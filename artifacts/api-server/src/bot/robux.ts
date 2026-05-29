@@ -392,76 +392,6 @@ export function startBot(): void {
         return;
       }
 
-      // ── !comprar <robux> ─────────────────────────────────────────────────
-      if (lower.startsWith("!comprar")) {
-        setCooldown(message.author.id);
-        const parts = content.split(/\s+/);
-        if (parts.length < 2) {
-          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Use: `!comprar <quantidade de Robux>` — Ex: `!comprar 3000`")] });
-          return;
-        }
-        const target = parseNumber(parts[1]);
-        if (isNaN(target) || target <= 0) {
-          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Valor inválido. Use um número positivo. Ex: `!comprar 3000`")] });
-          return;
-        }
-
-        // Standard Roblox package sizes
-        const PACKAGES = [400, 800, 1700, 4500, 10000];
-
-        interface PackageOption {
-          pkgSize: number;
-          qty: number;
-          totalRobux: number;
-          totalBrl: number;
-          surplus: number;
-          costPer1k: number;
-        }
-
-        const options: PackageOption[] = PACKAGES.map(pkgSize => {
-          const qty = Math.ceil(target / pkgSize);
-          const totalRobux = qty * pkgSize;
-          const totalBrl = robuxToBrl(totalRobux, rate);
-          const surplus = totalRobux - target;
-          const costPer1k = (totalBrl / totalRobux) * 1000;
-          return { pkgSize, qty, totalRobux, totalBrl, surplus, costPer1k };
-        });
-
-        // Best = lowest cost per 1k Robux (all packages have same rate, so fewer packages = less surplus = better)
-        // Actually with a flat rate, the best is always the fewest packages. Sort by totalBrl ascending.
-        const sorted = [...options].sort((a, b) => a.totalBrl - b.totalBrl);
-        const best = sorted[0];
-
-        const pkgCol   = options.map(o => `${formatRobux(o.pkgSize)} Robux`);
-        const qtyCol   = options.map(o => `${o.qty}x`);
-        const totCol   = options.map(o => `${formatRobux(o.totalRobux)} Robux`);
-        const brlCol2  = options.map(o => formatBrl(o.totalBrl));
-        const surpCol  = options.map(o => o.surplus > 0 ? `+${formatRobux(o.surplus)}` : "exato");
-
-        const maxPkg   = Math.max(...pkgCol.map(s => s.length));
-        const maxQty   = Math.max(...qtyCol.map(s => s.length));
-        const maxTot   = Math.max(...totCol.map(s => s.length));
-        const maxBrl2  = Math.max(...brlCol2.map(s => s.length));
-
-        const rows = options.map((o, i) => {
-          const star = o === best ? " ⭐" : "   ";
-          return `${star} ${qtyCol[i].padStart(maxQty)} pacote ${pkgCol[i].padEnd(maxPkg)}  →  ${totCol[i].padStart(maxTot)}  |  ${brlCol2[i].padStart(maxBrl2)}  (sobra: ${surpCol[i]})`;
-        }).join("\n");
-
-        await message.reply({ embeds: [
-          new EmbedBuilder()
-            .setColor(Colors.DarkAqua)
-            .setTitle(`🛒 Como comprar ${formatRobux(Math.round(target))} Robux`)
-            .setDescription(`\`\`\`\n${rows}\n\`\`\``)
-            .addFields({
-              name: "⭐ Melhor opção",
-              value: `**${best.qty}x pacote de ${formatRobux(best.pkgSize)} Robux** → ${formatRobux(best.totalRobux)} Robux por **${formatBrl(best.totalBrl)}**${best.surplus > 0 ? ` (sobram ${formatRobux(best.surplus)} Robux)` : ""}`,
-            })
-            .setFooter({ text: footerText(rate) }),
-        ]});
-        return;
-      }
-
       // ── !gamepass <id ou link> ────────────────────────────────────────────
       if (lower.startsWith("!gamepass")) {
         setCooldown(message.author.id);
@@ -559,7 +489,6 @@ export function startBot(): void {
               { name: "`!brl <robux>`", value: "Converte Robux → BRL" },
               { name: "`!taxa`", value: "Mostra a taxa de câmbio atual" },
               { name: "`!simular <v1> <v2> ...`", value: "Tabela de múltiplos valores (até 8)" },
-              { name: "`!comprar <robux>`", value: "Melhor combinação de pacotes para atingir a quantidade" },
               { name: "`!gamepass <ID ou link>`", value: "Busca informações de um gamepass do Roblox" },
               { name: "`!historico`", value: "Últimas alterações de taxa" },
               { name: "`!status`", value: "Uptime e estatísticas do bot" },
