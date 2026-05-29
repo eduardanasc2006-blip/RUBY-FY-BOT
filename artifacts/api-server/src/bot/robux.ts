@@ -477,6 +477,33 @@ export function startBot(): void {
         return;
       }
 
+      // ── !limpar [quantidade] ─────────────────────────────────────────────
+      if (lower.startsWith("!limpar")) {
+        if (!message.member?.permissions.has("ManageMessages")) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Você não tem permissão para limpar mensagens.")] });
+          return;
+        }
+        if (!message.channel.isTextBased() || message.channel.isDMBased()) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Este comando só funciona em canais de texto.")] });
+          return;
+        }
+        const parts = content.split(/\s+/);
+        let amount = parts.length >= 2 ? parseInt(parts[1], 10) : 100;
+        if (isNaN(amount) || amount < 1) amount = 1;
+        if (amount > 100) amount = 100;
+
+        // bulkDelete deletes up to 100 msgs at once, only works on msgs < 14 days old
+        const deleted = await (message.channel as import("discord.js").TextChannel).bulkDelete(amount, true).catch(() => null);
+        const count = deleted?.size ?? 0;
+        const confirm = await message.channel.send({ embeds: [
+          new EmbedBuilder()
+            .setColor(Colors.Green)
+            .setDescription(`🗑️ **${count}** mensagen${count !== 1 ? "s" : ""} apagada${count !== 1 ? "s" : ""} com sucesso.`),
+        ]});
+        setTimeout(() => confirm.delete().catch(() => null), 5000);
+        return;
+      }
+
       // ── !ajuda ────────────────────────────────────────────────────────────
       if (lower === "!ajuda" || lower === "!help") {
         setCooldown(message.author.id);
@@ -493,6 +520,7 @@ export function startBot(): void {
               { name: "`!historico`", value: "Últimas alterações de taxa" },
               { name: "`!status`", value: "Uptime e estatísticas do bot" },
               { name: "`!setraxa <robux> <R$>`", value: "*(Admin)* Atualiza a taxa" },
+              { name: "`!limpar [quantidade]`", value: "*(Admin)* Apaga mensagens do canal (padrão: 100, máx: 100)" },
               { name: "`!ping`", value: "Latência do bot" },
               { name: "`!ajuda`", value: "Mostra esta mensagem" },
             )
