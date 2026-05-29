@@ -488,8 +488,15 @@ export function startBot(): void {
           return;
         }
         const parts = content.split(/\s+/);
-        let amount = parts.length >= 2 ? parseInt(parts[1], 10) : 100;
-        if (isNaN(amount) || amount < 1) amount = 1;
+        if (parts.length < 2) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Informe a quantidade. Ex: `!limpar 10`")] });
+          return;
+        }
+        let amount = parseInt(parts[1], 10);
+        if (isNaN(amount) || amount < 1) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Quantidade inválida. Use um número entre 1 e 100. Ex: `!limpar 10`")] });
+          return;
+        }
         if (amount > 100) amount = 100;
 
         // bulkDelete deletes up to 100 msgs at once, only works on msgs < 14 days old
