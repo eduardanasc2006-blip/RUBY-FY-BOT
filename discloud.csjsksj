@@ -1,5 +1,5 @@
 NAME=FiskBot
-TYPE=bot
+TYPE
 MAIN=artifacts/bot/index.js
-RAM=100
+RAM=
 VERSION=latest
