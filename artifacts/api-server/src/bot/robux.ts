@@ -205,7 +205,29 @@ export function startBot(): void {
 
   client.once(Events.ClientReady, (c) => {
     logger.info({ tag: c.user.tag }, "Discord bot online");
-    c.user.setActivity("!ajuda | Robux ↔ BRL");
+
+    const getActivities = (): Array<{ name: string; type: import("discord.js").ActivityType }> => {
+      const { ActivityType } = require("discord.js") as typeof import("discord.js");
+      const rate = getCurrentRate();
+      const brl = robuxToBrl(1000, rate);
+      const brlFmt = brl.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+      return [
+        { name: `1.000 Robux = ${brlFmt}`, type: ActivityType.Watching },
+        { name: "!ajuda para ver comandos", type: ActivityType.Playing },
+        { name: "Roblox ↔ BRL em tempo real", type: ActivityType.Watching },
+        { name: "!robux | !brl | !gamepass", type: ActivityType.Playing },
+      ];
+    };
+
+    let idx = 0;
+    const rotate = () => {
+      const activities = getActivities();
+      const act = activities[idx % activities.length];
+      c.user.setActivity(act.name, { type: act.type });
+      idx++;
+    };
+    rotate();
+    setInterval(rotate, 30_000);
   });
 
   client.on(Events.MessageCreate, async (message: Message) => {
