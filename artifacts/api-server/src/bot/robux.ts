@@ -511,6 +511,30 @@ export function startBot(): void {
         return;
       }
 
+      // ── !anuncio <mensagem> ───────────────────────────────────────────────
+      if (lower.startsWith("!anuncio")) {
+        if (!message.member?.permissions.has("ManageMessages")) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Você não tem permissão para fazer anúncios.")] });
+          return;
+        }
+        const text = content.slice("!anuncio".length).trim();
+        if (!text) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Informe o texto do anúncio. Ex: `!anuncio Evento de Robux hoje às 20h!`")] });
+          return;
+        }
+        await message.delete().catch(() => null);
+        const announcement = await (message.channel as import("discord.js").TextChannel).send({ embeds: [
+          new EmbedBuilder()
+            .setColor(Colors.Gold)
+            .setTitle("📣 Anúncio")
+            .setDescription(text)
+            .setFooter({ text: `Anunciado por ${message.author.username}` })
+            .setTimestamp(),
+        ]});
+        await announcement.pin().catch(() => null);
+        return;
+      }
+
       // ── !ajuda ────────────────────────────────────────────────────────────
       if (lower === "!ajuda" || lower === "!help") {
         setCooldown(message.author.id);
@@ -527,7 +551,8 @@ export function startBot(): void {
               { name: "`!historico`", value: "Últimas alterações de taxa" },
               { name: "`!status`", value: "Uptime e estatísticas do bot" },
               { name: "`!setraxa <robux> <R$>`", value: "*(Admin)* Atualiza a taxa" },
-              { name: "`!limpar [quantidade]`", value: "*(Admin)* Apaga mensagens do canal (padrão: 100, máx: 100)" },
+              { name: "`!limpar <quantidade>`", value: "*(Admin)* Apaga N mensagens do canal (máx: 100)" },
+              { name: "`!anuncio <mensagem>`", value: "*(Admin)* Posta e fixa um anúncio no canal" },
               { name: "`!ping`", value: "Latência do bot" },
               { name: "`!ajuda`", value: "Mostra esta mensagem" },
             )
