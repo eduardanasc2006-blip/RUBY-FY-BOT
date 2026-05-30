@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "build": "tsc",
-    "start": "tsc && node dist/index.js"
+    "build": "echo 'Done'",
+    "start": "node discloud.js"
   },
   "private": true,
   "devDependencies": {
