@@ -107386,14 +107386,29 @@ var routes_default = router2;
 var import_pino = __toESM(require_pino(), 1);
 var isProduction = process.env.NODE_ENV === "production";
 var isDiscloud = !!process.env["DISCLOUD"];
-var logger = (0, import_pino.default)({
+function makeConsoleLogger() {
+  const fmt = (level, obj, msg) => {
+    const extra = obj && typeof obj === "object" && Object.keys(obj).length ? JSON.stringify(obj) : "";
+    console.log(`[${(/* @__PURE__ */ new Date()).toISOString()}] ${level.toUpperCase()} ${msg ?? ""}${extra ? " " + extra : ""}`);
+  };
+  return {
+    info: (obj, msg) => fmt("info", obj, msg),
+    warn: (obj, msg) => fmt("warn", obj, msg),
+    error: (obj, msg) => fmt("error", obj, msg),
+    debug: (obj, msg) => fmt("debug", obj, msg),
+    trace: (obj, msg) => fmt("trace", obj, msg),
+    fatal: (obj, msg) => fmt("fatal", obj, msg),
+    child: () => makeConsoleLogger()
+  };
+}
+var logger = isDiscloud ? makeConsoleLogger() : (0, import_pino.default)({
   level: process.env.LOG_LEVEL ?? "info",
   redact: [
     "req.headers.authorization",
     "req.headers.cookie",
     "res.headers['set-cookie']"
   ],
-  ...isProduction || isDiscloud ? {} : {
+  ...isProduction ? {} : {
     transport: {
       target: "pino-pretty",
       options: { colorize: true }
