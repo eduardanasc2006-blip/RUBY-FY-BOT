@@ -1,6 +1,9 @@
 const { execSync } = require("child_process");
 const path = require("path");
 
+// Discloud doesn't set PORT automatically — default to 8080
+process.env.PORT = process.env.PORT || "8080";
+
 console.log("[Discloud] Instalando dependências...");
 execSync("pnpm install --frozen-lockfile", { stdio: "inherit" });
 
