@@ -103052,6 +103052,50 @@ function repRank(rep) {
   if (rep >= 3) return "\u{1F949} Bronze";
   return "\u{1F331} Novato";
 }
+var socialStore = /* @__PURE__ */ new Map();
+function getSocialStats(userId) {
+  if (!socialStore.has(userId)) {
+    socialStore.set(userId, {
+      abracos: 0,
+      beijos: 0,
+      high5s: 0,
+      elogios: 0,
+      casamentos: 0,
+      abracosRecebidos: 0,
+      beijosRecebidos: 0,
+      high5sRecebidos: 0,
+      elogiosRecebidos: 0
+    });
+  }
+  return socialStore.get(userId);
+}
+function addSocialGiven(userId, type) {
+  const s = getSocialStats(userId);
+  if (type === "abraco") s.abracos++;
+  else if (type === "beijo") s.beijos++;
+  else if (type === "high5") s.high5s++;
+  else if (type === "elogio") s.elogios++;
+  else if (type === "casamento") s.casamentos++;
+}
+function addSocialReceived(userId, type) {
+  const s = getSocialStats(userId);
+  if (type === "abraco") s.abracosRecebidos++;
+  else if (type === "beijo") s.beijosRecebidos++;
+  else if (type === "high5") s.high5sRecebidos++;
+  else if (type === "elogio") s.elogiosRecebidos++;
+}
+async function fetchGif(category) {
+  try {
+    const res = await fetch(`https://nekos.best/api/v2/${category}`, {
+      headers: { "Accept": "application/json" }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.results?.[0]?.url ?? null;
+  } catch {
+    return null;
+  }
+}
 var marriages = /* @__PURE__ */ new Map();
 var msgAbraco = [
   "deu um abra\xE7o apertado em",
@@ -103408,12 +103452,25 @@ ${rows}
       if (lower === "!meuperfil") {
         setCooldown(message.author.id);
         const data = getRepData(message.author.id);
+        const social = getSocialStats(message.author.id);
         const partnerText = marriages.has(message.author.id) ? `<@${marriages.get(message.author.id)}> \u{1F48D}` : "Solteiro(a) \u{1F494}";
         await message.reply({ embeds: [
           new import_discord.EmbedBuilder().setColor(import_discord.Colors.Blurple).setTitle(`\u{1F464} Perfil de ${message.author.displayName}`).setThumbnail(message.author.displayAvatarURL()).addFields(
             { name: "\u2B50 Reputa\xE7\xE3o", value: data.rep.toLocaleString("pt-BR"), inline: true },
             { name: "\u{1F3C5} Rank", value: repRank(data.rep), inline: true },
-            { name: "\u{1F48D} Parceiro(a)", value: partnerText, inline: false }
+            { name: "\u{1F48D} Parceiro(a)", value: partnerText, inline: false },
+            {
+              name: "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\u{1F917} Intera\xE7\xF5es Dadas",
+              value: `Abra\xE7os: **${social.abracos}** \xB7 Beijos: **${social.beijos}**
+High5s: **${social.high5s}** \xB7 Elogios: **${social.elogios}** \xB7 Casamentos: **${social.casamentos}**`,
+              inline: false
+            },
+            {
+              name: "\u{1F48C} Intera\xE7\xF5es Recebidas",
+              value: `Abra\xE7os: **${social.abracosRecebidos}** \xB7 Beijos: **${social.beijosRecebidos}**
+High5s: **${social.high5sRecebidos}** \xB7 Elogios: **${social.elogiosRecebidos}**`,
+              inline: false
+            }
           ).setTimestamp()
         ] });
         return;
@@ -103460,11 +103517,14 @@ ${rows}
         }
         marriages.set(message.author.id, mentioned.id);
         marriages.set(mentioned.id, message.author.id);
-        await message.reply({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Fuchsia).setTitle("\u{1F48D} Casamento Virtual!").setDescription(`**${message.author.displayName}** e **${mentioned.displayName}** agora s\xE3o casados! \u{1F38A}
+        addSocialGiven(message.author.id, "casamento");
+        addSocialGiven(mentioned.id, "casamento");
+        const gifUrl = await fetchGif("kiss");
+        const embed = new import_discord.EmbedBuilder().setColor(import_discord.Colors.Fuchsia).setTitle("\u{1F48D} Casamento Virtual!").setDescription(`**${message.author.displayName}** e **${mentioned.displayName}** agora s\xE3o casados! \u{1F38A}
 
-Parab\xE9ns ao novo casal! \u{1F491}`).setTimestamp()
-        ] });
+Parab\xE9ns ao novo casal! \u{1F491}`).setTimestamp();
+        if (gifUrl) embed.setImage(gifUrl);
+        await message.reply({ embeds: [embed] });
         return;
       }
       if (lower === "!divorciar") {
@@ -103504,18 +103564,31 @@ Parab\xE9ns ao novo casal! \u{1F491}`).setTimestamp()
         const score = shipScore(u1.id, u2.id);
         const bar = shipBar(score);
         let comment = "";
-        if (score >= 90) comment = "Amor eterno! \u{1F49E}";
-        else if (score >= 70) comment = "Combinam muito! \u{1F495}";
-        else if (score >= 50) comment = "Tem potencial! \u{1F49B}";
-        else if (score >= 30) comment = "Pode melhorar... \u{1F914}";
-        else comment = "Melhor como amigos! \u{1F605}";
-        await message.reply({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Fuchsia).setTitle("\u{1F498} Ship-o-metro").setDescription(`**${u1.displayName}** \u{1F49E} **${u2.displayName}**
+        let gifCategory = "smile";
+        if (score >= 90) {
+          comment = "Amor eterno! \u{1F49E}";
+          gifCategory = "kiss";
+        } else if (score >= 70) {
+          comment = "Combinam muito! \u{1F495}";
+          gifCategory = "hug";
+        } else if (score >= 50) {
+          comment = "Tem potencial! \u{1F49B}";
+          gifCategory = "smile";
+        } else if (score >= 30) {
+          comment = "Pode melhorar... \u{1F914}";
+          gifCategory = "wave";
+        } else {
+          comment = "Melhor como amigos! \u{1F605}";
+          gifCategory = "laugh";
+        }
+        const gifUrl = await fetchGif(gifCategory);
+        const embed = new import_discord.EmbedBuilder().setColor(import_discord.Colors.Fuchsia).setTitle("\u{1F498} Ship-o-metro").setDescription(`**${u1.displayName}** \u{1F49E} **${u2.displayName}**
 
 ${bar}
 
-**${score}%** \u2014 ${comment}`)
-        ] });
+**${score}%** \u2014 ${comment}`).setThumbnail(u1.displayAvatarURL({ size: 128 })).setImage(u2.displayAvatarURL({ size: 256 }));
+        if (gifUrl) embed.setImage(gifUrl);
+        await message.reply({ embeds: [embed] });
         return;
       }
       if (lower.startsWith("!abra\xE7ar") || lower.startsWith("!abracar")) {
@@ -103525,9 +103598,12 @@ ${bar}
           await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Mencione algu\xE9m! Ex: `!abra\xE7ar @usuario`")] });
           return;
         }
-        await message.reply({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Yellow).setDescription(`\u{1F917} **${message.author.displayName}** ${randomFrom(msgAbraco)} **${mentioned.displayName}**!`)
-        ] });
+        addSocialGiven(message.author.id, "abraco");
+        addSocialReceived(mentioned.id, "abraco");
+        const gifUrl = await fetchGif("hug");
+        const embed = new import_discord.EmbedBuilder().setColor(import_discord.Colors.Yellow).setDescription(`\u{1F917} **${message.author.displayName}** ${randomFrom(msgAbraco)} **${mentioned.displayName}**!`).setFooter({ text: `Abra\xE7os dados: ${getSocialStats(message.author.id).abracos}` });
+        if (gifUrl) embed.setImage(gifUrl);
+        await message.reply({ embeds: [embed] });
         return;
       }
       if (lower.startsWith("!beijar")) {
@@ -103537,9 +103613,12 @@ ${bar}
           await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Mencione algu\xE9m! Ex: `!beijar @usuario`")] });
           return;
         }
-        await message.reply({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Fuchsia).setDescription(`\u{1F618} **${message.author.displayName}** ${randomFrom(msgBeijo)} **${mentioned.displayName}**!`)
-        ] });
+        addSocialGiven(message.author.id, "beijo");
+        addSocialReceived(mentioned.id, "beijo");
+        const gifUrl = await fetchGif("kiss");
+        const embed = new import_discord.EmbedBuilder().setColor(import_discord.Colors.Fuchsia).setDescription(`\u{1F618} **${message.author.displayName}** ${randomFrom(msgBeijo)} **${mentioned.displayName}**!`).setFooter({ text: `Beijos dados: ${getSocialStats(message.author.id).beijos}` });
+        if (gifUrl) embed.setImage(gifUrl);
+        await message.reply({ embeds: [embed] });
         return;
       }
       if (lower.startsWith("!high5")) {
@@ -103549,9 +103628,12 @@ ${bar}
           await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Mencione algu\xE9m! Ex: `!high5 @usuario`")] });
           return;
         }
-        await message.reply({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Green).setDescription(`\u{1F64C} **${message.author.displayName}** ${randomFrom(msgHigh5)} **${mentioned.displayName}**!`)
-        ] });
+        addSocialGiven(message.author.id, "high5");
+        addSocialReceived(mentioned.id, "high5");
+        const gifUrl = await fetchGif("handshake");
+        const embed = new import_discord.EmbedBuilder().setColor(import_discord.Colors.Green).setDescription(`\u{1F64C} **${message.author.displayName}** ${randomFrom(msgHigh5)} **${mentioned.displayName}**!`).setFooter({ text: `High5s dados: ${getSocialStats(message.author.id).high5s}` });
+        if (gifUrl) embed.setImage(gifUrl);
+        await message.reply({ embeds: [embed] });
         return;
       }
       if (lower.startsWith("!elogiar")) {
@@ -103561,11 +103643,14 @@ ${bar}
           await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Mencione algu\xE9m! Ex: `!elogiar @usuario`")] });
           return;
         }
-        await message.reply({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Gold).setDescription(`\u{1F31F} **${mentioned.displayName}** ${randomFrom(msgElogio)}
+        addSocialGiven(message.author.id, "elogio");
+        addSocialReceived(mentioned.id, "elogio");
+        const gifUrl = await fetchGif("pat");
+        const embed = new import_discord.EmbedBuilder().setColor(import_discord.Colors.Gold).setDescription(`\u{1F31F} **${mentioned.displayName}** ${randomFrom(msgElogio)}
 
-\u2014 elogio enviado por **${message.author.displayName}**`)
-        ] });
+\u2014 elogio enviado por **${message.author.displayName}**`).setFooter({ text: `Elogios enviados: ${getSocialStats(message.author.id).elogios}` });
+        if (gifUrl) embed.setImage(gifUrl);
+        await message.reply({ embeds: [embed] });
         return;
       }
       if (lower.startsWith("!setraxa")) {
