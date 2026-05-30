@@ -1,6 +1,5 @@
-// Tell the app to skip pino worker transports (paths break on cross-host deploys)
-process.env.DISCLOUD = "true";
 process.env.PORT = process.env.PORT || "8080";
+process.env.NODE_ENV = process.env.NODE_ENV || "production";
 
 console.log("[FiskBot] Iniciando...");
 

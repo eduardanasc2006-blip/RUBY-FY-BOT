@@ -28,6 +28,11 @@ async function buildAll() {
     // - uses native modules and loads them dynamically (e.g. sharp)
     // - use path traversal to read files (e.g. @google-cloud/secret-manager loads sibling .proto files)
     external: [
+      // pino uses thread-stream workers — externalize so paths resolve correctly at runtime
+      "pino",
+      "pino-http",
+      "pino-pretty",
+      "thread-stream",
       "*.node",
       "sharp",
       "better-sqlite3",
@@ -102,10 +107,7 @@ async function buildAll() {
       "electron",
     ],
     sourcemap: "linked",
-    plugins: [
-      // pino relies on workers to handle logging, instead of externalizing it we use a plugin to handle it
-      esbuildPluginPino({ transports: ["pino-pretty"] })
-    ],
+    plugins: [],
     // Make sure packages that are cjs only (e.g. express) but are bundled continue to work in our esm output file
     banner: {
       js: `import { createRequire as __bannerCrReq } from 'node:module';
