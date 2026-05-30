@@ -98917,7 +98917,6 @@ var require_src2 = __commonJS({
 // src/app.ts
 var import_express3 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
-import pinoHttp from "pino-http";
 
 // src/routes/index.ts
 var import_express2 = __toESM(require_express2(), 1);
@@ -102820,44 +102819,28 @@ router2.use(health_default);
 var routes_default = router2;
 
 // src/lib/logger.ts
-import pino from "pino";
-var isProduction = process.env.NODE_ENV === "production";
-var logger = pino({
-  level: process.env.LOG_LEVEL ?? "info",
-  redact: [
-    "req.headers.authorization",
-    "req.headers.cookie",
-    "res.headers['set-cookie']"
-  ],
-  ...isProduction ? {} : {
-    transport: {
-      target: "pino-pretty",
-      options: { colorize: true }
-    }
-  }
-});
+function fmt(level, obj, msg) {
+  const ts = (/* @__PURE__ */ new Date()).toISOString();
+  const message = msg ?? (typeof obj === "string" ? obj : "");
+  const extra = obj && typeof obj === "object" && Object.keys(obj).length > 0 ? " " + JSON.stringify(obj) : "";
+  console.log(`[${ts}] ${level.toUpperCase().padEnd(5)} ${message}${extra}`);
+}
+var logger = {
+  info: (obj, msg) => fmt("info", obj, msg),
+  warn: (obj, msg) => fmt("warn", obj, msg),
+  error: (obj, msg) => fmt("error", obj, msg),
+  debug: (obj, msg) => fmt("debug", obj, msg),
+  trace: (obj, msg) => fmt("trace", obj, msg),
+  fatal: (obj, msg) => fmt("fatal", obj, msg),
+  child: (_bindings) => logger
+};
 
 // src/app.ts
 var app = (0, import_express3.default)();
-app.use(
-  pinoHttp({
-    logger,
-    serializers: {
-      req(req) {
-        return {
-          id: req.id,
-          method: req.method,
-          url: req.url?.split("?")[0]
-        };
-      },
-      res(res) {
-        return {
-          statusCode: res.statusCode
-        };
-      }
-    }
-  })
-);
+app.use((req, _res, next) => {
+  logger.info({ method: req.method, url: req.url?.split("?")[0] }, "request");
+  next();
+});
 app.use((0, import_cors.default)());
 app.use(import_express3.default.json());
 app.use(import_express3.default.urlencoded({ extended: true }));
