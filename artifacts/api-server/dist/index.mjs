@@ -343,8 +343,8 @@ var require_common = __commonJS({
 var require_browser = __commonJS({
   "../../node_modules/.pnpm/debug@4.4.3/node_modules/debug/src/browser.js"(exports2, module2) {
     exports2.formatArgs = formatArgs;
-    exports2.save = save2;
-    exports2.load = load2;
+    exports2.save = save;
+    exports2.load = load;
     exports2.useColors = useColors;
     exports2.storage = localstorage();
     exports2.destroy = /* @__PURE__ */ (() => {
@@ -470,7 +470,7 @@ var require_browser = __commonJS({
     }
     exports2.log = console.debug || console.log || (() => {
     });
-    function save2(namespaces) {
+    function save(namespaces) {
       try {
         if (namespaces) {
           exports2.storage.setItem("debug", namespaces);
@@ -480,7 +480,7 @@ var require_browser = __commonJS({
       } catch (error) {
       }
     }
-    function load2() {
+    function load() {
       let r;
       try {
         r = exports2.storage.getItem("debug") || exports2.storage.getItem("DEBUG");
@@ -517,8 +517,8 @@ var require_node = __commonJS({
     exports2.init = init;
     exports2.log = log;
     exports2.formatArgs = formatArgs;
-    exports2.save = save2;
-    exports2.load = load2;
+    exports2.save = save;
+    exports2.load = load;
     exports2.useColors = useColors;
     exports2.destroy = util2.deprecate(
       () => {
@@ -653,14 +653,14 @@ var require_node = __commonJS({
     function log(...args) {
       return process.stderr.write(util2.formatWithOptions(exports2.inspectOpts, ...args) + "\n");
     }
-    function save2(namespaces) {
+    function save(namespaces) {
       if (namespaces) {
         process.env.DEBUG = namespaces;
       } else {
         delete process.env.DEBUG;
       }
     }
-    function load2() {
+    function load() {
       return process.env.DEBUG;
     }
     function init(debug) {
@@ -15203,11 +15203,11 @@ var require_mime_types = __commonJS({
       }
       return exts[0];
     }
-    function lookup(path2) {
-      if (!path2 || typeof path2 !== "string") {
+    function lookup(path) {
+      if (!path || typeof path !== "string") {
         return false;
       }
-      var extension2 = extname("x." + path2).toLowerCase().slice(1);
+      var extension2 = extname("x." + path).toLowerCase().slice(1);
       if (!extension2) {
         return false;
       }
@@ -18678,13 +18678,13 @@ var require_view = __commonJS({
   "../../node_modules/.pnpm/express@5.2.1/node_modules/express/lib/view.js"(exports2, module2) {
     "use strict";
     var debug = require_src()("express:view");
-    var path2 = __require("node:path");
-    var fs2 = __require("node:fs");
-    var dirname = path2.dirname;
-    var basename = path2.basename;
-    var extname = path2.extname;
-    var join = path2.join;
-    var resolve = path2.resolve;
+    var path = __require("node:path");
+    var fs = __require("node:fs");
+    var dirname = path.dirname;
+    var basename = path.basename;
+    var extname = path.extname;
+    var join = path.join;
+    var resolve = path.resolve;
     module2.exports = View;
     function View(name, options) {
       var opts = options || {};
@@ -18713,17 +18713,17 @@ var require_view = __commonJS({
       this.path = this.lookup(fileName);
     }
     View.prototype.lookup = function lookup(name) {
-      var path3;
+      var path2;
       var roots = [].concat(this.root);
       debug('lookup "%s"', name);
-      for (var i = 0; i < roots.length && !path3; i++) {
+      for (var i = 0; i < roots.length && !path2; i++) {
         var root = roots[i];
         var loc = resolve(root, name);
         var dir = dirname(loc);
         var file = basename(loc);
-        path3 = this.resolve(dir, file);
+        path2 = this.resolve(dir, file);
       }
-      return path3;
+      return path2;
     };
     View.prototype.render = function render(options, callback) {
       var sync = true;
@@ -18745,21 +18745,21 @@ var require_view = __commonJS({
     };
     View.prototype.resolve = function resolve2(dir, file) {
       var ext = this.ext;
-      var path3 = join(dir, file);
-      var stat = tryStat(path3);
+      var path2 = join(dir, file);
+      var stat = tryStat(path2);
       if (stat && stat.isFile()) {
-        return path3;
+        return path2;
       }
-      path3 = join(dir, basename(file, ext), "index" + ext);
-      stat = tryStat(path3);
+      path2 = join(dir, basename(file, ext), "index" + ext);
+      stat = tryStat(path2);
       if (stat && stat.isFile()) {
-        return path3;
+        return path2;
       }
     };
-    function tryStat(path3) {
-      debug('stat "%s"', path3);
+    function tryStat(path2) {
+      debug('stat "%s"', path2);
       try {
-        return fs2.statSync(path3);
+        return fs.statSync(path2);
       } catch (e) {
         return void 0;
       }
@@ -19895,15 +19895,15 @@ var require_dist = __commonJS({
       let index = 0;
       function consumeUntil(end) {
         const output = [];
-        let path2 = "";
+        let path = "";
         function writePath() {
-          if (!path2)
+          if (!path)
             return;
           output.push({
             type: "text",
-            value: encodePath(path2)
+            value: encodePath(path)
           });
-          path2 = "";
+          path = "";
         }
         while (index < chars.length) {
           const value = chars[index++];
@@ -19915,7 +19915,7 @@ var require_dist = __commonJS({
             if (index === chars.length) {
               throw new PathError(`Unexpected end after \\ at index ${index}`, str);
             }
-            path2 += chars[index++];
+            path += chars[index++];
             continue;
           }
           if (value === ":" || value === "*") {
@@ -19959,7 +19959,7 @@ var require_dist = __commonJS({
           if (value === "}" || value === "(" || value === ")" || value === "[" || value === "]" || value === "+" || value === "?" || value === "!") {
             throw new PathError(`Unexpected ${value} at index ${index - 1}`, str);
           }
-          path2 += value;
+          path += value;
         }
         if (end) {
           throw new PathError(`Unexpected end at index ${index}, expected ${end}`, str);
@@ -19969,17 +19969,17 @@ var require_dist = __commonJS({
       }
       return new TokenData(consumeUntil(""), str);
     }
-    function compile(path2, options = {}) {
+    function compile(path, options = {}) {
       const { encode = encodeURIComponent, delimiter = DEFAULT_DELIMITER } = options;
-      const data = typeof path2 === "object" ? path2 : parse(path2, options);
+      const data = typeof path === "object" ? path : parse(path, options);
       const fn = tokensToFunction(data.tokens, delimiter, encode);
-      return function path3(params = {}) {
+      return function path2(params = {}) {
         const missing = [];
-        const path4 = fn(params, missing);
+        const path3 = fn(params, missing);
         if (missing.length) {
           throw new TypeError(`Missing parameters: ${missing.join(", ")}`);
         }
-        return path4;
+        return path3;
       };
     }
     function tokensToFunction(tokens, delimiter, encode) {
@@ -20041,9 +20041,9 @@ var require_dist = __commonJS({
         return encodeValue(value);
       };
     }
-    function match(path2, options = {}) {
+    function match(path, options = {}) {
       const { decode = decodeURIComponent, delimiter = DEFAULT_DELIMITER } = options;
-      const { regexp, keys } = pathToRegexp(path2, options);
+      const { regexp, keys } = pathToRegexp(path, options);
       const decoders = keys.map((key) => {
         if (decode === false)
           return NOOP_VALUE;
@@ -20055,7 +20055,7 @@ var require_dist = __commonJS({
         const m = regexp.exec(input);
         if (!m)
           return false;
-        const path3 = m[0];
+        const path2 = m[0];
         const params = /* @__PURE__ */ Object.create(null);
         for (let i = 1; i < m.length; i++) {
           if (m[i] === void 0)
@@ -20064,21 +20064,21 @@ var require_dist = __commonJS({
           const decoder = decoders[i - 1];
           params[key.name] = decoder(m[i]);
         }
-        return { path: path3, params };
+        return { path: path2, params };
       };
     }
-    function pathToRegexp(path2, options = {}) {
+    function pathToRegexp(path, options = {}) {
       const { delimiter = DEFAULT_DELIMITER, end = true, sensitive = false, trailing = true } = options;
       const keys = [];
       let source = "";
       let combinations = 0;
-      function process2(path3) {
-        if (Array.isArray(path3)) {
-          for (const p of path3)
+      function process2(path2) {
+        if (Array.isArray(path2)) {
+          for (const p of path2)
             process2(p);
           return;
         }
-        const data = typeof path3 === "object" ? path3 : parse(path3, options);
+        const data = typeof path2 === "object" ? path2 : parse(path2, options);
         flatten(data.tokens, 0, [], (tokens) => {
           if (combinations >= 256) {
             throw new PathError("Too many path combinations", data.originalPath);
@@ -20089,7 +20089,7 @@ var require_dist = __commonJS({
           combinations++;
         });
       }
-      process2(path2);
+      process2(path);
       let pattern = `^(?:${source})`;
       if (trailing)
         pattern += "(?:" + escape2(delimiter) + "$)?";
@@ -20229,18 +20229,18 @@ var require_layer = __commonJS({
     var TRAILING_SLASH_REGEXP = /\/+$/;
     var MATCHING_GROUP_REGEXP = /\((?:\?<(.*?)>)?(?!\?)/g;
     module2.exports = Layer;
-    function Layer(path2, options, fn) {
+    function Layer(path, options, fn) {
       if (!(this instanceof Layer)) {
-        return new Layer(path2, options, fn);
+        return new Layer(path, options, fn);
       }
-      debug("new %o", path2);
+      debug("new %o", path);
       const opts = options || {};
       this.handle = fn;
       this.keys = [];
       this.name = fn.name || "<anonymous>";
       this.params = void 0;
       this.path = void 0;
-      this.slash = path2 === "/" && opts.end === false;
+      this.slash = path === "/" && opts.end === false;
       function matcher(_path) {
         if (_path instanceof RegExp) {
           const keys = [];
@@ -20279,7 +20279,7 @@ var require_layer = __commonJS({
           decode: decodeParam
         });
       }
-      this.matchers = Array.isArray(path2) ? path2.map(matcher) : [matcher(path2)];
+      this.matchers = Array.isArray(path) ? path.map(matcher) : [matcher(path)];
     }
     Layer.prototype.handleError = function handleError(error, req, res, next) {
       const fn = this.handle;
@@ -20319,9 +20319,9 @@ var require_layer = __commonJS({
         next(err);
       }
     };
-    Layer.prototype.match = function match(path2) {
+    Layer.prototype.match = function match(path) {
       let match2;
-      if (path2 != null) {
+      if (path != null) {
         if (this.slash) {
           this.params = {};
           this.path = "";
@@ -20329,7 +20329,7 @@ var require_layer = __commonJS({
         }
         let i = 0;
         while (!match2 && i < this.matchers.length) {
-          match2 = this.matchers[i](path2);
+          match2 = this.matchers[i](path);
           i++;
         }
       }
@@ -20357,13 +20357,13 @@ var require_layer = __commonJS({
         throw err;
       }
     }
-    function loosen(path2) {
-      if (path2 instanceof RegExp || path2 === "/") {
-        return path2;
+    function loosen(path) {
+      if (path instanceof RegExp || path === "/") {
+        return path;
       }
-      return Array.isArray(path2) ? path2.map(function(p) {
+      return Array.isArray(path) ? path.map(function(p) {
         return loosen(p);
-      }) : String(path2).replace(TRAILING_SLASH_REGEXP, "");
+      }) : String(path).replace(TRAILING_SLASH_REGEXP, "");
     }
   }
 });
@@ -20379,9 +20379,9 @@ var require_route = __commonJS({
     var flatten = Array.prototype.flat;
     var methods = METHODS.map((method) => method.toLowerCase());
     module2.exports = Route;
-    function Route(path2) {
-      debug("new %o", path2);
-      this.path = path2;
+    function Route(path) {
+      debug("new %o", path);
+      this.path = path;
       this.stack = [];
       this.methods = /* @__PURE__ */ Object.create(null);
     }
@@ -20589,8 +20589,8 @@ var require_router = __commonJS({
         if (++sync > 100) {
           return setImmediate(next, err);
         }
-        const path2 = getPathname(req);
-        if (path2 == null) {
+        const path = getPathname(req);
+        if (path == null) {
           return done(layerError);
         }
         let layer;
@@ -20598,7 +20598,7 @@ var require_router = __commonJS({
         let route;
         while (match !== true && idx < stack.length) {
           layer = stack[idx++];
-          match = matchLayer(layer, path2);
+          match = matchLayer(layer, path);
           route = layer.route;
           if (typeof match !== "boolean") {
             layerError = layerError || match;
@@ -20636,18 +20636,18 @@ var require_router = __commonJS({
           } else if (route) {
             layer.handleRequest(req, res, next);
           } else {
-            trimPrefix(layer, layerError, layerPath, path2);
+            trimPrefix(layer, layerError, layerPath, path);
           }
           sync = 0;
         });
       }
-      function trimPrefix(layer, layerError, layerPath, path2) {
+      function trimPrefix(layer, layerError, layerPath, path) {
         if (layerPath.length !== 0) {
-          if (layerPath !== path2.substring(0, layerPath.length)) {
+          if (layerPath !== path.substring(0, layerPath.length)) {
             next(layerError);
             return;
           }
-          const c = path2[layerPath.length];
+          const c = path[layerPath.length];
           if (c && c !== "/") {
             next(layerError);
             return;
@@ -20671,7 +20671,7 @@ var require_router = __commonJS({
     };
     Router3.prototype.use = function use(handler) {
       let offset = 0;
-      let path2 = "/";
+      let path = "/";
       if (typeof handler !== "function") {
         let arg = handler;
         while (Array.isArray(arg) && arg.length !== 0) {
@@ -20679,7 +20679,7 @@ var require_router = __commonJS({
         }
         if (typeof arg !== "function") {
           offset = 1;
-          path2 = handler;
+          path = handler;
         }
       }
       const callbacks = flatten.call(slice.call(arguments, offset), Infinity);
@@ -20691,8 +20691,8 @@ var require_router = __commonJS({
         if (typeof fn !== "function") {
           throw new TypeError("argument handler must be a function");
         }
-        debug("use %o %s", path2, fn.name || "<anonymous>");
-        const layer = new Layer(path2, {
+        debug("use %o %s", path, fn.name || "<anonymous>");
+        const layer = new Layer(path, {
           sensitive: this.caseSensitive,
           strict: false,
           end: false
@@ -20702,9 +20702,9 @@ var require_router = __commonJS({
       }
       return this;
     };
-    Router3.prototype.route = function route(path2) {
-      const route2 = new Route(path2);
-      const layer = new Layer(path2, {
+    Router3.prototype.route = function route(path) {
+      const route2 = new Route(path);
+      const layer = new Layer(path, {
         sensitive: this.caseSensitive,
         strict: this.strict,
         end: true
@@ -20717,8 +20717,8 @@ var require_router = __commonJS({
       return route2;
     };
     methods.concat("all").forEach(function(method) {
-      Router3.prototype[method] = function(path2) {
-        const route = this.route(path2);
+      Router3.prototype[method] = function(path) {
+        const route = this.route(path);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
       };
@@ -20747,9 +20747,9 @@ var require_router = __commonJS({
       const fqdnIndex = url.substring(0, pathLength).indexOf("://");
       return fqdnIndex !== -1 ? url.substring(0, url.indexOf("/", 3 + fqdnIndex)) : void 0;
     }
-    function matchLayer(layer, path2) {
+    function matchLayer(layer, path) {
       try {
-        return layer.match(path2);
+        return layer.match(path);
       } catch (err) {
         return err;
       }
@@ -20977,7 +20977,7 @@ var require_application = __commonJS({
     };
     app2.use = function use(fn) {
       var offset = 0;
-      var path2 = "/";
+      var path = "/";
       if (typeof fn !== "function") {
         var arg = fn;
         while (Array.isArray(arg) && arg.length !== 0) {
@@ -20985,7 +20985,7 @@ var require_application = __commonJS({
         }
         if (typeof arg !== "function") {
           offset = 1;
-          path2 = fn;
+          path = fn;
         }
       }
       var fns = flatten.call(slice.call(arguments, offset), Infinity);
@@ -20995,12 +20995,12 @@ var require_application = __commonJS({
       var router3 = this.router;
       fns.forEach(function(fn2) {
         if (!fn2 || !fn2.handle || !fn2.set) {
-          return router3.use(path2, fn2);
+          return router3.use(path, fn2);
         }
-        debug(".use app under %s", path2);
-        fn2.mountpath = path2;
+        debug(".use app under %s", path);
+        fn2.mountpath = path;
         fn2.parent = this;
-        router3.use(path2, function mounted_app(req, res, next) {
+        router3.use(path, function mounted_app(req, res, next) {
           var orig = req.app;
           fn2.handle(req, res, function(err) {
             Object.setPrototypeOf(req, orig.request);
@@ -21012,8 +21012,8 @@ var require_application = __commonJS({
       }, this);
       return this;
     };
-    app2.route = function route(path2) {
-      return this.router.route(path2);
+    app2.route = function route(path) {
+      return this.router.route(path);
     };
     app2.engine = function engine(ext, fn) {
       if (typeof fn !== "function") {
@@ -21056,7 +21056,7 @@ var require_application = __commonJS({
       }
       return this;
     };
-    app2.path = function path2() {
+    app2.path = function path() {
       return this.parent ? this.parent.path() + this.mountpath : "";
     };
     app2.enabled = function enabled(setting) {
@@ -21072,17 +21072,17 @@ var require_application = __commonJS({
       return this.set(setting, false);
     };
     methods.forEach(function(method) {
-      app2[method] = function(path2) {
+      app2[method] = function(path) {
         if (method === "get" && arguments.length === 1) {
-          return this.set(path2);
+          return this.set(path);
         }
-        var route = this.route(path2);
+        var route = this.route(path);
         route[method].apply(route, slice.call(arguments, 1));
         return this;
       };
     });
-    app2.all = function all(path2) {
-      var route = this.route(path2);
+    app2.all = function all(path) {
+      var route = this.route(path);
       var args = slice.call(arguments, 1);
       for (var i = 0; i < methods.length; i++) {
         route[methods[i]].apply(route, args);
@@ -21992,7 +21992,7 @@ var require_request = __commonJS({
       var subdomains2 = !isIP(hostname) ? hostname.split(".").reverse() : [hostname];
       return subdomains2.slice(offset);
     });
-    defineGetter(req, "path", function path2() {
+    defineGetter(req, "path", function path() {
       return parse(this).pathname;
     });
     defineGetter(req, "host", function host() {
@@ -22203,8 +22203,8 @@ var require_content_disposition = __commonJS({
       this.type = type;
       this.parameters = parameters;
     }
-    function basename(path2) {
-      const normalized = path2.replaceAll("\\", "/");
+    function basename(path) {
+      const normalized = path.replaceAll("\\", "/");
       let end = normalized.length;
       while (end > 0 && normalized[end - 1] === "/") {
         end--;
@@ -22445,32 +22445,32 @@ var require_send = __commonJS({
     var escapeHtml = require_escape_html();
     var etag = require_etag();
     var fresh = require_fresh();
-    var fs2 = __require("fs");
+    var fs = __require("fs");
     var mime = require_mime_types();
     var ms = require_ms();
     var onFinished = require_on_finished();
     var parseRange = require_range_parser();
-    var path2 = __require("path");
+    var path = __require("path");
     var statuses = require_statuses();
     var Stream = __require("stream");
     var util2 = __require("util");
-    var extname = path2.extname;
-    var join = path2.join;
-    var normalize = path2.normalize;
-    var resolve = path2.resolve;
-    var sep = path2.sep;
+    var extname = path.extname;
+    var join = path.join;
+    var normalize = path.normalize;
+    var resolve = path.resolve;
+    var sep = path.sep;
     var BYTES_RANGE_REGEXP = /^ *bytes=/;
     var MAX_MAXAGE = 60 * 60 * 24 * 365 * 1e3;
     var UP_PATH_REGEXP = /(?:^|[\\/])\.\.(?:[\\/]|$)/;
     module2.exports = send;
-    function send(req, path3, options) {
-      return new SendStream(req, path3, options);
+    function send(req, path2, options) {
+      return new SendStream(req, path2, options);
     }
-    function SendStream(req, path3, options) {
+    function SendStream(req, path2, options) {
       Stream.call(this);
       var opts = options || {};
       this.options = opts;
-      this.path = path3;
+      this.path = path2;
       this.req = req;
       this._acceptRanges = opts.acceptRanges !== void 0 ? Boolean(opts.acceptRanges) : true;
       this._cacheControl = opts.cacheControl !== void 0 ? Boolean(opts.cacheControl) : true;
@@ -22584,10 +22584,10 @@ var require_send = __commonJS({
       var lastModified = this.res.getHeader("Last-Modified");
       return parseHttpDate(lastModified) <= parseHttpDate(ifRange);
     };
-    SendStream.prototype.redirect = function redirect(path3) {
+    SendStream.prototype.redirect = function redirect(path2) {
       var res = this.res;
       if (hasListeners(this, "directory")) {
-        this.emit("directory", res, path3);
+        this.emit("directory", res, path2);
         return;
       }
       if (this.hasTrailingSlash()) {
@@ -22607,38 +22607,38 @@ var require_send = __commonJS({
     SendStream.prototype.pipe = function pipe(res) {
       var root = this._root;
       this.res = res;
-      var path3 = decode(this.path);
-      if (path3 === -1) {
+      var path2 = decode(this.path);
+      if (path2 === -1) {
         this.error(400);
         return res;
       }
-      if (~path3.indexOf("\0")) {
+      if (~path2.indexOf("\0")) {
         this.error(400);
         return res;
       }
       var parts;
       if (root !== null) {
-        if (path3) {
-          path3 = normalize("." + sep + path3);
+        if (path2) {
+          path2 = normalize("." + sep + path2);
         }
-        if (UP_PATH_REGEXP.test(path3)) {
-          debug('malicious path "%s"', path3);
+        if (UP_PATH_REGEXP.test(path2)) {
+          debug('malicious path "%s"', path2);
           this.error(403);
           return res;
         }
-        parts = path3.split(sep);
-        path3 = normalize(join(root, path3));
+        parts = path2.split(sep);
+        path2 = normalize(join(root, path2));
       } else {
-        if (UP_PATH_REGEXP.test(path3)) {
-          debug('malicious path "%s"', path3);
+        if (UP_PATH_REGEXP.test(path2)) {
+          debug('malicious path "%s"', path2);
           this.error(403);
           return res;
         }
-        parts = normalize(path3).split(sep);
-        path3 = resolve(path3);
+        parts = normalize(path2).split(sep);
+        path2 = resolve(path2);
       }
       if (containsDotFile(parts)) {
-        debug('%s dotfile "%s"', this._dotfiles, path3);
+        debug('%s dotfile "%s"', this._dotfiles, path2);
         switch (this._dotfiles) {
           case "allow":
             break;
@@ -22652,13 +22652,13 @@ var require_send = __commonJS({
         }
       }
       if (this._index.length && this.hasTrailingSlash()) {
-        this.sendIndex(path3);
+        this.sendIndex(path2);
         return res;
       }
-      this.sendFile(path3);
+      this.sendFile(path2);
       return res;
     };
-    SendStream.prototype.send = function send2(path3, stat) {
+    SendStream.prototype.send = function send2(path2, stat) {
       var len = stat.size;
       var options = this.options;
       var opts = {};
@@ -22670,9 +22670,9 @@ var require_send = __commonJS({
         this.headersAlreadySent();
         return;
       }
-      debug('pipe "%s"', path3);
-      this.setHeader(path3, stat);
-      this.type(path3);
+      debug('pipe "%s"', path2);
+      this.setHeader(path2, stat);
+      this.type(path2);
       if (this.isConditionalGET()) {
         if (this.isPreconditionFailure()) {
           this.error(412);
@@ -22721,30 +22721,30 @@ var require_send = __commonJS({
         res.end();
         return;
       }
-      this.stream(path3, opts);
+      this.stream(path2, opts);
     };
-    SendStream.prototype.sendFile = function sendFile(path3) {
+    SendStream.prototype.sendFile = function sendFile(path2) {
       var i = 0;
       var self2 = this;
-      debug('stat "%s"', path3);
-      fs2.stat(path3, function onstat(err, stat) {
-        var pathEndsWithSep = path3[path3.length - 1] === sep;
-        if (err && err.code === "ENOENT" && !extname(path3) && !pathEndsWithSep) {
+      debug('stat "%s"', path2);
+      fs.stat(path2, function onstat(err, stat) {
+        var pathEndsWithSep = path2[path2.length - 1] === sep;
+        if (err && err.code === "ENOENT" && !extname(path2) && !pathEndsWithSep) {
           return next(err);
         }
         if (err) return self2.onStatError(err);
-        if (stat.isDirectory()) return self2.redirect(path3);
+        if (stat.isDirectory()) return self2.redirect(path2);
         if (pathEndsWithSep) return self2.error(404);
-        self2.emit("file", path3, stat);
-        self2.send(path3, stat);
+        self2.emit("file", path2, stat);
+        self2.send(path2, stat);
       });
       function next(err) {
         if (self2._extensions.length <= i) {
           return err ? self2.onStatError(err) : self2.error(404);
         }
-        var p = path3 + "." + self2._extensions[i++];
+        var p = path2 + "." + self2._extensions[i++];
         debug('stat "%s"', p);
-        fs2.stat(p, function(err2, stat) {
+        fs.stat(p, function(err2, stat) {
           if (err2) return next(err2);
           if (stat.isDirectory()) return next();
           self2.emit("file", p, stat);
@@ -22752,7 +22752,7 @@ var require_send = __commonJS({
         });
       }
     };
-    SendStream.prototype.sendIndex = function sendIndex(path3) {
+    SendStream.prototype.sendIndex = function sendIndex(path2) {
       var i = -1;
       var self2 = this;
       function next(err) {
@@ -22760,9 +22760,9 @@ var require_send = __commonJS({
           if (err) return self2.onStatError(err);
           return self2.error(404);
         }
-        var p = join(path3, self2._index[i]);
+        var p = join(path2, self2._index[i]);
         debug('stat "%s"', p);
-        fs2.stat(p, function(err2, stat) {
+        fs.stat(p, function(err2, stat) {
           if (err2) return next(err2);
           if (stat.isDirectory()) return next();
           self2.emit("file", p, stat);
@@ -22771,10 +22771,10 @@ var require_send = __commonJS({
       }
       next();
     };
-    SendStream.prototype.stream = function stream(path3, options) {
+    SendStream.prototype.stream = function stream(path2, options) {
       var self2 = this;
       var res = this.res;
-      var stream2 = fs2.createReadStream(path3, options);
+      var stream2 = fs.createReadStream(path2, options);
       this.emit("stream", stream2);
       stream2.pipe(res);
       function cleanup() {
@@ -22789,17 +22789,17 @@ var require_send = __commonJS({
         self2.emit("end");
       });
     };
-    SendStream.prototype.type = function type(path3) {
+    SendStream.prototype.type = function type(path2) {
       var res = this.res;
       if (res.getHeader("Content-Type")) return;
-      var ext = extname(path3);
+      var ext = extname(path2);
       var type2 = mime.contentType(ext) || "application/octet-stream";
       debug("content-type %s", type2);
       res.setHeader("Content-Type", type2);
     };
-    SendStream.prototype.setHeader = function setHeader(path3, stat) {
+    SendStream.prototype.setHeader = function setHeader(path2, stat) {
       var res = this.res;
-      this.emit("headers", res, path3, stat);
+      this.emit("headers", res, path2, stat);
       if (this._acceptRanges && !res.getHeader("Accept-Ranges")) {
         debug("accept ranges");
         res.setHeader("Accept-Ranges", "bytes");
@@ -22857,9 +22857,9 @@ var require_send = __commonJS({
       }
       return err instanceof Error ? createError(status, err, { expose: false }) : createError(status, err);
     }
-    function decode(path3) {
+    function decode(path2) {
       try {
-        return decodeURIComponent(path3);
+        return decodeURIComponent(path2);
       } catch (err) {
         return -1;
       }
@@ -23003,7 +23003,7 @@ var require_response = __commonJS({
     var http = __require("node:http");
     var onFinished = require_on_finished();
     var mime = require_mime_types();
-    var path2 = __require("node:path");
+    var path = __require("node:path");
     var pathIsAbsolute = __require("node:path").isAbsolute;
     var statuses = require_statuses();
     var sign = require_cookie_signature().sign;
@@ -23012,8 +23012,8 @@ var require_response = __commonJS({
     var setCharset = require_utils3().setCharset;
     var cookie = require_cookie();
     var send = require_send();
-    var extname = path2.extname;
-    var resolve = path2.resolve;
+    var extname = path.extname;
+    var resolve = path.resolve;
     var vary = require_vary();
     var { Buffer: Buffer2 } = __require("node:buffer");
     var res = Object.create(http.ServerResponse.prototype);
@@ -23159,26 +23159,26 @@ var require_response = __commonJS({
       this.type("txt");
       return this.send(body);
     };
-    res.sendFile = function sendFile(path3, options, callback) {
+    res.sendFile = function sendFile(path2, options, callback) {
       var done = callback;
       var req = this.req;
       var res2 = this;
       var next = req.next;
       var opts = options || {};
-      if (!path3) {
+      if (!path2) {
         throw new TypeError("path argument is required to res.sendFile");
       }
-      if (typeof path3 !== "string") {
+      if (typeof path2 !== "string") {
         throw new TypeError("path must be a string to res.sendFile");
       }
       if (typeof options === "function") {
         done = options;
         opts = {};
       }
-      if (!opts.root && !pathIsAbsolute(path3)) {
+      if (!opts.root && !pathIsAbsolute(path2)) {
         throw new TypeError("path must be absolute or specify root to res.sendFile");
       }
-      var pathname = encodeURI(path3);
+      var pathname = encodeURI(path2);
       opts.etag = this.app.enabled("etag");
       var file = send(req, pathname, opts);
       sendfile(res2, file, opts, function(err) {
@@ -23189,7 +23189,7 @@ var require_response = __commonJS({
         }
       });
     };
-    res.download = function download(path3, filename, options, callback) {
+    res.download = function download(path2, filename, options, callback) {
       var done = callback;
       var name = filename;
       var opts = options || null;
@@ -23206,7 +23206,7 @@ var require_response = __commonJS({
         opts = filename;
       }
       var headers = {
-        "Content-Disposition": contentDisposition(name || path3)
+        "Content-Disposition": contentDisposition(name || path2)
       };
       if (opts && opts.headers) {
         var keys = Object.keys(opts.headers);
@@ -23219,7 +23219,7 @@ var require_response = __commonJS({
       }
       opts = Object.create(opts);
       opts.headers = headers;
-      var fullPath = !opts.root ? resolve(path3) : path3;
+      var fullPath = !opts.root ? resolve(path2) : path2;
       return this.sendFile(fullPath, opts, done);
     };
     res.contentType = res.type = function contentType(type) {
@@ -23502,11 +23502,11 @@ var require_serve_static = __commonJS({
         }
         var forwardError = !fallthrough;
         var originalUrl = parseUrl.original(req);
-        var path2 = parseUrl(req).pathname;
-        if (path2 === "/" && originalUrl.pathname.substr(-1) !== "/") {
-          path2 = "";
+        var path = parseUrl(req).pathname;
+        if (path === "/" && originalUrl.pathname.substr(-1) !== "/") {
+          path = "";
         }
-        var stream = send(req, path2, opts);
+        var stream = send(req, path, opts);
         stream.on("directory", onDirectory);
         if (setHeaders) {
           stream.on("headers", setHeaders);
@@ -24449,13 +24449,13 @@ function __disposeResources(env) {
   }
   return next();
 }
-function __rewriteRelativeImportExtension(path2, preserveJsx) {
-  if (typeof path2 === "string" && /^\.\.?\//.test(path2)) {
-    return path2.replace(/\.(tsx)$|((?:\.d)?)((?:\.[^./]+?)?)\.([cm]?)ts$/i, function(m, tsx, d, ext, cm) {
+function __rewriteRelativeImportExtension(path, preserveJsx) {
+  if (typeof path === "string" && /^\.\.?\//.test(path)) {
+    return path.replace(/\.(tsx)$|((?:\.d)?)((?:\.[^./]+?)?)\.([cm]?)ts$/i, function(m, tsx, d, ext, cm) {
       return tsx ? preserveJsx ? ".jsx" : ".js" : d && (!ext || !cm) ? m : d + ext + "." + cm.toLowerCase() + "js";
     });
   }
-  return path2;
+  return path;
 }
 var extendStatics, __assign, __createBinding, __setModuleDefault, ownKeys, _SuppressedError, tslib_es6_default;
 var init_tslib_es6 = __esm({
@@ -25347,14 +25347,14 @@ var require_util = __commonJS({
         }
         const port2 = url.port != null ? url.port : url.protocol === "https:" ? 443 : 80;
         let origin = url.origin != null ? url.origin : `${url.protocol || ""}//${url.hostname || ""}:${port2}`;
-        let path2 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
+        let path = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
         if (origin[origin.length - 1] === "/") {
           origin = origin.slice(0, origin.length - 1);
         }
-        if (path2 && path2[0] !== "/") {
-          path2 = `/${path2}`;
+        if (path && path[0] !== "/") {
+          path = `/${path}`;
         }
-        return new URL(`${origin}${path2}`);
+        return new URL(`${origin}${path}`);
       }
       if (!isHttpOrHttpsPrefixed(url.origin || url.protocol)) {
         throw new InvalidArgumentError("Invalid URL protocol: the URL must start with `http:` or `https:`.");
@@ -25805,39 +25805,39 @@ var require_diagnostics = __commonJS({
       });
       diagnosticsChannel.channel("undici:client:sendHeaders").subscribe((evt) => {
         const {
-          request: { method, path: path2, origin }
+          request: { method, path, origin }
         } = evt;
-        debuglog("sending request to %s %s/%s", method, origin, path2);
+        debuglog("sending request to %s %s/%s", method, origin, path);
       });
       diagnosticsChannel.channel("undici:request:headers").subscribe((evt) => {
         const {
-          request: { method, path: path2, origin },
+          request: { method, path, origin },
           response: { statusCode }
         } = evt;
         debuglog(
           "received response to %s %s/%s - HTTP %d",
           method,
           origin,
-          path2,
+          path,
           statusCode
         );
       });
       diagnosticsChannel.channel("undici:request:trailers").subscribe((evt) => {
         const {
-          request: { method, path: path2, origin }
+          request: { method, path, origin }
         } = evt;
-        debuglog("trailers received from %s %s/%s", method, origin, path2);
+        debuglog("trailers received from %s %s/%s", method, origin, path);
       });
       diagnosticsChannel.channel("undici:request:error").subscribe((evt) => {
         const {
-          request: { method, path: path2, origin },
+          request: { method, path, origin },
           error
         } = evt;
         debuglog(
           "request to %s %s/%s errored - %s",
           method,
           origin,
-          path2,
+          path,
           error.message
         );
       });
@@ -25886,9 +25886,9 @@ var require_diagnostics = __commonJS({
         });
         diagnosticsChannel.channel("undici:client:sendHeaders").subscribe((evt) => {
           const {
-            request: { method, path: path2, origin }
+            request: { method, path, origin }
           } = evt;
-          debuglog("sending request to %s %s/%s", method, origin, path2);
+          debuglog("sending request to %s %s/%s", method, origin, path);
         });
       }
       diagnosticsChannel.channel("undici:websocket:open").subscribe((evt) => {
@@ -25951,7 +25951,7 @@ var require_request2 = __commonJS({
     var kHandler = /* @__PURE__ */ Symbol("handler");
     var Request = class {
       constructor(origin, {
-        path: path2,
+        path,
         method,
         body,
         headers,
@@ -25966,11 +25966,11 @@ var require_request2 = __commonJS({
         expectContinue,
         servername
       }, handler) {
-        if (typeof path2 !== "string") {
+        if (typeof path !== "string") {
           throw new InvalidArgumentError("path must be a string");
-        } else if (path2[0] !== "/" && !(path2.startsWith("http://") || path2.startsWith("https://")) && method !== "CONNECT") {
+        } else if (path[0] !== "/" && !(path.startsWith("http://") || path.startsWith("https://")) && method !== "CONNECT") {
           throw new InvalidArgumentError("path must be an absolute URL or start with a slash");
-        } else if (invalidPathRegex.test(path2)) {
+        } else if (invalidPathRegex.test(path)) {
           throw new InvalidArgumentError("invalid request path");
         }
         if (typeof method !== "string") {
@@ -26036,7 +26036,7 @@ var require_request2 = __commonJS({
         this.completed = false;
         this.aborted = false;
         this.upgrade = upgrade || null;
-        this.path = query ? buildURL(path2, query) : path2;
+        this.path = query ? buildURL(path, query) : path;
         this.origin = origin;
         this.idempotent = idempotent == null ? method === "HEAD" || method === "GET" : idempotent;
         this.blocking = blocking == null ? false : blocking;
@@ -30555,7 +30555,7 @@ var require_client_h1 = __commonJS({
       return method !== "GET" && method !== "HEAD" && method !== "OPTIONS" && method !== "TRACE" && method !== "CONNECT";
     }
     function writeH1(client, request) {
-      const { method, path: path2, host, upgrade, blocking, reset } = request;
+      const { method, path, host, upgrade, blocking, reset } = request;
       let { body, headers, contentLength } = request;
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH" || method === "QUERY" || method === "PROPFIND" || method === "PROPPATCH";
       if (util2.isFormDataLike(body)) {
@@ -30621,7 +30621,7 @@ var require_client_h1 = __commonJS({
       if (blocking) {
         socket[kBlocking] = true;
       }
-      let header = `${method} ${path2} HTTP/1.1\r
+      let header = `${method} ${path} HTTP/1.1\r
 `;
       if (typeof host === "string") {
         header += `host: ${host}\r
@@ -31147,7 +31147,7 @@ var require_client_h2 = __commonJS({
     }
     function writeH2(client, request) {
       const session = client[kHTTP2Session];
-      const { method, path: path2, host, upgrade, expectContinue, signal, headers: reqHeaders } = request;
+      const { method, path, host, upgrade, expectContinue, signal, headers: reqHeaders } = request;
       let { body } = request;
       if (upgrade) {
         util2.errorRequest(client, request, new Error("Upgrade not supported for H2"));
@@ -31214,7 +31214,7 @@ var require_client_h2 = __commonJS({
         });
         return true;
       }
-      headers[HTTP2_HEADER_PATH] = path2;
+      headers[HTTP2_HEADER_PATH] = path;
       headers[HTTP2_HEADER_SCHEME] = "https";
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH";
       if (body && typeof body.read === "function") {
@@ -31567,9 +31567,9 @@ var require_redirect_handler = __commonJS({
           return this.handler.onHeaders(statusCode, headers, resume, statusText);
         }
         const { origin, pathname, search } = util2.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
-        const path2 = search ? `${pathname}${search}` : pathname;
+        const path = search ? `${pathname}${search}` : pathname;
         this.opts.headers = cleanRequestHeaders(this.opts.headers, statusCode === 303, this.opts.origin !== origin);
-        this.opts.path = path2;
+        this.opts.path = path;
         this.opts.origin = origin;
         this.opts.maxRedirections = 0;
         this.opts.query = null;
@@ -32803,10 +32803,10 @@ var require_proxy_agent = __commonJS({
         };
         const {
           origin,
-          path: path2 = "/",
+          path = "/",
           headers = {}
         } = opts;
-        opts.path = origin + path2;
+        opts.path = origin + path;
         if (!("host" in headers) && !("Host" in headers)) {
           const { host } = new URL2(origin);
           headers.host = host;
@@ -34727,20 +34727,20 @@ var require_mock_utils = __commonJS({
       }
       return true;
     }
-    function safeUrl(path2) {
-      if (typeof path2 !== "string") {
-        return path2;
+    function safeUrl(path) {
+      if (typeof path !== "string") {
+        return path;
       }
-      const pathSegments = path2.split("?");
+      const pathSegments = path.split("?");
       if (pathSegments.length !== 2) {
-        return path2;
+        return path;
       }
       const qp = new URLSearchParams(pathSegments.pop());
       qp.sort();
       return [...pathSegments, qp.toString()].join("?");
     }
-    function matchKey(mockDispatch2, { path: path2, method, body, headers }) {
-      const pathMatch = matchValue(mockDispatch2.path, path2);
+    function matchKey(mockDispatch2, { path, method, body, headers }) {
+      const pathMatch = matchValue(mockDispatch2.path, path);
       const methodMatch = matchValue(mockDispatch2.method, method);
       const bodyMatch = typeof mockDispatch2.body !== "undefined" ? matchValue(mockDispatch2.body, body) : true;
       const headersMatch = matchHeaders(mockDispatch2, headers);
@@ -34762,7 +34762,7 @@ var require_mock_utils = __commonJS({
     function getMockDispatch(mockDispatches, key) {
       const basePath = key.query ? buildURL(key.path, key.query) : key.path;
       const resolvedPath = typeof basePath === "string" ? safeUrl(basePath) : basePath;
-      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path2 }) => matchValue(safeUrl(path2), resolvedPath));
+      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path }) => matchValue(safeUrl(path), resolvedPath));
       if (matchedMockDispatches.length === 0) {
         throw new MockNotMatchedError(`Mock dispatch not matched for path '${resolvedPath}'`);
       }
@@ -34800,9 +34800,9 @@ var require_mock_utils = __commonJS({
       }
     }
     function buildKey(opts) {
-      const { path: path2, method, body, headers, query } = opts;
+      const { path, method, body, headers, query } = opts;
       return {
-        path: path2,
+        path,
         method,
         body,
         headers,
@@ -34859,9 +34859,9 @@ var require_mock_utils = __commonJS({
       } else {
         handleReply(this[kDispatches]);
       }
-      function handleReply(mockDispatches, _data2 = data) {
+      function handleReply(mockDispatches, _data = data) {
         const optsHeaders = Array.isArray(opts.headers) ? buildHeadersFromArray(opts.headers) : opts.headers;
-        const body = typeof _data2 === "function" ? _data2({ ...opts, headers: optsHeaders }) : _data2;
+        const body = typeof _data === "function" ? _data({ ...opts, headers: optsHeaders }) : _data;
         if (isPromise(body)) {
           body.then((newData) => handleReply(mockDispatches, newData));
           return;
@@ -35265,10 +35265,10 @@ var require_pending_interceptors_formatter = __commonJS({
       }
       format(pendingInterceptors) {
         const withPrettyHeaders = pendingInterceptors.map(
-          ({ method, path: path2, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
+          ({ method, path, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
             Method: method,
             Origin: origin,
-            Path: path2,
+            Path: path,
             "Status code": statusCode,
             Persistent: persist ? PERSISTENT : NOT_PERSISTENT,
             Invocations: timesInvoked,
@@ -40149,9 +40149,9 @@ var require_util6 = __commonJS({
         }
       }
     }
-    function validateCookiePath(path2) {
-      for (let i = 0; i < path2.length; ++i) {
-        const code = path2.charCodeAt(i);
+    function validateCookiePath(path) {
+      for (let i = 0; i < path.length; ++i) {
+        const code = path.charCodeAt(i);
         if (code < 32 || // exclude CTLs (0-31)
         code === 127 || // DEL
         code === 59) {
@@ -42791,11 +42791,11 @@ var require_undici = __commonJS({
           if (typeof opts.path !== "string") {
             throw new InvalidArgumentError("invalid opts.path");
           }
-          let path2 = opts.path;
+          let path = opts.path;
           if (!opts.path.startsWith("/")) {
-            path2 = `/${path2}`;
+            path = `/${path}`;
           }
-          url = new URL(util2.parseOrigin(url).origin + path2);
+          url = new URL(util2.parseOrigin(url).origin + path);
         } else {
           if (!opts) {
             opts = typeof url === "object" ? url : {};
@@ -44265,15 +44265,15 @@ var require_message = __commonJS({
       ComponentType2[ComponentType2["Checkbox"] = 23] = "Checkbox";
       ComponentType2[ComponentType2["SelectMenu"] = 3] = "SelectMenu";
     })(ComponentType || (exports2.ComponentType = ComponentType = {}));
-    var ButtonStyle;
-    (function(ButtonStyle2) {
-      ButtonStyle2[ButtonStyle2["Primary"] = 1] = "Primary";
-      ButtonStyle2[ButtonStyle2["Secondary"] = 2] = "Secondary";
-      ButtonStyle2[ButtonStyle2["Success"] = 3] = "Success";
-      ButtonStyle2[ButtonStyle2["Danger"] = 4] = "Danger";
-      ButtonStyle2[ButtonStyle2["Link"] = 5] = "Link";
-      ButtonStyle2[ButtonStyle2["Premium"] = 6] = "Premium";
-    })(ButtonStyle || (exports2.ButtonStyle = ButtonStyle = {}));
+    var ButtonStyle2;
+    (function(ButtonStyle3) {
+      ButtonStyle3[ButtonStyle3["Primary"] = 1] = "Primary";
+      ButtonStyle3[ButtonStyle3["Secondary"] = 2] = "Secondary";
+      ButtonStyle3[ButtonStyle3["Success"] = 3] = "Success";
+      ButtonStyle3[ButtonStyle3["Danger"] = 4] = "Danger";
+      ButtonStyle3[ButtonStyle3["Link"] = 5] = "Link";
+      ButtonStyle3[ButtonStyle3["Premium"] = 6] = "Premium";
+    })(ButtonStyle2 || (exports2.ButtonStyle = ButtonStyle2 = {}));
     var TextInputStyle;
     (function(TextInputStyle2) {
       TextInputStyle2[TextInputStyle2["Short"] = 1] = "Short";
@@ -50204,13 +50204,13 @@ var require_tree2 = __commonJS({
       mime: leaf.info.mime,
       extension: leaf.info.extension
     });
-    var isLeafNode = (tree, path2) => tree && path2.length === 0;
+    var isLeafNode = (tree, path) => tree && path.length === 0;
     var merge = (node, tree) => {
       if (node.bytes.length === 0)
         return tree;
-      const [currentByte, ...path2] = node.bytes;
+      const [currentByte, ...path] = node.bytes;
       const currentTree = tree.bytes[currentByte];
-      if (isLeafNode(currentTree, path2)) {
+      if (isLeafNode(currentTree, path)) {
         const matchingNode = tree.bytes[currentByte];
         tree.bytes[currentByte] = {
           ...matchingNode,
@@ -50222,9 +50222,9 @@ var require_tree2 = __commonJS({
         return tree;
       }
       if (tree.bytes[currentByte]) {
-        tree.bytes[currentByte] = exports2.merge(exports2.createNode(node.typename, path2, node.info), tree.bytes[currentByte]);
+        tree.bytes[currentByte] = exports2.merge(exports2.createNode(node.typename, path, node.info), tree.bytes[currentByte]);
       } else {
-        tree.bytes[currentByte] = exports2.createComplexNode(node.typename, path2, node.info);
+        tree.bytes[currentByte] = exports2.createComplexNode(node.typename, path, node.info);
       }
       return tree;
     };
@@ -50238,7 +50238,7 @@ var require_tree2 = __commonJS({
         bytes: {},
         matches: void 0
       };
-      const [currentKey, ...path2] = bytes;
+      const [currentKey, ...path] = bytes;
       if (bytes.length === 0) {
         return {
           matches: [
@@ -50250,7 +50250,7 @@ var require_tree2 = __commonJS({
           bytes: {}
         };
       }
-      obj.bytes[currentKey] = exports2.createComplexNode(typename, path2, info);
+      obj.bytes[currentKey] = exports2.createComplexNode(typename, path, info);
       return obj;
     };
     exports2.createComplexNode = createComplexNode;
@@ -56937,8 +56937,8 @@ var require_Util = __commonJS({
       await client.rest.patch(route, { body: updatedItems, reason });
       return updatedItems;
     }
-    function basename(path2, ext) {
-      const res = parse(path2);
+    function basename(path, ext) {
+      const res = parse(path);
       return ext && res.ext.startsWith(ext) ? res.name : res.base.split("?")[0];
     }
     function cleanContent(str, channel) {
@@ -59420,8 +59420,8 @@ var require_DataResolver = __commonJS({
   "../../node_modules/.pnpm/discord.js@14.26.4/node_modules/discord.js/src/util/DataResolver.js"(exports2, module2) {
     "use strict";
     var { Buffer: Buffer2 } = __require("node:buffer");
-    var fs2 = __require("node:fs/promises");
-    var path2 = __require("node:path");
+    var fs = __require("node:fs/promises");
+    var path = __require("node:path");
     var { fetch: fetch2 } = require_undici();
     var { DiscordjsError: DiscordjsError2, DiscordjsTypeError: DiscordjsTypeError2, ErrorCodes: ErrorCodes2 } = require_errors2();
     var Invite2 = require_Invite();
@@ -59447,10 +59447,10 @@ var require_DataResolver = __commonJS({
           const res = await fetch2(resource);
           return { data: Buffer2.from(await res.arrayBuffer()), contentType: res.headers.get("content-type") };
         }
-        const file = path2.resolve(resource);
-        const stats2 = await fs2.stat(file);
+        const file = path.resolve(resource);
+        const stats2 = await fs.stat(file);
         if (!stats2.isFile()) throw new DiscordjsError2(ErrorCodes2.FileNotFound, file);
-        return { data: await fs2.readFile(file) };
+        return { data: await fs.readFile(file) };
       }
       throw new DiscordjsTypeError2(ErrorCodes2.ReqResourceType);
     }
@@ -62603,11 +62603,11 @@ var require_baseGet = __commonJS({
   "../../node_modules/.pnpm/lodash@4.18.1/node_modules/lodash/_baseGet.js"(exports2, module2) {
     var castPath = require_castPath();
     var toKey = require_toKey();
-    function baseGet(object, path2) {
-      path2 = castPath(path2, object);
-      var index = 0, length = path2.length;
+    function baseGet(object, path) {
+      path = castPath(path, object);
+      var index = 0, length = path.length;
       while (object != null && index < length) {
-        object = object[toKey(path2[index++])];
+        object = object[toKey(path[index++])];
       }
       return index && index == length ? object : void 0;
     }
@@ -62619,8 +62619,8 @@ var require_baseGet = __commonJS({
 var require_get2 = __commonJS({
   "../../node_modules/.pnpm/lodash@4.18.1/node_modules/lodash/get.js"(exports2, module2) {
     var baseGet = require_baseGet();
-    function get(object, path2, defaultValue) {
-      var result = object == null ? void 0 : baseGet(object, path2);
+    function get(object, path, defaultValue) {
+      var result = object == null ? void 0 : baseGet(object, path);
       return result === void 0 ? defaultValue : result;
     }
     module2.exports = get;
@@ -66462,14 +66462,14 @@ var require_dist9 = __commonJS({
     };
     var index_exports = {};
     __export2(index_exports, {
-      ActionRowBuilder: () => ActionRowBuilder,
+      ActionRowBuilder: () => ActionRowBuilder2,
       ApplicationCommandNumericOptionMinMaxValueMixin: () => ApplicationCommandNumericOptionMinMaxValueMixin,
       ApplicationCommandOptionBase: () => ApplicationCommandOptionBase,
       ApplicationCommandOptionChannelTypesMixin: () => ApplicationCommandOptionChannelTypesMixin,
       ApplicationCommandOptionWithAutocompleteMixin: () => ApplicationCommandOptionWithAutocompleteMixin,
       ApplicationCommandOptionWithChoicesMixin: () => ApplicationCommandOptionWithChoicesMixin,
       BaseSelectMenuBuilder: () => BaseSelectMenuBuilder,
-      ButtonBuilder: () => ButtonBuilder,
+      ButtonBuilder: () => ButtonBuilder2,
       ChannelSelectMenuBuilder: () => ChannelSelectMenuBuilder,
       CheckboxAssertions: () => Assertions_exports3,
       CheckboxBuilder: () => CheckboxBuilder,
@@ -67035,7 +67035,7 @@ var require_dist9 = __commonJS({
     };
     var import_v1027 = require_v106();
     var import_v102 = require_v106();
-    var ButtonBuilder = class extends ComponentBuilder {
+    var ButtonBuilder2 = class extends ComponentBuilder {
       static {
         __name(this, "ButtonBuilder");
       }
@@ -68817,7 +68817,7 @@ var require_dist9 = __commonJS({
     var dividerPredicate = import_shapeshift8.s.boolean();
     var spacingPredicate = import_shapeshift8.s.nativeEnum(import_v1020.SeparatorSpacingSize);
     var textDisplayContentPredicate = import_shapeshift8.s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(4e3).setValidationEnabled(isValidationEnabled);
-    var accessoryPredicate = import_shapeshift8.s.instance(ButtonBuilder).or(import_shapeshift8.s.instance(ThumbnailBuilder)).setValidationEnabled(isValidationEnabled);
+    var accessoryPredicate = import_shapeshift8.s.instance(ButtonBuilder2).or(import_shapeshift8.s.instance(ThumbnailBuilder)).setValidationEnabled(isValidationEnabled);
     var containerColorPredicate = colorPredicate.nullish();
     function assertReturnOfBuilder(input, ExpectedInstanceOf) {
       import_shapeshift8.s.instance(ExpectedInstanceOf).setValidationEnabled(isValidationEnabled).parse(input);
@@ -69070,7 +69070,7 @@ var require_dist9 = __commonJS({
        */
       addActionRowComponents(...components) {
         this.components.push(
-          ...normalizeArray(components).map((component) => resolveBuilder(component, ActionRowBuilder))
+          ...normalizeArray(components).map((component) => resolveBuilder(component, ActionRowBuilder2))
         );
         return this;
       }
@@ -69392,7 +69392,7 @@ var require_dist9 = __commonJS({
        * @param accessory - The accessory to use
        */
       setButtonAccessory(accessory) {
-        Reflect.set(this, "accessory", accessoryPredicate.parse(resolveBuilder(accessory, ButtonBuilder)));
+        Reflect.set(this, "accessory", accessoryPredicate.parse(resolveBuilder(accessory, ButtonBuilder2)));
         return this;
       }
       /**
@@ -69456,9 +69456,9 @@ var require_dist9 = __commonJS({
       }
       switch (data.type) {
         case import_v1027.ComponentType.ActionRow:
-          return new ActionRowBuilder(data);
+          return new ActionRowBuilder2(data);
         case import_v1027.ComponentType.Button:
-          return new ButtonBuilder(data);
+          return new ButtonBuilder2(data);
         case import_v1027.ComponentType.StringSelect:
           return new StringSelectMenuBuilder(data);
         case import_v1027.ComponentType.TextInput:
@@ -69514,7 +69514,7 @@ var require_dist9 = __commonJS({
       return new Constructor(builder);
     }
     __name(resolveBuilder, "resolveBuilder");
-    var ActionRowBuilder = class extends ComponentBuilder {
+    var ActionRowBuilder2 = class extends ComponentBuilder {
       static {
         __name(this, "ActionRowBuilder");
       }
@@ -69597,7 +69597,7 @@ var require_dist9 = __commonJS({
     });
     var import_shapeshift9 = require_cjs4();
     var titleValidator = import_shapeshift9.s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(45).setValidationEnabled(isValidationEnabled);
-    var componentsValidator = import_shapeshift9.s.union([import_shapeshift9.s.instance(ActionRowBuilder), import_shapeshift9.s.instance(LabelBuilder), import_shapeshift9.s.instance(TextDisplayBuilder)]).array().lengthGreaterThanOrEqual(1).setValidationEnabled(isValidationEnabled);
+    var componentsValidator = import_shapeshift9.s.union([import_shapeshift9.s.instance(ActionRowBuilder2), import_shapeshift9.s.instance(LabelBuilder), import_shapeshift9.s.instance(TextDisplayBuilder)]).array().lengthGreaterThanOrEqual(1).setValidationEnabled(isValidationEnabled);
     function validateRequiredParameters2(customId, title, components) {
       customIdValidator.parse(customId);
       titleValidator.parse(title);
@@ -69652,15 +69652,15 @@ var require_dist9 = __commonJS({
       addComponents(...components) {
         this.components.push(
           ...normalizeArray(components).map((component, idx) => {
-            if (component instanceof ActionRowBuilder || component instanceof LabelBuilder || component instanceof TextDisplayBuilder) {
+            if (component instanceof ActionRowBuilder2 || component instanceof LabelBuilder || component instanceof TextDisplayBuilder) {
               return component;
             }
             if (component instanceof TextInputBuilder) {
-              return new ActionRowBuilder().addComponents(component);
+              return new ActionRowBuilder2().addComponents(component);
             }
             if ("type" in component) {
               if (component.type === import_v1029.ComponentType.ActionRow) {
-                return new ActionRowBuilder(component);
+                return new ActionRowBuilder2(component);
               }
               if (component.type === import_v1029.ComponentType.Label) {
                 return new LabelBuilder(component);
@@ -69669,7 +69669,7 @@ var require_dist9 = __commonJS({
                 return new TextDisplayBuilder(component);
               }
               if (component.type === import_v1029.ComponentType.TextInput) {
-                return new ActionRowBuilder().addComponents(
+                return new ActionRowBuilder2().addComponents(
                   new TextInputBuilder(component)
                 );
               }
@@ -69709,7 +69709,7 @@ var require_dist9 = __commonJS({
        */
       addActionRowComponents(...components) {
         const normalized = normalizeArray(components);
-        const resolved = normalized.map((row) => resolveBuilder(row, ActionRowBuilder));
+        const resolved = normalized.map((row) => resolveBuilder(row, ActionRowBuilder2));
         this.components.push(...resolved);
         return this;
       }
@@ -72367,7 +72367,7 @@ var require_ActionRowBuilder = __commonJS({
     var { isJSONEncodable } = require_dist2();
     var { createComponentBuilder } = require_Components();
     var { toSnakeCase } = require_Transformers();
-    var ActionRowBuilder = class extends BuildersActionRow {
+    var ActionRowBuilder2 = class extends BuildersActionRow {
       constructor({ components, ...data } = {}) {
         super({
           ...toSnakeCase(data),
@@ -72383,7 +72383,7 @@ var require_ActionRowBuilder = __commonJS({
         return new this(isJSONEncodable(other) ? other.toJSON() : other);
       }
     };
-    module2.exports = ActionRowBuilder;
+    module2.exports = ActionRowBuilder2;
   }
 });
 
@@ -72395,7 +72395,7 @@ var require_ButtonBuilder = __commonJS({
     var { isJSONEncodable } = require_dist2();
     var { toSnakeCase } = require_Transformers();
     var { resolvePartialEmoji } = require_Util();
-    var ButtonBuilder = class extends BuildersButton {
+    var ButtonBuilder2 = class extends BuildersButton {
       constructor({ emoji, ...data } = {}) {
         super(toSnakeCase({ ...data, emoji: emoji && typeof emoji === "string" ? resolvePartialEmoji(emoji) : emoji }));
       }
@@ -72419,7 +72419,7 @@ var require_ButtonBuilder = __commonJS({
         return new this(isJSONEncodable(other) ? other.toJSON() : other);
       }
     };
-    module2.exports = ButtonBuilder;
+    module2.exports = ButtonBuilder2;
   }
 });
 
@@ -73172,8 +73172,8 @@ var require_Components = __commonJS({
     }
     module2.exports = { createComponent, createComponentBuilder, findComponentByCustomId };
     var ActionRow = require_ActionRow();
-    var ActionRowBuilder = require_ActionRowBuilder();
-    var ButtonBuilder = require_ButtonBuilder();
+    var ActionRowBuilder2 = require_ActionRowBuilder();
+    var ButtonBuilder2 = require_ButtonBuilder();
     var ButtonComponent = require_ButtonComponent();
     var ChannelSelectMenuBuilder = require_ChannelSelectMenuBuilder();
     var ChannelSelectMenuComponent = require_ChannelSelectMenuComponent();
@@ -73215,8 +73215,8 @@ var require_Components = __commonJS({
       [ComponentType.Label]: LabelComponent
     };
     var ComponentTypeToBuilder = {
-      [ComponentType.ActionRow]: ActionRowBuilder,
-      [ComponentType.Button]: ButtonBuilder,
+      [ComponentType.ActionRow]: ActionRowBuilder2,
+      [ComponentType.Button]: ButtonBuilder2,
       [ComponentType.StringSelect]: StringSelectMenuBuilder,
       [ComponentType.TextInput]: TextInputBuilder,
       [ComponentType.UserSelect]: UserSelectMenuBuilder,
@@ -75478,7 +75478,7 @@ var require_MessageManager = __commonJS({
         const data = await this.client.rest.get(Routes2.channelMessages(this.channel.id), {
           query: makeURLSearchParams2(apiOptions)
         });
-        return data.reduce((_data2, message) => _data2.set(message.id, this._add(message, cache)), new Collection2());
+        return data.reduce((_data, message) => _data.set(message.id, this._add(message, cache)), new Collection2());
       }
       /**
        * Options used to fetch pinned messages.
@@ -78626,9 +78626,9 @@ var require_ThreadManager = __commonJS({
        * @returns {Promise<FetchedThreadsMore>}
        */
       async fetchArchived({ type = "public", fetchAll = false, before, limit } = {}, cache = true) {
-        let path2 = Routes2.channelThreads(this.channel.id, type);
+        let path = Routes2.channelThreads(this.channel.id, type);
         if (type === "private" && !fetchAll) {
-          path2 = Routes2.channelJoinedArchivedThreads(this.channel.id);
+          path = Routes2.channelJoinedArchivedThreads(this.channel.id);
         }
         let timestamp;
         let id;
@@ -78652,7 +78652,7 @@ var require_ThreadManager = __commonJS({
             }
           }
         }
-        const raw = await this.client.rest.get(path2, { query });
+        const raw = await this.client.rest.get(path, { query });
         return this.constructor._mapThreads(raw, this.client, { parent: this.channel, cache });
       }
       /**
@@ -79189,7 +79189,7 @@ var require_TextChannel = __commonJS({
   "../../node_modules/.pnpm/discord.js@14.26.4/node_modules/discord.js/src/structures/TextChannel.js"(exports2, module2) {
     "use strict";
     var BaseGuildTextChannel = require_BaseGuildTextChannel();
-    var TextChannel = class extends BaseGuildTextChannel {
+    var TextChannel2 = class extends BaseGuildTextChannel {
       _patch(data) {
         super._patch(data);
         if ("rate_limit_per_user" in data) {
@@ -79206,7 +79206,7 @@ var require_TextChannel = __commonJS({
         return this.edit({ rateLimitPerUser, reason });
       }
     };
-    module2.exports = TextChannel;
+    module2.exports = TextChannel2;
   }
 });
 
@@ -87680,7 +87680,7 @@ var require_dist10 = __commonJS({
     var import_node_worker_threads2 = __require("worker_threads");
     var import_collection2 = require_dist3();
     var import_node_events = __require("events");
-    var import_node_path2 = __require("path");
+    var import_node_path = __require("path");
     var import_node_worker_threads = __require("worker_threads");
     var import_collection = require_dist3();
     var WorkerSendPayloadOp = /* @__PURE__ */ ((WorkerSendPayloadOp2) => {
@@ -87831,20 +87831,20 @@ var require_dist10 = __commonJS({
         }
       }
       resolveWorkerPath() {
-        const path2 = this.options.workerPath;
-        if (!path2) {
-          return (0, import_node_path2.join)(__dirname, "defaultWorker.js");
+        const path = this.options.workerPath;
+        if (!path) {
+          return (0, import_node_path.join)(__dirname, "defaultWorker.js");
         }
-        if ((0, import_node_path2.isAbsolute)(path2)) {
-          return path2;
+        if ((0, import_node_path.isAbsolute)(path)) {
+          return path;
         }
-        if (/^\.\.?[/\\]/.test(path2)) {
-          return (0, import_node_path2.resolve)(path2);
+        if (/^\.\.?[/\\]/.test(path)) {
+          return (0, import_node_path.resolve)(path);
         }
         try {
-          return __require.resolve(path2);
+          return __require.resolve(path);
         } catch {
-          return (0, import_node_path2.resolve)(path2);
+          return (0, import_node_path.resolve)(path);
         }
       }
       async waitForWorkerReady(worker) {
@@ -97585,7 +97585,7 @@ var require_Shard = __commonJS({
   "../../node_modules/.pnpm/discord.js@14.26.4/node_modules/discord.js/src/sharding/Shard.js"(exports2, module2) {
     "use strict";
     var EventEmitter = __require("node:events");
-    var path2 = __require("node:path");
+    var path = __require("node:path");
     var process2 = __require("node:process");
     var { setTimeout: setTimeout2, clearTimeout: clearTimeout2 } = __require("node:timers");
     var { setTimeout: sleep } = __require("node:timers/promises");
@@ -97637,14 +97637,14 @@ var require_Shard = __commonJS({
         this._exitListener = this._handleExit.bind(this, void 0, timeout);
         switch (this.manager.mode) {
           case "process":
-            this.process = childProcess.fork(path2.resolve(this.manager.file), this.args, {
+            this.process = childProcess.fork(path.resolve(this.manager.file), this.args, {
               env: this.env,
               execArgv: this.execArgv,
               silent: this.silent
             }).on("message", this._handleMessage.bind(this)).on("exit", this._exitListener);
             break;
           case "worker":
-            this.worker = new Worker(path2.resolve(this.manager.file), {
+            this.worker = new Worker(path.resolve(this.manager.file), {
               workerData: this.env,
               env: SHARE_ENV,
               execArgv: this.execArgv,
@@ -97905,8 +97905,8 @@ var require_ShardingManager = __commonJS({
   "../../node_modules/.pnpm/discord.js@14.26.4/node_modules/discord.js/src/sharding/ShardingManager.js"(exports2, module2) {
     "use strict";
     var EventEmitter = __require("node:events");
-    var fs2 = __require("node:fs");
-    var path2 = __require("node:path");
+    var fs = __require("node:fs");
+    var path = __require("node:path");
     var process2 = __require("node:process");
     var { setTimeout: sleep } = __require("node:timers/promises");
     var { Collection: Collection2 } = require_dist7();
@@ -97951,8 +97951,8 @@ var require_ShardingManager = __commonJS({
         };
         this.file = file;
         if (!file) throw new DiscordjsError2(ErrorCodes2.ClientInvalidOption, "File", "specified.");
-        if (!path2.isAbsolute(file)) this.file = path2.resolve(process2.cwd(), file);
-        const stats2 = fs2.statSync(this.file);
+        if (!path.isAbsolute(file)) this.file = path.resolve(process2.cwd(), file);
+        const stats2 = fs.statSync(this.file);
         if (!stats2.isFile()) throw new DiscordjsError2(ErrorCodes2.ClientInvalidOption, "File", "a file");
         this.shardList = _options.shardList ?? "auto";
         if (this.shardList !== "auto") {
@@ -99283,8 +99283,8 @@ function getErrorMap() {
 
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path2, errorMaps, issueData } = params;
-  const fullPath = [...path2, ...issueData.path || []];
+  const { data, path, errorMaps, issueData } = params;
+  const fullPath = [...path, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -99399,11 +99399,11 @@ var errorUtil;
 
 // ../../node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path2, key) {
+  constructor(parent, value, path, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path2;
+    this._path = path;
     this._key = key;
   }
   get path() {
@@ -102819,20 +102819,42 @@ router2.use(health_default);
 var routes_default = router2;
 
 // src/lib/logger.ts
-function fmt(level, obj, msg) {
+var isProduction = process.env.NODE_ENV === "production";
+function formatMsg(level, data, msg) {
   const ts = (/* @__PURE__ */ new Date()).toISOString();
-  const message = msg ?? (typeof obj === "string" ? obj : "");
-  const extra = obj && typeof obj === "object" && Object.keys(obj).length > 0 ? " " + JSON.stringify(obj) : "";
-  console.log(`[${ts}] ${level.toUpperCase().padEnd(5)} ${message}${extra}`);
+  const extra = Object.keys(data).length ? " " + JSON.stringify(data) : "";
+  return `[${ts}] ${level.toUpperCase().padEnd(5)} ${msg ?? ""}${extra}`;
 }
 var logger = {
-  info: (obj, msg) => fmt("info", obj, msg),
-  warn: (obj, msg) => fmt("warn", obj, msg),
-  error: (obj, msg) => fmt("error", obj, msg),
-  debug: (obj, msg) => fmt("debug", obj, msg),
-  trace: (obj, msg) => fmt("trace", obj, msg),
-  fatal: (obj, msg) => fmt("fatal", obj, msg),
-  child: (_bindings) => logger
+  info(data, msg) {
+    if (typeof data === "string") {
+      console.log(`[${(/* @__PURE__ */ new Date()).toISOString()}] INFO  ${data}`);
+      return;
+    }
+    console.log(formatMsg("info", data, msg));
+  },
+  warn(data, msg) {
+    if (typeof data === "string") {
+      console.warn(`[${(/* @__PURE__ */ new Date()).toISOString()}] WARN  ${data}`);
+      return;
+    }
+    console.warn(formatMsg("warn", data, msg));
+  },
+  error(data, msg) {
+    if (typeof data === "string") {
+      console.error(`[${(/* @__PURE__ */ new Date()).toISOString()}] ERROR ${data}`);
+      return;
+    }
+    console.error(formatMsg("error", data, msg));
+  },
+  debug(data, msg) {
+    if (isProduction) return;
+    if (typeof data === "string") {
+      console.debug(`[${(/* @__PURE__ */ new Date()).toISOString()}] DEBUG ${data}`);
+      return;
+    }
+    console.debug(formatMsg("debug", data, msg));
+  }
 };
 
 // src/app.ts
@@ -102851,56 +102873,25 @@ var app_default = app;
 var import_discord = __toESM(require_src2(), 1);
 
 // src/bot/store.ts
-import fs from "node:fs";
-import path from "node:path";
-var STORE_PATH = path.resolve("./data/rate-store.json");
 var MAX_HISTORY = 10;
-var DEFAULT_RATE = { robux: 1e3, brl: 38 };
-function ensureDir() {
-  const dir = path.dirname(STORE_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
-function load() {
-  try {
-    ensureDir();
-    if (!fs.existsSync(STORE_PATH)) {
-      return { currentRate: { ...DEFAULT_RATE }, history: [] };
-    }
-    const raw = fs.readFileSync(STORE_PATH, "utf-8");
-    return JSON.parse(raw);
-  } catch (err) {
-    logger.warn({ err }, "Failed to load rate store, using defaults");
-    return { currentRate: { ...DEFAULT_RATE }, history: [] };
-  }
-}
-function save(data) {
-  try {
-    ensureDir();
-    fs.writeFileSync(STORE_PATH, JSON.stringify(data, null, 2), "utf-8");
-  } catch (err) {
-    logger.error({ err }, "Failed to save rate store");
-  }
-}
-var _data = load();
+var currentRate = { robux: 1e3, brl: 38 };
+var history = [];
 function getCurrentRate() {
-  return { ..._data.currentRate };
+  return currentRate;
 }
 function getHistory() {
-  return [..._data.history];
+  return history;
 }
 function updateRate(after, changedBy) {
   const entry = {
+    before: { ...currentRate },
+    after: { ...after },
     changedBy,
-    changedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    before: { ..._data.currentRate },
-    after: { ...after }
+    changedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
-  _data.history.push(entry);
-  if (_data.history.length > MAX_HISTORY) _data.history.shift();
-  _data.currentRate = { ...after };
-  save(_data);
+  history.push(entry);
+  if (history.length > MAX_HISTORY) history.shift();
+  currentRate = { ...after };
 }
 
 // src/bot/robux.ts
@@ -102986,37 +102977,139 @@ function extractGamepassId(input) {
   if (/^\d+$/.test(input.trim())) return input.trim();
   return null;
 }
-async function fetchGamepass(id) {
+async function fetchRobloxProfile(username) {
   try {
-    const res = await fetch(
-      `https://economy.roblox.com/v2/game-passes/${id}/game-pass-product-info`,
-      { headers: { "Accept": "application/json" } }
-    );
-    if (!res.ok) return null;
-    const data = await res.json();
-    let thumbnailUrl = null;
-    try {
-      const thumbRes = await fetch(
-        `https://thumbnails.roblox.com/v1/game-passes?gamePassIds=${id}&size=150x150&format=Png`,
-        { headers: { "Accept": "application/json" } }
-      );
-      if (thumbRes.ok) {
-        const thumbData = await thumbRes.json();
-        thumbnailUrl = thumbData.data?.[0]?.imageUrl ?? null;
-      }
-    } catch {
+    const lookupRes = await fetch("https://users.roblox.com/v1/usernames/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ usernames: [username], excludeBannedUsers: false })
+    });
+    if (!lookupRes.ok) return null;
+    const lookupData = await lookupRes.json();
+    const user = lookupData.data?.[0];
+    if (!user) return null;
+    const [infoRes, friendsRes, followersRes, followingsRes, avatarRes] = await Promise.allSettled([
+      fetch(`https://users.roblox.com/v1/users/${user.id}`, { headers: { "Accept": "application/json" } }),
+      fetch(`https://friends.roblox.com/v1/users/${user.id}/friends/count`, { headers: { "Accept": "application/json" } }),
+      fetch(`https://friends.roblox.com/v1/users/${user.id}/followers/count`, { headers: { "Accept": "application/json" } }),
+      fetch(`https://friends.roblox.com/v1/users/${user.id}/followings/count`, { headers: { "Accept": "application/json" } }),
+      fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${user.id}&size=150x150&format=Png`, { headers: { "Accept": "application/json" } })
+    ]);
+    let description = "", created = "", isBanned = false;
+    if (infoRes.status === "fulfilled" && infoRes.value.ok) {
+      const info = await infoRes.value.json();
+      description = info.description ?? "";
+      created = info.created ?? "";
+      isBanned = info.isBanned ?? false;
     }
-    return {
-      name: data.Name ?? "Sem nome",
-      priceInRobux: data.PriceInRobux ?? null,
-      isForSale: data.IsForSale ?? false,
-      sales: data.Sales ?? 0,
-      creator: data.Creator?.Name ?? "Desconhecido",
-      thumbnailUrl
-    };
+    let friendsCount = 0;
+    if (friendsRes.status === "fulfilled" && friendsRes.value.ok) {
+      const d = await friendsRes.value.json();
+      friendsCount = d.count ?? 0;
+    }
+    let followersCount = 0;
+    if (followersRes.status === "fulfilled" && followersRes.value.ok) {
+      const d = await followersRes.value.json();
+      followersCount = d.count ?? 0;
+    }
+    let followingsCount = 0;
+    if (followingsRes.status === "fulfilled" && followingsRes.value.ok) {
+      const d = await followingsRes.value.json();
+      followingsCount = d.count ?? 0;
+    }
+    let avatarUrl = null;
+    if (avatarRes.status === "fulfilled" && avatarRes.value.ok) {
+      const d = await avatarRes.value.json();
+      avatarUrl = d.data?.[0]?.imageUrl ?? null;
+    }
+    return { id: user.id, name: user.name, displayName: user.displayName, description, created, isBanned, avatarUrl, friendsCount, followersCount, followingsCount };
   } catch {
     return null;
   }
+}
+var repStore = /* @__PURE__ */ new Map();
+function getRepData(userId) {
+  if (!repStore.has(userId)) repStore.set(userId, { rep: 0, givenTo: /* @__PURE__ */ new Map() });
+  return repStore.get(userId);
+}
+var ONE_DAY_MS = 24 * 60 * 60 * 1e3;
+function canGiveRep(giverId, targetId) {
+  const data = getRepData(giverId);
+  const last = data.givenTo.get(targetId) ?? 0;
+  return Date.now() - last >= ONE_DAY_MS;
+}
+function giveRep(giverId, targetId) {
+  const giver = getRepData(giverId);
+  giver.givenTo.set(targetId, Date.now());
+  const target = getRepData(targetId);
+  target.rep += 1;
+}
+function repRank(rep) {
+  if (rep >= 100) return "\u{1F451} Lend\xE1rio";
+  if (rep >= 50) return "\u{1F48E} Diamante";
+  if (rep >= 25) return "\u{1F947} Ouro";
+  if (rep >= 10) return "\u{1F948} Prata";
+  if (rep >= 3) return "\u{1F949} Bronze";
+  return "\u{1F331} Novato";
+}
+var marriages = /* @__PURE__ */ new Map();
+var msgAbraco = [
+  "deu um abra\xE7o apertado em",
+  "correu e abra\xE7ou forte",
+  "envolveu com um abra\xE7o enorme",
+  "deu o abra\xE7o mais fofo do dia para",
+  "apertou bem forte com carinho"
+];
+var msgBeijo = [
+  "deu um beijinho em",
+  "mandou um beijo cheio de carinho para",
+  "deu um selinho em",
+  "beijou na bochecha de",
+  "mandou um beijo voando para"
+];
+var msgHigh5 = [
+  "deu um high five \xE9pico para",
+  "bateu um high five empolgado com",
+  "mandou aquele high five certeiro para",
+  "veio com tudo e deu um high five em"
+];
+var msgElogio = [
+  "\xE9 incr\xEDvel e merece muito reconhecimento! \u{1F31F}",
+  "\xE9 a pessoa mais legal do servidor! \u{1F499}",
+  "ilumina qualquer ambiente que entra! \u2600\uFE0F",
+  "tem um cora\xE7\xE3o enorme! \u{1F49B}",
+  "\xE9 pura energia boa! \u2728",
+  "deixa o servidor muito mais divertido! \u{1F389}",
+  "\xE9 uma pessoa especial e \xFAnica! \u{1F48E}",
+  "tem um talento que impressiona! \u{1F680}",
+  "merece todo o sucesso do mundo! \u{1F3C6}",
+  "\xE9 simplesmente demais! \u{1F525}"
+];
+function randomFrom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+function shipScore(id1, id2) {
+  const combined = [id1, id2].sort().join("");
+  let hash = 0;
+  for (let i = 0; i < combined.length; i++) {
+    hash = hash * 31 + combined.charCodeAt(i) & 4294967295;
+  }
+  return Math.abs(hash) % 101;
+}
+function shipBar(score) {
+  const filled = Math.round(score / 10);
+  return "\u2764\uFE0F".repeat(filled) + "\u{1F5A4}".repeat(10 - filled);
+}
+var WELCOME_CHANNEL_NAMES = ["boas-vindas", "bem-vindo", "bem-vinda", "entrada", "geral", "welcome", "general"];
+function findWelcomeChannel(guild) {
+  if (guild.systemChannel) return guild.systemChannel;
+  for (const name of WELCOME_CHANNEL_NAMES) {
+    const ch = guild.channels.cache.find(
+      (c) => c.name === name && c.isTextBased() && !c.isDMBased()
+    );
+    if (ch) return ch;
+  }
+  return null;
 }
 function isAdmin(message) {
   if (!message.member) return false;
@@ -103033,7 +103126,8 @@ function startBot() {
       import_discord.GatewayIntentBits.Guilds,
       import_discord.GatewayIntentBits.GuildMessages,
       import_discord.GatewayIntentBits.MessageContent,
-      import_discord.GatewayIntentBits.DirectMessages
+      import_discord.GatewayIntentBits.DirectMessages,
+      import_discord.GatewayIntentBits.GuildMembers
     ]
   });
   client.once(import_discord.Events.ClientReady, (c) => {
@@ -103047,7 +103141,7 @@ function startBot() {
         { name: `1.000 Robux = ${brlFmt}`, type: ActivityType.Watching },
         { name: "!ajuda para ver comandos", type: ActivityType.Playing },
         { name: "Roblox \u2194 BRL em tempo real", type: ActivityType.Watching },
-        { name: "!robux | !brl | !gamepass", type: ActivityType.Playing }
+        { name: "!casar | !rep | !ship", type: ActivityType.Playing }
       ];
     };
     let idx = 0;
@@ -103059,6 +103153,22 @@ function startBot() {
     };
     rotate();
     setInterval(rotate, 3e4);
+  });
+  client.on(import_discord.Events.GuildMemberAdd, (member) => {
+    const channel = findWelcomeChannel(member.guild);
+    if (!channel) return;
+    const rate = getCurrentRate();
+    const embed = new import_discord.EmbedBuilder().setColor(5793266).setTitle("\u{1F389} Bem-vindo(a) ao servidor!").setDescription(
+      `Ol\xE1, ${member}! \xC9 muito bom ter voc\xEA aqui! \u{1F973}
+
+Use \`!ajuda\` para ver todos os meus comandos.
+Converta Robux, veja perfis do Roblox, fa\xE7a amizades e muito mais!`
+    ).setThumbnail(member.user.displayAvatarURL({ size: 256 })).addFields(
+      { name: "\u{1F464} Membro", value: member.user.username, inline: true },
+      { name: "\u{1F4C5} Conta criada", value: member.user.createdAt.toLocaleDateString("pt-BR"), inline: true },
+      { name: "\u{1F465} Total de membros", value: member.guild.memberCount.toLocaleString("pt-BR"), inline: true }
+    ).setFooter({ text: `Taxa atual: ${rateLabel(rate)}` }).setTimestamp();
+    channel.send({ embeds: [embed] }).catch(() => null);
   });
   client.on(import_discord.Events.MessageCreate, async (message) => {
     if (message.author.bot) return;
@@ -103158,17 +103268,17 @@ function startBot() {
       }
       if (lower === "!historico") {
         setCooldown(message.author.id);
-        const history = getHistory();
-        if (history.length === 0) {
+        const history2 = getHistory();
+        if (history2.length === 0) {
           await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Grey).setTitle("\u{1F4CB} Hist\xF3rico de taxas").setDescription("Nenhuma altera\xE7\xE3o registrada ainda.")] });
           return;
         }
-        const lines = history.slice().reverse().map(
+        const lines = history2.slice().reverse().map(
           (entry, i) => `**${i + 1}.** \`${formatDateTime(entry.changedAt)}\` \u2014 **${entry.changedBy}**
 \u21B3 ${rateLabel(entry.before)} \u2192 **${rateLabel(entry.after)}**`
         ).join("\n\n");
         await message.reply({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Purple).setTitle(`\u{1F4CB} Hist\xF3rico de taxas (\xFAltimas ${history.length})`).setDescription(lines)
+          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Purple).setTitle(`\u{1F4CB} Hist\xF3rico de taxas (\xFAltimas ${history2.length})`).setDescription(lines)
         ] });
         return;
       }
@@ -103214,30 +103324,245 @@ ${rows}
           await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C ID ou link inv\xE1lido. Ex: `!gamepass 12345678` ou cole o link do gamepass.")] });
           return;
         }
-        const loading = await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Grey).setDescription("\u{1F50D} Buscando gamepass no Roblox...")] });
-        const gp = await fetchGamepass(gpId);
-        if (!gp) {
-          await loading.edit({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Gamepass n\xE3o encontrado ou a API do Roblox est\xE1 fora do ar. Verifique o ID/link.")] });
+        const gamepassUrl = `https://www.roblox.com/game-pass/${gpId}`;
+        const linkButton = new import_discord.ActionRowBuilder().addComponents(
+          new import_discord.ButtonBuilder().setLabel("\u{1F3AE} Ver Gamepass no Roblox").setURL(gamepassUrl).setStyle(import_discord.ButtonStyle.Link)
+        );
+        stats.gamepass++;
+        await message.reply({
+          embeds: [
+            new import_discord.EmbedBuilder().setColor(import_discord.Colors.Orange).setTitle("\u{1F3AE} Gamepass do Roblox").setDescription(`Clique no bot\xE3o abaixo para ver o gamepass **#${gpId}** no Roblox.`).setFooter({ text: footerText(rate) })
+          ],
+          components: [linkButton]
+        });
+        return;
+      }
+      if (lower.startsWith("!perfil")) {
+        setCooldown(message.author.id);
+        const parts = content.split(/\s+/);
+        if (parts.length < 2) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Use: `!perfil <usu\xE1rio>` \u2014 Ex: `!perfil Builderman`")] });
           return;
         }
-        stats.gamepass++;
-        const embed = new import_discord.EmbedBuilder().setColor(import_discord.Colors.Orange).setTitle(`\u{1F3AE} ${gp.name}`).setURL(`https://www.roblox.com/game-pass/${gpId}`).addFields(
-          { name: "Criador", value: gp.creator, inline: true },
-          { name: "Vendas", value: gp.sales.toLocaleString("pt-BR"), inline: true },
-          { name: "\xC0 venda", value: gp.isForSale ? "\u2705 Sim" : "\u274C N\xE3o", inline: true }
-        );
-        if (gp.priceInRobux !== null) {
-          const priceBrl = robuxToBrl(gp.priceInRobux, rate);
-          embed.addFields(
-            { name: "\u{1F48E} Pre\xE7o em Robux", value: `${formatRobux(gp.priceInRobux)} Robux`, inline: true },
-            { name: "\u{1F4B5} Pre\xE7o em BRL", value: formatBrl(priceBrl), inline: true }
-          );
-        } else {
-          embed.addFields({ name: "\u{1F48E} Pre\xE7o", value: "Gratuito / Sem pre\xE7o", inline: true });
+        const username = parts[1];
+        const loading = await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Grey).setDescription(`\u{1F50D} Buscando perfil de **${username}**...`)] });
+        const profile = await fetchRobloxProfile(username);
+        if (!profile) {
+          await loading.edit({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription(`\u274C Usu\xE1rio **${username}** n\xE3o encontrado no Roblox.`)] });
+          return;
         }
-        if (gp.thumbnailUrl) embed.setThumbnail(gp.thumbnailUrl);
-        embed.setFooter({ text: footerText(rate) });
-        await loading.edit({ embeds: [embed] });
+        const profileUrl = `https://www.roblox.com/users/${profile.id}/profile`;
+        const profileButton = new import_discord.ActionRowBuilder().addComponents(
+          new import_discord.ButtonBuilder().setLabel("\u{1F464} Ver Perfil no Roblox").setURL(profileUrl).setStyle(import_discord.ButtonStyle.Link)
+        );
+        const joinDate = profile.created ? new Date(profile.created).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }) : "Desconhecido";
+        const embed = new import_discord.EmbedBuilder().setColor(import_discord.Colors.Blurple).setTitle(`${profile.isBanned ? "\u{1F6AB} " : "\u{1F464} "}${profile.displayName}`).setURL(profileUrl).addFields(
+          { name: "\u{1F464} Username", value: `@${profile.name}`, inline: true },
+          { name: "\u{1F194} ID", value: profile.id.toString(), inline: true },
+          { name: "\u{1F4C5} Conta criada em", value: joinDate, inline: true },
+          { name: "\u{1F46B} Amigos", value: profile.friendsCount.toLocaleString("pt-BR"), inline: true },
+          { name: "\u{1F465} Seguidores", value: profile.followersCount.toLocaleString("pt-BR"), inline: true },
+          { name: "\u27A1\uFE0F Seguindo", value: profile.followingsCount.toLocaleString("pt-BR"), inline: true }
+        );
+        if (profile.isBanned) embed.addFields({ name: "\u26A0\uFE0F Status", value: "Conta banida" });
+        if (profile.description) {
+          const desc = profile.description.length > 200 ? profile.description.slice(0, 200) + "..." : profile.description;
+          embed.setDescription(desc);
+        }
+        if (profile.avatarUrl) embed.setThumbnail(profile.avatarUrl);
+        await loading.edit({ embeds: [embed], components: [profileButton] });
+        return;
+      }
+      if (lower.startsWith("!rep")) {
+        setCooldown(message.author.id);
+        const mentioned = message.mentions.users.first();
+        if (!mentioned) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Mencione algu\xE9m! Ex: `!rep @usuario`")] });
+          return;
+        }
+        if (mentioned.id === message.author.id) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Voc\xEA n\xE3o pode dar rep para si mesmo!")] });
+          return;
+        }
+        if (mentioned.bot) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Voc\xEA n\xE3o pode dar rep para um bot!")] });
+          return;
+        }
+        if (!canGiveRep(message.author.id, mentioned.id)) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Orange).setDescription(`\u23F3 Voc\xEA j\xE1 deu rep para **${mentioned.displayName}** hoje. Volte em 24h!`)] });
+          return;
+        }
+        giveRep(message.author.id, mentioned.id);
+        const newRep = getRepData(mentioned.id).rep;
+        await message.reply({ embeds: [
+          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Gold).setTitle("\u2B50 Reputa\xE7\xE3o Dada!").setDescription(`**${message.author.displayName}** deu +1 rep para **${mentioned.displayName}**!`).addFields(
+            { name: "Total de rep", value: `\u2B50 ${newRep}`, inline: true },
+            { name: "Rank", value: repRank(newRep), inline: true }
+          )
+        ] });
+        return;
+      }
+      if (lower === "!meuperfil") {
+        setCooldown(message.author.id);
+        const data = getRepData(message.author.id);
+        const partnerText = marriages.has(message.author.id) ? `<@${marriages.get(message.author.id)}> \u{1F48D}` : "Solteiro(a) \u{1F494}";
+        await message.reply({ embeds: [
+          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Blurple).setTitle(`\u{1F464} Perfil de ${message.author.displayName}`).setThumbnail(message.author.displayAvatarURL()).addFields(
+            { name: "\u2B50 Reputa\xE7\xE3o", value: data.rep.toLocaleString("pt-BR"), inline: true },
+            { name: "\u{1F3C5} Rank", value: repRank(data.rep), inline: true },
+            { name: "\u{1F48D} Parceiro(a)", value: partnerText, inline: false }
+          ).setTimestamp()
+        ] });
+        return;
+      }
+      if (lower === "!ranking") {
+        setCooldown(message.author.id);
+        const sorted = [...repStore.entries()].sort((a, b) => b[1].rep - a[1].rep).slice(0, 10);
+        if (sorted.length === 0) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Grey).setDescription("Ningu\xE9m tem rep ainda. Use `!rep @usuario` para come\xE7ar!")] });
+          return;
+        }
+        const medals = ["\u{1F947}", "\u{1F948}", "\u{1F949}", "4\uFE0F\u20E3", "5\uFE0F\u20E3", "6\uFE0F\u20E3", "7\uFE0F\u20E3", "8\uFE0F\u20E3", "9\uFE0F\u20E3", "\u{1F51F}"];
+        const lines = sorted.map(
+          ([userId, data], i) => `${medals[i]} <@${userId}> \u2014 **${data.rep} rep** \xB7 ${repRank(data.rep)}`
+        ).join("\n");
+        await message.reply({ embeds: [
+          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Gold).setTitle("\u{1F3C6} Ranking de Reputa\xE7\xE3o").setDescription(lines).setTimestamp()
+        ] });
+        return;
+      }
+      if (lower.startsWith("!casar")) {
+        setCooldown(message.author.id);
+        const mentioned = message.mentions.users.first();
+        if (!mentioned) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Mencione algu\xE9m! Ex: `!casar @usuario`")] });
+          return;
+        }
+        if (mentioned.id === message.author.id) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Voc\xEA n\xE3o pode se casar consigo mesmo!")] });
+          return;
+        }
+        if (mentioned.bot) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Voc\xEA n\xE3o pode se casar com um bot!")] });
+          return;
+        }
+        if (marriages.has(message.author.id)) {
+          const partnerId = marriages.get(message.author.id);
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription(`\u274C Voc\xEA j\xE1 est\xE1 casado(a) com <@${partnerId}>! Use \`!divorciar\` primeiro.`)] });
+          return;
+        }
+        if (marriages.has(mentioned.id)) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription(`\u274C <@${mentioned.id}> j\xE1 est\xE1 casado(a) com outra pessoa!`)] });
+          return;
+        }
+        marriages.set(message.author.id, mentioned.id);
+        marriages.set(mentioned.id, message.author.id);
+        await message.reply({ embeds: [
+          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Fuchsia).setTitle("\u{1F48D} Casamento Virtual!").setDescription(`**${message.author.displayName}** e **${mentioned.displayName}** agora s\xE3o casados! \u{1F38A}
+
+Parab\xE9ns ao novo casal! \u{1F491}`).setTimestamp()
+        ] });
+        return;
+      }
+      if (lower === "!divorciar") {
+        setCooldown(message.author.id);
+        if (!marriages.has(message.author.id)) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Voc\xEA n\xE3o est\xE1 casado(a) com ningu\xE9m!")] });
+          return;
+        }
+        const partnerId = marriages.get(message.author.id);
+        marriages.delete(message.author.id);
+        marriages.delete(partnerId);
+        await message.reply({ embeds: [
+          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Grey).setTitle("\u{1F494} Div\xF3rcio").setDescription(`**${message.author.displayName}** e <@${partnerId}> se divorciaram. Que pena...`)
+        ] });
+        return;
+      }
+      if (lower === "!parceiro") {
+        setCooldown(message.author.id);
+        if (!marriages.has(message.author.id)) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Grey).setDescription("\u{1F494} Voc\xEA n\xE3o est\xE1 casado(a) com ningu\xE9m. Use `!casar @usuario`!")] });
+          return;
+        }
+        const partnerId = marriages.get(message.author.id);
+        await message.reply({ embeds: [
+          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Fuchsia).setTitle("\u{1F491} Seu Parceiro(a)").setDescription(`**${message.author.displayName}** est\xE1 casado(a) com <@${partnerId}> \u{1F48D}`)
+        ] });
+        return;
+      }
+      if (lower.startsWith("!ship")) {
+        setCooldown(message.author.id);
+        const mentioned = message.mentions.users;
+        if (mentioned.size < 2) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Mencione duas pessoas! Ex: `!ship @usuario1 @usuario2`")] });
+          return;
+        }
+        const [u1, u2] = mentioned.first(2);
+        const score = shipScore(u1.id, u2.id);
+        const bar = shipBar(score);
+        let comment = "";
+        if (score >= 90) comment = "Amor eterno! \u{1F49E}";
+        else if (score >= 70) comment = "Combinam muito! \u{1F495}";
+        else if (score >= 50) comment = "Tem potencial! \u{1F49B}";
+        else if (score >= 30) comment = "Pode melhorar... \u{1F914}";
+        else comment = "Melhor como amigos! \u{1F605}";
+        await message.reply({ embeds: [
+          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Fuchsia).setTitle("\u{1F498} Ship-o-metro").setDescription(`**${u1.displayName}** \u{1F49E} **${u2.displayName}**
+
+${bar}
+
+**${score}%** \u2014 ${comment}`)
+        ] });
+        return;
+      }
+      if (lower.startsWith("!abra\xE7ar") || lower.startsWith("!abracar")) {
+        setCooldown(message.author.id);
+        const mentioned = message.mentions.users.first();
+        if (!mentioned) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Mencione algu\xE9m! Ex: `!abra\xE7ar @usuario`")] });
+          return;
+        }
+        await message.reply({ embeds: [
+          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Yellow).setDescription(`\u{1F917} **${message.author.displayName}** ${randomFrom(msgAbraco)} **${mentioned.displayName}**!`)
+        ] });
+        return;
+      }
+      if (lower.startsWith("!beijar")) {
+        setCooldown(message.author.id);
+        const mentioned = message.mentions.users.first();
+        if (!mentioned) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Mencione algu\xE9m! Ex: `!beijar @usuario`")] });
+          return;
+        }
+        await message.reply({ embeds: [
+          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Fuchsia).setDescription(`\u{1F618} **${message.author.displayName}** ${randomFrom(msgBeijo)} **${mentioned.displayName}**!`)
+        ] });
+        return;
+      }
+      if (lower.startsWith("!high5")) {
+        setCooldown(message.author.id);
+        const mentioned = message.mentions.users.first();
+        if (!mentioned) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Mencione algu\xE9m! Ex: `!high5 @usuario`")] });
+          return;
+        }
+        await message.reply({ embeds: [
+          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Green).setDescription(`\u{1F64C} **${message.author.displayName}** ${randomFrom(msgHigh5)} **${mentioned.displayName}**!`)
+        ] });
+        return;
+      }
+      if (lower.startsWith("!elogiar")) {
+        setCooldown(message.author.id);
+        const mentioned = message.mentions.users.first();
+        if (!mentioned) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Mencione algu\xE9m! Ex: `!elogiar @usuario`")] });
+          return;
+        }
+        await message.reply({ embeds: [
+          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Gold).setDescription(`\u{1F31F} **${mentioned.displayName}** ${randomFrom(msgElogio)}
+
+\u2014 elogio enviado por **${message.author.displayName}**`)
+        ] });
         return;
       }
       if (lower.startsWith("!setraxa")) {
@@ -103284,7 +103609,7 @@ ${rows}
         }
         let amount = parseInt(parts[1], 10);
         if (isNaN(amount) || amount < 1) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Quantidade inv\xE1lida. Use um n\xFAmero entre 1 e 100. Ex: `!limpar 10`")] });
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Quantidade inv\xE1lida. Use um n\xFAmero entre 1 e 100.")] });
           return;
         }
         if (amount > 100) amount = 100;
@@ -103303,7 +103628,7 @@ ${rows}
         }
         const text = content.slice("!anuncio".length).trim();
         if (!text) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Informe o texto do an\xFAncio. Ex: `!anuncio Evento de Robux hoje \xE0s 20h!`")] });
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Informe o texto. Ex: `!anuncio Evento hoje \xE0s 20h!`")] });
           return;
         }
         await message.delete().catch(() => null);
@@ -103316,32 +103641,43 @@ ${rows}
       if (lower === "!ajuda" || lower === "!help") {
         setCooldown(message.author.id);
         await message.reply({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Blurple).setTitle("\u{1F3AE} Bot de Convers\xE3o Robux / BRL").addFields(
-            { name: "`!robux <R$>`", value: "Converte BRL \u2192 Robux" },
-            { name: "`!brl <robux>`", value: "Converte Robux \u2192 BRL" },
-            { name: "`!taxa`", value: "Mostra a taxa de c\xE2mbio atual" },
-            { name: "`!simular <v1> <v2> ...`", value: "Tabela de m\xFAltiplos valores (at\xE9 8)" },
-            { name: "`!gamepass <ID ou link>`", value: "Busca informa\xE7\xF5es de um gamepass do Roblox" },
-            { name: "`!historico`", value: "\xDAltimas altera\xE7\xF5es de taxa" },
-            { name: "`!status`", value: "Uptime e estat\xEDsticas do bot" },
-            { name: "`!setraxa <robux> <R$>`", value: "*(Admin)* Atualiza a taxa" },
-            { name: "`!limpar <quantidade>`", value: "*(Admin)* Apaga N mensagens do canal (m\xE1x: 100)" },
-            { name: "`!anuncio <mensagem>`", value: "*(Admin)* Posta e fixa um an\xFAncio no canal" },
-            { name: "`!ping`", value: "Lat\xEAncia do bot" },
-            { name: "`!ajuda`", value: "Mostra esta mensagem" }
-          ).addFields({
-            name: "Exemplos",
-            value: "`!robux 100` \u2192 Robux com R$100\n`!brl 1000` \u2192 quanto custa 1000 Robux\n`!gamepass 12345678` \u2192 info + pre\xE7o em BRL\n`!setraxa 1000 40` \u2192 1000 Robux = R$40,00"
-          }).setFooter({ text: footerText(rate) })
+          new import_discord.EmbedBuilder().setColor(5793266).setTitle("\u2728 FiskBot \u2014 Central de Comandos").setDescription("Ol\xE1! Aqui est\xE3o todos os meus comandos organizados por categoria.\nUse o prefixo `!` antes de cada comando.").addFields(
+            {
+              name: "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\u{1F4B8} **Robux & Convers\xE3o**",
+              value: "`!robux <R$>` \u2192 Converte BRL para Robux\n`!brl <robux>` \u2192 Converte Robux para BRL\n`!taxa` \u2192 Taxa de c\xE2mbio atual\n`!simular <v1> <v2>...` \u2192 Tabela de convers\xE3o\n`!historico` \u2192 Hist\xF3rico de altera\xE7\xF5es de taxa"
+            },
+            {
+              name: "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\u{1F3AE} **Roblox**",
+              value: "`!gamepass <ID ou link>` \u2192 Link direto para o gamepass\n`!perfil <usu\xE1rio>` \u2192 Perfil de um jogador Roblox"
+            },
+            {
+              name: "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\u{1F491} **Social**",
+              value: "`!casar @user` \u2192 Se casa virtualmente com algu\xE9m\n`!divorciar` \u2192 Termina o casamento\n`!parceiro` \u2192 Ver com quem est\xE1 casado(a)\n`!ship @u1 @u2` \u2192 Compatibilidade entre dois usu\xE1rios\n`!abra\xE7ar @user` \u2192 D\xE1 um abra\xE7o\n`!beijar @user` \u2192 D\xE1 um beijo\n`!high5 @user` \u2192 Bate um high five\n`!elogiar @user` \u2192 Elogia algu\xE9m"
+            },
+            {
+              name: "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\u2B50 **Reputa\xE7\xE3o**",
+              value: "`!rep @user` \u2192 D\xE1 +1 rep para algu\xE9m (1x por dia)\n`!meuperfil` \u2192 Ver seu perfil e reputa\xE7\xE3o\n`!ranking` \u2192 Top 10 em reputa\xE7\xE3o"
+            },
+            {
+              name: "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\u{1F527} **Utilit\xE1rios**",
+              value: "`!ping` \u2192 Lat\xEAncia do bot\n`!status` \u2192 Uptime e estat\xEDsticas"
+            },
+            {
+              name: "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\u{1F512} **Admin**",
+              value: "`!setraxa <robux> <R$>` \u2192 Atualiza a taxa\n`!limpar <qtd>` \u2192 Apaga N mensagens (m\xE1x 100)\n`!anuncio <texto>` \u2192 Posta e fixa um an\xFAncio"
+            }
+          ).setFooter({ text: footerText(rate) }).setTimestamp()
         ] });
         return;
       }
     } catch (err) {
-      logger.error({ err }, "Error handling Discord message");
+      logger.error({ err }, "Error handling command");
+      await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Ocorreu um erro interno. Tente novamente.")] }).catch(() => null);
     }
   });
   client.login(token).catch((err) => {
     logger.error({ err }, "Failed to login to Discord");
+    process.exit(1);
   });
 }
 
@@ -103362,8 +103698,8 @@ app_default.listen(port, (err) => {
     process.exit(1);
   }
   logger.info({ port }, "Server listening");
+  startBot();
 });
-startBot();
 /*! Bundled license information:
 
 depd/index.js:
@@ -103674,4 +104010,3 @@ undici/lib/web/websocket/frame.js:
    * @see https://github.com/colinhacks/zod/blob/master/LICENSE
    *)
 */
-//# sourceMappingURL=index.mjs.map
