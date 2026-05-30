@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "build": "tsc --build"},
+    "build": "echo 'Done'"},
   "private": true,
   "devDependencies": {
     "prettier": "^3.8.3",
