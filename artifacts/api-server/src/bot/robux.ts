@@ -13,6 +13,8 @@ import {
 import { logger } from "../lib/logger";
 import { getCurrentRate, getHistory, updateRate, type RateEntry } from "./store";
 
+// ── Cooldown ──────────────────────────────────────────────────────────────────
+
 const COOLDOWN_MS = 3000;
 const cooldowns = new Map<string, number>();
 
@@ -23,6 +25,8 @@ function isOnCooldown(userId: string): boolean {
 function setCooldown(userId: string): void {
   cooldowns.set(userId, Date.now());
 }
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
 
 const stats = {
   startedAt: new Date(),
@@ -47,6 +51,8 @@ function formatUptime(): string {
   return `${m}m ${s % 60}s`;
 }
 
+// ── Math helpers ──────────────────────────────────────────────────────────────
+
 function robuxPerBrl(rate: RateEntry): number {
   return rate.robux / rate.brl;
 }
@@ -58,6 +64,8 @@ function brlToRobux(brl: number, rate: RateEntry): number {
 function robuxToBrl(robux: number, rate: RateEntry): number {
   return robux / robuxPerBrl(rate);
 }
+
+// ── Formatters ────────────────────────────────────────────────────────────────
 
 function formatBrl(value: number): string {
   return value.toLocaleString("pt-BR", {
@@ -104,6 +112,8 @@ function parseNumber(raw: string): number {
   return parseFloat(s);
 }
 
+// ── Roblox helpers ────────────────────────────────────────────────────────────
+
 function extractGamepassId(input: string): string | null {
   const urlMatch = input.match(/game-pass\/(\d+)/i);
   if (urlMatch) return urlMatch[1];
@@ -111,56 +121,174 @@ function extractGamepassId(input: string): string | null {
   return null;
 }
 
-interface GamepassInfo {
+// ── Roblox Profile ────────────────────────────────────────────────────────────
+
+interface RobloxProfile {
+  id: number;
   name: string;
-  priceInRobux: number | null;
-  isForSale: boolean;
-  sales: number;
-  creator: string;
-  thumbnailUrl: string | null;
+  displayName: string;
+  description: string;
+  created: string;
+  isBanned: boolean;
+  avatarUrl: string | null;
+  friendsCount: number;
+  followersCount: number;
+  followingsCount: number;
 }
 
-async function fetchGamepass(id: string): Promise<GamepassInfo | null> {
+async function fetchRobloxProfile(username: string): Promise<RobloxProfile | null> {
   try {
-    const res = await fetch(
-      `https://economy.roblox.com/v2/game-passes/${id}/game-pass-product-info`,
-      { headers: { "Accept": "application/json" } }
-    );
-    if (!res.ok) return null;
-    const data = await res.json() as {
-      Name?: string;
-      PriceInRobux?: number;
-      IsForSale?: boolean;
-      Sales?: number;
-      Creator?: { Name?: string };
-    };
+    const lookupRes = await fetch("https://users.roblox.com/v1/usernames/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ usernames: [username], excludeBannedUsers: false }),
+    });
+    if (!lookupRes.ok) return null;
+    const lookupData = await lookupRes.json() as { data?: Array<{ id: number; name: string; displayName: string }> };
+    const user = lookupData.data?.[0];
+    if (!user) return null;
 
-    let thumbnailUrl: string | null = null;
-    try {
-      const thumbRes = await fetch(
-        `https://thumbnails.roblox.com/v1/game-passes?gamePassIds=${id}&size=150x150&format=Png`,
-        { headers: { "Accept": "application/json" } }
-      );
-      if (thumbRes.ok) {
-        const thumbData = await thumbRes.json() as { data?: Array<{ imageUrl?: string }> };
-        thumbnailUrl = thumbData.data?.[0]?.imageUrl ?? null;
-      }
-    } catch {
-      // thumbnail is optional
+    const [infoRes, friendsRes, followersRes, followingsRes, avatarRes] = await Promise.allSettled([
+      fetch(`https://users.roblox.com/v1/users/${user.id}`, { headers: { "Accept": "application/json" } }),
+      fetch(`https://friends.roblox.com/v1/users/${user.id}/friends/count`, { headers: { "Accept": "application/json" } }),
+      fetch(`https://friends.roblox.com/v1/users/${user.id}/followers/count`, { headers: { "Accept": "application/json" } }),
+      fetch(`https://friends.roblox.com/v1/users/${user.id}/followings/count`, { headers: { "Accept": "application/json" } }),
+      fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${user.id}&size=150x150&format=Png`, { headers: { "Accept": "application/json" } }),
+    ]);
+
+    let description = "", created = "", isBanned = false;
+    if (infoRes.status === "fulfilled" && infoRes.value.ok) {
+      const info = await infoRes.value.json() as { description?: string; created?: string; isBanned?: boolean };
+      description = info.description ?? "";
+      created = info.created ?? "";
+      isBanned = info.isBanned ?? false;
+    }
+    let friendsCount = 0;
+    if (friendsRes.status === "fulfilled" && friendsRes.value.ok) {
+      const d = await friendsRes.value.json() as { count?: number };
+      friendsCount = d.count ?? 0;
+    }
+    let followersCount = 0;
+    if (followersRes.status === "fulfilled" && followersRes.value.ok) {
+      const d = await followersRes.value.json() as { count?: number };
+      followersCount = d.count ?? 0;
+    }
+    let followingsCount = 0;
+    if (followingsRes.status === "fulfilled" && followingsRes.value.ok) {
+      const d = await followingsRes.value.json() as { count?: number };
+      followingsCount = d.count ?? 0;
+    }
+    let avatarUrl: string | null = null;
+    if (avatarRes.status === "fulfilled" && avatarRes.value.ok) {
+      const d = await avatarRes.value.json() as { data?: Array<{ imageUrl?: string }> };
+      avatarUrl = d.data?.[0]?.imageUrl ?? null;
     }
 
-    return {
-      name: data.Name ?? "Sem nome",
-      priceInRobux: data.PriceInRobux ?? null,
-      isForSale: data.IsForSale ?? false,
-      sales: data.Sales ?? 0,
-      creator: data.Creator?.Name ?? "Desconhecido",
-      thumbnailUrl,
-    };
+    return { id: user.id, name: user.name, displayName: user.displayName, description, created, isBanned, avatarUrl, friendsCount, followersCount, followingsCount };
   } catch {
     return null;
   }
 }
+
+// ── Reputação ─────────────────────────────────────────────────────────────────
+
+interface RepData {
+  rep: number;
+  givenTo: Map<string, number>; // targetId → timestamp of last rep given
+}
+
+const repStore = new Map<string, RepData>();
+
+function getRepData(userId: string): RepData {
+  if (!repStore.has(userId)) repStore.set(userId, { rep: 0, givenTo: new Map() });
+  return repStore.get(userId)!;
+}
+
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+function canGiveRep(giverId: string, targetId: string): boolean {
+  const data = getRepData(giverId);
+  const last = data.givenTo.get(targetId) ?? 0;
+  return Date.now() - last >= ONE_DAY_MS;
+}
+
+function giveRep(giverId: string, targetId: string): void {
+  const giver = getRepData(giverId);
+  giver.givenTo.set(targetId, Date.now());
+  const target = getRepData(targetId);
+  target.rep += 1;
+}
+
+function repRank(rep: number): string {
+  if (rep >= 100) return "👑 Lendário";
+  if (rep >= 50) return "💎 Diamante";
+  if (rep >= 25) return "🥇 Ouro";
+  if (rep >= 10) return "🥈 Prata";
+  if (rep >= 3) return "🥉 Bronze";
+  return "🌱 Novato";
+}
+
+// ── Social: Casamentos ────────────────────────────────────────────────────────
+
+const marriages = new Map<string, string>();
+
+// ── Social: Mensagens aleatórias ──────────────────────────────────────────────
+
+const msgAbraco = [
+  "deu um abraço apertado em",
+  "correu e abraçou forte",
+  "envolveu com um abraço enorme",
+  "deu o abraço mais fofo do dia para",
+  "apertou bem forte com carinho",
+];
+
+const msgBeijo = [
+  "deu um beijinho em",
+  "mandou um beijo cheio de carinho para",
+  "deu um selinho em",
+  "beijou na bochecha de",
+  "mandou um beijo voando para",
+];
+
+const msgHigh5 = [
+  "deu um high five épico para",
+  "bateu um high five empolgado com",
+  "mandou aquele high five certeiro para",
+  "veio com tudo e deu um high five em",
+];
+
+const msgElogio = [
+  "é incrível e merece muito reconhecimento! 🌟",
+  "é a pessoa mais legal do servidor! 💙",
+  "ilumina qualquer ambiente que entra! ☀️",
+  "tem um coração enorme! 💛",
+  "é pura energia boa! ✨",
+  "deixa o servidor muito mais divertido! 🎉",
+  "é uma pessoa especial e única! 💎",
+  "tem um talento que impressiona! 🚀",
+  "merece todo o sucesso do mundo! 🏆",
+  "é simplesmente demais! 🔥",
+];
+
+function randomFrom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function shipScore(id1: string, id2: string): number {
+  const combined = [id1, id2].sort().join("");
+  let hash = 0;
+  for (let i = 0; i < combined.length; i++) {
+    hash = (hash * 31 + combined.charCodeAt(i)) & 0xffffffff;
+  }
+  return Math.abs(hash) % 101;
+}
+
+function shipBar(score: number): string {
+  const filled = Math.round(score / 10);
+  return "❤️".repeat(filled) + "🖤".repeat(10 - filled);
+}
+
+// ── Permissions ───────────────────────────────────────────────────────────────
 
 function isAdmin(message: Message): boolean {
   if (!message.member) return false;
@@ -169,6 +297,8 @@ function isAdmin(message: Message): boolean {
     message.member.permissions.has(PermissionFlagsBits.ManageGuild)
   );
 }
+
+// ── Bot entry point ───────────────────────────────────────────────────────────
 
 export function startBot(): void {
   const token = process.env["DISCORD_BOT_TOKEN"];
@@ -198,7 +328,7 @@ export function startBot(): void {
         { name: `1.000 Robux = ${brlFmt}`, type: ActivityType.Watching },
         { name: "!ajuda para ver comandos", type: ActivityType.Playing },
         { name: "Roblox ↔ BRL em tempo real", type: ActivityType.Watching },
-        { name: "!robux | !brl | !gamepass", type: ActivityType.Playing },
+        { name: "!casar | !rep | !ship", type: ActivityType.Playing },
       ];
     };
 
@@ -410,55 +540,313 @@ export function startBot(): void {
           await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ ID ou link inválido. Ex: `!gamepass 12345678` ou cole o link do gamepass.")] });
           return;
         }
-
         const gamepassUrl = `https://www.roblox.com/game-pass/${gpId}`;
         const linkButton = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          new ButtonBuilder()
-            .setLabel("🎮 Ver no Roblox")
-            .setURL(gamepassUrl)
-            .setStyle(ButtonStyle.Link)
+          new ButtonBuilder().setLabel("🎮 Ver Gamepass no Roblox").setURL(gamepassUrl).setStyle(ButtonStyle.Link)
         );
-
-        const loading = await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Grey).setDescription("🔍 Buscando gamepass no Roblox...")] });
-        const gp = await fetchGamepass(gpId);
-
-        if (!gp) {
-          await loading.edit({
-            embeds: [new EmbedBuilder().setColor(Colors.Orange).setDescription("⚠️ Não foi possível buscar os detalhes, mas aqui está o link direto:")],
-            components: [linkButton],
-          });
-          return;
-        }
-
         stats.gamepass++;
-        const embed = new EmbedBuilder()
-          .setColor(Colors.Orange)
-          .setTitle(`🎮 ${gp.name}`)
-          .setURL(gamepassUrl)
-          .addFields(
-            { name: "Criador", value: gp.creator, inline: true },
-            { name: "Vendas", value: gp.sales.toLocaleString("pt-BR"), inline: true },
-            { name: "À venda", value: gp.isForSale ? "✅ Sim" : "❌ Não", inline: true },
-          );
-
-        if (gp.priceInRobux !== null) {
-          const priceBrl = robuxToBrl(gp.priceInRobux, rate);
-          embed.addFields(
-            { name: "💎 Preço em Robux", value: `${formatRobux(gp.priceInRobux)} Robux`, inline: true },
-            { name: "💵 Preço em BRL", value: formatBrl(priceBrl), inline: true },
-          );
-        } else {
-          embed.addFields({ name: "💎 Preço", value: "Gratuito / Sem preço", inline: true });
-        }
-
-        if (gp.thumbnailUrl) embed.setThumbnail(gp.thumbnailUrl);
-        embed.setFooter({ text: footerText(rate) });
-
-        await loading.edit({ embeds: [embed], components: [linkButton] });
+        await message.reply({
+          embeds: [
+            new EmbedBuilder()
+              .setColor(Colors.Orange)
+              .setTitle("🎮 Gamepass do Roblox")
+              .setDescription(`Clique no botão abaixo para ver o gamepass **#${gpId}** no Roblox.`)
+              .setFooter({ text: footerText(rate) }),
+          ],
+          components: [linkButton],
+        });
         return;
       }
 
-      // ── !setraxa <robux> <brl>  — admin only ─────────────────────────────
+      // ── !perfil <username> ────────────────────────────────────────────────
+      if (lower.startsWith("!perfil")) {
+        setCooldown(message.author.id);
+        const parts = content.split(/\s+/);
+        if (parts.length < 2) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Use: `!perfil <usuário>` — Ex: `!perfil Builderman`")] });
+          return;
+        }
+        const username = parts[1];
+        const loading = await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Grey).setDescription(`🔍 Buscando perfil de **${username}**...`)] });
+        const profile = await fetchRobloxProfile(username);
+        if (!profile) {
+          await loading.edit({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription(`❌ Usuário **${username}** não encontrado no Roblox.`)] });
+          return;
+        }
+        const profileUrl = `https://www.roblox.com/users/${profile.id}/profile`;
+        const profileButton = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder().setLabel("👤 Ver Perfil no Roblox").setURL(profileUrl).setStyle(ButtonStyle.Link)
+        );
+        const joinDate = profile.created
+          ? new Date(profile.created).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })
+          : "Desconhecido";
+        const embed = new EmbedBuilder()
+          .setColor(Colors.Blurple)
+          .setTitle(`${profile.isBanned ? "🚫 " : "👤 "}${profile.displayName}`)
+          .setURL(profileUrl)
+          .addFields(
+            { name: "👤 Username", value: `@${profile.name}`, inline: true },
+            { name: "🆔 ID", value: profile.id.toString(), inline: true },
+            { name: "📅 Conta criada em", value: joinDate, inline: true },
+            { name: "👫 Amigos", value: profile.friendsCount.toLocaleString("pt-BR"), inline: true },
+            { name: "👥 Seguidores", value: profile.followersCount.toLocaleString("pt-BR"), inline: true },
+            { name: "➡️ Seguindo", value: profile.followingsCount.toLocaleString("pt-BR"), inline: true },
+          );
+        if (profile.isBanned) embed.addFields({ name: "⚠️ Status", value: "Conta banida" });
+        if (profile.description) {
+          const desc = profile.description.length > 200 ? profile.description.slice(0, 200) + "..." : profile.description;
+          embed.setDescription(desc);
+        }
+        if (profile.avatarUrl) embed.setThumbnail(profile.avatarUrl);
+        await loading.edit({ embeds: [embed], components: [profileButton] });
+        return;
+      }
+
+      // ── !rep @usuário ─────────────────────────────────────────────────────
+      if (lower.startsWith("!rep")) {
+        setCooldown(message.author.id);
+        const mentioned = message.mentions.users.first();
+        if (!mentioned) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Mencione alguém! Ex: `!rep @usuario`")] });
+          return;
+        }
+        if (mentioned.id === message.author.id) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Você não pode dar rep para si mesmo!")] });
+          return;
+        }
+        if (mentioned.bot) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Você não pode dar rep para um bot!")] });
+          return;
+        }
+        if (!canGiveRep(message.author.id, mentioned.id)) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Orange).setDescription(`⏳ Você já deu rep para **${mentioned.displayName}** hoje. Volte em 24h!`)] });
+          return;
+        }
+        giveRep(message.author.id, mentioned.id);
+        const newRep = getRepData(mentioned.id).rep;
+        await message.reply({ embeds: [
+          new EmbedBuilder()
+            .setColor(Colors.Gold)
+            .setTitle("⭐ Reputação Dada!")
+            .setDescription(`**${message.author.displayName}** deu +1 rep para **${mentioned.displayName}**!`)
+            .addFields(
+              { name: "Total de rep", value: `⭐ ${newRep}`, inline: true },
+              { name: "Rank", value: repRank(newRep), inline: true },
+            ),
+        ]});
+        return;
+      }
+
+      // ── !meuperfil ────────────────────────────────────────────────────────
+      if (lower === "!meuperfil") {
+        setCooldown(message.author.id);
+        const data = getRepData(message.author.id);
+        const partnerText = marriages.has(message.author.id)
+          ? `<@${marriages.get(message.author.id)}> 💍`
+          : "Solteiro(a) 💔";
+        await message.reply({ embeds: [
+          new EmbedBuilder()
+            .setColor(Colors.Blurple)
+            .setTitle(`👤 Perfil de ${message.author.displayName}`)
+            .setThumbnail(message.author.displayAvatarURL())
+            .addFields(
+              { name: "⭐ Reputação", value: data.rep.toLocaleString("pt-BR"), inline: true },
+              { name: "🏅 Rank", value: repRank(data.rep), inline: true },
+              { name: "💍 Parceiro(a)", value: partnerText, inline: false },
+            )
+            .setTimestamp(),
+        ]});
+        return;
+      }
+
+      // ── !ranking ─────────────────────────────────────────────────────────
+      if (lower === "!ranking") {
+        setCooldown(message.author.id);
+        const sorted = [...repStore.entries()]
+          .sort((a, b) => b[1].rep - a[1].rep)
+          .slice(0, 10);
+        if (sorted.length === 0) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Grey).setDescription("Ninguém tem rep ainda. Use `!rep @usuario` para começar!")] });
+          return;
+        }
+        const medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
+        const lines = sorted.map(([userId, data], i) =>
+          `${medals[i]} <@${userId}> — **${data.rep} rep** · ${repRank(data.rep)}`
+        ).join("\n");
+        await message.reply({ embeds: [
+          new EmbedBuilder()
+            .setColor(Colors.Gold)
+            .setTitle("🏆 Ranking de Reputação")
+            .setDescription(lines)
+            .setTimestamp(),
+        ]});
+        return;
+      }
+
+      // ── !casar @usuário ───────────────────────────────────────────────────
+      if (lower.startsWith("!casar")) {
+        setCooldown(message.author.id);
+        const mentioned = message.mentions.users.first();
+        if (!mentioned) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Mencione alguém! Ex: `!casar @usuario`")] });
+          return;
+        }
+        if (mentioned.id === message.author.id) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Você não pode se casar consigo mesmo!")] });
+          return;
+        }
+        if (mentioned.bot) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Você não pode se casar com um bot!")] });
+          return;
+        }
+        if (marriages.has(message.author.id)) {
+          const partnerId = marriages.get(message.author.id)!;
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription(`❌ Você já está casado(a) com <@${partnerId}>! Use \`!divorciar\` primeiro.`)] });
+          return;
+        }
+        if (marriages.has(mentioned.id)) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription(`❌ <@${mentioned.id}> já está casado(a) com outra pessoa!`)] });
+          return;
+        }
+        marriages.set(message.author.id, mentioned.id);
+        marriages.set(mentioned.id, message.author.id);
+        await message.reply({ embeds: [
+          new EmbedBuilder()
+            .setColor(Colors.Fuchsia)
+            .setTitle("💍 Casamento Virtual!")
+            .setDescription(`**${message.author.displayName}** e **${mentioned.displayName}** agora são casados! 🎊\n\nParabéns ao novo casal! 💑`)
+            .setTimestamp(),
+        ]});
+        return;
+      }
+
+      // ── !divorciar ────────────────────────────────────────────────────────
+      if (lower === "!divorciar") {
+        setCooldown(message.author.id);
+        if (!marriages.has(message.author.id)) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Você não está casado(a) com ninguém!")] });
+          return;
+        }
+        const partnerId = marriages.get(message.author.id)!;
+        marriages.delete(message.author.id);
+        marriages.delete(partnerId);
+        await message.reply({ embeds: [
+          new EmbedBuilder()
+            .setColor(Colors.Grey)
+            .setTitle("💔 Divórcio")
+            .setDescription(`**${message.author.displayName}** e <@${partnerId}> se divorciaram. Que pena...`),
+        ]});
+        return;
+      }
+
+      // ── !parceiro ─────────────────────────────────────────────────────────
+      if (lower === "!parceiro") {
+        setCooldown(message.author.id);
+        if (!marriages.has(message.author.id)) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Grey).setDescription("💔 Você não está casado(a) com ninguém. Use `!casar @usuario`!")] });
+          return;
+        }
+        const partnerId = marriages.get(message.author.id)!;
+        await message.reply({ embeds: [
+          new EmbedBuilder()
+            .setColor(Colors.Fuchsia)
+            .setTitle("💑 Seu Parceiro(a)")
+            .setDescription(`**${message.author.displayName}** está casado(a) com <@${partnerId}> 💍`),
+        ]});
+        return;
+      }
+
+      // ── !ship @u1 @u2 ─────────────────────────────────────────────────────
+      if (lower.startsWith("!ship")) {
+        setCooldown(message.author.id);
+        const mentioned = message.mentions.users;
+        if (mentioned.size < 2) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Mencione duas pessoas! Ex: `!ship @usuario1 @usuario2`")] });
+          return;
+        }
+        const [u1, u2] = mentioned.first(2);
+        const score = shipScore(u1.id, u2.id);
+        const bar = shipBar(score);
+        let comment = "";
+        if (score >= 90) comment = "Amor eterno! 💞";
+        else if (score >= 70) comment = "Combinam muito! 💕";
+        else if (score >= 50) comment = "Tem potencial! 💛";
+        else if (score >= 30) comment = "Pode melhorar... 🤔";
+        else comment = "Melhor como amigos! 😅";
+        await message.reply({ embeds: [
+          new EmbedBuilder()
+            .setColor(Colors.Fuchsia)
+            .setTitle("💘 Ship-o-metro")
+            .setDescription(`**${u1.displayName}** 💞 **${u2.displayName}**\n\n${bar}\n\n**${score}%** — ${comment}`),
+        ]});
+        return;
+      }
+
+      // ── !abraçar @usuário ─────────────────────────────────────────────────
+      if (lower.startsWith("!abraçar") || lower.startsWith("!abracar")) {
+        setCooldown(message.author.id);
+        const mentioned = message.mentions.users.first();
+        if (!mentioned) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Mencione alguém! Ex: `!abraçar @usuario`")] });
+          return;
+        }
+        await message.reply({ embeds: [
+          new EmbedBuilder()
+            .setColor(Colors.Yellow)
+            .setDescription(`🤗 **${message.author.displayName}** ${randomFrom(msgAbraco)} **${mentioned.displayName}**!`),
+        ]});
+        return;
+      }
+
+      // ── !beijar @usuário ──────────────────────────────────────────────────
+      if (lower.startsWith("!beijar")) {
+        setCooldown(message.author.id);
+        const mentioned = message.mentions.users.first();
+        if (!mentioned) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Mencione alguém! Ex: `!beijar @usuario`")] });
+          return;
+        }
+        await message.reply({ embeds: [
+          new EmbedBuilder()
+            .setColor(Colors.Fuchsia)
+            .setDescription(`😘 **${message.author.displayName}** ${randomFrom(msgBeijo)} **${mentioned.displayName}**!`),
+        ]});
+        return;
+      }
+
+      // ── !high5 @usuário ───────────────────────────────────────────────────
+      if (lower.startsWith("!high5")) {
+        setCooldown(message.author.id);
+        const mentioned = message.mentions.users.first();
+        if (!mentioned) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Mencione alguém! Ex: `!high5 @usuario`")] });
+          return;
+        }
+        await message.reply({ embeds: [
+          new EmbedBuilder()
+            .setColor(Colors.Green)
+            .setDescription(`🙌 **${message.author.displayName}** ${randomFrom(msgHigh5)} **${mentioned.displayName}**!`),
+        ]});
+        return;
+      }
+
+      // ── !elogiar @usuário ─────────────────────────────────────────────────
+      if (lower.startsWith("!elogiar")) {
+        setCooldown(message.author.id);
+        const mentioned = message.mentions.users.first();
+        if (!mentioned) {
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Mencione alguém! Ex: `!elogiar @usuario`")] });
+          return;
+        }
+        await message.reply({ embeds: [
+          new EmbedBuilder()
+            .setColor(Colors.Gold)
+            .setDescription(`🌟 **${mentioned.displayName}** ${randomFrom(msgElogio)}\n\n— elogio enviado por **${message.author.displayName}**`),
+        ]});
+        return;
+      }
+
+      // ── !setraxa — admin only ─────────────────────────────────────────────
       if (lower.startsWith("!setraxa")) {
         if (!isAdmin(message)) {
           await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("🔒 Apenas administradores podem alterar a taxa.")] });
@@ -493,7 +881,7 @@ export function startBot(): void {
         return;
       }
 
-      // ── !limpar [quantidade] ─────────────────────────────────────────────
+      // ── !limpar — admin only ──────────────────────────────────────────────
       if (lower.startsWith("!limpar")) {
         if (!message.member?.permissions.has("ManageMessages")) {
           await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Você não tem permissão para limpar mensagens.")] });
@@ -510,23 +898,20 @@ export function startBot(): void {
         }
         let amount = parseInt(parts[1], 10);
         if (isNaN(amount) || amount < 1) {
-          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Quantidade inválida. Use um número entre 1 e 100. Ex: `!limpar 10`")] });
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Quantidade inválida. Use um número entre 1 e 100.")] });
           return;
         }
         if (amount > 100) amount = 100;
-
         const deleted = await (message.channel as import("discord.js").TextChannel).bulkDelete(amount, true).catch(() => null);
         const count = deleted?.size ?? 0;
         const confirm = await message.channel.send({ embeds: [
-          new EmbedBuilder()
-            .setColor(Colors.Green)
-            .setDescription(`🗑️ **${count}** mensagen${count !== 1 ? "s" : ""} apagada${count !== 1 ? "s" : ""} com sucesso.`),
+          new EmbedBuilder().setColor(Colors.Green).setDescription(`🗑️ **${count}** mensagen${count !== 1 ? "s" : ""} apagada${count !== 1 ? "s" : ""} com sucesso.`),
         ]});
         setTimeout(() => confirm.delete().catch(() => null), 5000);
         return;
       }
 
-      // ── !anuncio <mensagem> ───────────────────────────────────────────────
+      // ── !anuncio — admin only ─────────────────────────────────────────────
       if (lower.startsWith("!anuncio")) {
         if (!message.member?.permissions.has("ManageMessages")) {
           await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Você não tem permissão para fazer anúncios.")] });
@@ -534,7 +919,7 @@ export function startBot(): void {
         }
         const text = content.slice("!anuncio".length).trim();
         if (!text) {
-          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Informe o texto do anúncio. Ex: `!anuncio Evento de Robux hoje às 20h!`")] });
+          await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Informe o texto. Ex: `!anuncio Evento hoje às 20h!`")] });
           return;
         }
         await message.delete().catch(() => null);
@@ -555,41 +940,24 @@ export function startBot(): void {
         setCooldown(message.author.id);
         await message.reply({ embeds: [
           new EmbedBuilder()
-            .setColor(Colors.Blurple)
-            .setTitle("🎮 Bot de Conversão Robux / BRL")
+            .setColor(0x5865F2)
+            .setTitle("✨ FiskBot — Central de Comandos")
+            .setDescription("Olá! Aqui estão todos os meus comandos organizados por categoria.\nUse o prefixo `!` antes de cada comando.")
             .addFields(
-              { name: "`!robux <R$>`", value: "Converte BRL → Robux" },
-              { name: "`!brl <robux>`", value: "Converte Robux → BRL" },
-              { name: "`!taxa`", value: "Mostra a taxa de câmbio atual" },
-              { name: "`!simular <v1> <v2> ...`", value: "Tabela de múltiplos valores (até 8)" },
-              { name: "`!gamepass <ID ou link>`", value: "Busca informações de um gamepass do Roblox" },
-              { name: "`!historico`", value: "Últimas alterações de taxa" },
-              { name: "`!status`", value: "Uptime e estatísticas do bot" },
-              { name: "`!setraxa <robux> <R$>`", value: "*(Admin)* Atualiza a taxa" },
-              { name: "`!limpar <quantidade>`", value: "*(Admin)* Apaga N mensagens do canal (máx: 100)" },
-              { name: "`!anuncio <mensagem>`", value: "*(Admin)* Posta e fixa um anúncio no canal" },
-              { name: "`!ping`", value: "Latência do bot" },
-              { name: "`!ajuda`", value: "Mostra esta mensagem" },
-            )
-            .addFields({
-              name: "Exemplos",
-              value:
-                "`!robux 100` → Robux com R$100\n" +
-                "`!brl 1000` → quanto custa 1000 Robux\n" +
-                "`!gamepass 12345678` → info + preço em BRL\n" +
-                "`!setraxa 1000 40` → 1000 Robux = R$40,00",
-            })
-            .setFooter({ text: footerText(rate) }),
-        ]});
-        return;
-      }
+              {
+                name: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n💸 **Robux & Conversão**",
+                value:
+                  "`!robux <R$>` → Converte BRL para Robux\n" +
+                  "`!brl <robux>` → Converte Robux para BRL\n" +
+                  "`!taxa` → Taxa de câmbio atual\n" +
+                  "`!simular <v1> <v2>...` → Tabela de conversão\n" +
+                  "`!historico` → Histórico de alterações de taxa",
+              },
+              {
+                name: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🎮 **Roblox**",
+                value:
+                  "`!gamepass <ID ou link>` → Link direto para o gamepass\n" +
+                  "`!perfil <usuário>` → Perfil de um jogador Roblox",
+              }, **...**
 
-    } catch (err) {
-      logger.error({ err }, "Error handling Discord message");
-    }
-  });
-
-  client.login(token).catch((err) => {
-    logger.error({ err }, "Failed to login to Discord");
-  });
-}
+_This response is too long to display in full._
