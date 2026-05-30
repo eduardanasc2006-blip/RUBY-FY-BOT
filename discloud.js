@@ -1,4 +1,3 @@
-// Discloud doesn't set PORT automatically — default to 8080
 process.env.PORT = process.env.PORT || "8080";
 
 console.log("[FiskBot] Iniciando...");
