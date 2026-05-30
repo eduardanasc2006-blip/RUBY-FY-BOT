@@ -103101,6 +103101,14 @@ function shipBar(score) {
   return "\u2764\uFE0F".repeat(filled) + "\u{1F5A4}".repeat(10 - filled);
 }
 var WELCOME_CHANNEL_NAMES = ["boas-vindas", "bem-vindo", "bem-vinda", "entrada", "geral", "welcome", "general"];
+var welcomeMessages = /* @__PURE__ */ new Map();
+var DEFAULT_WELCOME = "Ol\xE1, {user}! Seja muito bem-vindo(a) ao **{servidor}**! \u{1F973}\n\nUse `!ajuda` para ver todos os meus comandos.\nVoc\xEA \xE9 o membro n\xFAmero **{count}** do servidor!";
+function getWelcomeText(guildId) {
+  return welcomeMessages.get(guildId) ?? DEFAULT_WELCOME;
+}
+function applyWelcomePlaceholders(text, member) {
+  return text.replace(/\{user\}/g, member.toString()).replace(/\{nome\}/g, member.user.displayName).replace(/\{servidor\}/g, member.guild.name).replace(/\{count\}/g, member.guild.memberCount.toLocaleString("pt-BR"));
+}
 function findWelcomeChannel(guild) {
   if (guild.systemChannel) return guild.systemChannel;
   for (const name of WELCOME_CHANNEL_NAMES) {
@@ -103158,13 +103166,8 @@ function startBot() {
     const channel = findWelcomeChannel(member.guild);
     if (!channel) return;
     const rate = getCurrentRate();
-    const embed = new import_discord.EmbedBuilder().setColor(5793266).setTitle("\u{1F389} Bem-vindo(a) ao servidor!").setDescription(
-      `Ol\xE1, ${member}! \xC9 muito bom ter voc\xEA aqui! \u{1F973}
-
-Use \`!ajuda\` para ver todos os meus comandos.
-Converta Robux, veja perfis do Roblox, fa\xE7a amizades e muito mais!`
-    ).setThumbnail(member.user.displayAvatarURL({ size: 256 })).addFields(
-      { name: "\u{1F464} Membro", value: member.user.username, inline: true },
+    const text = applyWelcomePlaceholders(getWelcomeText(member.guild.id), member);
+    const embed = new import_discord.EmbedBuilder().setColor(5793266).setTitle("\u{1F389} Bem-vindo(a) ao servidor!").setDescription(text).setThumbnail(member.user.displayAvatarURL({ size: 256 })).addFields(
       { name: "\u{1F4C5} Conta criada", value: member.user.createdAt.toLocaleDateString("pt-BR"), inline: true },
       { name: "\u{1F465} Total de membros", value: member.guild.memberCount.toLocaleString("pt-BR"), inline: true }
     ).setFooter({ text: `Taxa atual: ${rateLabel(rate)}` }).setTimestamp();
@@ -103638,6 +103641,39 @@ ${bar}
         await announcement.pin().catch(() => null);
         return;
       }
+      if (lower.startsWith("!setwelcome")) {
+        if (!isAdmin(message)) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u{1F512} Apenas administradores podem alterar a mensagem de boas-vindas.")] });
+          return;
+        }
+        const text = content.slice("!setwelcome".length).trim();
+        if (!text) {
+          const current = welcomeMessages.get(message.guildId ?? "") ?? DEFAULT_WELCOME;
+          await message.reply({ embeds: [
+            new import_discord.EmbedBuilder().setColor(import_discord.Colors.Blue).setTitle("\u{1F44B} Mensagem de Boas-vindas Atual").setDescription(current).addFields({ name: "Vari\xE1veis dispon\xEDveis", value: "`{user}` \u2192 menciona o membro\n`{nome}` \u2192 nome do membro\n`{servidor}` \u2192 nome do servidor\n`{count}` \u2192 total de membros" }).setFooter({ text: "Use !setwelcome <texto> para alterar" })
+          ] });
+          return;
+        }
+        welcomeMessages.set(message.guildId ?? "", text);
+        await message.reply({ embeds: [
+          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Green).setTitle("\u2705 Mensagem de boas-vindas atualizada!").setDescription(text).addFields({ name: "\u{1F4A1} Dica", value: "Use `!testwelcome` para visualizar como vai aparecer." }).setTimestamp()
+        ] });
+        return;
+      }
+      if (lower === "!testwelcome") {
+        if (!isAdmin(message)) {
+          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u{1F512} Apenas administradores podem testar a mensagem de boas-vindas.")] });
+          return;
+        }
+        if (!message.member) return;
+        const text = applyWelcomePlaceholders(getWelcomeText(message.guildId ?? ""), message.member);
+        const embed = new import_discord.EmbedBuilder().setColor(5793266).setTitle("\u{1F389} Bem-vindo(a) ao servidor!").setDescription(text).setThumbnail(message.author.displayAvatarURL({ size: 256 })).addFields(
+          { name: "\u{1F4C5} Conta criada", value: message.author.createdAt.toLocaleDateString("pt-BR"), inline: true },
+          { name: "\u{1F465} Total de membros", value: message.guild.memberCount.toLocaleString("pt-BR"), inline: true }
+        ).setFooter({ text: "\u2B06\uFE0F Pr\xE9via \u2014 \xE9 assim que vai aparecer para novos membros" }).setTimestamp();
+        await message.reply({ embeds: [embed] });
+        return;
+      }
       if (lower === "!ajuda" || lower === "!help") {
         setCooldown(message.author.id);
         await message.reply({ embeds: [
@@ -103664,7 +103700,7 @@ ${bar}
             },
             {
               name: "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\u{1F512} **Admin**",
-              value: "`!setraxa <robux> <R$>` \u2192 Atualiza a taxa\n`!limpar <qtd>` \u2192 Apaga N mensagens (m\xE1x 100)\n`!anuncio <texto>` \u2192 Posta e fixa um an\xFAncio"
+              value: "`!setraxa <robux> <R$>` \u2192 Atualiza a taxa\n`!limpar <qtd>` \u2192 Apaga N mensagens (m\xE1x 100)\n`!anuncio <texto>` \u2192 Posta e fixa um an\xFAncio\n`!setwelcome <texto>` \u2192 Personaliza a mensagem de boas-vindas\n`!testwelcome` \u2192 Visualiza a mensagem de boas-vindas"
             }
           ).setFooter({ text: footerText(rate) }).setTimestamp()
         ] });
