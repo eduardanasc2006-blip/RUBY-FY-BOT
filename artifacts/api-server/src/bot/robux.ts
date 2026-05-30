@@ -6,11 +6,12 @@ import {
   PermissionFlagsBits,
   EmbedBuilder,
   Colors,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
 } from "discord.js";
 import { logger } from "../lib/logger";
 import { getCurrentRate, getHistory, updateRate, type RateEntry } from "./store";
-
-// ── Cooldown ─────────────────────────────────────────────────────────────────
 
 const COOLDOWN_MS = 3000;
 const cooldowns = new Map<string, number>();
@@ -22,8 +23,6 @@ function isOnCooldown(userId: string): boolean {
 function setCooldown(userId: string): void {
   cooldowns.set(userId, Date.now());
 }
-
-// ── Stats ─────────────────────────────────────────────────────────────────────
 
 const stats = {
   startedAt: new Date(),
@@ -48,8 +47,6 @@ function formatUptime(): string {
   return `${m}m ${s % 60}s`;
 }
 
-// ── Math helpers ──────────────────────────────────────────────────────────────
-
 function robuxPerBrl(rate: RateEntry): number {
   return rate.robux / rate.brl;
 }
@@ -61,8 +58,6 @@ function brlToRobux(brl: number, rate: RateEntry): number {
 function robuxToBrl(robux: number, rate: RateEntry): number {
   return robux / robuxPerBrl(rate);
 }
-
-// ── Formatters ────────────────────────────────────────────────────────────────
 
 function formatBrl(value: number): string {
   return value.toLocaleString("pt-BR", {
@@ -96,9 +91,6 @@ function formatDateTime(iso: string): string {
   });
 }
 
-// ── Number parser ─────────────────────────────────────────────────────────────
-// Handles: "R$100", "100,50", "1.000", "1.000,50", "100.50"
-
 function parseNumber(raw: string): number {
   let s = raw.trim().replace(/^R\$\s*/i, "");
   if (s.includes(".") && s.includes(",")) {
@@ -112,13 +104,9 @@ function parseNumber(raw: string): number {
   return parseFloat(s);
 }
 
-// ── Roblox API ────────────────────────────────────────────────────────────────
-
 function extractGamepassId(input: string): string | null {
-  // URL: https://www.roblox.com/game-pass/12345678/...
   const urlMatch = input.match(/game-pass\/(\d+)/i);
   if (urlMatch) return urlMatch[1];
-  // Plain ID
   if (/^\d+$/.test(input.trim())) return input.trim();
   return null;
 }
@@ -147,7 +135,6 @@ async function fetchGamepass(id: string): Promise<GamepassInfo | null> {
       Creator?: { Name?: string };
     };
 
-    // Fetch thumbnail
     let thumbnailUrl: string | null = null;
     try {
       const thumbRes = await fetch(
@@ -175,8 +162,6 @@ async function fetchGamepass(id: string): Promise<GamepassInfo | null> {
   }
 }
 
-// ── Permissions ───────────────────────────────────────────────────────────────
-
 function isAdmin(message: Message): boolean {
   if (!message.member) return false;
   return (
@@ -184,8 +169,6 @@ function isAdmin(message: Message): boolean {
     message.member.permissions.has(PermissionFlagsBits.ManageGuild)
   );
 }
-
-// ── Bot entry point ───────────────────────────────────────────────────────────
 
 export function startBot(): void {
   const token = process.env["DISCORD_BOT_TOKEN"];
@@ -428,11 +411,22 @@ export function startBot(): void {
           return;
         }
 
+        const gamepassUrl = `https://www.roblox.com/game-pass/${gpId}`;
+        const linkButton = new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder()
+            .setLabel("🎮 Ver no Roblox")
+            .setURL(gamepassUrl)
+            .setStyle(ButtonStyle.Link)
+        );
+
         const loading = await message.reply({ embeds: [new EmbedBuilder().setColor(Colors.Grey).setDescription("🔍 Buscando gamepass no Roblox...")] });
         const gp = await fetchGamepass(gpId);
 
         if (!gp) {
-          await loading.edit({ embeds: [new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Gamepass não encontrado ou a API do Roblox está fora do ar. Verifique o ID/link.")] });
+          await loading.edit({
+            embeds: [new EmbedBuilder().setColor(Colors.Orange).setDescription("⚠️ Não foi possível buscar os detalhes, mas aqui está o link direto:")],
+            components: [linkButton],
+          });
           return;
         }
 
@@ -440,7 +434,7 @@ export function startBot(): void {
         const embed = new EmbedBuilder()
           .setColor(Colors.Orange)
           .setTitle(`🎮 ${gp.name}`)
-          .setURL(`https://www.roblox.com/game-pass/${gpId}`)
+          .setURL(gamepassUrl)
           .addFields(
             { name: "Criador", value: gp.creator, inline: true },
             { name: "Vendas", value: gp.sales.toLocaleString("pt-BR"), inline: true },
@@ -460,7 +454,7 @@ export function startBot(): void {
         if (gp.thumbnailUrl) embed.setThumbnail(gp.thumbnailUrl);
         embed.setFooter({ text: footerText(rate) });
 
-        await loading.edit({ embeds: [embed] });
+        await loading.edit({ embeds: [embed], components: [linkButton] });
         return;
       }
 
@@ -521,7 +515,6 @@ export function startBot(): void {
         }
         if (amount > 100) amount = 100;
 
-        // bulkDelete deletes up to 100 msgs at once, only works on msgs < 14 days old
         const deleted = await (message.channel as import("discord.js").TextChannel).bulkDelete(amount, true).catch(() => null);
         const count = deleted?.size ?? 0;
         const confirm = await message.channel.send({ embeds: [
