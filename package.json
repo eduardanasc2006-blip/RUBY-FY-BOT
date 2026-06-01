@@ -11,5 +11,10 @@
     "esbuild": "^0.20.0",
     "prettier": "^3.8.3",
     "typescript": "~5.9.3"
-  }
+  },
+  "dependencies": {
+    "discord.js": "^14.26.4",
+    "mongoose": "^8.15.2"
+  },
+  "type": "module"
 }
