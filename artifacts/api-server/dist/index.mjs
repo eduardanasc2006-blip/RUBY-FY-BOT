@@ -141316,7 +141316,7 @@ Parab\xE9ns ao novo casal! \u{1F491}`).setTimestamp();
         await message.reply({ embeds: [embed] });
         return;
       }
-      if (lower === "!ajuda" || lower === "!help") {
+      if (lower === "_ajuda_desativado_") {
         setCooldown(message.author.id);
         await message.reply({ embeds: [
           new import_discord.EmbedBuilder().setColor(5793266).setTitle("\u2728 FiskBot \u2014 Central de Comandos").setDescription("Ol\xE1! Aqui est\xE3o todos os meus comandos organizados por categoria.\nUse o prefixo `!` antes de cada comando.").addFields(
@@ -141357,10 +141357,16 @@ Parab\xE9ns ao novo casal! \u{1F491}`).setTimestamp();
       await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Ocorreu um erro interno. Tente novamente.")] }).catch(() => null);
     }
   });
-  client.login(token).catch((err) => {
-    logger.error({ err }, "Failed to login to Discord");
-    process.exit(1);
-  });
+  (async () => {
+    if (typeof globalThis.__loadExpansion === "function") {
+      try { await globalThis.__loadExpansion(client); }
+      catch (e) { logger.warn({ err: e }, "[FiskBot] Expansao ignorada"); }
+    }
+    client.login(token).catch((err) => {
+      logger.error({ err }, "Failed to login to Discord");
+      process.exit(1);
+    });
+  })();
 }
 
 // src/index.ts
