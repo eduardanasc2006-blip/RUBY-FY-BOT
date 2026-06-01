@@ -9,6 +9,8 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  StringSelectMenuBuilder,
+  ComponentType,
 } from "discord.js";
 import { logger } from "../lib/logger";
 import { getCurrentRate, getHistory, updateRate, type RateEntry } from "./store";
@@ -936,28 +938,195 @@ export function startBot(): void {
       }
 
       // ── !ajuda ────────────────────────────────────────────────────────────
-      if (lower === "!ajuda" || lower === "!help") {
+      if (lower === "!ajuda" || lower === "!help" || lower === "!comandos") {
         setCooldown(message.author.id);
-        await message.reply({ embeds: [
-          new EmbedBuilder()
-            .setColor(0x5865F2)
-            .setTitle("✨ FiskBot — Central de Comandos")
-            .setDescription("Olá! Aqui estão todos os meus comandos organizados por categoria.\nUse o prefixo `!` antes de cada comando.")
-            .addFields(
-              {
-                name: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n💸 **Robux & Conversão**",
-                value:
-                  "`!robux <R$>` → Converte BRL para Robux\n" +
-                  "`!brl <robux>` → Converte Robux para BRL\n" +
-                  "`!taxa` → Taxa de câmbio atual\n" +
-                  "`!simular <v1> <v2>...` → Tabela de conversão\n" +
-                  "`!historico` → Histórico de alterações de taxa",
-              },
-              {
-                name: "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🎮 **Roblox**",
-                value:
-                  "`!gamepass <ID ou link>` → Link direto para o gamepass\n" +
-                  "`!perfil <usuário>` → Perfil de um jogador Roblox",
-              }, **...**
 
-_This response is too long to display in full._
+        // Categorias e seus comandos
+        const categorias: Record<string, {
+          emoji: string;
+          label: string;
+          cor: number;
+          descricao: string;
+          comandos: Array<{ nome: string; desc: string }>;
+        }> = {
+          robux: {
+            emoji: "💸", label: "Robux & Conversão", cor: 0xf59e0b,
+            descricao: "Ferramentas de conversão e cálculo de Robux.",
+            comandos: [
+              { nome: "!robux <valor>", desc: "Converte BRL para Robux." },
+              { nome: "!brl <valor>", desc: "Converte Robux para BRL." },
+              { nome: "!taxa", desc: "Mostra a taxa de câmbio atual." },
+              { nome: "!simular <v1> <v2>...", desc: "Gera uma tabela de conversão." },
+              { nome: "!historico", desc: "Exibe o histórico de alterações de taxa." },
+            ],
+          },
+          roblox: {
+            emoji: "🎮", label: "Roblox", cor: 0x3b82f6,
+            descricao: "Informações e pesquisas relacionadas ao Roblox.",
+            comandos: [
+              { nome: "!perfil <usuário>", desc: "Exibe o perfil Roblox de um usuário." },
+              { nome: "!gamepass <ID ou link>", desc: "Link direto para o gamepass." },
+            ],
+          },
+          relacionamentos: {
+            emoji: "💑", label: "Relacionamentos", cor: 0xec4899,
+            descricao: "Comandos de casamento e relacionamento virtual.",
+            comandos: [
+              { nome: "!casar @usuário", desc: "Propõe casamento para alguém." },
+              { nome: "!divorciar", desc: "Termina o casamento atual." },
+              { nome: "!parceiro", desc: "Mostra seu parceiro atual." },
+              { nome: "!ship @u1 @u2", desc: "Calcula a compatibilidade entre dois membros." },
+            ],
+          },
+          interacoes: {
+            emoji: "🤝", label: "Interações", cor: 0x10b981,
+            descricao: "Interaja com outros membros do servidor.",
+            comandos: [
+              { nome: "!abraçar @usuário", desc: "Abraça outro membro." },
+              { nome: "!beijar @usuário", desc: "Beija outro membro." },
+              { nome: "!high5 @usuário", desc: "Dá um high five." },
+              { nome: "!elogiar @usuário", desc: "Elogia alguém do servidor." },
+            ],
+          },
+          reputacao: {
+            emoji: "⭐", label: "Reputação", cor: 0xf59e0b,
+            descricao: "Sistema de reputação e ranking de membros.",
+            comandos: [
+              { nome: "!rep @usuário", desc: "Dá +1 rep para alguém (1x por dia)." },
+              { nome: "!ranking", desc: "Top 10 membros com mais reputação." },
+              { nome: "!meuperfil", desc: "Vê seu perfil com rep e parceiro." },
+            ],
+          },
+          administracao: {
+            emoji: "📢", label: "Administração", cor: 0xdc2626,
+            descricao: "Ferramentas para admins e moderadores.",
+            comandos: [
+              { nome: "!setraxa <robux> <R$>", desc: "Atualiza a taxa de câmbio (admin)." },
+              { nome: "!limpar <qtd>", desc: "Apaga mensagens do canal (mod)." },
+              { nome: "!anuncio <texto>", desc: "Faz um anúncio fixado no canal (mod)." },
+            ],
+          },
+          geral: {
+            emoji: "📊", label: "Geral & Status", cor: 0x64748b,
+            descricao: "Informações e status do FiskBot.",
+            comandos: [
+              { nome: "!ping", desc: "Verifica a latência do bot." },
+              { nome: "!status", desc: "Estatísticas gerais de uso do FiskBot." },
+            ],
+          },
+        };
+
+        // Embed principal
+        const embedPrincipal = new EmbedBuilder()
+          .setTitle("✨ FiskBot — Central de Comandos")
+          .setDescription(
+            "Bem-vindo ao painel de ajuda do **FiskBot**.\n" +
+            "Selecione uma categoria abaixo para visualizar seus comandos."
+          )
+          .addFields({
+            name: "📂 Categorias disponíveis",
+            value: Object.values(categorias)
+              .map((c) => `${c.emoji} **${c.label}**`)
+              .join("  ·  "),
+          })
+          .setColor(0x5865f2)
+          .setFooter({ text: "FiskBot • Use o menu abaixo para navegar" })
+          .setTimestamp();
+
+        // Select menu com todas as categorias
+        const buildMenu = () =>
+          new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+            new StringSelectMenuBuilder()
+              .setCustomId("ajuda_cat")
+              .setPlaceholder("📂 Escolha uma categoria...")
+              .addOptions(
+                Object.entries(categorias).map(([chave, cat]) => ({
+                  label: cat.label,
+                  value: chave,
+                  emoji: cat.emoji,
+                  description: cat.descricao.slice(0, 50),
+                }))
+              )
+          );
+
+        // Botão voltar
+        const buildBotaoVoltar = () =>
+          new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+              .setCustomId("ajuda_voltar")
+              .setLabel("⬅  Voltar ao Menu Principal")
+              .setStyle(ButtonStyle.Secondary)
+          );
+
+        // Embed de categoria
+        const embedCategoria = (chave: string) => {
+          const cat = categorias[chave];
+          const lista = cat.comandos
+            .map((c) => `\`${c.nome}\`\n╰ ${c.desc}`)
+            .join("\n\n");
+          return new EmbedBuilder()
+            .setTitle(`${cat.emoji} ${cat.label}`)
+            .setDescription(`${cat.descricao}\n\u200B`)
+            .addFields({ name: "Comandos", value: lista })
+            .setColor(cat.cor)
+            .setFooter({ text: "FiskBot • Clique em ⬅ Voltar para o menu principal" })
+            .setTimestamp();
+        };
+
+        // Envia o painel
+        const msg = await message.reply({
+          embeds: [embedPrincipal],
+          components: [buildMenu()],
+        });
+
+        // Coletor do select menu (só quem executou o !ajuda)
+        const coletorMenu = msg.createMessageComponentCollector({
+          filter: (i) => i.user.id === message.author.id,
+          componentType: ComponentType.StringSelect,
+          time: 5 * 60 * 1000,
+        });
+
+        // Coletor do botão voltar
+        const coletorVoltar = msg.createMessageComponentCollector({
+          filter: (i) => i.user.id === message.author.id,
+          componentType: ComponentType.Button,
+          time: 5 * 60 * 1000,
+        });
+
+        coletorMenu.on("collect", async (interacao) => {
+          await interacao.deferUpdate();
+          const chave = interacao.values[0];
+          await msg.edit({
+            embeds: [embedCategoria(chave)],
+            components: [buildBotaoVoltar()],
+          });
+        });
+
+        coletorVoltar.on("collect", async (interacao) => {
+          await interacao.deferUpdate();
+          await msg.edit({
+            embeds: [embedPrincipal],
+            components: [buildMenu()],
+          });
+        });
+
+        coletorMenu.on("end", async () => {
+          await msg.edit({ components: [] }).catch(() => null);
+        });
+
+        return;
+      }
+
+    } catch (err) {
+      logger.error({ err }, "Error handling message command");
+      await message.reply({ embeds: [
+        new EmbedBuilder().setColor(Colors.Red).setDescription("❌ Ocorreu um erro ao processar o comando. Tente novamente."),
+      ]}).catch(() => null);
+    }
+  });
+
+  client.login(token).catch((err) => {
+    logger.error({ err }, "Failed to login to Discord");
+    process.exit(1);
+  });
+}
