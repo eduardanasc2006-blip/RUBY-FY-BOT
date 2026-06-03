@@ -1,7 +1,7 @@
 import { EmbedBuilder } from 'discord.js';
 import Missao from '../db/models/Missao.mjs';
-import Usuario from '../db/models/Usuario.mjs';
 import { embedErro } from '../utils/embeds.mjs';
+import { ganharXP } from './xpSystem.mjs';
 
 const DIARIAS_BASE = [
   { id: 'd1', tipo: 'mensagem',  descricao: 'Enviar 20 mensagens',       meta: 20, recompensa: 100 },
@@ -118,7 +118,7 @@ export async function progredirMissao(userId, guildId, tipo, quantidade = 1) {
           m.atual = Math.min(m.atual + quantidade, m.meta);
           if (m.atual >= m.meta) {
             m.concluida = true;
-            await Usuario.updateOne({ userId, guildId }, { $inc: { xp: m.recompensa }, $setOnInsert: { userId, guildId } }, { upsert: true });
+            await ganharXP(userId, guildId, m.recompensa, 'missao');
           }
           atualizado = true;
         }

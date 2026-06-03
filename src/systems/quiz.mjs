@@ -3,10 +3,10 @@ import {
   StringSelectMenuBuilder, StringSelectMenuOptionBuilder,
 } from 'discord.js';
 import QuizModel from '../db/models/Quiz.mjs';
-import Usuario from '../db/models/Usuario.mjs';
 import { embedErro } from '../utils/embeds.mjs';
 import { checkCooldown, formatarTempo } from '../utils/cooldown.mjs';
 import { progredirMissao } from './missoes.mjs';
+import { ganharXP, XP_EVENTS } from './xpSystem.mjs';
 
 const PERGUNTAS = {
   roblox: [
@@ -238,7 +238,7 @@ export function register(client, configs) {
     jogosAtivos.delete(chave);
     const resposta = parseInt(respostaStr);
     const correto = resposta === jogo.correto;
-    const xpGanho = correto ? 30 : 0;
+    const xpGanho = correto ? XP_EVENTS.QUIZ : 0;
 
     // Atualizar stats — também rastreia categoria favorita
     try {
@@ -259,11 +259,7 @@ export function register(client, configs) {
     } catch {}
 
     if (correto && xpGanho > 0) {
-      await Usuario.findOneAndUpdate(
-        { userId, guildId },
-        { $inc: { xp: xpGanho }, $setOnInsert: { userId, guildId } },
-        { upsert: true }
-      ).catch(() => {});
+      await ganharXP(userId, guildId, xpGanho, 'quiz').catch(() => {});
     }
 
     await progredirMissao(userId, guildId, 'quiz').catch(() => {});

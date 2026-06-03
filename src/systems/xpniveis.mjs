@@ -1,11 +1,11 @@
 import { EmbedBuilder } from 'discord.js';
 import Usuario from '../db/models/Usuario.mjs';
-import Config from '../db/models/Config.mjs';
 import { calcularNivel, getFaixa } from '../utils/nivelCalc.mjs';
 import { registrarLog } from '../utils/logger.mjs';
 import { embedErro } from '../utils/embeds.mjs';
 import { verificarConquistas } from './conquistas.mjs';
 import { isDBConnected } from '../utils/dbGuard.mjs';
+import { ganharXP, XP_EVENTS, historicoXP } from './xpSystem.mjs';
 
 const MSGS_RECENTES = new Map();
 
@@ -91,6 +91,34 @@ export function register(client, configs) {
         });
       }
 
+      /* ===== XP LOGS ===== */
+      if (cmd === 'xplogs') {
+        const alvo = msg.mentions.users.first() || msg.author;
+        const logs = await historicoXP(alvo.id, guildId, 10);
+
+        if (!logs.length)
+          return msg.reply({ embeds: [embedErro('Nenhum histórico de XP ainda.')] });
+
+        const emojis = { ganho: '🟢', gasto: '🔴' };
+        const linhas = logs.map(l => {
+          const sinal  = l.tipo === 'ganho' ? `+${l.valor}` : `${l.valor}`;
+          const emoji  = emojis[l.tipo] || '⚪';
+          const data   = l.createdAt ? new Date(l.createdAt).toLocaleString('pt-BR') : '?';
+          return `${emoji} \`${sinal.padStart(6)} XP\` — **${l.origem}** • ${data}`;
+        });
+
+        return msg.reply({
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0x3498db)
+              .setTitle(`📋 Histórico de XP — ${alvo.globalName || alvo.username}`)
+              .setDescription(linhas.join('\n'))
+              .setFooter({ text: 'Últimas 10 transações • FiskBot' })
+              .setTimestamp()
+          ]
+        });
+      }
+
       /* ===== RANK ===== */
       if (cmd === 'rank' || cmd === 'leaderboard' || cmd === 'topxp') {
         const top = await Usuario.find({ guildId })
@@ -148,39 +176,33 @@ export function register(client, configs) {
       if (ultimo === ontemStr) streak = (uAtual?.streak || 0) + 1;
     }
 
-    /* ===== XP GANHO (15–30 FIXADO) ===== */
-    const base = Math.floor(Math.random() * 16) + 15; // 15–30 XP
-    const mult = multiplicadorStreak(streak);
-    const ganho = Math.round(base * mult);
+    /* ===== XP GANHO — usa XP_EVENTS.CHAT + multiplicador streak ===== */
+    const chatMin  = XP_EVENTS.CHAT.base;
+    const chatMax  = XP_EVENTS.CHAT.max;
+    const base     = Math.floor(Math.random() * (chatMax - chatMin + 1)) + chatMin;
+    const mult     = multiplicadorStreak(streak);
 
-    const u = await Usuario.findOneAndUpdate(
+    // Atualiza campos NÃO-XP: mensagens, streak, ultimoDiaAtivo
+    await Usuario.findOneAndUpdate(
       { userId: msg.author.id, guildId },
       {
-        $inc: {
-          xpTotal: ganho,
-          xpDisponivel: ganho,
-          mensagens: 1
-        },
-        $set: {
-          streak,
-          ultimoDiaAtivo: hoje
-        },
-        $setOnInsert: {
-          userId: msg.author.id,
-          guildId
-        }
+        $inc: { mensagens: 1 },
+        $set: { streak, ultimoDiaAtivo: hoje },
+        $setOnInsert: { userId: msg.author.id, guildId }
       },
-      { upsert: true, new: true }
+      { upsert: true }
     );
 
+    // Todo XP passa pelo controlador central (ganharXP)
+    // mult é passado como multiplicador → ganharXP faz Math.round(base * mult)
+    const { usuario: u, levelUp, nivelNovo } = await ganharXP(
+      msg.author.id, guildId, base, 'chat', mult
+    );
     if (!u) return;
 
-    /* ===== LEVEL UP ===== */
-    const nivelAntes = calcularNivel((u.xpTotal || 0) - ganho).nivel;
-    const nivelDepois = calcularNivel(u.xpTotal || 0).nivel;
-
-    if (nivelDepois > nivelAntes) {
-      const faixa = getFaixa(nivelDepois);
+    /* ===== LEVEL UP (detectado dentro de ganharXP, anunciado aqui) ===== */
+    if (levelUp) {
+      const faixa = getFaixa(nivelNovo);
 
       await msg.channel.send({
         embeds: [
@@ -188,13 +210,13 @@ export function register(client, configs) {
             .setColor(faixa.cor)
             .setTitle('🎉 Level Up!')
             .setDescription(
-              `<@${u.userId}> chegou ao nível **${nivelDepois}** ${faixa.emoji}`
+              `<@${u.userId}> chegou ao nível **${nivelNovo}** ${faixa.emoji}`
             )
         ]
       });
 
       await registrarLog(client, guildId, 'nivel', u.userId, {
-        descricao: `<@${u.userId}> subiu para o nível ${nivelDepois}`
+        descricao: `<@${u.userId}> subiu para o nível ${nivelNovo}`
       }, configs);
     }
 

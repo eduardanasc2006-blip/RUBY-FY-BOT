@@ -1,8 +1,8 @@
 import { EmbedBuilder } from 'discord.js';
 import ForcaModel from '../db/models/Forca.mjs';
-import Usuario from '../db/models/Usuario.mjs';
 import { embedErro } from '../utils/embeds.mjs';
 import { progredirMissao } from './missoes.mjs';
+import { ganharXP, XP_EVENTS } from './xpSystem.mjs';
 
 const PALAVRAS = {
   anime: ['NARUTO', 'SASUKE', 'BORUTO', 'GOKU', 'VEGETA', 'LUFFY', 'ZORO', 'NAMI', 'ICHIGO', 'BLEACH', 'TITAN', 'MIKASA', 'LEVI', 'TANJIRO'],
@@ -89,9 +89,9 @@ export function register(client, configs) {
       jogosAtivos.delete(chave);
       if (ganhou) {
         await ForcaModel.findOneAndUpdate({ userId: msg.author.id, guildId }, { $inc: { vitorias: 1 }, $setOnInsert: { userId: msg.author.id, guildId } }, { upsert: true });
-        await Usuario.updateOne({ userId: msg.author.id, guildId }, { $inc: { xp: 50 }, $setOnInsert: { userId: msg.author.id, guildId } }, { upsert: true });
+        await ganharXP(msg.author.id, guildId, XP_EVENTS.FORCA, 'forca');
         await progredirMissao(msg.author.id, guildId, 'forca').catch(() => {});
-        const embed = new EmbedBuilder().setColor(0x2ecc71).setTitle('🎉 Você venceu!').setDescription(`A palavra era: **${jogo.palavra}**\n+50 XP!`).setTimestamp();
+        const embed = new EmbedBuilder().setColor(0x2ecc71).setTitle('🎉 Você venceu!').setDescription(`A palavra era: **${jogo.palavra}**\n+${XP_EVENTS.FORCA} XP!`).setTimestamp();
         return msg.channel.send({ embeds: [embed] });
       } else {
         await ForcaModel.findOneAndUpdate({ userId: msg.author.id, guildId }, { $inc: { derrotas: 1 }, $setOnInsert: { userId: msg.author.id, guildId } }, { upsert: true });
