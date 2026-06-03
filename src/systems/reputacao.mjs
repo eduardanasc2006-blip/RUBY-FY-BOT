@@ -36,79 +36,6 @@ export function register(client, configs) {
     const guildId = msg.guild.id;
 
     /* =========================
-       REPUTAÇÃO
-    ========================= */
-    if (cmd === 'rep') {
-      if (semBanco(msg)) return;
-
-      const alvo = msg.mentions.users.first();
-      if (!alvo || alvo.bot)
-        return msg.reply({ embeds: [embedErro('Mencione um usuário válido.')] });
-
-      if (alvo.id === msg.author.id)
-        return msg.reply({ embeds: [embedErro('Você não pode se autoavaliar.')] });
-
-      const cdKey = `rep:${msg.author.id}:${guildId}`;
-      const espera = checkCooldown(cdKey, 24 * 60 * 60 * 1000);
-
-      if (espera) {
-        const h = Math.floor(espera / 3600000);
-        const m = Math.floor((espera % 3600000) / 60000);
-        return msg.reply({
-          embeds: [embedErro(`Você já deu reputação hoje. Próxima em **${h}h ${m}m**.`)],
-        });
-      }
-
-      await Usuario.findOneAndUpdate(
-        { userId: alvo.id, guildId },
-        { $inc: { reputacao: 1 }, $setOnInsert: { userId: alvo.id, guildId } },
-        { upsert: true }
-      );
-
-      await registrarLog(client, guildId, 'reputacao', msg.author.id, {
-        descricao: `<@${msg.author.id}> deu +1 rep para <@${alvo.id}>`,
-      }, configs);
-
-      return msg.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0xffd700)
-            .setDescription(`⭐ <@${msg.author.id}> deu **+1 reputação** para <@${alvo.id}>!`)
-            .setTimestamp(),
-        ],
-      });
-    }
-
-    /* =========================
-       RANKING
-    ========================= */
-    if (cmd === 'ranking') {
-      if (semBanco(msg)) return;
-
-      const top = await Usuario.find({ guildId })
-        .sort({ reputacao: -1 })
-        .limit(10)
-        .lean();
-
-      const medals = ['🥇', '🥈', '🥉'];
-
-      const linhas = top.map(
-        (u, i) =>
-          `${medals[i] || `**#${i + 1}**`} <@${u.userId}> — ⭐ ${u.reputacao || 0}`
-      );
-
-      return msg.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0xffd700)
-            .setTitle('⭐ Top Reputação')
-            .setDescription(linhas.join('\n') || 'Nenhum dado.')
-            .setTimestamp(),
-        ],
-      });
-    }
-
-    /* =========================
        PERFIL
     ========================= */
     if (cmd === 'meuperfil') {
@@ -194,19 +121,22 @@ export function register(client, configs) {
       /* =========================
          TÍTULOS
       ========================= */
-      let totalTitulos = 0;
-      try {
-        const { TITULOS_DISPONIVEIS } = await import('./titulos.mjs');
-        totalTitulos = u?.titulos?.length || 0;
-      } catch {
-        totalTitulos = u?.titulos?.length || 0;
-      }
+      let totalTitulos = u?.titulos?.length || 0;
+
+      /* =========================
+         DESCRIÇÃO SEGURA (CORREÇÃO DO ERRO)
+      ========================= */
+      const desc = u?.descricao?.trim() || "Sem descrição disponível";
 
       const embed = new EmbedBuilder()
         .setColor(faixa.cor)
         .setTitle(`👤 ${nome(alvo)}`)
         .setThumbnail(alvo.displayAvatarURL({ size: 256 }))
-        .setDescription(u?.tituloEquipado ? `👑 ${u.tituloEquipado}` : '');
+        .setDescription(
+          u?.tituloEquipado
+            ? `👑 ${u.tituloEquipado}\n\n${desc}`
+            : desc
+        );
 
       const fields = [
         {
@@ -214,8 +144,16 @@ export function register(client, configs) {
           value: `${barra} **${pct}%**`,
           inline: false,
         },
-        { name: '📈 XP', value: `**${xpTotal.toLocaleString('pt-BR')}**`, inline: true },
-        { name: '⭐ Reputação', value: `**${u?.reputacao || 0}**`, inline: true },
+        {
+          name: '📈 XP',
+          value: `**${xpTotal.toLocaleString('pt-BR')}**`,
+          inline: true,
+        },
+        {
+          name: '⭐ Reputação',
+          value: `**${u?.reputacao || 0}**`,
+          inline: true,
+        },
         { name: '\u200b', value: '\u200b', inline: true },
       ];
 
@@ -236,8 +174,16 @@ export function register(client, configs) {
       }
 
       fields.push(
-        { name: '🏆 Conquistas', value: `**${totalConquistas}**`, inline: true },
-        { name: '🎖️ Títulos', value: `**${totalTitulos}**`, inline: true }
+        {
+          name: '🏆 Conquistas',
+          value: `**${totalConquistas}**`,
+          inline: true,
+        },
+        {
+          name: '🎖️ Títulos',
+          value: `**${totalTitulos}**`,
+          inline: true,
+        }
       );
 
       if (quizPrecisao !== null) {
@@ -262,4 +208,4 @@ export function register(client, configs) {
       return msg.reply({ embeds: [embed] });
     }
   });
-        }
+}
