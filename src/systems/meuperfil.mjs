@@ -8,6 +8,8 @@ import {
 } from 'discord.js';
 import Usuario from '../db/models/Usuario.mjs';
 import Conquista from '../db/models/Conquista.mjs';
+import Casamento from '../db/models/Casamento.mjs';
+import Afinidade from '../db/models/Afinidade.mjs';
 import { calcularNivel, getFaixa } from '../utils/nivelCalc.mjs';
 import { embedErro } from '../utils/embeds.mjs';
 import { isDBConnected } from '../utils/dbGuard.mjs';
@@ -67,10 +69,13 @@ function corMoldura(id) {
   return mapa[id] || 0x5865f2;
 }
 
+function chaveAfin(u1, u2) { return u1 < u2 ? [u1, u2] : [u2, u1]; }
+
 async function mostrarPerfil(alvo, guildId, guild, replyFn) {
-  const [u, conquistas] = await Promise.all([
+  const [u, conquistas, casamento] = await Promise.all([
     Usuario.findOne({ userId: alvo.id, guildId }),
     Conquista.findOne({ userId: alvo.id, guildId }),
+    Casamento.findOne({ guildId, ativo: true, $or: [{ userId1: alvo.id }, { userId2: alvo.id }] }),
   ]);
 
   const xp      = u?.xp || 0;
@@ -83,24 +88,73 @@ async function mostrarPerfil(alvo, guildId, guild, replyFn) {
   const genero  = u?.genero  || null;
   const streak  = u?.streak  || 0;
 
+  // ── Casamento & afinidade ──
+  let parceiroNome = null;
+  let afinidadePct = null;
+  if (casamento) {
+    const parceiroId = casamento.userId1 === alvo.id ? casamento.userId2 : casamento.userId1;
+    try {
+      const membro = await guild.members.fetch(parceiroId).catch(() => null);
+      parceiroNome = membro ? (membro.user.globalName || membro.user.username) : `<@${parceiroId}>`;
+      const [u1, u2] = chaveAfin(alvo.id, parceiroId);
+      const afin = await Afinidade.findOne({ guildId, userId1: u1, userId2: u2 });
+      if (afin?.pontos) afinidadePct = Math.min(100, Math.round((afin.pontos / 2000) * 100));
+    } catch {}
+  }
+
+  // ── Quiz stats ──
+  let quizPrecisao = null;
+  try {
+    const Quiz = (await import('../db/models/Quiz.mjs')).default;
+    const q = await Quiz.findOne({ userId: alvo.id, guildId });
+    if (q && (q.acertos + q.erros) > 0)
+      quizPrecisao = Math.round((q.acertos / (q.acertos + q.erros)) * 100);
+  } catch {}
+
+  // ── Forca stats ──
+  let forcaVitorias = null;
+  try {
+    const Forca = (await import('../db/models/Forca.mjs')).default;
+    const fc = await Forca.findOne({ userId: alvo.id, guildId });
+    forcaVitorias = fc?.vitorias ?? 0;
+  } catch {}
+
   const embed = new EmbedBuilder()
     .setColor(corMoldura(moldura))
-    .setTitle(`Perfil de ${alvo.displayName}`)
+    .setTitle(`👤 ${alvo.globalName || alvo.username}`)
     .setThumbnail(alvo.displayAvatarURL({ size: 256 }))
-    .addFields(
-      { name: 'Nivel', value: `${faixa.emoji} **${nivel}** - ${faixa.nome}`, inline: true },
-      { name: 'XP Total', value: `**${xp.toLocaleString('pt-BR')}**`, inline: true },
-      { name: 'Reputacao', value: `**${u?.reputacao || 0}**`, inline: true },
-      { name: `Progresso (${pct}%)`, value: `${barra}  ${xpAtual} / ${xpProximo}`, inline: false },
-      { name: 'Mensagens', value: `**${(u?.mensagens || 0).toLocaleString('pt-BR')}**`, inline: true },
-      { name: 'Streak', value: streak > 1 ? `**${streak}** dias seguidos` : '—', inline: true },
-      { name: 'Conquistas', value: `**${conquistas?.conquistas?.length || 0}**`, inline: true },
-      { name: 'Titulo Equipado', value: u?.tituloEquipado ? `*"${u.tituloEquipado}"*` : '─', inline: false },
-      { name: 'Genero', value: genero ? LABEL_GENERO[genero] : 'Nao definido', inline: true },
-      { name: 'Moldura', value: nomeMoldura(moldura), inline: true },
-      { name: 'Fundo', value: nomeFundo(fundo), inline: true },
-    )
-    .setFooter({ text: `${guild.name} | Use os botoes abaixo para personalizar` })
+    .setDescription(u?.tituloEquipado ? `👑 *"${u.tituloEquipado}"*` : '');
+
+  const fields = [
+    { name: `${faixa.emoji} Nível ${nivel} — ${faixa.nome}`, value: `${barra} **${pct}%**  (${xpAtual}/${xpProximo} XP)`, inline: false },
+    { name: '📈 XP Total', value: `**${xp.toLocaleString('pt-BR')}**`, inline: true },
+    { name: '⭐ Reputação', value: `**${u?.reputacao || 0}**`, inline: true },
+    { name: '💬 Mensagens', value: `**${(u?.mensagens || 0).toLocaleString('pt-BR')}**`, inline: true },
+    { name: '🔥 Streak', value: streak > 0 ? `**${streak}** dia${streak !== 1 ? 's' : ''}` : '—', inline: true },
+    { name: '🏆 Conquistas', value: `**${conquistas?.conquistas?.length || 0}**`, inline: true },
+    { name: '🎖️ Títulos', value: `**${u?.titulos?.length || 0}**`, inline: true },
+  ];
+
+  if (casamento && parceiroNome)
+    fields.push({ name: '💍 Casado(a) com', value: `**${parceiroNome}**`, inline: true });
+  if (afinidadePct !== null)
+    fields.push({ name: '💘 Afinidade', value: `**${afinidadePct}%**`, inline: true });
+  if (casamento || afinidadePct !== null)
+    fields.push({ name: '\u200b', value: '\u200b', inline: true });
+
+  if (quizPrecisao !== null)
+    fields.push({ name: '🧠 Quiz', value: `**${quizPrecisao}%** precisão`, inline: true });
+  if (forcaVitorias !== null)
+    fields.push({ name: '🔤 Forca', value: `**${forcaVitorias}** vitórias`, inline: true });
+
+  fields.push(
+    { name: '👤 Gênero', value: genero ? LABEL_GENERO[genero] : 'Não definido', inline: true },
+    { name: '🖼️ Moldura', value: nomeMoldura(moldura), inline: true },
+    { name: '🌌 Fundo', value: nomeFundo(fundo), inline: true },
+  );
+
+  embed.addFields(fields)
+    .setFooter({ text: `${guild.name} | Personalize com os botões abaixo` })
     .setTimestamp();
 
   // Botoes de personalizacao
@@ -142,7 +196,7 @@ export function register(client, configs) {
     const cmd   = args.shift().toLowerCase();
     const guildId = msg.guild.id;
 
-    if (cmd !== 'meuperfil' && cmd !== 'perfil') return;
+    if (cmd !== 'meuperfil') return;
 
     if (!isDBConnected())
       return msg.reply({ embeds: [embedErro('Banco de dados nao disponivel.')] });

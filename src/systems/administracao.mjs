@@ -130,37 +130,6 @@ export function register(client, configs) {
       return msg.reply({ embeds: [embedSucesso('Auto-Role Removido', 'Novos membros não receberão cargo automático.')] });
     }
 
-    // ── Level Roles ───────────────────────────────────────────────────────────
-
-    if (cmd === 'setlevelrole') {
-      if (!isAdmin(msg.member, cfg)) return msg.reply({ embeds: [embedErro('Apenas administradores.')] });
-      if (semBanco(msg)) return;
-      const nivel = parseInt(args[0]);
-      const cargo = msg.mentions.roles.first();
-      if (!nivel || !cargo) return msg.reply({ embeds: [embedErro('Use: `!setlevelrole <nível> @cargo`')] });
-      await Config.findOneAndUpdate({ guildId }, { $pull: { levelRoles: { nivel } } }, { upsert: true });
-      await Config.findOneAndUpdate({ guildId }, { $push: { levelRoles: { nivel, cargoId: cargo.id } } });
-      return msg.reply({ embeds: [new EmbedBuilder().setColor(0x2ecc71).setDescription(`✅ Nível **${nivel}** → <@&${cargo.id}>`)] });
-    }
-
-    if (cmd === 'levelroles') {
-      if (semBanco(msg)) return;
-      const dbCfg = await Config.findOne({ guildId }).catch(() => null);
-      const roles = dbCfg?.levelRoles?.sort((a, b) => a.nivel - b.nivel) || [];
-      if (!roles.length) return msg.reply({ embeds: [embedErro('Nenhum cargo de nível configurado.\nUse `!setlevelrole <nível> @cargo`')] });
-      const linhas = roles.map(r => `Nível **${r.nivel}** → <@&${r.cargoId}>`);
-      return msg.reply({ embeds: [new EmbedBuilder().setColor(0x5865f2).setTitle('🎖️ Cargos por Nível').setDescription(linhas.join('\n')).setFooter({ text: '!setlevelrole <nível> @cargo para configurar' }).setTimestamp()] });
-    }
-
-    if (cmd === 'removelevelrole') {
-      if (!isAdmin(msg.member, cfg)) return msg.reply({ embeds: [embedErro('Apenas administradores.')] });
-      if (semBanco(msg)) return;
-      const nivel = parseInt(args[0]);
-      if (!nivel) return msg.reply({ embeds: [embedErro('Use: `!removelevelrole <nível>`')] });
-      await Config.findOneAndUpdate({ guildId }, { $pull: { levelRoles: { nivel } } });
-      return msg.reply({ embeds: [new EmbedBuilder().setColor(0x2ecc71).setDescription(`✅ Cargo do Nível **${nivel}** removido.`)] });
-    }
-
     // ── Config ────────────────────────────────────────────────────────────────
 
     if (cmd === 'setconfig') {
@@ -199,16 +168,6 @@ export function register(client, configs) {
       return msg.reply({ embeds: [embed] });
     }
 
-    if (cmd === 'settaxa') {
-      if (!isAdmin(msg.member, cfg)) return msg.reply({ embeds: [embedErro('Sem permissão.')] });
-      if (semBanco(msg)) return;
-      const taxa = parseFloat(args[0]?.replace(',', '.'));
-      if (!taxa || isNaN(taxa)) return msg.reply({ embeds: [embedErro('Use: `!settaxa <valor>`')] });
-      await Config.findOneAndUpdate({ guildId }, { $set: { taxa }, $push: { taxaHistorico: { taxa, adminId: msg.author.id, data: new Date() } } }, { upsert: true });
-      if (cfg) cfg.taxa = taxa;
-      await registrarLog(client, guildId, 'admin', msg.author.id, { descricao: `Taxa alterada para R$${taxa.toFixed(2)}` }, configs);
-      return msg.reply({ embeds: [new EmbedBuilder().setColor(0x2ecc71).setDescription(`✅ Taxa atualizada: **R$${taxa.toFixed(2)}** por 1.000 Robux.`)] });
-    }
   });
 
   // ── Auto-Role ao entrar ───────────────────────────────────────────────────
@@ -256,4 +215,3 @@ async function enviarBoasVindas(canal, member, guild, dbCfg) {
 
   await canal.send({ embeds: [embed] }).catch(() => {});
 }
-
