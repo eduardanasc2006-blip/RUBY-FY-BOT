@@ -2,19 +2,16 @@ import { makeModel } from '../sqlite.mjs';
 
 export default makeModel('usuarios', {
   jsonFields: [
-    // sistema atual
+    // 🏷️ sistema social
     'titulos',
 
-    // 🛒 loja / inventário
+    // 🛒 economia / loja
     'inventario',
     'badges',
     'efeitos',
 
-    // 🎮 quiz system
-    'quiz',
-
-    // 💍 relacionamentos (casamento / ship)
-    'relacionamentos'
+    // 🎮 sistemas internos
+    'quiz'
   ],
 
   dateFields: [
@@ -25,41 +22,40 @@ export default makeModel('usuarios', {
     'updatedAt'
   ],
 
-  // 🔥 valores padrão automáticos (IMPORTANTE pro seu sistema não quebrar)
   defaults: {
-    xpDisponivel: 0,
+    // 💰 economia principal
     xpTotal: 0,
+    xpDisponivel: 0,
     nivel: 1,
 
+    // 🏷️ títulos
     titulos: [],
 
+    // 🛒 inventário centralizado
     inventario: {
       moldura: 'padrao',
       fundo: 'azul',
-      titulo: null,
-      badges: [],
-      efeitos: []
+      titulo: null
     },
 
     badges: [],
     efeitos: [],
 
+    // 🎮 quiz system (com expansão futura)
     quiz: {
       vidas: 3,
       maxVidas: 3,
       pulos: 0,
-      acertos: 0
+      acertos: 0,
+      erros: 0
     },
 
-    relacionamentos: {
-      casado: false,
-      parceiroId: null,
-      dataCasamento: null
-    },
-
+    // ⏱️ controle social simples (sem duplicar casamento real)
     ultimaRep: null,
     ultimaMensagem: null,
     ultimoXP: null,
+
+    // 📊 controle base
     createdAt: new Date(),
     updatedAt: new Date()
   }
