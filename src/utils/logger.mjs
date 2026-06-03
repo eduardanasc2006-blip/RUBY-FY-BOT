@@ -23,4 +23,3 @@ export async function registrarLog(client, guildId, tipo, userId, dados, configs
     await canal.send({ embeds: [embed] }).catch(() => {});
   } catch {}
 }
-
