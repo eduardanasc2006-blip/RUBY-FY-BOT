@@ -1,4 +1,9 @@
-import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import {
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle
+} from 'discord.js';
 
 import Casamento from '../db/models/Casamento.mjs';
 import Afinidade from '../db/models/Afinidade.mjs';
@@ -11,7 +16,7 @@ import { nivelAfinidade } from '../utils/nivelCalc.mjs';
 const pedidos = new Map();
 
 /* =========================
-   CONFIG CASAMENTO
+   CONFIG
 ========================= */
 
 const XP_CASAMENTO = 12000;
@@ -41,6 +46,7 @@ export function register(client, configs) {
 
     if (cmd === 'casar') {
       const alvo = msg.mentions.users.first();
+
       if (!alvo || alvo.bot || alvo.id === userId)
         return msg.reply({ embeds: [embedErro('Usuário inválido.')] });
 
@@ -49,12 +55,10 @@ export function register(client, configs) {
         Usuario.findOne({ userId: alvo.id, guildId })
       ]);
 
-      const xp1 = u1?.xpDisponivel || 0;
-      const xp2 = u2?.xpDisponivel || 0;
-
-      if (xp1 < XP_CASAMENTO || xp2 < XP_CASAMENTO) {
+      if ((u1?.xpDisponivel || 0) < XP_CASAMENTO ||
+          (u2?.xpDisponivel || 0) < XP_CASAMENTO) {
         return msg.reply({
-          embeds: [embedErro(`❌ Ambos precisam de **${XP_CASAMENTO} XP disponível** para casar.`)]
+          embeds: [embedErro(`❌ Ambos precisam de **${XP_CASAMENTO.toLocaleString()} XP disponível**.`)]
         });
       }
 
@@ -77,6 +81,7 @@ export function register(client, configs) {
         return msg.reply({ embeds: [embedErro('Essa pessoa já está casada.')] });
 
       const chave = `${guildId}:${alvo.id}`;
+
       if (pedidos.has(chave))
         return msg.reply({ embeds: [embedErro('Já existe um pedido pendente.')] });
 
@@ -94,55 +99,14 @@ export function register(client, configs) {
           .setStyle(ButtonStyle.Danger),
       );
 
-      const embed = new EmbedBuilder()
-        .setColor(0xff69b4)
-        .setTitle('💍 Pedido de Casamento')
-        .setDescription(`<@${userId}> pediu <@${alvo.id}> em casamento!\n\n💰 Custo: **${XP_CASAMENTO} XP disponível cada um**`);
-
-      msg.channel.send({ embeds: [embed], components: [row] });
-
-      setTimeout(() => pedidos.delete(chave), 60000);
-    }
-
-    /* =========================
-       DIVÓRCIO
-    ========================= */
-
-    if (cmd === 'divorciar') {
-      const casamento = await Casamento.findOne({
-        guildId,
-        ativo: true,
-        $or: [{ userId1: userId }, { userId2: userId }]
-      });
-
-      if (!casamento)
-        return msg.reply({ embeds: [embedErro('Você não está casado.')] });
-
-      const chave = `div:${guildId}:${userId}`;
-
-      pedidos.set(chave, {
-        casamentoId: casamento._id,
-        parceiro: casamento.userId1 === userId ? casamento.userId2 : casamento.userId1
-      });
-
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`div:aceitar:${userId}`)
-          .setLabel('💔 Confirmar')
-          .setStyle(ButtonStyle.Danger),
-
-        new ButtonBuilder()
-          .setCustomId(`div:recusar:${userId}`)
-          .setLabel('❌ Cancelar')
-          .setStyle(ButtonStyle.Secondary),
-      );
-
-      msg.channel.send({
+      await msg.channel.send({
         embeds: [
           new EmbedBuilder()
-            .setColor(0x888888)
-            .setTitle('💔 Divórcio')
-            .setDescription(`<@${userId}> quer se divorciar.`)
+            .setColor(0xff69b4)
+            .setTitle('💍 Pedido de Casamento')
+            .setDescription(
+              `<@${userId}> pediu <@${alvo.id}> em casamento!\n💰 Custo: **${XP_CASAMENTO.toLocaleString()} XP disponível cada um**`
+            )
         ],
         components: [row]
       });
@@ -178,7 +142,7 @@ export function register(client, configs) {
         userId2: [alvo.id, parceiro].sort()[1]
       });
 
-      msg.reply({
+      return msg.reply({
         embeds: [
           new EmbedBuilder()
             .setColor(0xff69b4)
@@ -186,7 +150,11 @@ export function register(client, configs) {
             .addFields(
               { name: '💑 Parceiro', value: `<@${parceiro}>`, inline: true },
               { name: '📅 Dias juntos', value: `${dias}`, inline: true },
-              { name: '💘 Afinidade', value: `${afin?.pontos || 0} (${nivelAfinidade(afin?.pontos || 0)})`, inline: true },
+              {
+                name: '💘 Afinidade',
+                value: `${afin?.pontos || 0} (${nivelAfinidade(afin?.pontos || 0)})`,
+                inline: true
+              }
             )
         ]
       });
@@ -203,7 +171,7 @@ export function register(client, configs) {
     const { customId, guild, user } = interaction;
 
     /* =========================
-       CASAMENTO ACEITAR
+       CASAMENTO
     ========================= */
 
     if (customId.startsWith('casar:')) {
@@ -218,12 +186,34 @@ export function register(client, configs) {
         const u1 = await Usuario.findOne({ userId: deId, guildId: guild.id });
         const u2 = await Usuario.findOne({ userId: paraId, guildId: guild.id });
 
-        if ((u1?.xpDisponivel || 0) < XP_CASAMENTO || (u2?.xpDisponivel || 0) < XP_CASAMENTO) {
+        if ((u1?.xpDisponivel || 0) < XP_CASAMENTO ||
+            (u2?.xpDisponivel || 0) < XP_CASAMENTO) {
           return interaction.reply({ content: 'XP insuficiente.', ephemeral: true });
         }
 
-        await Usuario.updateOne({ userId: deId }, { $inc: { xpDisponivel: -XP_CASAMENTO } });
-        await Usuario.updateOne({ userId: paraId }, { $inc: { xpDisponivel: -XP_CASAMENTO } });
+        const ja = await Casamento.findOne({
+          guildId: guild.id,
+          ativo: true,
+          $or: [
+            { userId1: deId },
+            { userId2: deId },
+            { userId1: paraId },
+            { userId2: paraId }
+          ]
+        });
+
+        if (ja)
+          return interaction.reply({ content: 'Um dos usuários já está casado.', ephemeral: true });
+
+        await Usuario.updateOne(
+          { userId: deId, guildId: guild.id },
+          { $inc: { xpDisponivel: -XP_CASAMENTO } }
+        );
+
+        await Usuario.updateOne(
+          { userId: paraId, guildId: guild.id },
+          { $inc: { xpDisponivel: -XP_CASAMENTO } }
+        );
 
         await Casamento.create({
           guildId: guild.id,
@@ -260,7 +250,8 @@ export function register(client, configs) {
       const chave = `div:${guild.id}:${deId}`;
 
       const data = pedidos.get(chave);
-      if (!data) return;
+      if (!data)
+        return interaction.reply({ content: 'Pedido expirado.', ephemeral: true });
 
       if (acao === 'aceitar') {
         await Casamento.findByIdAndUpdate(data.casamentoId, {
