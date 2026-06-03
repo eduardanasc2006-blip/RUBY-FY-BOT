@@ -112,7 +112,7 @@ function isAdmin(message: Message) {
 }
 
 /* ─────────────────────────────────────────────
-   MAIN BOT
+   BOT
 ───────────────────────────────────────────── */
 
 export function startBot() {
@@ -141,6 +141,7 @@ export function startBot() {
     const lower = content.toLowerCase();
 
     if (!lower.startsWith("!")) return;
+
     if (isOnCooldown(message.author.id)) {
       await message.react("⏳").catch(() => {});
       return;
@@ -183,7 +184,7 @@ export function startBot() {
       if (lower === "!status") {
         setCooldown(message.author.id);
 
-        await message.reply({
+        return message.reply({
           embeds: [
             new EmbedBuilder()
               .setColor(Colors.Green)
@@ -196,11 +197,9 @@ export function startBot() {
                 { name: "Simular", value: stats.simular.toString(), inline: true },
                 { name: "Gamepass", value: stats.gamepass.toString(), inline: true }
               )
-              .setFooter({ text: `Taxa: ${rate.robux}R$ = ${rate.brl} BRL` }),
+              .setFooter({ text: `Taxa: ${rate.robux}/${rate.brl}` }),
           ],
         });
-
-        return;
       }
 
       /* ───── !robux ───── */
@@ -223,7 +222,7 @@ export function startBot() {
               .setTitle("💸 BRL → Robux")
               .addFields(
                 { name: "BRL", value: formatBrl(value), inline: true },
-                { name: "Robux", value: `${formatRobux(robux)}`, inline: true }
+                { name: "Robux", value: formatRobux(robux), inline: true }
               ),
           ],
         });
@@ -310,7 +309,80 @@ export function startBot() {
         });
       }
 
-      /* fallback */
+      /* ───── !ajuda (FIX COMPLETO DO MENU + BOTÃO) ───── */
+      if (lower === "!ajuda") {
+        setCooldown(message.author.id);
+
+        const embed = new EmbedBuilder()
+          .setColor(Colors.Blurple)
+          .setTitle("📚 Menu de Ajuda")
+          .setDescription("Selecione uma categoria abaixo.");
+
+        const menu = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+          new StringSelectMenuBuilder()
+            .setCustomId("ajuda_cat")
+            .setPlaceholder("Escolha uma categoria")
+            .addOptions([
+              { label: "Robux", value: "robux" },
+              { label: "Info", value: "info" },
+            ])
+        );
+
+        const msg = await message.reply({
+          embeds: [embed],
+          components: [menu],
+        });
+
+        /* ✔ MENU CORRIGIDO */
+        const coletorMenu = msg.createMessageComponentCollector({
+          filter: (i) =>
+            i.user.id === message.author.id &&
+            i.customId === "ajuda_cat",
+          componentType: ComponentType.StringSelect,
+          time: 300000,
+        });
+
+        /* ✔ BOTÃO VOLTAR CORRIGIDO */
+        const coletorVoltar = msg.createMessageComponentCollector({
+          filter: (i) =>
+            i.user.id === message.author.id &&
+            i.customId === "ajuda_voltar",
+          componentType: ComponentType.Button,
+          time: 300000,
+        });
+
+        coletorMenu.on("collect", async (i) => {
+          await i.deferUpdate();
+
+          await msg.edit({
+            embeds: [
+              new EmbedBuilder()
+                .setColor(Colors.Gold)
+                .setTitle("Categoria selecionada")
+                .setDescription(i.values[0]),
+            ],
+            components: [
+              new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                  .setCustomId("ajuda_voltar")
+                  .setLabel("Voltar")
+                  .setStyle(ButtonStyle.Secondary)
+              ),
+            ],
+          });
+        });
+
+        coletorVoltar.on("collect", async (i) => {
+          await i.deferUpdate();
+          await msg.edit({
+            embeds: [embed],
+            components: [menu],
+          });
+        });
+
+        return;
+      }
+
       return;
     } catch (err) {
       logger.error(err);
