@@ -3,8 +3,6 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  StringSelectMenuBuilder,
-  StringSelectMenuOptionBuilder,
 } from 'discord.js';
 
 import Usuario from '../db/models/Usuario.mjs';
@@ -17,49 +15,46 @@ import { embedErro } from '../utils/embeds.mjs';
 import { isDBConnected } from '../utils/dbGuard.mjs';
 import { checkCooldown, formatarTempo } from '../utils/cooldown.mjs';
 
-// ───────────────────────────────
-// MOLDURAS
-// ───────────────────────────────
+/* =========================
+   MOLDURAS
+========================= */
+
 const MOLDURAS = [
-  { id: 'padrao', nome: 'Padrao', emoji: '⬜', desc: 'Moldura simples padrao' },
-  { id: 'bronze', nome: 'Bronze', emoji: '🟫', desc: 'Acabamento em bronze' },
-  { id: 'prata', nome: 'Prata', emoji: '⬜', desc: 'Acabamento em prata' },
-  { id: 'ouro', nome: 'Ouro', emoji: '🟨', desc: 'Acabamento em ouro' },
-  { id: 'diamante', nome: 'Diamante', emoji: '🔷', desc: 'Cristal diamante' },
-  { id: 'neon_azul', nome: 'Neon Azul', emoji: '🟦', desc: 'Brilho neon azul' },
-  { id: 'neon_roxo', nome: 'Neon Roxo', emoji: '🟪', desc: 'Brilho neon roxo' },
-  { id: 'cosmica', nome: 'Cosmica', emoji: '🌌', desc: 'Gradiente cosmico' },
+  { id: 'padrao', nome: 'Padrão', emoji: '⬜' },
+  { id: 'bronze', nome: 'Bronze', emoji: '🟫' },
+  { id: 'prata', nome: 'Prata', emoji: '⬜' },
+  { id: 'ouro', nome: 'Ouro', emoji: '🟨' },
+  { id: 'diamante', nome: 'Diamante', emoji: '🔷' },
+  { id: 'neon_azul', nome: 'Neon Azul', emoji: '🟦' },
+  { id: 'neon_roxo', nome: 'Neon Roxo', emoji: '🟪' },
+  { id: 'cosmica', nome: 'Cósmica', emoji: '🌌' },
 ];
 
-// ───────────────────────────────
-// FUNDOS
-// ───────────────────────────────
+/* =========================
+   FUNDOS
+========================= */
+
 const FUNDOS = [
-  { id: 'escuro', nome: 'Escuro', desc: 'Fundo padrao escuro' },
-  { id: 'galaxia', nome: 'Galaxia', desc: 'Tons azul-roxo espacial' },
-  { id: 'floresta', nome: 'Floresta', desc: 'Verde escuro natural' },
-  { id: 'oceano', nome: 'Oceano', desc: 'Azul profundo' },
-  { id: 'pordosol', nome: 'Por do Sol', desc: 'Laranja e rosa' },
-  { id: 'neon', nome: 'Neon', desc: 'Luzes neon vibrantes' },
+  { id: 'escuro', nome: 'Escuro' },
+  { id: 'galaxia', nome: 'Galáxia' },
+  { id: 'floresta', nome: 'Floresta' },
+  { id: 'oceano', nome: 'Oceano' },
+  { id: 'pordosol', nome: 'Pôr do Sol' },
+  { id: 'neon', nome: 'Neon' },
 ];
 
-const LABEL_GENERO = {
-  masculino: 'Masculino',
-  feminino: 'Feminino',
-  outro: 'Outro',
-};
+/* =========================
+   UTIL
+========================= */
 
-// ───────────────────────────────
-// UTIL
-// ───────────────────────────────
-function gerarBarra(atual, total, tamanho = 12) {
+function gerarBarra(atual, total, size = 12) {
   const p = Math.min(1, atual / Math.max(1, total));
-  const f = Math.round(p * tamanho);
-  return '`' + '█'.repeat(f) + '░'.repeat(tamanho - f) + '`';
+  const f = Math.round(p * size);
+  return '█'.repeat(f) + '░'.repeat(size - f);
 }
 
 function nomeMoldura(id) {
-  return MOLDURAS.find(m => m.id === id)?.nome || 'Padrao';
+  return MOLDURAS.find(m => m.id === id)?.nome || 'Padrão';
 }
 
 function nomeFundo(id) {
@@ -80,13 +75,10 @@ function corMoldura(id) {
   return mapa[id] || 0x5865f2;
 }
 
-function chaveAfin(u1, u2) {
-  return u1 < u2 ? [u1, u2] : [u2, u1];
-}
+/* =========================
+   PERFIL
+========================= */
 
-// ───────────────────────────────
-// PERFIL
-// ───────────────────────────────
 async function mostrarPerfil(alvo, guildId, guild, replyFn) {
   const [u, conquistas, casamento] = await Promise.all([
     Usuario.findOne({ userId: alvo.id, guildId }),
@@ -98,25 +90,31 @@ async function mostrarPerfil(alvo, guildId, guild, replyFn) {
     }),
   ]);
 
-  const xp = u?.xp || 0;
-  const { nivel, xpAtual, xpProximo } = calcularNivel(xp);
+  if (!u) {
+    return replyFn({ embeds: [embedErro('Usuário não encontrado.')] });
+  }
 
-  const pct = xpProximo > 0 ? Math.round((xpAtual / xpProximo) * 100) : 100;
+  /* =========================
+     XP SYSTEM (NOVO)
+  ========================= */
+
+  const xpTotal = u.xpTotal || u.xp || 0;
+  const xpDisponivel = u.xpDisponivel || 0;
+
+  const { nivel, xpAtual, xpProximo } = calcularNivel(xpTotal);
   const faixa = getFaixa(nivel);
+
+  const moldura = u.inventario?.moldura || 'padrao';
+  const fundo = u.inventario?.fundo || 'escuro';
+  const streak = u.streak || 0;
+
   const barra = gerarBarra(xpAtual, xpProximo);
+  const pct = Math.round((xpAtual / xpProximo) * 100);
 
-  const moldura = u?.moldura || 'padrao';
-  const fundo = u?.fundo || 'escuro';
-  const genero = u?.genero || null;
-  const streak = u?.streak || 0;
+  /* =========================
+     CASAMENTO + XP 12K REGRAS
+  ========================= */
 
-  // ── última conquista ──
-  const ultimaConquista =
-    conquistas?.conquistas?.length > 0
-      ? conquistas.conquistas[conquistas.conquistas.length - 1]
-      : null;
-
-  // ── casamento ──
   let parceiroNome = null;
   let afinidadePct = null;
 
@@ -124,108 +122,54 @@ async function mostrarPerfil(alvo, guildId, guild, replyFn) {
     const parceiroId =
       casamento.userId1 === alvo.id ? casamento.userId2 : casamento.userId1;
 
-    try {
-      const membro = await guild.members.fetch(parceiroId).catch(() => null);
-      parceiroNome = membro
-        ? (membro.user.globalName || membro.user.username)
-        : `<@${parceiroId}>`;
+    const membro = await guild.members.fetch(parceiroId).catch(() => null);
 
-      const [u1, u2] = chaveAfin(alvo.id, parceiroId);
+    parceiroNome = membro
+      ? (membro.user.globalName || membro.user.username)
+      : `<@${parceiroId}>`;
 
-      const afin = await Afinidade.findOne({ guildId, userId1: u1, userId2: u2 });
+    const [u1, u2] = [alvo.id, parceiroId].sort();
 
-      if (afin && afin.pontos !== undefined) {
-        afinidadePct = Math.min(100, Math.round((afin.pontos / 2000) * 100));
-      }
-    } catch {}
+    const afin = await Afinidade.findOne({ guildId, userId1: u1, userId2: u2 });
+
+    if (afin?.pontos) {
+      afinidadePct = Math.min(100, Math.round((afin.pontos / 2000) * 100));
+    }
   }
 
-  // ── quiz ──
-  let quizPrecisao = null;
-  try {
-    const Quiz = (await import('../db/models/Quiz.mjs')).default;
-    const q = await Quiz.findOne({ userId: alvo.id, guildId });
-
-    if (q && (q.acertos + q.erros) > 0) {
-      quizPrecisao = Math.round((q.acertos / (q.acertos + q.erros)) * 100);
-    }
-  } catch {}
-
-  // ── forca ──
-  let forcaVitorias = null;
-  try {
-    const Forca = (await import('../db/models/Forca.mjs')).default;
-    const fc = await Forca.findOne({ userId: alvo.id, guildId });
-    forcaVitorias = fc?.vitorias ?? 0;
-  } catch {}
+  /* =========================
+     EMBED
+  ========================= */
 
   const embed = new EmbedBuilder()
     .setColor(corMoldura(moldura))
     .setTitle(`👤 ${alvo.globalName || alvo.username}`)
     .setThumbnail(alvo.displayAvatarURL({ size: 256 }))
-    .setDescription(u?.tituloEquipado ? `👑 *"${u.tituloEquipado}"*` : '')
     .setAuthor({
       name: `Lv ${nivel} • ${faixa.nome}`,
       iconURL: alvo.displayAvatarURL(),
-    });
+    })
+    .addFields(
+      { name: `${faixa.emoji} Nível`, value: `${barra} ${pct}%`, inline: false },
+      { name: '⭐ XP Total', value: `${xpTotal}`, inline: true },
+      { name: '💰 XP Disponível', value: `${xpDisponivel}`, inline: true },
+      { name: '🔥 Streak', value: streak ? `${streak} dias` : '—', inline: true },
+      { name: '🏆 Conquistas', value: `${conquistas?.conquistas?.length || 0}`, inline: true },
+      { name: '🎖️ Última Conquista', value: conquistas?.conquistas?.slice(-1)[0] || 'Nenhuma', inline: false },
+      { name: '🖼️ Moldura', value: nomeMoldura(moldura), inline: true },
+      { name: '🌌 Fundo', value: nomeFundo(fundo), inline: true },
+    );
 
-  const fields = [
-    {
-      name: `${faixa.emoji} Nível`,
-      value: `${barra} **${pct}%**`,
-      inline: false,
-    },
-    { name: '📈 XP', value: `${xp}`, inline: true },
-    { name: '⭐ Reputação', value: `${u?.reputacao || 0}`, inline: true },
-    { name: '💬 Mensagens', value: `${u?.mensagens || 0}`, inline: true },
-    { name: '🔥 Streak', value: streak > 0 ? `${streak} dias` : '—', inline: true },
-    {
-      name: '🏆 Conquistas',
-      value: `${conquistas?.conquistas?.length || 0}`,
-      inline: true,
-    },
-    {
-      name: '🎖️ Última Conquista',
-      value: ultimaConquista || 'Nenhuma',
-      inline: false,
-    },
-  ];
+  if (casamento) {
+    embed.addFields(
+      { name: '💍 Casado(a) com', value: parceiroNome, inline: true },
+      { name: '💘 Afinidade', value: `${afinidadePct || 0}%`, inline: true }
+    );
+  }
 
-  if (casamento && parceiroNome)
-    fields.push({
-      name: '💍 Casado(a) com',
-      value: parceiroNome,
-      inline: true,
-    });
-
-  if (afinidadePct !== null)
-    fields.push({
-      name: '💘 Afinidade',
-      value: `${afinidadePct}%`,
-      inline: true,
-    });
-
-  if (quizPrecisao !== null)
-    fields.push({
-      name: '🧠 Quiz',
-      value: `${quizPrecisao}%`,
-      inline: true,
-    });
-
-  if (forcaVitorias !== null)
-    fields.push({
-      name: '🔤 Força',
-      value: `${forcaVitorias}`,
-      inline: true,
-    });
-
-  fields.push(
-    { name: '👤 Gênero', value: genero || 'Não definido', inline: true },
-    { name: '🖼️ Moldura', value: nomeMoldura(moldura), inline: true },
-    { name: '🌌 Fundo', value: nomeFundo(fundo), inline: true }
-  );
-
-  embed.addFields(fields);
+  /* =========================
+     BOTÕES
+  ========================= */
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -236,31 +180,23 @@ async function mostrarPerfil(alvo, guildId, guild, replyFn) {
     new ButtonBuilder()
       .setCustomId(`perfil:fundo:${alvo.id}:${guildId}`)
       .setLabel('Fundo')
-      .setStyle(ButtonStyle.Secondary),
-
-    new ButtonBuilder()
-      .setCustomId(`perfil:titulos:${alvo.id}:${guildId}`)
-      .setLabel('Titulo')
-      .setStyle(ButtonStyle.Secondary),
-
-    new ButtonBuilder()
-      .setCustomId(`perfil:genero:${alvo.id}:${guildId}`)
-      .setLabel('Genero')
       .setStyle(ButtonStyle.Secondary)
   );
 
   return replyFn({ embeds: [embed], components: [row] });
 }
 
-// ───────────────────────────────
-// REGISTER
-// ───────────────────────────────
+/* =========================
+   REGISTER
+========================= */
+
 export function register(client, configs) {
   client.on('messageCreate', async msg => {
-    if (msg.author.bot || !msg.guild) return;
+    if (!msg.guild || msg.author.bot) return;
 
     const cfg = configs.get(msg.guild.id);
     const prefixo = cfg?.prefixo || '!';
+
     if (!msg.content.startsWith(prefixo)) return;
 
     const args = msg.content.slice(prefixo.length).trim().split(/\s+/);
@@ -271,18 +207,14 @@ export function register(client, configs) {
     if (!isDBConnected())
       return msg.reply({ embeds: [embedErro('Banco offline.')] });
 
-    const cdKey = `perfil:${msg.author.id}:${msg.guild.id}`;
-    const espera = checkCooldown(cdKey, 8000);
-
-    if (espera)
-      return msg.reply({
-        embeds: [embedErro(`Aguarde ${formatarTempo(espera)}`)],
-      });
+    const cd = checkCooldown(`perfil:${msg.author.id}:${msg.guild.id}`, 8000);
+    if (cd)
+      return msg.reply({ embeds: [embedErro(`Aguarde ${formatarTempo(cd)}`)] });
 
     const alvo = msg.mentions.users.first() || msg.author;
 
-    await mostrarPerfil(alvo, msg.guild.id, msg.guild, opts =>
+    return mostrarPerfil(alvo, msg.guild.id, msg.guild, opts =>
       msg.reply(opts)
     );
   });
-      }
+}
