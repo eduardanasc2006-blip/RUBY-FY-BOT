@@ -11,19 +11,17 @@ import {
   ButtonStyle,
   StringSelectMenuBuilder,
   ComponentType,
-  TextChannel,
 } from "discord.js";
 
 import { logger } from "../lib/logger";
 import {
   getCurrentRate,
-  getHistory,
   updateRate,
   type RateEntry,
 } from "./store";
 
 /* ─────────────────────────────────────────────
-   COOLDOWN
+   CONFIG GERAL
 ───────────────────────────────────────────── */
 
 const COOLDOWN_MS = 3000;
@@ -38,7 +36,7 @@ function setCooldown(id: string) {
 }
 
 /* ─────────────────────────────────────────────
-   STATS
+   ESTATÍSTICAS
 ───────────────────────────────────────────── */
 
 const stats = {
@@ -65,7 +63,7 @@ function uptime() {
 }
 
 /* ─────────────────────────────────────────────
-   MATH / FORMAT
+   FORMATAÇÃO
 ───────────────────────────────────────────── */
 
 function robuxPerBrl(rate: RateEntry) {
@@ -101,7 +99,7 @@ function parseNumber(raw: string) {
 }
 
 /* ─────────────────────────────────────────────
-   PERMISSIONS
+   PERMISSÃO
 ───────────────────────────────────────────── */
 
 function isAdmin(message: Message) {
@@ -202,114 +200,7 @@ export function startBot() {
         });
       }
 
-      /* ───── !robux ───── */
-      if (lower.startsWith("!robux")) {
-        setCooldown(message.author.id);
-
-        const value = parseNumber(content.split(" ")[1]);
-        if (!value || value <= 0) {
-          return message.reply("❌ Use: `!robux <valor>`");
-        }
-
-        stats.robux++;
-
-        const robux = brlToRobux(value, rate);
-
-        return message.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor(Colors.Green)
-              .setTitle("💸 BRL → Robux")
-              .addFields(
-                { name: "BRL", value: formatBrl(value), inline: true },
-                { name: "Robux", value: formatRobux(robux), inline: true }
-              ),
-          ],
-        });
-      }
-
-      /* ───── !brl ───── */
-      if (lower.startsWith("!brl")) {
-        setCooldown(message.author.id);
-
-        const value = parseNumber(content.split(" ")[1]);
-        if (!value || value <= 0) {
-          return message.reply("❌ Use: `!brl <robux>`");
-        }
-
-        stats.brl++;
-
-        const brl = robuxToBrl(value, rate);
-
-        return message.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor(Colors.Gold)
-              .setTitle("💰 Robux → BRL")
-              .addFields(
-                { name: "Robux", value: formatRobux(value), inline: true },
-                { name: "BRL", value: formatBrl(brl), inline: true }
-              ),
-          ],
-        });
-      }
-
-      /* ───── !taxa ───── */
-      if (lower === "!taxa") {
-        setCooldown(message.author.id);
-
-        return message.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor(Colors.Blue)
-              .setTitle("📊 Taxa atual")
-              .addFields(
-                {
-                  name: "Base",
-                  value: `${rate.robux} Robux = ${formatBrl(rate.brl)}`,
-                },
-                {
-                  name: "1 Robux",
-                  value: formatBrl(rate.brl / rate.robux),
-                }
-              ),
-          ],
-        });
-      }
-
-      /* ───── !setraxa ───── */
-      if (lower.startsWith("!setraxa")) {
-        if (!isAdmin(message)) {
-          return message.reply("❌ Apenas admins.");
-        }
-
-        const [_, r, b] = content.split(" ");
-        const robux = Number(r);
-        const brl = Number(b);
-
-        if (!robux || !brl) {
-          return message.reply("❌ Use: !setraxa 1000 40");
-        }
-
-        const before = getCurrentRate();
-        const after: RateEntry = { robux, brl };
-
-        updateRate(after, message.author.displayName);
-
-        return message.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor(Colors.Green)
-              .setTitle("Taxa atualizada")
-              .addFields(
-                { name: "Antes", value: `${before.robux}/${before.brl}` },
-                { name: "Agora", value: `${robux}/${brl}` }
-              ),
-          ],
-        });
-      }
-
-      /* ───── !ajuda (FIX COMPLETO DO MENU + BOTÃO) ───── */
+      /* ───── !ajuda (SEGURO SEM CRASH) ───── */
       if (lower === "!ajuda") {
         setCooldown(message.author.id);
 
@@ -333,51 +224,54 @@ export function startBot() {
           components: [menu],
         });
 
-        /* ✔ MENU CORRIGIDO */
-        const coletorMenu = msg.createMessageComponentCollector({
-          filter: (i) =>
-            i.user.id === message.author.id &&
-            i.customId === "ajuda_cat",
-          componentType: ComponentType.StringSelect,
+        const collector = msg.createMessageComponentCollector({
           time: 300000,
         });
 
-        /* ✔ BOTÃO VOLTAR CORRIGIDO */
-        const coletorVoltar = msg.createMessageComponentCollector({
-          filter: (i) =>
-            i.user.id === message.author.id &&
-            i.customId === "ajuda_voltar",
-          componentType: ComponentType.Button,
-          time: 300000,
+        collector.on("collect", async (i) => {
+          try {
+            if (i.user.id !== message.author.id) {
+              return i.reply({ content: "Não é para você.", ephemeral: true });
+            }
+
+            if (i.isStringSelectMenu()) {
+              await i.deferUpdate();
+
+              await msg.edit({
+                embeds: [
+                  new EmbedBuilder()
+                    .setColor(Colors.Gold)
+                    .setTitle("Categoria selecionada")
+                    .setDescription(i.values[0]),
+                ],
+                components: [
+                  new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    new ButtonBuilder()
+                      .setCustomId("ajuda_voltar")
+                      .setLabel("Voltar")
+                      .setStyle(ButtonStyle.Secondary)
+                  ),
+                ],
+              });
+            }
+
+            if (i.isButton() && i.customId === "ajuda_voltar") {
+              await i.deferUpdate();
+
+              await msg.edit({
+                embeds: [embed],
+                components: [menu],
+              });
+            }
+          } catch (e) {
+            logger.error(e);
+          }
         });
 
-        coletorMenu.on("collect", async (i) => {
-          await i.deferUpdate();
-
-          await msg.edit({
-            embeds: [
-              new EmbedBuilder()
-                .setColor(Colors.Gold)
-                .setTitle("Categoria selecionada")
-                .setDescription(i.values[0]),
-            ],
-            components: [
-              new ActionRowBuilder<ButtonBuilder>().addComponents(
-                new ButtonBuilder()
-                  .setCustomId("ajuda_voltar")
-                  .setLabel("Voltar")
-                  .setStyle(ButtonStyle.Secondary)
-              ),
-            ],
-          });
-        });
-
-        coletorVoltar.on("collect", async (i) => {
-          await i.deferUpdate();
-          await msg.edit({
-            embeds: [embed],
-            components: [menu],
-          });
+        collector.on("end", async () => {
+          try {
+            await msg.edit({ components: [] });
+          } catch {}
         });
 
         return;
