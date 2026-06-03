@@ -62,9 +62,7 @@ export function register(client, configs) {
 
       const totalConquistas = conquistaDoc?.conquistas?.length || 0;
 
-      /* =========================
-         CASAMENTO / AFINIDADE
-      ========================= */
+      /* CASAMENTO / AFINIDADE */
       let parceiroNome = null;
       let afinidadePct = null;
 
@@ -93,9 +91,7 @@ export function register(client, configs) {
         }
       }
 
-      /* =========================
-         QUIZ
-      ========================= */
+      /* QUIZ */
       let quizPrecisao = null;
       try {
         const { default: Quiz } = await import('../db/models/Quiz.mjs');
@@ -108,9 +104,7 @@ export function register(client, configs) {
         }
       } catch {}
 
-      /* =========================
-         FORCA
-      ========================= */
+      /* FORCA */
       let forcaVitorias = null;
       try {
         const { default: Forca } = await import('../db/models/Forca.mjs');
@@ -118,13 +112,11 @@ export function register(client, configs) {
         forcaVitorias = forca?.vitorias || 0;
       } catch {}
 
-      /* =========================
-         TÍTULOS
-      ========================= */
-      let totalTitulos = u?.titulos?.length || 0;
+      /* TÍTULOS */
+      const totalTitulos = u?.titulos?.length || 0;
 
       /* =========================
-         DESCRIÇÃO SEGURA (CORREÇÃO DO ERRO)
+         DESCRIÇÃO SEGURA (FIX DEFINITIVO)
       ========================= */
       const desc = u?.descricao?.trim() || "Sem descrição disponível";
 
@@ -133,7 +125,7 @@ export function register(client, configs) {
         .setTitle(`👤 ${nome(alvo)}`)
         .setThumbnail(alvo.displayAvatarURL({ size: 256 }))
         .setDescription(
-          u?.tituloEquipado
+          u?.tituloEquipado?.trim()
             ? `👑 ${u.tituloEquipado}\n\n${desc}`
             : desc
         );
