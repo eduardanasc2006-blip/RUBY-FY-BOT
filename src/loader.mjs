@@ -31,12 +31,21 @@ import { register as regMeuPerfil }      from './systems/meuperfil.mjs';
 const configs = new Map();
 
 /* =========================
-   ECONOMIA GLOBAL (XP SYSTEM)
+   ECONOMIA GLOBAL (XP / LOJA SYSTEM)
 ========================= */
 const economy = {
   currency: 'xp',
   enabled: true,
   logs: true,
+
+  // base para TODAS as lojas futuras:
+  shops: {
+    quiz: true,
+    badges: true,
+    profile: true,
+    ship: false, // só visual
+  },
+
   version: '1.0',
 };
 
@@ -134,6 +143,8 @@ export async function loadSystems(client) {
   console.log(
     `[Loader] FiskBot — ${ok} sistemas ativos${fail ? `, ${fail} com erro` : ''}. ${dbStatus}`
   );
+
+  console.log(`[Economy] Sistema global ativo | moeda: ${economy.currency} | lojas: ${Object.keys(economy.shops).length}`);
 
   return configs;
 }
