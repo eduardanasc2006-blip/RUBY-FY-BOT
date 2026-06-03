@@ -16,7 +16,9 @@ function _createTables() {
     CREATE TABLE IF NOT EXISTS usuarios (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       userId TEXT NOT NULL, guildId TEXT NOT NULL,
-      xp INTEGER NOT NULL DEFAULT 0, nivel INTEGER NOT NULL DEFAULT 0,
+      xpTotal INTEGER NOT NULL DEFAULT 0,
+      xpDisponivel INTEGER NOT NULL DEFAULT 0,
+      nivel INTEGER NOT NULL DEFAULT 1,
       reputacao INTEGER NOT NULL DEFAULT 0, ultimaRep TEXT,
       tituloEquipado TEXT, titulos TEXT NOT NULL DEFAULT '[]',
       mensagens INTEGER NOT NULL DEFAULT 0, ultimaMensagem TEXT, ultimoXP TEXT,
@@ -113,10 +115,22 @@ function _createTables() {
       vitorias INTEGER NOT NULL DEFAULT 0, derrotas INTEGER NOT NULL DEFAULT 0,
       UNIQUE(userId, guildId)
     );
+    CREATE TABLE IF NOT EXISTS xp_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId TEXT NOT NULL,
+      guildId TEXT NOT NULL,
+      tipo TEXT NOT NULL DEFAULT 'ganho',
+      valor INTEGER NOT NULL DEFAULT 0,
+      origem TEXT NOT NULL DEFAULT 'sistema',
+      saldoApos INTEGER NOT NULL DEFAULT 0,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   // Migrações seguras — adiciona colunas se ainda não existirem
   const migrations = [
+    `ALTER TABLE usuarios ADD COLUMN xpTotal INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE usuarios ADD COLUMN xpDisponivel INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE usuarios ADD COLUMN streak INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE usuarios ADD COLUMN ultimoDiaAtivo TEXT`,
     `ALTER TABLE usuarios ADD COLUMN genero TEXT`,
