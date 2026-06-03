@@ -1,186 +1,288 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+
 import Casamento from '../db/models/Casamento.mjs';
 import Afinidade from '../db/models/Afinidade.mjs';
-import { embedErro, embedSucesso } from '../utils/embeds.mjs';
+import Usuario from '../db/models/Usuario.mjs';
+
+import { embedErro } from '../utils/embeds.mjs';
 import { registrarLog } from '../utils/logger.mjs';
 import { nivelAfinidade } from '../utils/nivelCalc.mjs';
 
-const pedidosPendentes = new Map();
+const pedidos = new Map();
+
+/* =========================
+   CONFIG CASAMENTO
+========================= */
+
+const XP_CASAMENTO = 12000;
+
+/* =========================
+   REGISTER
+========================= */
 
 export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
-    if (msg.author.bot || !msg.guild) return;
+    if (!msg.guild || msg.author.bot) return;
+
     const cfg = configs.get(msg.guild.id);
     const prefixo = cfg?.prefixo || '!';
+
     if (!msg.content.startsWith(prefixo)) return;
 
     const args = msg.content.slice(prefixo.length).trim().split(/\s+/);
     const cmd = args.shift().toLowerCase();
+
     const guildId = msg.guild.id;
+    const userId = msg.author.id;
+
+    /* =========================
+       CASAR
+    ========================= */
 
     if (cmd === 'casar') {
       const alvo = msg.mentions.users.first();
-      if (!alvo || alvo.bot || alvo.id === msg.author.id)
-        return msg.reply({ embeds: [embedErro('Mencione um usuário válido para se casar.')] });
+      if (!alvo || alvo.bot || alvo.id === userId)
+        return msg.reply({ embeds: [embedErro('Usuário inválido.')] });
 
-      const jaExiste = await Casamento.findOne({ guildId, $or: [{ userId1: msg.author.id }, { userId2: msg.author.id }], ativo: true });
-      if (jaExiste) return msg.reply({ embeds: [embedErro('Você já está casado(a)! Use `!divorciar` primeiro.')] });
+      const [u1, u2] = await Promise.all([
+        Usuario.findOne({ userId, guildId }),
+        Usuario.findOne({ userId: alvo.id, guildId })
+      ]);
 
-      const alvoJaCasado = await Casamento.findOne({ guildId, $or: [{ userId1: alvo.id }, { userId2: alvo.id }], ativo: true });
-      if (alvoJaCasado) return msg.reply({ embeds: [embedErro(`<@${alvo.id}> já está casado(a).`)] });
+      const xp1 = u1?.xpDisponivel || 0;
+      const xp2 = u2?.xpDisponivel || 0;
+
+      if (xp1 < XP_CASAMENTO || xp2 < XP_CASAMENTO) {
+        return msg.reply({
+          embeds: [embedErro(`❌ Ambos precisam de **${XP_CASAMENTO} XP disponível** para casar.`)]
+        });
+      }
+
+      const jaCasado = await Casamento.findOne({
+        guildId,
+        ativo: true,
+        $or: [{ userId1: userId }, { userId2: userId }]
+      });
+
+      if (jaCasado)
+        return msg.reply({ embeds: [embedErro('Você já está casado.')] });
+
+      const alvoCasado = await Casamento.findOne({
+        guildId,
+        ativo: true,
+        $or: [{ userId1: alvo.id }, { userId2: alvo.id }]
+      });
+
+      if (alvoCasado)
+        return msg.reply({ embeds: [embedErro('Essa pessoa já está casada.')] });
 
       const chave = `${guildId}:${alvo.id}`;
-      if (pedidosPendentes.has(chave)) return msg.reply({ embeds: [embedErro('Já existe um pedido pendente para esse usuário.')] });
+      if (pedidos.has(chave))
+        return msg.reply({ embeds: [embedErro('Já existe um pedido pendente.')] });
 
-      pedidosPendentes.set(chave, { de: msg.author.id, para: alvo.id });
+      pedidos.set(chave, { de: userId, para: alvo.id });
 
       const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`casar:aceitar:${msg.author.id}:${alvo.id}`).setLabel('💍 Aceitar').setStyle(ButtonStyle.Success),
-        new ButtonBuilder().setCustomId(`casar:recusar:${msg.author.id}:${alvo.id}`).setLabel('❌ Recusar').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder()
+          .setCustomId(`casar:aceitar:${userId}:${alvo.id}`)
+          .setLabel('💍 Aceitar')
+          .setStyle(ButtonStyle.Success),
+
+        new ButtonBuilder()
+          .setCustomId(`casar:recusar:${userId}:${alvo.id}`)
+          .setLabel('❌ Recusar')
+          .setStyle(ButtonStyle.Danger),
       );
+
       const embed = new EmbedBuilder()
         .setColor(0xff69b4)
-        .setTitle('💍 Pedido de Casamento!')
-        .setDescription(`<@${msg.author.id}> está pedindo <@${alvo.id}> em casamento!\n\n<@${alvo.id}>, você aceita?`)
-        .setTimestamp();
-      await msg.channel.send({ embeds: [embed], components: [row] });
+        .setTitle('💍 Pedido de Casamento')
+        .setDescription(`<@${userId}> pediu <@${alvo.id}> em casamento!\n\n💰 Custo: **${XP_CASAMENTO} XP disponível cada um**`);
 
-      setTimeout(() => pedidosPendentes.delete(chave), 60_000);
-      return;
+      msg.channel.send({ embeds: [embed], components: [row] });
+
+      setTimeout(() => pedidos.delete(chave), 60000);
     }
+
+    /* =========================
+       DIVÓRCIO
+    ========================= */
 
     if (cmd === 'divorciar') {
-      const casamento = await Casamento.findOne({ guildId, $or: [{ userId1: msg.author.id }, { userId2: msg.author.id }], ativo: true });
-      if (!casamento) return msg.reply({ embeds: [embedErro('Você não está casado(a).')] });
+      const casamento = await Casamento.findOne({
+        guildId,
+        ativo: true,
+        $or: [{ userId1: userId }, { userId2: userId }]
+      });
 
-      const parceiro = casamento.userId1 === msg.author.id ? casamento.userId2 : casamento.userId1;
-      const chave = `div:${guildId}:${msg.author.id}`;
-      pedidosPendentes.set(chave, { casamentoId: casamento._id, parceiro });
+      if (!casamento)
+        return msg.reply({ embeds: [embedErro('Você não está casado.')] });
+
+      const chave = `div:${guildId}:${userId}`;
+
+      pedidos.set(chave, {
+        casamentoId: casamento._id,
+        parceiro: casamento.userId1 === userId ? casamento.userId2 : casamento.userId1
+      });
 
       const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`div:aceitar:${msg.author.id}`).setLabel('💔 Confirmar Divórcio').setStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId(`div:recusar:${msg.author.id}`).setLabel('❌ Cancelar').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder()
+          .setCustomId(`div:aceitar:${userId}`)
+          .setLabel('💔 Confirmar')
+          .setStyle(ButtonStyle.Danger),
+
+        new ButtonBuilder()
+          .setCustomId(`div:recusar:${userId}`)
+          .setLabel('❌ Cancelar')
+          .setStyle(ButtonStyle.Secondary),
       );
-      const embed = new EmbedBuilder()
-        .setColor(0x888888)
-        .setTitle('💔 Pedido de Divórcio')
-        .setDescription(`<@${msg.author.id}> quer se divorciar de <@${parceiro}>.\n\n<@${parceiro}>, confirma?`)
-        .setTimestamp();
-      await msg.channel.send({ embeds: [embed], components: [row] });
-      setTimeout(() => pedidosPendentes.delete(chave), 60_000);
-      return;
+
+      msg.channel.send({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x888888)
+            .setTitle('💔 Divórcio')
+            .setDescription(`<@${userId}> quer se divorciar.`)
+        ],
+        components: [row]
+      });
+
+      setTimeout(() => pedidos.delete(chave), 60000);
     }
+
+    /* =========================
+       PARCEIRO
+    ========================= */
 
     if (cmd === 'parceiro') {
       const alvo = msg.mentions.users.first() || msg.author;
-      const casamento = await Casamento.findOne({ guildId, $or: [{ userId1: alvo.id }, { userId2: alvo.id }], ativo: true });
-      if (!casamento) return msg.reply({ embeds: [embedErro(`${alvo.id === msg.author.id ? 'Você não está' : 'Esse usuário não está'} casado(a).`)] });
 
-      const parcId = casamento.userId1 === alvo.id ? casamento.userId2 : casamento.userId1;
-      const dias = Math.floor((Date.now() - casamento.dataCasamento.getTime()) / 86400000);
+      const casamento = await Casamento.findOne({
+        guildId,
+        ativo: true,
+        $or: [{ userId1: alvo.id }, { userId2: alvo.id }]
+      });
 
-      const u1 = Math.min(alvo.id, parcId);
-      const u2 = Math.max(alvo.id, parcId);
-      const afin = await Afinidade.findOne({ guildId, userId1: u1, userId2: u2 });
+      if (!casamento)
+        return msg.reply({ embeds: [embedErro('Sem casamento ativo.')] });
 
-      const embed = new EmbedBuilder()
-        .setColor(0xff69b4)
-        .setTitle('💍 Informações do Casal')
-        .addFields(
-          { name: '💑 Parceiro(a)', value: `<@${parcId}>`, inline: true },
-          { name: '📅 Casados há', value: `${dias} dia(s)`, inline: true },
-          { name: '📆 Data', value: casamento.dataCasamento.toLocaleDateString('pt-BR'), inline: true },
-          { name: '💜 Afinidade', value: `${afin?.pontos || 0} pts (${nivelAfinidade(afin?.pontos || 0)})`, inline: true },
-          { name: '🤝 Interações', value: String(afin?.interacoes || 0), inline: true },
-        )
-        .setTimestamp();
-      return msg.reply({ embeds: [embed] });
-    }
+      const parceiro = casamento.userId1 === alvo.id
+        ? casamento.userId2
+        : casamento.userId1;
 
-    if (cmd === 'aniversariocasamento') {
-      const casamento = await Casamento.findOne({ guildId, $or: [{ userId1: msg.author.id }, { userId2: msg.author.id }], ativo: true });
-      if (!casamento) return msg.reply({ embeds: [embedErro('Você não está casado(a).')] });
+      const dias = Math.floor((Date.now() - casamento.dataCasamento) / 86400000);
 
-      const agora = new Date();
-      const inicio = casamento.dataCasamento;
-      const dias = Math.floor((agora - inicio) / 86400000);
-      const meses = Math.floor(dias / 30);
-      const anos = Math.floor(dias / 365);
+      const afin = await Afinidade.findOne({
+        guildId,
+        userId1: [alvo.id, parceiro].sort()[0],
+        userId2: [alvo.id, parceiro].sort()[1]
+      });
 
-      const proximoAniv = new Date(inicio);
-      proximoAniv.setFullYear(agora.getFullYear() + (agora > new Date(inicio.setFullYear(agora.getFullYear())) ? 1 : 0));
-      const diasAniv = Math.ceil((proximoAniv - agora) / 86400000);
-
-      const embed = new EmbedBuilder()
-        .setColor(0xff69b4)
-        .setTitle('💍 Aniversário de Casamento')
-        .addFields(
-          { name: '⏳ Tempo juntos', value: `${anos} ano(s), ${meses % 12} mês(es), ${dias % 30} dia(s)`, inline: false },
-          { name: '🎂 Próximo aniversário', value: `Em ${diasAniv} dia(s)`, inline: true },
-        )
-        .setTimestamp();
-      return msg.reply({ embeds: [embed] });
-    }
-
-    if (cmd === 'topcasais') {
-      const casamentos = await Casamento.find({ guildId, ativo: true }).lean();
-      const pares = await Promise.all(casamentos.slice(0, 10).map(async (c) => {
-        const u1 = Math.min(c.userId1, c.userId2);
-        const u2 = Math.max(c.userId1, c.userId2);
-        const afin = await Afinidade.findOne({ guildId, userId1: u1, userId2: u2 });
-        const dias = Math.floor((Date.now() - c.dataCasamento.getTime()) / 86400000);
-        return { c, afin: afin?.pontos || 0, dias };
-      }));
-      pares.sort((a, b) => b.afin - a.afin);
-      const linhas = pares.map((p, i) => `**#${i + 1}** <@${p.c.userId1}> ❤️ <@${p.c.userId2}> — ${p.afin} pts • ${p.dias} dias`);
-      const embed = new EmbedBuilder()
-        .setColor(0xff69b4)
-        .setTitle('👑 Top Casais')
-        .setDescription(linhas.join('\n') || 'Nenhum casal registrado.')
-        .setTimestamp();
-      return msg.reply({ embeds: [embed] });
+      msg.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xff69b4)
+            .setTitle('💍 Casal')
+            .addFields(
+              { name: '💑 Parceiro', value: `<@${parceiro}>`, inline: true },
+              { name: '📅 Dias juntos', value: `${dias}`, inline: true },
+              { name: '💘 Afinidade', value: `${afin?.pontos || 0} (${nivelAfinidade(afin?.pontos || 0)})`, inline: true },
+            )
+        ]
+      });
     }
   });
 
+  /* =========================
+     INTERAÇÕES
+  ========================= */
+
   client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
+
     const { customId, guild, user } = interaction;
+
+    /* =========================
+       CASAMENTO ACEITAR
+    ========================= */
 
     if (customId.startsWith('casar:')) {
       const [, acao, deId, paraId] = customId.split(':');
-      if (user.id !== paraId) return interaction.reply({ content: 'Este botão não é para você.', ephemeral: true });
+
+      if (user.id !== paraId)
+        return interaction.reply({ content: 'Não é para você.', ephemeral: true });
+
+      const chave = `${guild.id}:${paraId}`;
 
       if (acao === 'aceitar') {
-        const casamentoExistente = await Casamento.findOne({ guildId: guild.id, $or: [{ userId1: deId }, { userId1: paraId }, { userId2: deId }, { userId2: paraId }], ativo: true });
-        if (casamentoExistente) {
-          await interaction.update({ components: [] });
-          return interaction.followUp({ embeds: [embedErro('Um dos usuários já está casado.')] });
+        const u1 = await Usuario.findOne({ userId: deId, guildId: guild.id });
+        const u2 = await Usuario.findOne({ userId: paraId, guildId: guild.id });
+
+        if ((u1?.xpDisponivel || 0) < XP_CASAMENTO || (u2?.xpDisponivel || 0) < XP_CASAMENTO) {
+          return interaction.reply({ content: 'XP insuficiente.', ephemeral: true });
         }
-        await Casamento.create({ guildId: guild.id, userId1: deId, userId2: paraId });
-        const embed = new EmbedBuilder().setColor(0xff69b4).setTitle('💍 Casamento Realizado!').setDescription(`<@${deId}> e <@${paraId}> agora estão casados! 🎉`).setTimestamp();
-        await interaction.update({ embeds: [embed], components: [] });
-        await registrarLog(interaction.client, guild.id, 'casamento', deId, { descricao: `<@${deId}> e <@${paraId}> se casaram.` }, null);
-      } else {
-        await interaction.update({ embeds: [new EmbedBuilder().setColor(0x888888).setDescription(`💔 <@${paraId}> recusou o pedido de casamento.`)], components: [] });
+
+        await Usuario.updateOne({ userId: deId }, { $inc: { xpDisponivel: -XP_CASAMENTO } });
+        await Usuario.updateOne({ userId: paraId }, { $inc: { xpDisponivel: -XP_CASAMENTO } });
+
+        await Casamento.create({
+          guildId: guild.id,
+          userId1: deId,
+          userId2: paraId,
+          dataCasamento: new Date(),
+          ativo: true
+        });
+
+        await registrarLog(interaction.client, guild.id, 'casamento', deId, {
+          descricao: `<@${deId}> e <@${paraId}> casaram (-${XP_CASAMENTO} XP cada)`
+        });
+
+        await interaction.update({
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xff69b4)
+              .setTitle('💍 Casamento realizado!')
+              .setDescription(`<@${deId}> ❤️ <@${paraId}>`)
+          ],
+          components: []
+        });
       }
-      pedidosPendentes.delete(`${guild.id}:${paraId}`);
+
+      pedidos.delete(chave);
     }
+
+    /* =========================
+       DIVÓRCIO
+    ========================= */
 
     if (customId.startsWith('div:')) {
       const [, acao, deId] = customId.split(':');
       const chave = `div:${guild.id}:${deId}`;
-      const dados = pedidosPendentes.get(chave);
-      if (!dados) return interaction.reply({ content: 'Pedido expirado.', ephemeral: true });
-      if (user.id !== dados.parceiro && user.id !== deId) return interaction.reply({ content: 'Este botão não é para você.', ephemeral: true });
+
+      const data = pedidos.get(chave);
+      if (!data) return;
 
       if (acao === 'aceitar') {
-        await Casamento.findByIdAndUpdate(dados.casamentoId, { ativo: false, dataFim: new Date() });
-        await interaction.update({ embeds: [new EmbedBuilder().setColor(0x888888).setDescription(`💔 <@${deId}> e <@${dados.parceiro}> se divorciaram.`)], components: [] });
-        await registrarLog(interaction.client, guild.id, 'divorcio', deId, { descricao: `<@${deId}> e <@${dados.parceiro}> se divorciaram.` }, null);
-      } else {
-        await interaction.update({ embeds: [new EmbedBuilder().setColor(0x2ecc71).setDescription('❌ Divórcio cancelado.')], components: [] });
+        await Casamento.findByIdAndUpdate(data.casamentoId, {
+          ativo: false,
+          dataFim: new Date()
+        });
+
+        await registrarLog(interaction.client, guild.id, 'divorcio', deId, {
+          descricao: `<@${deId}> divorciou de <@${data.parceiro}>`
+        });
+
+        await interaction.update({
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0x888888)
+              .setDescription('💔 Divórcio concluído.')
+          ],
+          components: []
+        });
       }
-      pedidosPendentes.delete(chave);
+
+      pedidos.delete(chave);
     }
   });
 }
