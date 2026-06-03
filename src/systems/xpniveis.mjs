@@ -3,6 +3,7 @@ import Usuario from '../db/models/Usuario.mjs';
 import Config from '../db/models/Config.mjs';
 import { calcularNivel, getFaixa } from '../utils/nivelCalc.mjs';
 import { registrarLog } from '../utils/logger.mjs';
+import { embedErro } from '../utils/embeds.mjs';
 import { verificarConquistas } from './conquistas.mjs';
 import { isDBConnected } from '../utils/dbGuard.mjs';
 
@@ -15,11 +16,7 @@ const MSGS_RECENTES = new Map();
 function gerarBarra(atual, total, tamanho = 10) {
   const p = Math.min(1, atual / Math.max(1, total));
   const f = Math.round(p * tamanho);
-  return '█'.repeat(Math.max(0, f)) + '░'.repeat(Math.max(0, tamanho - f));
-}
-
-function nomeUsuario(user) {
-  return user.globalName || user.username || user.tag || 'Usuário';
+  return '█'.repeat(f) + '░'.repeat(tamanho - f);
 }
 
 function diaAtual() {
@@ -40,6 +37,7 @@ function multiplicadorStreak(streak) {
 export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
+    if (!isDBConnected()) return;
 
     const cfg = configs.get(msg.guild.id);
     const prefixo = cfg?.prefixo || '!';
@@ -64,23 +62,31 @@ export function register(client, configs) {
         const { nivel, xpAtual, xpProximo } = calcularNivel(total);
         const faixa = getFaixa(nivel);
 
-        const pct = xpProximo > 0 ? Math.floor((xpAtual / xpProximo) * 100) : 100;
         const barra = gerarBarra(xpAtual, xpProximo);
+        const pct = Math.floor((xpAtual / xpProximo) * 100);
 
         return msg.reply({
           embeds: [
             new EmbedBuilder()
               .setColor(faixa.cor)
-              .setTitle(`${faixa.emoji} XP de ${nomeUsuario(alvo)}`)
+              .setTitle(`${faixa.emoji} XP de ${alvo.globalName || alvo.username}`)
               .setThumbnail(alvo.displayAvatarURL({ size: 128 }))
               .addFields(
-                { name: '🏆 Nível', value: `${nivel}`, inline: true },
-                { name: '⭐ XP Total', value: `${total.toLocaleString('pt-BR')}`, inline: true },
-                { name: '💰 XP Disponível', value: `${disponivel.toLocaleString('pt-BR')}`, inline: true },
-                { name: `📊 Progresso (${pct}%)`, value: `${barra}\n${xpAtual}/${xpProximo}`, inline: false },
-                { name: '🔥 Streak', value: `${u?.streak || 0} dias`, inline: true }
+                { name: '🏆 Nível', value: `**${nivel}**`, inline: true },
+                { name: '⭐ XP Total', value: `**${total.toLocaleString('pt-BR')}**`, inline: true },
+                { name: '💰 XP Disponível', value: `**${disponivel.toLocaleString('pt-BR')}**`, inline: true },
+                {
+                  name: `📊 Progresso (${pct}%)`,
+                  value: `${barra}\n${xpAtual} / ${xpProximo}`,
+                  inline: false
+                },
+                {
+                  name: '🔥 Streak',
+                  value: `${u?.streak || 0} dias`,
+                  inline: true
+                }
               )
-              .setFooter({ text: 'FiskBot • XP System' })
+              .setFooter({ text: 'FiskBot • Sistema de XP' })
           ]
         });
       }
@@ -89,15 +95,16 @@ export function register(client, configs) {
       if (cmd === 'rank' || cmd === 'leaderboard' || cmd === 'topxp') {
         const top = await Usuario.find({ guildId })
           .sort({ xpTotal: -1 })
-          .limit(10);
+          .limit(10)
+          .lean();
 
         if (!top.length)
-          return msg.reply({ embeds: [{ description: 'Nenhum dado ainda.' }] });
+          return msg.reply({ embeds: [embedErro('Nenhum dado de XP ainda.')] });
 
         const linhas = top.map((u, i) => {
           const { nivel } = calcularNivel(u.xpTotal || 0);
-          const medal = ['🥇','🥈','🥉'][i] || `#${i+1}`;
-          return `${medal} <@${u.userId}> — Nível ${nivel} • ${u.xpTotal || 0} XP`;
+          const medal = ['🥇', '🥈', '🥉'][i] || `#${i + 1}`;
+          return `${medal} <@${u.userId}> — Nível **${nivel}** • ${u.xpTotal} XP`;
         });
 
         return msg.reply({
@@ -131,22 +138,18 @@ export function register(client, configs) {
 
     let streak = 1;
 
-    if (ultimo) {
+    if (ultimo === hoje) {
+      streak = uAtual?.streak || 1;
+    } else {
       const ontem = new Date();
       ontem.setUTCDate(ontem.getUTCDate() - 1);
       const ontemStr = ontem.toISOString().slice(0, 10);
 
-      if (ultimo === hoje) {
-        streak = uAtual?.streak || 1;
-      } else if (ultimo === ontemStr) {
-        streak = (uAtual?.streak || 0) + 1;
-      } else {
-        streak = 1;
-      }
+      if (ultimo === ontemStr) streak = (uAtual?.streak || 0) + 1;
     }
 
-    /* ===== XP GANHO ===== */
-    const base = Math.floor(Math.random() * 8) + 8;
+    /* ===== XP GANHO (15–30 FIXADO) ===== */
+    const base = Math.floor(Math.random() * 16) + 15; // 15–30 XP
     const mult = multiplicadorStreak(streak);
     const ganho = Math.round(base * mult);
 
@@ -184,7 +187,9 @@ export function register(client, configs) {
           new EmbedBuilder()
             .setColor(faixa.cor)
             .setTitle('🎉 Level Up!')
-            .setDescription(`<@${u.userId}> chegou ao nível **${nivelDepois}** ${faixa.emoji}`)
+            .setDescription(
+              `<@${u.userId}> chegou ao nível **${nivelDepois}** ${faixa.emoji}`
+            )
         ]
       });
 
@@ -193,6 +198,8 @@ export function register(client, configs) {
       }, configs);
     }
 
-    await verificarConquistas(client, msg.author.id, guildId, u, configs).catch(() => {});
+    /* ===== CONQUISTAS ===== */
+    await verificarConquistas(client, msg.author.id, guildId, u, configs)
+      .catch(() => {});
   });
 }
