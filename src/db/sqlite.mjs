@@ -482,4 +482,3 @@ export function makeModel(table, { jsonFields = [], dateFields = [] } = {}) {
     },
   };
 }
-
