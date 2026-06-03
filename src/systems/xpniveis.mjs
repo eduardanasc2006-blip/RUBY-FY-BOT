@@ -3,9 +3,7 @@ import Usuario from '../db/models/Usuario.mjs';
 import Config from '../db/models/Config.mjs';
 import { calcularNivel, getFaixa } from '../utils/nivelCalc.mjs';
 import { registrarLog } from '../utils/logger.mjs';
-import { embedErro } from '../utils/embeds.mjs';
 import { verificarConquistas } from './conquistas.mjs';
-import { isAdmin } from '../utils/permissions.mjs';
 import { isDBConnected } from '../utils/dbGuard.mjs';
 
 const MSGS_RECENTES = new Map();
@@ -66,8 +64,8 @@ export function register(client, configs) {
         const { nivel, xpAtual, xpProximo } = calcularNivel(total);
         const faixa = getFaixa(nivel);
 
+        const pct = xpProximo > 0 ? Math.floor((xpAtual / xpProximo) * 100) : 100;
         const barra = gerarBarra(xpAtual, xpProximo);
-        const pct = Math.floor((xpAtual / xpProximo) * 100);
 
         return msg.reply({
           embeds: [
@@ -80,7 +78,7 @@ export function register(client, configs) {
                 { name: '⭐ XP Total', value: `${total.toLocaleString('pt-BR')}`, inline: true },
                 { name: '💰 XP Disponível', value: `${disponivel.toLocaleString('pt-BR')}`, inline: true },
                 { name: `📊 Progresso (${pct}%)`, value: `${barra}\n${xpAtual}/${xpProximo}`, inline: false },
-                { name: '🔥 Streak', value: `${u?.streak || 0} dias`, inline: true },
+                { name: '🔥 Streak', value: `${u?.streak || 0} dias`, inline: true }
               )
               .setFooter({ text: 'FiskBot • XP System' })
           ]
@@ -89,14 +87,17 @@ export function register(client, configs) {
 
       /* ===== RANK ===== */
       if (cmd === 'rank' || cmd === 'leaderboard' || cmd === 'topxp') {
-        const top = await Usuario.find({ guildId }).sort({ xpTotal: -1 }).limit(10).lean();
+        const top = await Usuario.find({ guildId })
+          .sort({ xpTotal: -1 })
+          .limit(10);
 
-        if (!top.length) return msg.reply({ embeds: [embedErro('Nenhum dado ainda.')] });
+        if (!top.length)
+          return msg.reply({ embeds: [{ description: 'Nenhum dado ainda.' }] });
 
         const linhas = top.map((u, i) => {
           const { nivel } = calcularNivel(u.xpTotal || 0);
           const medal = ['🥇','🥈','🥉'][i] || `#${i+1}`;
-          return `${medal} <@${u.userId}> — Nível ${nivel} • ${u.xpTotal} XP`;
+          return `${medal} <@${u.userId}> — Nível ${nivel} • ${u.xpTotal || 0} XP`;
         });
 
         return msg.reply({
@@ -130,18 +131,22 @@ export function register(client, configs) {
 
     let streak = 1;
 
-    if (ultimo === hoje) {
-      streak = uAtual.streak || 1;
-    } else {
+    if (ultimo) {
       const ontem = new Date();
       ontem.setUTCDate(ontem.getUTCDate() - 1);
       const ontemStr = ontem.toISOString().slice(0, 10);
 
-      if (ultimo === ontemStr) streak = (uAtual?.streak || 0) + 1;
+      if (ultimo === hoje) {
+        streak = uAtual?.streak || 1;
+      } else if (ultimo === ontemStr) {
+        streak = (uAtual?.streak || 0) + 1;
+      } else {
+        streak = 1;
+      }
     }
 
     /* ===== XP GANHO ===== */
-    const base = Math.floor(Math.random() * 8) + 8; // 8–15
+    const base = Math.floor(Math.random() * 8) + 8;
     const mult = multiplicadorStreak(streak);
     const ganho = Math.round(base * mult);
 
@@ -190,18 +195,4 @@ export function register(client, configs) {
 
     await verificarConquistas(client, msg.author.id, guildId, u, configs).catch(() => {});
   });
-}
-
-/* =====================
-   MISSOES (mantido)
-===================== */
-
-async function atualizarMissoes(userId, guildId, tipo) {
-  try {
-    const { default: Missao } = await import('../db/models/Missao.mjs');
-    await Missao.updateOne(
-      { userId, guildId, 'diarias.tipo': tipo, 'diarias.concluida': false },
-      { $inc: { 'diarias.$.atual': 1 } }
-    );
-  } catch {}
 }
