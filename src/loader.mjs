@@ -126,14 +126,160 @@ export async function loadSystems(client) {
     try {
       fn(client, configs);
       ok++;
+// 🔥 REGISTRY AUTOMÁTICO PARA !AJUDA
+client.systems.set(nome, {
+  label: nome,
 
-      // 🔥 registra sistema para o help automático
-      client.systems.set(nome, {
-        label: nome,
-        emoji: '📦',
-        cor: 0x5865f2,
-        comandos: []
-      });
+  emoji:
+    nome === 'XP & Niveis' ? '⭐' :
+    nome === 'Relacionamentos' ? '💍' :
+    nome === 'Afinidade' ? '💜' :
+    nome === 'Reputacao' ? '🏆' :
+    nome === 'Conquistas' ? '🎖️' :
+    nome === 'Missoes' ? '📜' :
+    nome === 'Titulos' ? '👑' :
+    nome === 'Perfil Visual' ? '🖼️' :
+    nome === 'Ship' ? '💕' :
+    nome === 'Diversao' ? '🎮' :
+    nome === 'Quiz' ? '❓' :
+    nome === 'Forca' ? '🎯' :
+    nome === 'Suporte' ? '🎫' :
+    nome === 'Denuncias' ? '🚨' :
+    nome === 'Avaliacoes' ? '⭐' :
+    nome === 'Administracao' ? '🛡️' :
+    nome === 'Logs' ? '📋' :
+    nome === 'Anti-Abuso' ? '🔨' :
+    nome === 'Estatisticas' ? '📊' :
+    nome === 'Genero' ? '⚧️' :
+    nome === 'MeuPerfil' ? '👤' :
+    nome === 'Roblox' ? '🟥' :
+    nome === 'Conversao' ? '🔄' :
+    nome === 'Interacoes' ? '🤝' :
+    nome === 'Produtos' ? '🛒' :
+    '📦',
+
+  cor:
+    nome === 'XP & Niveis' ? 0xf1c40f :
+    nome === 'Relacionamentos' ? 0xff69b4 :
+    nome === 'Afinidade' ? 0xa855f7 :
+    nome === 'Reputacao' ? 0xffd700 :
+    nome === 'Conquistas' ? 0x2ecc71 :
+    nome === 'Administracao' ? 0xe74c3c :
+    0x5865f2,
+
+  comandos:
+
+    nome === 'XP & Niveis' ? [
+      { cmd: '!xp', desc: 'Mostra seu XP e nível' },
+      { cmd: '!rank', desc: 'Ranking de XP do servidor' },
+      { cmd: '!xplogs', desc: 'Histórico de XP' }
+    ] :
+
+    nome === 'Relacionamentos' ? [
+      { cmd: '!casar @usuario', desc: 'Pedir alguém em casamento' },
+      { cmd: '!parceiro', desc: 'Ver seu parceiro atual' }
+    ] :
+
+    nome === 'Afinidade' ? [
+      { cmd: '!afinidade @usuario', desc: 'Ver compatibilidade' },
+      { cmd: '!topafinidade', desc: 'Ranking dos casais' }
+    ] :
+
+    nome === 'Reputacao' ? [
+      { cmd: '!rep @usuario', desc: 'Dar reputação' },
+      { cmd: '!ranking', desc: 'Ranking de reputação' }
+    ] :
+
+    nome === 'MeuPerfil' ? [
+      { cmd: '!meuperfil', desc: 'Perfil completo do usuário' }
+    ] :
+
+    nome === 'Ship' ? [
+      { cmd: '!ship @usuario', desc: 'Calcular compatibilidade' },
+      { cmd: '!ship @user1 @user2', desc: 'Ship entre duas pessoas' }
+    ] :
+
+    nome === 'Conquistas' ? [
+      { cmd: '!conquistas', desc: 'Ver conquistas desbloqueadas' }
+    ] :
+
+    nome === 'Missoes' ? [
+      { cmd: '!missoes', desc: 'Missões diárias e semanais' }
+    ] :
+
+    nome === 'Titulos' ? [
+      { cmd: '!titulos', desc: 'Ver títulos obtidos' }
+    ] :
+
+    nome === 'Perfil Visual' ? [
+      { cmd: '!perfilvisual', desc: 'Editar aparência do perfil' }
+    ] :
+
+    nome === 'Diversao' ? [
+      { cmd: '!8ball', desc: 'Pergunte à bola mágica' },
+      { cmd: '!piada', desc: 'Receber uma piada' }
+    ] :
+
+    nome === 'Quiz' ? [
+      { cmd: '!quiz', desc: 'Responder perguntas' }
+    ] :
+
+    nome === 'Forca' ? [
+      { cmd: '!forca', desc: 'Jogar forca' }
+    ] :
+
+    nome === 'Suporte' ? [
+      { cmd: '!ticket', desc: 'Abrir ticket de suporte' }
+    ] :
+
+    nome === 'Denuncias' ? [
+      { cmd: '!denunciar', desc: 'Enviar denúncia' }
+    ] :
+
+    nome === 'Avaliacoes' ? [
+      { cmd: '!avaliar', desc: 'Avaliar atendimento' }
+    ] :
+
+    nome === 'Administracao' ? [
+      { cmd: '!config', desc: 'Configurações do servidor' }
+    ] :
+
+    nome === 'Logs' ? [
+      { cmd: '!logs', desc: 'Configuração de logs' }
+    ] :
+
+    nome === 'Anti-Abuso' ? [
+      { cmd: '!antiabuso', desc: 'Configurar proteção' }
+    ] :
+
+    nome === 'Estatisticas' ? [
+      { cmd: '!stats', desc: 'Estatísticas do servidor' }
+    ] :
+
+    nome === 'Genero' ? [
+      { cmd: '!genero', desc: 'Definir gênero do perfil' }
+    ] :
+
+    nome === 'Roblox' ? [
+      { cmd: '!roblox', desc: 'Ferramentas Roblox' }
+    ] :
+
+    nome === 'Conversao' ? [
+      { cmd: '!converter', desc: 'Conversão de unidades' }
+    ] :
+
+    nome === 'Interacoes' ? [
+      { cmd: '!abracar', desc: 'Abraçar alguém' },
+      { cmd: '!beijar', desc: 'Beijar alguém' },
+      { cmd: '!cafune', desc: 'Fazer carinho' }
+    ] :
+
+    nome === 'Produtos' ? [
+      { cmd: '!loja', desc: 'Abrir loja de XP' }
+    ] :
+
+    []
+});
 
     } catch (e) {
       fail++;
