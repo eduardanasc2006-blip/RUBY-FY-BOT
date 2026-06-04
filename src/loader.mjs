@@ -44,7 +44,10 @@ async function carregarConfigs() {
 
   try {
     const todas = await Config.find({}).lean();
-    for (const [nome, fn, comandos] of sistemas) {
+
+    for (const cfg of todas) {
+      configs.set(cfg.guildId, cfg);
+    }
 
     console.log(`[Loader] ${todas.length} configurações carregadas.`);
   } catch (e) {
@@ -123,7 +126,7 @@ export async function loadSystems(client) {
 let ok = 0;
 let fail = 0;
 
-for (const [nome, fn] of sistemas) {
+for (const [nome, fn, comandos] of sistemas) {
   try {
     fn(client, configs);
     ok++;
