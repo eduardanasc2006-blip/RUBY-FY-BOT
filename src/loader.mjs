@@ -112,10 +112,10 @@ export async function loadSystems(client) {
     ['Administracao', regAdministracao],
     ['Logs', regLogs],
     ['Anti-Abuso', regAntiAbuso],
+    ['Ajuda', regAjuda],
     ['Estatisticas', regEstatisticas],
     ['Genero', regGenero],
     ['MeuPerfil', regMeuPerfil],
-  ];
 
   let ok = 0, fail = 0;
 
@@ -278,6 +278,9 @@ client.systems.set(nome, {
       { cmd: '!loja', desc: 'Abrir loja de XP' }
     ] :
 
+    nome === 'Ajuda' ? [
+      { cmd: '!ajuda', desc: 'Central de ajuda do FiskBot' }
+    ] :
     []
 });
 
@@ -297,4 +300,4 @@ client.systems.set(nome, {
   );
 
   return configs;
-      }
+  } 
