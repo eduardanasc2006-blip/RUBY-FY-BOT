@@ -37,7 +37,7 @@ import { register as regMeuPerfil }      from './systems/meuperfil.mjs';
 const configs = new Map();
 
 // ===============================
-// LOAD CONFIGS FROM DB
+// LOAD CONFIGS
 // ===============================
 async function carregarConfigs() {
   if (!isDBConnected()) return;
@@ -51,7 +51,7 @@ async function carregarConfigs() {
 
     console.log(`[Loader] ${todas.length} configurações carregadas.`);
   } catch (e) {
-    console.warn('[Loader] Erro ao carregar configs:', e.message);
+    console.warn('[Loader] Erro configs:', e.message);
   }
 }
 
@@ -59,20 +59,16 @@ async function carregarConfigs() {
 // MAIN LOADER
 // ===============================
 export async function loadSystems(client) {
-  // 🔥 cria registry global de sistemas
   client.systems = new Map();
 
-  // ===========================
-  // INIT DB
-  // ===========================
   const dbOk = initDB();
   console.log(dbOk ? '[DB] SQLite pronto.' : '[DB] Banco não iniciado.');
 
   await carregarConfigs();
 
-  // ===========================
-  // AUTO CONFIG GUILD
-  // ===========================
+  // ===============================
+  // GUILD CREATE AUTO CONFIG
+  // ===============================
   client.on('guildCreate', async (guild) => {
     if (!isDBConnected() || configs.has(guild.id)) return;
 
@@ -89,9 +85,9 @@ export async function loadSystems(client) {
     }
   });
 
-  // ===========================
-  // SYSTEMS REGISTRY
-  // ===========================
+  // ===============================
+  // SYSTEMS LIST
+  // ===============================
   const sistemas = [
     ['Conversao', regConversao],
     ['Roblox', regRoblox],
@@ -119,81 +115,86 @@ export async function loadSystems(client) {
     ['Estatisticas', regEstatisticas],
     ['Genero', regGenero],
     ['MeuPerfil', regMeuPerfil],
-];
+  ];
+
   console.log('REGISTRO AJUDA ENCONTRADO');
-// ===========================
-// REGISTER SYSTEMS
-// ===========================
-let ok = 0;
-let fail = 0;
 
-for (const [nome, fn, comandos] of sistemas) {
-  console.log('CARREGANDO:', nome);
+  // ===============================
+  // REGISTER SYSTEMS
+  // ===============================
+  let ok = 0;
+  let fail = 0;
 
-  try {
-    fn(client, configs);
-    ok++;
+  for (const [nome, fn, comandos] of sistemas) {
+    console.log('CARREGANDO:', nome);
 
-    client.systems.set(nome, {
-      label: nome,
+    try {
+      fn(client, configs);
+      ok++;
 
-      emoji:
-        nome === 'XP & Niveis' ? '⭐' :
-        nome === 'Relacionamentos' ? '💍' :
-        nome === 'Afinidade' ? '💜' :
-        nome === 'Reputacao' ? '🏆' :
-        nome === 'Conquistas' ? '🎖️' :
-        nome === 'Missoes' ? '📜' :
-        nome === 'Titulos' ? '👑' :
-        nome === 'Perfil Visual' ? '🖼️' :
-        nome === 'Ship' ? '💕' :
-        nome === 'Diversao' ? '🎮' :
-        nome === 'Quiz' ? '❓' :
-        nome === 'Forca' ? '🎯' :
-        nome === 'Suporte' ? '🎫' :
-        nome === 'Denuncias' ? '🚨' :
-        nome === 'Avaliacoes' ? '⭐' :
-        nome === 'Administracao' ? '🛡️' :
-        nome === 'Logs' ? '📋' :
-        nome === 'Anti-Abuso' ? '🔨' :
-        nome === 'Estatisticas' ? '📊' :
-        nome === 'Genero' ? '⚧️' :
-        nome === 'MeuPerfil' ? '👤' :
-        nome === 'Roblox' ? '🟥' :
-        nome === 'Conversao' ? '🔄' :
-        nome === 'Interacoes' ? '🤝' :
-        nome === 'Produtos' ? '🛒' :
-        nome === 'Ajuda' ? '📚' :
-        '📦',
+      client.systems.set(nome, {
+        id: nome, // 🔥 ESSENCIAL PARA O MENU
+        label: nome,
 
-      cor:
-        nome === 'XP & Niveis' ? 0xf1c40f :
-        nome === 'Relacionamentos' ? 0xff69b4 :
-        nome === 'Afinidade' ? 0xa855f7 :
-        nome === 'Reputacao' ? 0xffd700 :
-        nome === 'Conquistas' ? 0x2ecc71 :
-        nome === 'Administracao' ? 0xe74c3c :
-        0x5865f2,
+        emoji:
+          nome === 'XP & Niveis' ? '⭐' :
+          nome === 'Relacionamentos' ? '💍' :
+          nome === 'Afinidade' ? '💜' :
+          nome === 'Reputacao' ? '🏆' :
+          nome === 'Conquistas' ? '🎖️' :
+          nome === 'Missoes' ? '📜' :
+          nome === 'Titulos' ? '👑' :
+          nome === 'Perfil Visual' ? '🖼️' :
+          nome === 'Ship' ? '💕' :
+          nome === 'Diversao' ? '🎮' :
+          nome === 'Quiz' ? '❓' :
+          nome === 'Forca' ? '🎯' :
+          nome === 'Suporte' ? '🎫' :
+          nome === 'Denuncias' ? '🚨' :
+          nome === 'Avaliacoes' ? '⭐' :
+          nome === 'Administracao' ? '🛡️' :
+          nome === 'Logs' ? '📋' :
+          nome === 'Anti-Abuso' ? '🔨' :
+          nome === 'Estatisticas' ? '📊' :
+          nome === 'Genero' ? '⚧️' :
+          nome === 'MeuPerfil' ? '👤' :
+          nome === 'Roblox' ? '🟥' :
+          nome === 'Conversao' ? '🔄' :
+          nome === 'Interacoes' ? '🤝' :
+          nome === 'Produtos' ? '🛒' :
+          nome === 'Ajuda' ? '📚' :
+          '📦',
 
-      comandos: comandos || []
-    });
-console.log('[SISTEMA]', nome, '=>', comandos?.length || 0);
+        cor:
+          nome === 'XP & Niveis' ? 0xf1c40f :
+          nome === 'Relacionamentos' ? 0xff69b4 :
+          nome === 'Afinidade' ? 0xa855f7 :
+          nome === 'Reputacao' ? 0xffd700 :
+          nome === 'Conquistas' ? 0x2ecc71 :
+          nome === 'Administracao' ? 0xe74c3c :
+          0x5865f2,
 
-  } catch (e) {
-    fail++;
-    console.error(`[Loader] Erro ${nome}:`, e.message);
+        comandos: comandos || []
+      });
+
+      console.log('[SISTEMA]', nome, '=>', comandos?.length || 0);
+
+    } catch (e) {
+      fail++;
+      console.error(`[Loader] Erro ${nome}:`, e.message);
+    }
   }
-     }
-// ===========================
-// FINAL LOG
-// ===========================
-const dbStatus = isDBConnected()
-  ? 'SQLite ativo'
-  : 'sem banco de dados';
 
-console.log(
-  `[Loader] FiskBot — ${ok} sistemas ativos${fail ? `, ${fail} erros` : ''}. ${dbStatus}`
-);
+  // ===============================
+  // FINAL LOG
+  // ===============================
+  const dbStatus = isDBConnected()
+    ? 'SQLite ativo'
+    : 'sem banco de dados';
 
-return configs;
-}
+  console.log(
+    `[Loader] FiskBot — ${ok} sistemas ativos${fail ? `, ${fail} erros` : ''}. ${dbStatus}`
+  );
+
+  return configs;
+  }
