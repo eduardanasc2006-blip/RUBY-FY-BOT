@@ -44,7 +44,7 @@ async function carregarConfigs() {
 
   try {
     const todas = await Config.find({}).lean();
-    for (const cfg of todas) configs.set(cfg.guildId, cfg);
+    for (const [nome, fn, comandos] of sistemas) {
 
     console.log(`[Loader] ${todas.length} configurações carregadas.`);
   } catch (e) {
