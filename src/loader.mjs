@@ -116,7 +116,7 @@ export async function loadSystems(client) {
     ['Estatisticas', regEstatisticas],
     ['Genero', regGenero],
     ['MeuPerfil', regMeuPerfil],
-
+];
   let ok = 0, fail = 0;
 
   // ===========================
