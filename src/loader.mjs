@@ -174,6 +174,7 @@ for (const [nome, fn, comandos] of sistemas) {
 
       comandos: comandos || []
     });
+console.log('[SISTEMA]', nome, '=>', comandos?.length || 0);
 
   } catch (e) {
     fail++;
