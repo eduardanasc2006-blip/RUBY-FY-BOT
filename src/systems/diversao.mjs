@@ -1,191 +1,177 @@
-import {
-  EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-} from 'discord.js';
-
+import { EmbedBuilder } from 'discord.js';
 import { ganharXP, gastarXP } from './xpSystem.mjs';
 
-const duelosAtivos = new Map();
-
 /* =========================
-   !duel @usuario valor
+   DADO (PvP opcional)
 ========================= */
-export async function handleDuel(msg, args) {
-  const desafiante = msg.author;
-  const oponente = msg.mentions.users.first();
-  const aposta = parseInt(args[1]) || 0;
+if (cmd === 'dado') {
+  const faces = parseInt(args[0]) || 6;
+  const alvo = msg.mentions.users.first();
 
-  if (!oponente) {
-    return msg.reply('❌ Use: `!duel @usuario [XP opcional]`');
-  }
+  const rollUser = Math.floor(Math.random() * faces) + 1;
+  const rollAlvo = alvo ? Math.floor(Math.random() * faces) + 1 : null;
 
-  if (oponente.bot) {
-    return msg.reply('❌ Você não pode duelar com bots.');
-  }
-
-  const chave = `${msg.guild.id}:${oponente.id}`;
-
-  if (duelosAtivos.has(chave)) {
-    return msg.reply('⚠️ Esse jogador já está em um duelo pendente.');
-  }
-
-  /* trava duelo */
-  duelosAtivos.set(chave, {
-    desafiante: desafiante.id,
-    oponente: oponente.id,
-    aposta,
-    channel: msg.channel.id,
-    timeout: null,
-  });
-
-  /* embed convite */
   const embed = new EmbedBuilder()
-    .setColor(0xe67e22)
-    .setTitle('⚔️ Pedido de Duelo!')
-    .setDescription(
-      `<@${oponente.id}>, você foi desafiado por <@${desafiante.id}>!\n\n💰 Aposta: **${aposta > 0 ? aposta + ' XP' : 'Sem aposta'}**`
-    )
-    .setFooter({ text: 'Você tem 30 segundos para responder' });
+    .setColor(0x3498db)
+    .setTitle('🎲 Jogo do Dado')
+    .addFields(
+      { name: msg.author.username, value: `🎲 ${rollUser}`, inline: true }
+    );
 
-  /* botões */
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`duel_accept:${desafiante.id}:${oponente.id}:${aposta}`)
-      .setLabel('Aceitar')
-      .setStyle(ButtonStyle.Success),
+  if (alvo) {
+    const vencedor =
+      rollUser > rollAlvo ? msg.author :
+      rollUser < rollAlvo ? alvo :
+      null;
 
-    new ButtonBuilder()
-      .setCustomId(`duel_reject:${desafiante.id}:${oponente.id}`)
-      .setLabel('Recusar')
-      .setStyle(ButtonStyle.Danger)
-  );
+    embed.addFields(
+      { name: alvo.username, value: `🎲 ${rollAlvo}`, inline: true },
+      {
+        name: '🏆 Resultado',
+        value: vencedor ? `${vencedor} venceu!` : '🤝 Empate!'
+      }
+    );
+  }
 
-  const msgDuelo = await msg.reply({
-    embeds: [embed],
-    components: [row],
-  });
-
-  /* timeout automático */
-  const timeout = setTimeout(async () => {
-    if (!duelosAtivos.has(chave)) return;
-
-    duelosAtivos.delete(chave);
-
-    await msgDuelo.edit({
-      components: [],
-      embeds: [
-        new EmbedBuilder()
-          .setColor(0x95a5a6)
-          .setTitle('⏱️ Duelo cancelado')
-          .setDescription('O tempo expirou e ninguém respondeu.'),
-      ],
-    });
-  }, 30_000);
-
-  duelosAtivos.get(chave).timeout = timeout;
+  return msg.reply({ embeds: [embed] });
 }
 
 /* =========================
-   INTERAÇÕES DO DUEL
+   COINFLIP (PvP + XP aposta)
 ========================= */
-export async function handleDuelInteraction(interaction) {
-  if (!interaction.isButton()) return;
-  if (!interaction.customId.startsWith('duel_')) return;
+if (cmd === 'coinflip') {
+  const escolha = args[0]?.toLowerCase();
+  const alvo = msg.mentions.users.first();
+  const aposta = parseInt(args[1]) || 0;
 
-  const [action, desafianteId, oponenteId, apostaStr] =
-    interaction.customId.split(':');
-
-  const aposta = parseInt(apostaStr) || 0;
-  const guildId = interaction.guild.id;
-
-  const chave = `${guildId}:${oponenteId}`;
-  const duelo = duelosAtivos.get(chave);
-
-  if (!duelo) {
-    return interaction.reply({
-      content: '❌ Esse duelo não existe mais.',
-      ephemeral: true,
-    });
+  if (!['cara', 'coroa'].includes(escolha)) {
+    return msg.reply('Use: `!coinflip cara/coroa @alguém [XP opcional]`');
   }
 
-  /* só o oponente pode responder */
-  if (interaction.user.id !== oponenteId) {
-    return interaction.reply({
-      content: '❌ Esse duelo não é seu.',
-      ephemeral: true,
-    });
-  }
-
-  clearTimeout(duelo.timeout);
-  duelosAtivos.delete(chave);
-
-  /* =========================
-     RECUSAR
-  ========================= */
-  if (action === 'duel_reject') {
-    return interaction.update({
-      components: [],
-      embeds: [
-        new EmbedBuilder()
-          .setColor(0xe74c3c)
-          .setTitle('❌ Duelo recusado')
-          .setDescription(`<@${oponenteId}> recusou o duelo.`),
-      ],
-    });
-  }
-
-  /* =========================
-     ACEITAR → RESOLVER
-  ========================= */
-
-  const desafianteRoll = Math.floor(Math.random() * 100) + 1;
-  const oponenteRoll = Math.floor(Math.random() * 100) + 1;
+  const resultado = Math.random() < 0.5 ? 'cara' : 'coroa';
 
   let vencedor = null;
 
-  if (desafianteRoll > oponenteRoll) {
-    vencedor = desafianteId;
-  } else if (oponenteRoll > desafianteRoll) {
-    vencedor = oponenteId;
+  if (escolha === resultado) {
+    vencedor = msg.author;
+  } else if (alvo) {
+    vencedor = alvo;
   }
 
-  /* =========================
-     APOSTA XP
-  ========================= */
+  // XP aposta
   if (aposta > 0) {
-    const ok1 = await gastarXP(desafianteId, guildId, aposta, 'duel');
-    const ok2 = await gastarXP(oponenteId, guildId, aposta, 'duel');
+    const ok = await gastarXP(msg.author.id, msg.guild.id, aposta, 'coinflip');
+    if (!ok) return msg.reply('❌ XP insuficiente para aposta!');
 
-    if (ok1 && ok2 && vencedor) {
-      await ganharXP(vencedor, guildId, aposta * 2, 'duel');
+    if (vencedor) {
+      await ganharXP(vencedor.id, msg.guild.id, aposta * 2, 'coinflip');
     }
   }
 
   const embed = new EmbedBuilder()
-    .setColor(0x9b59b6)
-    .setTitle('⚔️ Resultado do Duelo')
+    .setColor(0xf1c40f)
+    .setTitle('🪙 Coinflip')
     .addFields(
+      { name: 'Escolha', value: escolha, inline: true },
+      { name: 'Resultado', value: resultado, inline: true },
+      { name: '🏆 Vencedor', value: vencedor ? `${vencedor}` : 'Ninguém' }
+    );
+
+  return msg.reply({ embeds: [embed] });
+}
+
+/* =========================
+   PEDRA PAPEL TESOURA (PvP + XP aposta)
+========================= */
+if (cmd === 'ppt') {
+  const alvo = msg.mentions.users.first();
+  const escolha = args[0]?.toLowerCase();
+  const aposta = parseInt(args[1]) || 0;
+
+  const opcoes = ['pedra', 'papel', 'tesoura'];
+
+  if (!opcoes.includes(escolha)) {
+    return msg.reply('Use: `!ppt pedra/papel/tesoura @alguém [XP]`');
+  }
+
+  const bot = opcoes[Math.floor(Math.random() * opcoes.length)];
+
+  let resultado = 'empate';
+
+  if (
+    (escolha === 'pedra' && bot === 'tesoura') ||
+    (escolha === 'papel' && bot === 'pedra') ||
+    (escolha === 'tesoura' && bot === 'papel')
+  ) {
+    resultado = 'user';
+  } else if (escolha !== bot) {
+    resultado = 'bot';
+  }
+
+  // XP aposta
+  if (aposta > 0) {
+    const ok = await gastarXP(msg.author.id, msg.guild.id, aposta, 'ppt');
+    if (!ok) return msg.reply('❌ XP insuficiente!');
+
+    if (resultado === 'user') {
+      await ganharXP(msg.author.id, msg.guild.id, aposta * 2, 'ppt');
+    }
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(0x3498db)
+    .setTitle('✊ Pedra Papel Tesoura')
+    .addFields(
+      { name: 'Você', value: escolha, inline: true },
+      { name: 'Bot', value: bot, inline: true },
       {
-        name: '🧑 Desafiante',
-        value: `<@${desafianteId}> 🎲 ${desafianteRoll}`,
-        inline: true,
-      },
-      {
-        name: '🧑 Oponente',
-        value: `<@${oponenteId}> 🎲 ${oponenteRoll}`,
-        inline: true,
-      },
-      {
-        name: '🏆 Vencedor',
-        value: vencedor ? `<@${vencedor}>` : 'Empate!',
-        inline: false,
+        name: 'Resultado',
+        value:
+          resultado === 'user'
+            ? '🏆 Você venceu!'
+            : resultado === 'bot'
+            ? '😢 Você perdeu!'
+            : '🤝 Empate!'
       }
     );
 
-  return interaction.update({
-    embeds: [embed],
-    components: [],
-  });
-                                  }
+  return msg.reply({ embeds: [embed] });
+}
+
+/* =========================
+   VERDADE / DESAFIO (XP leve)
+========================= */
+
+const VERDADES = [
+  'Qual foi a coisa mais estranha que você já comeu?',
+  'Qual é o seu maior medo?',
+  'Você já mentiu para alguém?',
+  'Qual foi seu maior arrependimento?'
+];
+
+const DESAFIOS = [
+  'Cante algo no chat de voz!',
+  'Escreva um poema curto agora!',
+  'Fale algo engraçado!',
+  'Mande uma mensagem aleatória para alguém!'
+];
+
+if (cmd === 'verdade' || cmd === 'desafio') {
+  const lista = cmd === 'verdade' ? VERDADES : DESAFIOS;
+  const item = lista[Math.floor(Math.random() * lista.length)];
+
+  const xpBonus = Math.floor(Math.random() * 40) + 10;
+
+  await ganharXP(msg.author.id, msg.guild.id, xpBonus, cmd);
+
+  const embed = new EmbedBuilder()
+    .setColor(cmd === 'verdade' ? 0x2ecc71 : 0xe74c3c)
+    .setTitle(cmd === 'verdade' ? '💬 Verdade' : '🎯 Desafio')
+    .setDescription(item)
+    .addFields({
+      name: '🎁 Recompensa',
+      value: `+${xpBonus} XP`
+    });
+
+  return msg.reply({ embeds: [embed] });
+}
