@@ -2,18 +2,19 @@ import { makeModel } from '../sqlite.mjs';
 
 export default makeModel('usuarios', {
   jsonFields: [
-    // sistema atual
+    // sistema base
     'titulos',
 
-    // 🛒 loja / inventário
+    // 🛒 LOJA / INVENTÁRIO COMPLETO
     'inventario',
     'badges',
     'efeitos',
 
-    // 🎮 quiz system
+    // 🎮 SISTEMAS
     'quiz',
+    'forca',
 
-    // 💍 relacionamentos (casamento / ship)
+    // 💍 RELACIONAMENTOS
     'relacionamentos'
   ],
 
@@ -25,7 +26,9 @@ export default makeModel('usuarios', {
     'updatedAt'
   ],
 
-  // 🔥 valores padrão automáticos (IMPORTANTE pro seu sistema não quebrar)
+  // ─────────────────────────────────────────────
+  // 🔥 DEFAULTS ATUALIZADOS (ECONOMIA + JOGOS)
+  // ─────────────────────────────────────────────
   defaults: {
     xpDisponivel: 0,
     xpTotal: 0,
@@ -33,28 +36,63 @@ export default makeModel('usuarios', {
 
     titulos: [],
 
+    // 🧠 INVENTÁRIO COMPLETO (LOJA REAL)
     inventario: {
       moldura: 'padrao',
       fundo: 'azul',
       titulo: null,
-      badges: [],
-      efeitos: []
+
+      itens: {
+        quiz: [],
+        forca: [],
+        xp: [],
+        utilitarios: []
+      },
+
+      consumiveis: {
+        vidasExtra: 0,
+        dicasQuiz: 0,
+        pulosQuiz: 0,
+        letrasForca: 0,
+        protecaoErro: 0,
+        tempoExtra: 0
+      },
+
+      passivos: {
+        xpBoost: 1.0,
+        streakProtegido: false
+      }
     },
 
     badges: [],
     efeitos: [],
 
+    // 🎮 QUIZ SYSTEM NOVO
     quiz: {
       vidas: 3,
       maxVidas: 3,
-      pulos: 0,
-      acertos: 0
+      acertos: 0,
+      erros: 0,
+      total: 0,
+
+      categoriaFavorita: null,
+      streak: 0,
+      ultimoJogo: null
     },
 
+    // 🎯 FORCA SYSTEM NOVO
+    forca: {
+      vitorias: 0,
+      derrotas: 0,
+      streak: 0
+    },
+
+    // 💍 RELACIONAMENTOS
     relacionamentos: {
       casado: false,
       parceiroId: null,
-      dataCasamento: null
+      dataCasamento: null,
+      afinidade: 0
     },
 
     ultimaRep: null,
