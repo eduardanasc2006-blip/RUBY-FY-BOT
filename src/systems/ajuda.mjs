@@ -6,11 +6,6 @@ import {
   ButtonStyle,
 } from 'discord.js';
 
-const EXPIRACAO_MS = 5 * 60 * 1000;
-
-/**
- * 🔥 Pega sistemas reais do loader
- */
 function getCategorias(client) {
   const cats = {};
 
@@ -19,7 +14,7 @@ function getCategorias(client) {
   for (const [id, meta] of client.systems.entries()) {
     cats[id] = {
       id,
-      emoji: typeof meta.emoji === 'string' ? meta.emoji : '📦',
+      emoji: typeof meta.emoji === 'string' && meta.emoji.length > 0 ? meta.emoji : '📦',
       label: meta.label || id,
       cor: meta.cor || 0x5865f2,
       comandos: meta.comandos || []
@@ -63,7 +58,7 @@ function embedCategoria(client, id) {
 }
 
 /**
- * 🚀 FIX DEFINITIVO DO SELECT MENU (SEM CRASH DE EMOJI)
+ * 🚀 MENU SEGURO (SEM BUG DE EMOJI / SEM DUPLICAÇÃO)
  */
 function menuPrincipal(client, userId) {
   const categorias = getCategorias(client);
@@ -71,30 +66,12 @@ function menuPrincipal(client, userId) {
   const opcoes = [];
 
   for (const cat of Object.values(categorias)) {
-    const emoji =
-      typeof cat.emoji === 'string' && cat.emoji.length > 0
+    opcoes.push({
+      label: String(cat.label).slice(0, 100),
+      value: String(cat.id).slice(0, 100),
+      emoji: typeof cat.emoji === 'string' && cat.emoji.length > 0
         ? cat.emoji
-        : '📦';
-
-    opcoes.push({
-      label: String(cat.label).slice(0, 100),
-      value: String(cat.id).slice(0, 100),
-      emoji
-    });
-  }
-
-  return new ActionRowBuilder().addComponents(
-    new StringSelectMenuBuilder()
-      .setCustomId(`ajuda_menu:${userId}`)
-      .setPlaceholder('📂 Selecione uma categoria...')
-      .addOptions(opcoes.slice(0, 25))
-  );
-      }
-
-    opcoes.push({
-      label: String(cat.label).slice(0, 100),
-      value: String(cat.id).slice(0, 100),
-      emoji: emoji
+        : '📦'
     });
   }
 
@@ -151,23 +128,24 @@ export function register(client, configs) {
 
       const userId = interaction.customId.split(':')[1];
 
-      if (interaction.user.id !== userId)
+      if (interaction.user.id !== userId) {
         return interaction.reply({
           content: '❌ Não é seu menu.',
           ephemeral: true
         });
+      }
 
-      // SELECT MENU
       if (interaction.isStringSelectMenu()) {
         const id = interaction.values[0];
 
         const embed = embedCategoria(client, id);
 
-        if (!embed)
+        if (!embed) {
           return interaction.reply({
             content: '❌ Categoria inválida.',
             ephemeral: true
           });
+        }
 
         return interaction.update({
           embeds: [embed],
@@ -175,7 +153,6 @@ export function register(client, configs) {
         });
       }
 
-      // BOTÃO VOLTAR
       if (interaction.isButton()) {
         return interaction.update({
           embeds: [embedPrincipal(client)],
@@ -194,4 +171,4 @@ export function register(client, configs) {
       }
     }
   });
-  }
+      }
