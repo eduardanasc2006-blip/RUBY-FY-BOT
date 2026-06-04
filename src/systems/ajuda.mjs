@@ -10,29 +10,23 @@ import {
 const EXPIRACAO_MS = 5 * 60 * 1000;
 
 /**
- * 🔥 HELP DINÂMICO BASEADO NOS SISTEMAS DO LOADER
+ * 🔥 Pega sistemas reais do loader
  */
 function getCategorias(client) {
   const cats = {};
 
   if (!client.systems) return cats;
 
-  for (const meta of client.systems.values()) {
-    if (!meta) continue;
+  for (const [nome, meta] of client.systems.entries()) {
+    const label = meta.label || nome;
 
-    const categoria = meta.label || 'Outros';
-
-    if (!cats[categoria]) {
-      cats[categoria] = {
+    if (!cats[label]) {
+      cats[label] = {
         emoji: meta.emoji || '📦',
-        label: categoria,
+        label,
         cor: meta.cor || 0x5865f2,
-        comandos: []
+        comandos: meta.comandos || []
       };
-    }
-
-    if (Array.isArray(meta.comandos)) {
-      cats[categoria].comandos.push(...meta.comandos);
     }
   }
 
@@ -52,34 +46,32 @@ function embedPrincipal(client) {
         .map(c => `${c.emoji} **${c.label}**`)
         .join('\n')
     )
-    .setFooter({ text: 'FiskBot • Selecione uma categoria no menu abaixo' })
     .setTimestamp();
 }
 
-function embedCategoria(client, id) {
+function embedCategoria(client, label) {
   const categorias = getCategorias(client);
+  const cat = categorias[label];
 
-  const cat = Object.values(categorias).find(c => c.label === id);
   if (!cat) return null;
 
-  const linhas = cat.comandos
-    .map(c => `\`${c.cmd}\`\n┗ ${c.desc}`)
-    .join('\n\n');
+  const linhas = cat.comandos.length
+    ? cat.comandos.map(c => `\`${c.cmd}\`\n┗ ${c.desc}`).join('\n\n')
+    : 'Nenhum comando registrado.';
 
   return new EmbedBuilder()
-    .setColor(cat.cor || 0x5865f2)
+    .setColor(cat.cor)
     .setTitle(`${cat.emoji} ${cat.label}`)
-    .setDescription(linhas || 'Nenhum comando disponível.')
-    .setFooter({ text: 'FiskBot • Clique em ⬅ Voltar para o menu principal' })
+    .setDescription(linhas)
     .setTimestamp();
 }
 
 function menuPrincipal(client, userId) {
   const categorias = getCategorias(client);
 
-  const opcoes = Object.entries(categorias).map(([id, cat]) =>
+  const opcoes = Object.values(categorias).map(cat =>
     new StringSelectMenuOptionBuilder()
-      .setValue(id)
+      .setValue(cat.label)
       .setLabel(cat.label)
       .setEmoji(cat.emoji)
   );
@@ -96,7 +88,7 @@ function botaoVoltar(userId) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`ajuda_voltar:${userId}`)
-      .setLabel('⬅ Voltar ao Menu Principal')
+      .setLabel('⬅ Voltar')
       .setStyle(ButtonStyle.Secondary)
   );
 }
@@ -109,73 +101,52 @@ export function register(client, configs) {
 
     const cfg = configs.get(msg.guild.id);
     const prefixo = cfg?.prefixo || '!';
+
     if (!msg.content.startsWith(prefixo)) return;
 
-    const args = msg.content.slice(prefixo.length).trim().split(/\s+/);
-    const cmd = args.shift().toLowerCase();
+    const cmd = msg.content.slice(prefixo.length).trim().split(/\s+/)[0].toLowerCase();
 
-    if (cmd !== 'ajuda' && cmd !== 'help' && cmd !== 'comandos') return;
+    if (!['ajuda', 'help', 'comandos'].includes(cmd)) return;
 
-    try {
-      const sent = await msg.reply({
-        embeds: [embedPrincipal(client)],
-        components: [menuPrincipal(client, msg.author.id)],
-      });
+    const sent = await msg.reply({
+      embeds: [embedPrincipal(client)],
+      components: [menuPrincipal(client, msg.author.id)],
+    });
 
-      sessoes.set(sent.id, {
-        userId: msg.author.id,
-        timer: setTimeout(() => {
-          sent.edit({ components: [] }).catch(() => {});
-          sessoes.delete(sent.id);
-        }, EXPIRACAO_MS),
-      });
-
-    } catch (e) {
-      await msg.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0x5865f2)
-            .setTitle('✨ FiskBot — Comandos')
-            .setDescription('❌ Erro ao carregar menu interativo.')
-            .setTimestamp()
-        ],
-      }).catch(() => {});
-    }
+    sessoes.set(sent.id, {
+      timer: setTimeout(() => {
+        sent.edit({ components: [] }).catch(() => {});
+      }, EXPIRACAO_MS),
+    });
   });
 
   client.on('interactionCreate', async (interaction) => {
     try {
       if (!interaction.isStringSelectMenu() && !interaction.isButton()) return;
 
-      const { customId } = interaction;
+      const userId = interaction.customId.split(':')[1];
 
-      // 📂 selecionar categoria
-      if (interaction.isStringSelectMenu() && customId.startsWith('ajuda_menu:')) {
-        const userId = customId.split(':')[1];
+      if (interaction.user.id !== userId)
+        return interaction.reply({ content: '❌ Não é seu menu.', ephemeral: true });
 
-        if (interaction.user.id !== userId)
-          return interaction.reply({ content: '❌ Este menu não é seu.', ephemeral: true });
+      // SELECT MENU
+      if (interaction.isStringSelectMenu()) {
+        const label = interaction.values[0];
 
-        const catId = interaction.values[0];
+        const embed = embedCategoria(client, label);
 
-        const embed = embedCategoria(client, catId);
         if (!embed)
           return interaction.reply({ content: '❌ Categoria inválida.', ephemeral: true });
 
-        await interaction.update({
+        return interaction.update({
           embeds: [embed],
           components: [botaoVoltar(userId)],
         });
       }
 
-      // ⬅ voltar
-      if (interaction.isButton() && customId.startsWith('ajuda_voltar:')) {
-        const userId = customId.split(':')[1];
-
-        if (interaction.user.id !== userId)
-          return interaction.reply({ content: '❌ Este menu não é seu.', ephemeral: true });
-
-        await interaction.update({
+      // BOTÃO VOLTAR
+      if (interaction.isButton()) {
+        return interaction.update({
           embeds: [embedPrincipal(client)],
           components: [menuPrincipal(client, userId)],
         });
@@ -183,9 +154,9 @@ export function register(client, configs) {
 
     } catch (e) {
       interaction.reply({
-        content: '❌ Erro ao processar interação.',
+        content: '❌ Erro ao carregar ajuda.',
         ephemeral: true,
       }).catch(() => {});
     }
   });
-}
+  }
