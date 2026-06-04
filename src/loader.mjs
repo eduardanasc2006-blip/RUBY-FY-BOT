@@ -1,3 +1,5 @@
+client.removeAllListeners('messageCreate');
+client.removeAllListeners('interactionCreate');
 import { initDB, isDBConnected } from './db/sqlite.mjs';
 import Config from './db/models/Config.mjs';
 
