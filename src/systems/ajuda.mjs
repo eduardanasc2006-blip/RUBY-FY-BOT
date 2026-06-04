@@ -62,21 +62,27 @@ function embedCategoria(client, id) {
     .setTimestamp();
 }
 
+/**
+ * 🚀 FIX DEFINITIVO DO SELECT MENU (SEM CRASH DE EMOJI)
+ */
 function menuPrincipal(client, userId) {
   const categorias = getCategorias(client);
 
   const opcoes = [];
 
   for (const cat of Object.values(categorias)) {
-    try {
-      opcoes.push({
-        label: String(cat.label).slice(0, 100),
-        value: String(cat.id).slice(0, 100), // 🔥 FIX PRINCIPAL
-        emoji: typeof cat.emoji === 'string' ? cat.emoji : '📦'
-      });
-    } catch (e) {
-      console.log('[AJUDA] Categoria ignorada:', cat?.label);
+    let emoji = '📦';
+
+    // 🔥 GARANTE QUE É STRING PURA (Discord safe)
+    if (typeof cat.emoji === 'string') {
+      emoji = cat.emoji;
     }
+
+    opcoes.push({
+      label: String(cat.label).slice(0, 100),
+      value: String(cat.id).slice(0, 100),
+      emoji: emoji
+    });
   }
 
   return new ActionRowBuilder().addComponents(
@@ -175,4 +181,4 @@ export function register(client, configs) {
       }
     }
   });
-}
+  }
