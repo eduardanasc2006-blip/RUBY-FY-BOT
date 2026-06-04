@@ -1,115 +1,191 @@
-import { EmbedBuilder } from 'discord.js';
+import {
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+} from 'discord.js';
 
-const RESPOSTAS_8BALL = [
-  '✅ Sim, definitivamente!', '✅ Com certeza!', '✅ Tudo indica que sim.',
-  '✅ Provavelmente sim.', '🤔 Difícil dizer...', '🤔 Pergunta de novo mais tarde.',
-  '🤔 Não tenho certeza.', '❌ Provavelmente não.', '❌ Não parece.', '❌ Definitivamente não.',
-];
+import { ganharXP, gastarXP } from './xpSystem.mjs';
 
-const VERDADES = [
-  'Qual foi a coisa mais estranha que você já comeu?',
-  'Qual é o seu maior medo?',
-  'Você já mentiu para um amigo? O que foi?',
-  'Qual é a coisa mais engraçada que aconteceu com você?',
-  'Se você pudesse ser qualquer animal, qual seria?',
-  'Qual é seu maior arrependimento?',
-  'Você já apagou uma mensagem por vergonha?',
-  'O que você faria com R$1 milhão?',
-];
+const duelosAtivos = new Map();
 
-const DESAFIOS = [
-  'Escreva um poema de 4 versos agora!',
-  'Fale em inglês por 5 minutos.',
-  'Envie uma foto fazendo pose engraçada.',
-  'Cante uma música no chat de voz.',
-  'Escreva seu nome com a mão não dominante.',
-  'Conte até 20 em outra língua.',
-  'Tente dar 3 coisas positivas sobre você.',
-  'Mande uma mensagem aleatória para o próximo contato.',
-];
+/* =========================
+   !duel @usuario valor
+========================= */
+export async function handleDuel(msg, args) {
+  const desafiante = msg.author;
+  const oponente = msg.mentions.users.first();
+  const aposta = parseInt(args[1]) || 0;
 
-export function register(client, configs) {
-  client.on('messageCreate', async (msg) => {
-    if (msg.author.bot || !msg.guild) return;
-    const cfg = configs.get(msg.guild.id);
-    const prefixo = cfg?.prefixo || '!';
-    if (!msg.content.startsWith(prefixo)) return;
+  if (!oponente) {
+    return msg.reply('❌ Use: `!duel @usuario [XP opcional]`');
+  }
 
-    const args = msg.content.slice(prefixo.length).trim().split(/\s+/);
-    const cmd = args.shift().toLowerCase();
+  if (oponente.bot) {
+    return msg.reply('❌ Você não pode duelar com bots.');
+  }
 
-    if (cmd === '8ball') {
-      const pergunta = args.join(' ');
-      if (!pergunta) return msg.reply('❓ Faça uma pergunta! Ex: `!8ball Vou passar na prova?`');
-      const resp = RESPOSTAS_8BALL[Math.floor(Math.random() * RESPOSTAS_8BALL.length)];
-      const embed = new EmbedBuilder().setColor(0x9b59b6)
-        .setTitle('🎱 Bola Mágica 8')
-        .addFields({ name: '❓ Pergunta', value: pergunta }, { name: '💬 Resposta', value: resp })
-        .setTimestamp();
-      return msg.reply({ embeds: [embed] });
-    }
+  const chave = `${msg.guild.id}:${oponente.id}`;
 
-    if (cmd === 'dado') {
-      const faces = parseInt(args[0]) || 6;
-      const resultado = Math.floor(Math.random() * faces) + 1;
-      return msg.reply(`🎲 Você rolou um dado de **${faces}** faces: **${resultado}**`);
-    }
+  if (duelosAtivos.has(chave)) {
+    return msg.reply('⚠️ Esse jogador já está em um duelo pendente.');
+  }
 
-    if (cmd === 'coinflip') {
-      const r = Math.random() < 0.5 ? '🪙 Cara!' : '🪙 Coroa!';
-      return msg.reply(r);
-    }
-
-    if (cmd === 'ppt') {
-      const opcoes = ['🪨 Pedra', '📄 Papel', '✂️ Tesoura'];
-      const bot = opcoes[Math.floor(Math.random() * opcoes.length)];
-      const user = opcoes[Math.floor(Math.random() * opcoes.length)];
-      let resultado = '🤝 Empate!';
-      if (
-        (user === opcoes[0] && bot === opcoes[2]) ||
-        (user === opcoes[1] && bot === opcoes[0]) ||
-        (user === opcoes[2] && bot === opcoes[1])
-      ) resultado = '🏆 Você ganhou!';
-      else if (user !== bot) resultado = '😢 Bot ganhou!';
-      const embed = new EmbedBuilder().setColor(0x3498db)
-        .setTitle('✊ Pedra, Papel ou Tesoura')
-        .addFields({ name: '🧑 Você', value: user, inline: true }, { name: '🤖 Bot', value: bot, inline: true }, { name: '📊 Resultado', value: resultado, inline: false })
-        .setTimestamp();
-      return msg.reply({ embeds: [embed] });
-    }
-
-    if (cmd === 'roleta') {
-      const membros = msg.guild.members.cache.filter(m => !m.user.bot);
-      if (!membros.size) return msg.reply('Nenhum membro encontrado.');
-      const arr = [...membros.values()];
-      const escolhido = arr[Math.floor(Math.random() * arr.length)];
-      return msg.reply(`🎰 A roleta escolheu: **${escolhido.displayName}** (${escolhido.toString()})`);
-    }
-
-    if (cmd === 'escolher') {
-      if (!args.length) return msg.reply('Use: `!escolher opção1 opção2 opção3`');
-      const escolha = args[Math.floor(Math.random() * args.length)];
-      return msg.reply(`🎯 Eu escolho: **${escolha}**!`);
-    }
-
-    if (cmd === 'sortear') {
-      const membros = msg.guild.members.cache.filter(m => !m.user.bot && m.presence?.status !== 'offline');
-      const arr = [...(membros.size > 0 ? membros : msg.guild.members.cache.filter(m => !m.user.bot)).values()];
-      if (!arr.length) return msg.reply('Nenhum membro para sortear.');
-      const escolhido = arr[Math.floor(Math.random() * arr.length)];
-      return msg.reply(`🎉 Sorteado: **${escolhido.displayName}**!`);
-    }
-
-    if (cmd === 'verdade') {
-      const v = VERDADES[Math.floor(Math.random() * VERDADES.length)];
-      const embed = new EmbedBuilder().setColor(0x2ecc71).setTitle('💬 Verdade').setDescription(v).setTimestamp();
-      return msg.reply({ embeds: [embed] });
-    }
-
-    if (cmd === 'desafio') {
-      const d = DESAFIOS[Math.floor(Math.random() * DESAFIOS.length)];
-      const embed = new EmbedBuilder().setColor(0xe74c3c).setTitle('🎯 Desafio').setDescription(d).setTimestamp();
-      return msg.reply({ embeds: [embed] });
-    }
+  /* trava duelo */
+  duelosAtivos.set(chave, {
+    desafiante: desafiante.id,
+    oponente: oponente.id,
+    aposta,
+    channel: msg.channel.id,
+    timeout: null,
   });
+
+  /* embed convite */
+  const embed = new EmbedBuilder()
+    .setColor(0xe67e22)
+    .setTitle('⚔️ Pedido de Duelo!')
+    .setDescription(
+      `<@${oponente.id}>, você foi desafiado por <@${desafiante.id}>!\n\n💰 Aposta: **${aposta > 0 ? aposta + ' XP' : 'Sem aposta'}**`
+    )
+    .setFooter({ text: 'Você tem 30 segundos para responder' });
+
+  /* botões */
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`duel_accept:${desafiante.id}:${oponente.id}:${aposta}`)
+      .setLabel('Aceitar')
+      .setStyle(ButtonStyle.Success),
+
+    new ButtonBuilder()
+      .setCustomId(`duel_reject:${desafiante.id}:${oponente.id}`)
+      .setLabel('Recusar')
+      .setStyle(ButtonStyle.Danger)
+  );
+
+  const msgDuelo = await msg.reply({
+    embeds: [embed],
+    components: [row],
+  });
+
+  /* timeout automático */
+  const timeout = setTimeout(async () => {
+    if (!duelosAtivos.has(chave)) return;
+
+    duelosAtivos.delete(chave);
+
+    await msgDuelo.edit({
+      components: [],
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0x95a5a6)
+          .setTitle('⏱️ Duelo cancelado')
+          .setDescription('O tempo expirou e ninguém respondeu.'),
+      ],
+    });
+  }, 30_000);
+
+  duelosAtivos.get(chave).timeout = timeout;
 }
+
+/* =========================
+   INTERAÇÕES DO DUEL
+========================= */
+export async function handleDuelInteraction(interaction) {
+  if (!interaction.isButton()) return;
+  if (!interaction.customId.startsWith('duel_')) return;
+
+  const [action, desafianteId, oponenteId, apostaStr] =
+    interaction.customId.split(':');
+
+  const aposta = parseInt(apostaStr) || 0;
+  const guildId = interaction.guild.id;
+
+  const chave = `${guildId}:${oponenteId}`;
+  const duelo = duelosAtivos.get(chave);
+
+  if (!duelo) {
+    return interaction.reply({
+      content: '❌ Esse duelo não existe mais.',
+      ephemeral: true,
+    });
+  }
+
+  /* só o oponente pode responder */
+  if (interaction.user.id !== oponenteId) {
+    return interaction.reply({
+      content: '❌ Esse duelo não é seu.',
+      ephemeral: true,
+    });
+  }
+
+  clearTimeout(duelo.timeout);
+  duelosAtivos.delete(chave);
+
+  /* =========================
+     RECUSAR
+  ========================= */
+  if (action === 'duel_reject') {
+    return interaction.update({
+      components: [],
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0xe74c3c)
+          .setTitle('❌ Duelo recusado')
+          .setDescription(`<@${oponenteId}> recusou o duelo.`),
+      ],
+    });
+  }
+
+  /* =========================
+     ACEITAR → RESOLVER
+  ========================= */
+
+  const desafianteRoll = Math.floor(Math.random() * 100) + 1;
+  const oponenteRoll = Math.floor(Math.random() * 100) + 1;
+
+  let vencedor = null;
+
+  if (desafianteRoll > oponenteRoll) {
+    vencedor = desafianteId;
+  } else if (oponenteRoll > desafianteRoll) {
+    vencedor = oponenteId;
+  }
+
+  /* =========================
+     APOSTA XP
+  ========================= */
+  if (aposta > 0) {
+    const ok1 = await gastarXP(desafianteId, guildId, aposta, 'duel');
+    const ok2 = await gastarXP(oponenteId, guildId, aposta, 'duel');
+
+    if (ok1 && ok2 && vencedor) {
+      await ganharXP(vencedor, guildId, aposta * 2, 'duel');
+    }
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(0x9b59b6)
+    .setTitle('⚔️ Resultado do Duelo')
+    .addFields(
+      {
+        name: '🧑 Desafiante',
+        value: `<@${desafianteId}> 🎲 ${desafianteRoll}`,
+        inline: true,
+      },
+      {
+        name: '🧑 Oponente',
+        value: `<@${oponenteId}> 🎲 ${oponenteRoll}`,
+        inline: true,
+      },
+      {
+        name: '🏆 Vencedor',
+        value: vencedor ? `<@${vencedor}>` : 'Empate!',
+        inline: false,
+      }
+    );
+
+  return interaction.update({
+    embeds: [embed],
+    components: [],
+  });
+                                  }
