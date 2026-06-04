@@ -66,17 +66,29 @@ function embedCategoria(client, label) {
     .setTimestamp();
 }
 function menuPrincipal(client, userId) {
+  const categorias = getCategorias(client);
+
+  const opcoes = [];
+
+  for (const cat of Object.values(categorias)) {
+    try {
+      opcoes.push({
+        label: String(cat.label).slice(0, 100),
+        value: String(cat.label).slice(0, 100),
+        emoji: cat.emoji || '📦'
+      });
+    } catch (e) {
+      console.log('[AJUDA] Categoria ignorada:', cat?.label);
+    }
+  }
+
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(`ajuda_menu:${userId}`)
-      .setPlaceholder('Selecione')
-      .addOptions({
-        label: 'XP & Niveis',
-        value: 'XP & Niveis',
-        emoji: '⭐'
-      })
+      .setPlaceholder('📂 Selecione uma categoria...')
+      .addOptions(opcoes.slice(0, 25))
   );
-}
+    }
 
 function botaoVoltar(userId) {
   return new ActionRowBuilder().addComponents(
