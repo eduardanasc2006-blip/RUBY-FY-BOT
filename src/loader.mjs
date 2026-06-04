@@ -1,5 +1,3 @@
-client.removeAllListeners('messageCreate');
-client.removeAllListeners('interactionCreate');
 import { initDB, isDBConnected } from './db/sqlite.mjs';
 import Config from './db/models/Config.mjs';
 
@@ -61,15 +59,27 @@ async function carregarConfigs() {
 // MAIN LOADER
 // ===============================
 export async function loadSystems(client) {
+
+  // 🔥 PREVENÇÃO DE DUPLO LOAD (CRÍTICO)
+  if (client.__systemsLoaded) {
+    console.log('[Loader] Sistemas já carregados, ignorando reload');
+    return;
+  }
+  client.__systemsLoaded = true;
+
+  // registry global
   client.systems = new Map();
 
+  // ===============================
+  // DB INIT
+  // ===============================
   const dbOk = initDB();
   console.log(dbOk ? '[DB] SQLite pronto.' : '[DB] Banco não iniciado.');
 
   await carregarConfigs();
 
   // ===============================
-  // GUILD CREATE AUTO CONFIG
+  // AUTO CONFIG GUILD
   // ===============================
   client.on('guildCreate', async (guild) => {
     if (!isDBConnected() || configs.has(guild.id)) return;
@@ -135,7 +145,7 @@ export async function loadSystems(client) {
       ok++;
 
       client.systems.set(nome, {
-        id: nome, // 🔥 ESSENCIAL PARA O MENU
+        id: nome,
         label: nome,
 
         emoji:
