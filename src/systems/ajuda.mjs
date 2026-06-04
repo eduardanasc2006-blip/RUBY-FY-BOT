@@ -71,12 +71,25 @@ function menuPrincipal(client, userId) {
   const opcoes = [];
 
   for (const cat of Object.values(categorias)) {
-    let emoji = '📦';
+    const emoji =
+      typeof cat.emoji === 'string' && cat.emoji.length > 0
+        ? cat.emoji
+        : '📦';
 
-    // 🔥 GARANTE QUE É STRING PURA (Discord safe)
-    if (typeof cat.emoji === 'string') {
-      emoji = cat.emoji;
-    }
+    opcoes.push({
+      label: String(cat.label).slice(0, 100),
+      value: String(cat.id).slice(0, 100),
+      emoji
+    });
+  }
+
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(`ajuda_menu:${userId}`)
+      .setPlaceholder('📂 Selecione uma categoria...')
+      .addOptions(opcoes.slice(0, 25))
+  );
+      }
 
     opcoes.push({
       label: String(cat.label).slice(0, 100),
