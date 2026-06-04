@@ -94,6 +94,8 @@ function botaoVoltar(userId) {
 }
 
 export function register(client, configs) {
+  console.log('[AJUDA] Sistema carregado');
+
   const sessoes = new Map();
 
   client.on('messageCreate', async (msg) => {
