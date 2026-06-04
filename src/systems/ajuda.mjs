@@ -99,7 +99,55 @@ export function register(client, configs) {
   const sessoes = new Map();
 
   client.on('messageCreate', async (msg) => {
-    console.log('MENSAGEM RECEBIDA PELO AJUDA');
+  console.log('1 - mensagem chegou');
+
+  try {
+
+    console.log('2 - passou try');
+
+    if (msg.author.bot || !msg.guild) {
+      console.log('3 - bot ou sem guild');
+      return;
+    }
+
+    console.log('4 - guild ok');
+
+    const cfg = configs.get(msg.guild.id);
+
+    console.log('5 - cfg:', cfg);
+
+    const prefixo = cfg?.prefixo || '!';
+
+    console.log('6 - prefixo:', prefixo);
+
+    if (!msg.content.startsWith(prefixo)) {
+      console.log('7 - não começa com prefixo');
+      return;
+    }
+
+    console.log('8 - começa com prefixo');
+
+    const cmd = msg.content
+      .slice(prefixo.length)
+      .trim()
+      .split(/\s+/)[0]
+      .toLowerCase();
+
+    console.log('9 - comando:', cmd);
+
+    if (!['ajuda', 'help', 'comandos'].includes(cmd)) {
+      console.log('10 - não é ajuda');
+      return;
+    }
+
+    console.log('11 - AJUDA DETECTADA');
+
+    await msg.reply('Teste ajuda');
+
+  } catch (err) {
+    console.error('ERRO AJUDA:', err);
+  }
+});
     
     if (msg.author.bot || !msg.guild) return;
 
