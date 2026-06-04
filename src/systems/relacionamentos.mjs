@@ -96,7 +96,7 @@ export function register(client, configs) {
         new ButtonBuilder()
           .setCustomId(`casar:recusar:${userId}:${alvo.id}`)
           .setLabel('❌ Recusar')
-          .setStyle(ButtonStyle.Danger),
+          .setStyle(ButtonStyle.Danger)
       );
 
       await msg.channel.send({
@@ -105,7 +105,7 @@ export function register(client, configs) {
             .setColor(0xff69b4)
             .setTitle('💍 Pedido de Casamento')
             .setDescription(
-              `<@${userId}> pediu <@${alvo.id}> em casamento!\n💰 Custo: **${XP_CASAMENTO.toLocaleString()} XP disponível cada um**`
+              `<@${userId}> pediu <@${alvo.id}> em casamento!\n💰 Custo: **${XP_CASAMENTO.toLocaleString()} XP cada um**`
             )
         ],
         components: [row]
@@ -157,6 +157,65 @@ export function register(client, configs) {
               }
             )
         ]
+      });
+    }
+
+    /* =========================
+       DIVORCIAR (COMANDO)
+    ========================= */
+
+    if (cmd === 'divorciar') {
+      const casamento = await Casamento.findOne({
+        guildId,
+        ativo: true,
+        $or: [{ userId1: userId }, { userId2: userId }]
+      });
+
+      if (!casamento) {
+        return msg.reply({
+          embeds: [embedErro('💔 Você não está casado.')]
+        });
+      }
+
+      const parceiro = casamento.userId1 === userId
+        ? casamento.userId2
+        : casamento.userId1;
+
+      const chave = `div:${guildId}:${userId}`;
+
+      if (pedidos.has(chave)) {
+        return msg.reply({
+          embeds: [embedErro('Já existe um pedido de divórcio pendente.')]
+        });
+      }
+
+      pedidos.set(chave, {
+        casamentoId: casamento._id,
+        parceiro
+      });
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`div:aceitar:${userId}`)
+          .setLabel('💔 Confirmar divórcio')
+          .setStyle(ButtonStyle.Danger),
+
+        new ButtonBuilder()
+          .setCustomId(`div:cancelar:${userId}`)
+          .setLabel('💍 Cancelar')
+          .setStyle(ButtonStyle.Success)
+      );
+
+      return msg.channel.send({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xff5555)
+            .setTitle('💔 Pedido de Divórcio')
+            .setDescription(
+              `<@${userId}> deseja encerrar o casamento com <@${parceiro}>`
+            )
+        ],
+        components: [row]
       });
     }
   });
@@ -276,4 +335,4 @@ export function register(client, configs) {
       pedidos.delete(chave);
     }
   });
-}
+                                                      }
