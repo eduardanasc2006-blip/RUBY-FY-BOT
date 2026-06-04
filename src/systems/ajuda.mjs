@@ -65,22 +65,16 @@ function embedCategoria(client, label) {
     .setDescription(linhas)
     .setTimestamp();
 }
-
 function menuPrincipal(client, userId) {
-  const categorias = getCategorias(client);
-
-  const opcoes = Object.values(categorias).map(cat =>
-    new StringSelectMenuOptionBuilder()
-      .setValue(cat.label)
-      .setLabel(cat.label)
-      .setEmoji(cat.emoji)
-  );
-
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(`ajuda_menu:${userId}`)
-      .setPlaceholder('📂 Selecione uma categoria...')
-      .addOptions(opcoes)
+      .setPlaceholder('Selecione')
+      .addOptions({
+        label: 'XP & Niveis',
+        value: 'XP & Niveis',
+        emoji: '⭐'
+      })
   );
 }
 
@@ -132,8 +126,14 @@ console.log(
   JSON.stringify(Object.keys(categorias))
 );
 
+console.log(
+  'TOTAL CATEGORIAS:',
+  Object.keys(categorias).length
+);
+
 await msg.reply({
-  embeds: [embedPrincipal(client)]
+  embeds: [embedPrincipal(client)],
+  components: [menuPrincipal(client, msg.author.id)]
 });
 
   } catch (err) {
