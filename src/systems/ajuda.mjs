@@ -2,7 +2,6 @@ import {
   EmbedBuilder,
   ActionRowBuilder,
   StringSelectMenuBuilder,
-  StringSelectMenuOptionBuilder,
   ButtonBuilder,
   ButtonStyle,
 } from 'discord.js';
@@ -17,17 +16,14 @@ function getCategorias(client) {
 
   if (!client.systems) return cats;
 
-  for (const [nome, meta] of client.systems.entries()) {
-    const label = meta.label || nome;
-
-    if (!cats[label]) {
-      cats[label] = {
-        emoji: meta.emoji || '📦',
-        label,
-        cor: meta.cor || 0x5865f2,
-        comandos: meta.comandos || []
-      };
-    }
+  for (const [id, meta] of client.systems.entries()) {
+    cats[id] = {
+      id,
+      emoji: typeof meta.emoji === 'string' ? meta.emoji : '📦',
+      label: meta.label || id,
+      cor: meta.cor || 0x5865f2,
+      comandos: meta.comandos || []
+    };
   }
 
   return cats;
@@ -49,9 +45,9 @@ function embedPrincipal(client) {
     .setTimestamp();
 }
 
-function embedCategoria(client, label) {
+function embedCategoria(client, id) {
   const categorias = getCategorias(client);
-  const cat = categorias[label];
+  const cat = categorias[id];
 
   if (!cat) return null;
 
@@ -65,6 +61,7 @@ function embedCategoria(client, label) {
     .setDescription(linhas)
     .setTimestamp();
 }
+
 function menuPrincipal(client, userId) {
   const categorias = getCategorias(client);
 
@@ -74,8 +71,8 @@ function menuPrincipal(client, userId) {
     try {
       opcoes.push({
         label: String(cat.label).slice(0, 100),
-        value: String(cat.label).slice(0, 100),
-        emoji: cat.emoji || '📦'
+        value: String(cat.id).slice(0, 100), // 🔥 FIX PRINCIPAL
+        emoji: typeof cat.emoji === 'string' ? cat.emoji : '📦'
       });
     } catch (e) {
       console.log('[AJUDA] Categoria ignorada:', cat?.label);
@@ -88,7 +85,7 @@ function menuPrincipal(client, userId) {
       .setPlaceholder('📂 Selecione uma categoria...')
       .addOptions(opcoes.slice(0, 25))
   );
-    }
+}
 
 function botaoVoltar(userId) {
   return new ActionRowBuilder().addComponents(
@@ -102,56 +99,32 @@ function botaoVoltar(userId) {
 export function register(client, configs) {
   console.log('[AJUDA] Sistema carregado');
 
-  const sessoes = new Map();
+  client.on('messageCreate', async (msg) => {
+    try {
+      if (msg.author.bot || !msg.guild) return;
 
-client.on('messageCreate', async (msg) => {
-  console.log('MENSAGEM RECEBIDA PELO AJUDA');
+      const cfg = configs.get(msg.guild.id);
+      const prefixo = cfg?.prefixo || '!';
 
-  try {
-    if (msg.author.bot || !msg.guild) return;
+      if (!msg.content.startsWith(prefixo)) return;
 
-    const cfg = configs.get(msg.guild.id);
-    const prefixo = cfg?.prefixo || '!';
+      const cmd = msg.content
+        .slice(prefixo.length)
+        .trim()
+        .split(/\s+/)[0]
+        .toLowerCase();
 
-    console.log('PREFIXO:', prefixo);
-    console.log('MSG:', msg.content);
+      if (!['ajuda', 'help', 'comandos'].includes(cmd)) return;
 
-    if (!msg.content.startsWith(prefixo)) return;
+      await msg.reply({
+        embeds: [embedPrincipal(client)],
+        components: [menuPrincipal(client, msg.author.id)]
+      });
 
-    const cmd = msg.content
-      .slice(prefixo.length)
-      .trim()
-      .split(/\s+/)[0]
-      .toLowerCase();
-
-    console.log('CMD:', cmd);
-
-    if (!['ajuda', 'help', 'comandos'].includes(cmd))
-      return;
-
-    console.log('COMANDO AJUDA DETECTADO');
-
-    const categorias = getCategorias(client);
-
-console.log(
-  'CATEGORIAS:',
-  JSON.stringify(Object.keys(categorias))
-);
-
-console.log(
-  'TOTAL CATEGORIAS:',
-  Object.keys(categorias).length
-);
-
-await msg.reply({
-  embeds: [embedPrincipal(client)],
-  components: [menuPrincipal(client, msg.author.id)]
-});
-
-  } catch (err) {
-    console.error('ERRO AJUDA:', err);
-  }
-});
+    } catch (err) {
+      console.error('ERRO AJUDA:', err);
+    }
+  });
 
   client.on('interactionCreate', async (interaction) => {
     try {
@@ -160,16 +133,22 @@ await msg.reply({
       const userId = interaction.customId.split(':')[1];
 
       if (interaction.user.id !== userId)
-        return interaction.reply({ content: '❌ Não é seu menu.', ephemeral: true });
+        return interaction.reply({
+          content: '❌ Não é seu menu.',
+          ephemeral: true
+        });
 
       // SELECT MENU
       if (interaction.isStringSelectMenu()) {
-        const label = interaction.values[0];
+        const id = interaction.values[0];
 
-        const embed = embedCategoria(client, label);
+        const embed = embedCategoria(client, id);
 
         if (!embed)
-          return interaction.reply({ content: '❌ Categoria inválida.', ephemeral: true });
+          return interaction.reply({
+            content: '❌ Categoria inválida.',
+            ephemeral: true
+          });
 
         return interaction.update({
           embeds: [embed],
@@ -186,10 +165,14 @@ await msg.reply({
       }
 
     } catch (e) {
-      interaction.reply({
-        content: '❌ Erro ao carregar ajuda.',
-        ephemeral: true,
-      }).catch(() => {});
+      console.error(e);
+
+      if (!interaction.replied) {
+        interaction.reply({
+          content: '❌ Erro ao carregar ajuda.',
+          ephemeral: true,
+        }).catch(() => {});
+      }
     }
   });
-  }
+}
