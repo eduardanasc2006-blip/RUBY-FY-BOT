@@ -120,6 +120,7 @@ export async function loadSystems(client) {
     ['Genero', regGenero],
     ['MeuPerfil', regMeuPerfil],
 ];
+  console.log('REGISTRO AJUDA ENCONTRADO');
 // ===========================
 // REGISTER SYSTEMS
 // ===========================
@@ -127,6 +128,8 @@ let ok = 0;
 let fail = 0;
 
 for (const [nome, fn, comandos] of sistemas) {
+  console.log('CARREGANDO:', nome);
+
   try {
     fn(client, configs);
     ok++;
