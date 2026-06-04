@@ -10,7 +10,7 @@ import { register as regRelacionamentos } from './systems/relacionamentos.mjs';
 import { register as regAfinidade }      from './systems/afinidade.mjs';
 import { register as regInteracoes }     from './systems/interacoes.mjs';
 import { register as regReputacao }      from './systems/reputacao.mjs';
-import { register as regXpNiveis }       from './systems/xpniveis.mjs';
+import { register as regXpNiveis, comandos as cmdsXpNiveis } from './systems/xpniveis.mjs';
 import { register as regQuiz }           from './systems/quiz.mjs';
 import { register as regForca }          from './systems/forca.mjs';
 import { register as regDiversao }       from './systems/diversao.mjs';
@@ -96,7 +96,7 @@ export async function loadSystems(client) {
     ['Afinidade', regAfinidade],
     ['Interacoes', regInteracoes],
     ['Reputacao', regReputacao],
-    ['XP & Niveis', regXpNiveis],
+    ['XP & Niveis', regXpNiveis, cmdsXpNiveis],
     ['Quiz', regQuiz],
     ['Forca', regForca],
     ['Diversao', regDiversao],
@@ -169,7 +169,7 @@ for (const [nome, fn] of sistemas) {
         nome === 'Administracao' ? 0xe74c3c :
         0x5865f2,
 
-      comandos: []
+      comandos: comandos || []
     });
 
   } catch (e) {
