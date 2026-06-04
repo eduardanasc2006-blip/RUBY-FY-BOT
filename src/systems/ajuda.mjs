@@ -99,6 +99,8 @@ export function register(client, configs) {
   const sessoes = new Map();
 
   client.on('messageCreate', async (msg) => {
+    console.log('MENSAGEM RECEBIDA PELO AJUDA');
+    
     if (msg.author.bot || !msg.guild) return;
 
     const cfg = configs.get(msg.guild.id);
