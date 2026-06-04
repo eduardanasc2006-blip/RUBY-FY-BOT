@@ -6,18 +6,32 @@ import {
   ButtonStyle,
 } from 'discord.js';
 
+/**
+ * 🔥 GARANTE EMOJI VÁLIDO PRO DISCORD
+ */
+function safeEmoji(e) {
+  if (!e || typeof e !== 'string') return '📦';
+
+  // emoji unicode normal
+  if (/^\p{Extended_Pictographic}$/u.test(e)) return e;
+
+  // emoji custom discord
+  if (e.startsWith('<:') && e.endsWith('>')) return e;
+
+  return '📦';
+}
+
 function getCategorias(client) {
   const cats = {};
-
   if (!client.systems) return cats;
 
   for (const [id, meta] of client.systems.entries()) {
     cats[id] = {
       id,
-      emoji: typeof meta.emoji === 'string' && meta.emoji.length > 0 ? meta.emoji : '📦',
+      emoji: safeEmoji(meta.emoji),
       label: meta.label || id,
       cor: meta.cor || 0x5865f2,
-      comandos: meta.comandos || []
+      comandos: meta.comandos || [],
     };
   }
 
@@ -58,28 +72,24 @@ function embedCategoria(client, id) {
 }
 
 /**
- * 🚀 MENU SEGURO (SEM BUG DE EMOJI / SEM DUPLICAÇÃO)
+ * 🚀 MENU 100% SEGURO
  */
 function menuPrincipal(client, userId) {
   const categorias = getCategorias(client);
 
-  const opcoes = [];
-
-  for (const cat of Object.values(categorias)) {
-    opcoes.push({
+  const opcoes = Object.values(categorias)
+    .map(cat => ({
       label: String(cat.label).slice(0, 100),
       value: String(cat.id).slice(0, 100),
-      emoji: typeof cat.emoji === 'string' && cat.emoji.length > 0
-        ? cat.emoji
-        : '📦'
-    });
-  }
+      emoji: safeEmoji(cat.emoji),
+    }))
+    .slice(0, 25);
 
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
       .setCustomId(`ajuda_menu:${userId}`)
       .setPlaceholder('📂 Selecione uma categoria...')
-      .addOptions(opcoes.slice(0, 25))
+      .addOptions(opcoes)
   );
 }
 
@@ -114,7 +124,7 @@ export function register(client, configs) {
 
       await msg.reply({
         embeds: [embedPrincipal(client)],
-        components: [menuPrincipal(client, msg.author.id)]
+        components: [menuPrincipal(client, msg.author.id)],
       });
 
     } catch (err) {
@@ -127,23 +137,21 @@ export function register(client, configs) {
       if (!interaction.isStringSelectMenu() && !interaction.isButton()) return;
 
       const userId = interaction.customId.split(':')[1];
-
       if (interaction.user.id !== userId) {
         return interaction.reply({
           content: '❌ Não é seu menu.',
-          ephemeral: true
+          ephemeral: true,
         });
       }
 
       if (interaction.isStringSelectMenu()) {
         const id = interaction.values[0];
-
         const embed = embedCategoria(client, id);
 
         if (!embed) {
           return interaction.reply({
             content: '❌ Categoria inválida.',
-            ephemeral: true
+            ephemeral: true,
           });
         }
 
