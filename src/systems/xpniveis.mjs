@@ -1,16 +1,7 @@
 export const comandos = [
-  {
-    cmd: '!xp',
-    desc: 'Mostra seu XP e nível'
-  },
-  {
-    cmd: '!rank',
-    desc: 'Ranking de XP do servidor'
-  },
-  {
-    cmd: '!xplogs',
-    desc: 'Histórico de XP'
-  }
+  { cmd: '!xp', desc: 'Mostra seu XP e nível' },
+  { cmd: '!rank', desc: 'Ranking de XP do servidor' },
+  { cmd: '!xplogs', desc: 'Histórico de XP' }
 ];
 import { EmbedBuilder } from 'discord.js';
 import Usuario from '../db/models/Usuario.mjs';
