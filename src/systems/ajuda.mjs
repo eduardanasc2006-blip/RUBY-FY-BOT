@@ -125,7 +125,16 @@ client.on('messageCreate', async (msg) => {
 
     console.log('COMANDO AJUDA DETECTADO');
 
-    await msg.reply('✅ AJUDA FUNCIONOU');
+    const categorias = getCategorias(client);
+
+console.log(
+  'CATEGORIAS:',
+  JSON.stringify(Object.keys(categorias))
+);
+
+await msg.reply({
+  embeds: [embedPrincipal(client)]
+});
 
   } catch (err) {
     console.error('ERRO AJUDA:', err);
