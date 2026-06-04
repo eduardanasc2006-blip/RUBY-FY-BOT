@@ -98,34 +98,19 @@ export function register(client, configs) {
 
   const sessoes = new Map();
 
-  client.on('messageCreate', async (msg) => {
-  console.log('1 - mensagem chegou');
+client.on('messageCreate', async (msg) => {
+  console.log('MENSAGEM RECEBIDA PELO AJUDA');
 
   try {
-
-    console.log('2 - passou try');
-
-    if (msg.author.bot || !msg.guild) {
-      console.log('3 - bot ou sem guild');
-      return;
-    }
-
-    console.log('4 - guild ok');
+    if (msg.author.bot || !msg.guild) return;
 
     const cfg = configs.get(msg.guild.id);
-
-    console.log('5 - cfg:', cfg);
-
     const prefixo = cfg?.prefixo || '!';
 
-    console.log('6 - prefixo:', prefixo);
+    console.log('PREFIXO:', prefixo);
+    console.log('MSG:', msg.content);
 
-    if (!msg.content.startsWith(prefixo)) {
-      console.log('7 - não começa com prefixo');
-      return;
-    }
-
-    console.log('8 - começa com prefixo');
+    if (!msg.content.startsWith(prefixo)) return;
 
     const cmd = msg.content
       .slice(prefixo.length)
@@ -133,44 +118,19 @@ export function register(client, configs) {
       .split(/\s+/)[0]
       .toLowerCase();
 
-    console.log('9 - comando:', cmd);
+    console.log('CMD:', cmd);
 
-    if (!['ajuda', 'help', 'comandos'].includes(cmd)) {
-      console.log('10 - não é ajuda');
+    if (!['ajuda', 'help', 'comandos'].includes(cmd))
       return;
-    }
 
-    console.log('11 - AJUDA DETECTADA');
+    console.log('COMANDO AJUDA DETECTADO');
 
-    await msg.reply('Teste ajuda');
+    await msg.reply('✅ AJUDA FUNCIONOU');
 
   } catch (err) {
     console.error('ERRO AJUDA:', err);
   }
 });
-    
-    if (msg.author.bot || !msg.guild) return;
-
-    const cfg = configs.get(msg.guild.id);
-    const prefixo = cfg?.prefixo || '!';
-
-    if (!msg.content.startsWith(prefixo)) return;
-
-    const cmd = msg.content.slice(prefixo.length).trim().split(/\s+/)[0].toLowerCase();
-
-    if (!['ajuda', 'help', 'comandos'].includes(cmd)) return;
-
-    const sent = await msg.reply({
-      embeds: [embedPrincipal(client)],
-      components: [menuPrincipal(client, msg.author.id)],
-    });
-
-    sessoes.set(sent.id, {
-      timer: setTimeout(() => {
-        sent.edit({ components: [] }).catch(() => {});
-      }, EXPIRACAO_MS),
-    });
-  });
 
   client.on('interactionCreate', async (interaction) => {
     try {
