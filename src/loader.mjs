@@ -1,36 +1,40 @@
 import { initDB, isDBConnected } from './db/sqlite.mjs';
 import Config from './db/models/Config.mjs';
 
-// ── Imports — register + comandos ─────────────────────────────
-import { register as regAjuda, comandos as cAjuda } from './systems/ajuda.mjs';
-import { register as regDiversao, comandos as cDiversao } from './systems/diversao.mjs';
-import { register as regConversao, comandos as cConversao } from './systems/conversao.mjs';
-import { register as regRoblox, comandos as cRoblox } from './systems/roblox.mjs';
-import { register as regRelacionamentos, comandos as cRelacionamentos } from './systems/relacionamentos.mjs';
-import { register as regAfinidade, comandos as cAfinidade } from './systems/afinidade.mjs';
-import { register as regInteracoes, comandos as cInteracoes } from './systems/interacoes.mjs';
-import { register as regReputacao, comandos as cReputacao } from './systems/reputacao.mjs';
-import { register as regXpNiveis, comandos as cXpNiveis } from './systems/xpniveis.mjs';
-import { register as regQuiz, comandos as cQuiz } from './systems/quiz.mjs';
-import { register as regForca, comandos as cForca } from './systems/forca.mjs';
-import { register as regConquistas, comandos as cConquistas } from './systems/conquistas.mjs';
-import { register as regMissoes, comandos as cMissoes } from './systems/missoes.mjs';
-import { register as regTitulos, comandos as cTitulos } from './systems/titulos.mjs';
-import { register as regLoja, comandos as cLoja } from './systems/loja.mjs';
-import { register as regPerfilVisual, comandos as cPerfilVisual } from './systems/perfilvisual.mjs';
-import { register as regShip, comandos as cShip } from './systems/ship.mjs';
-import { register as regProdutos, comandos as cProdutos } from './systems/produtos.mjs';
-import { register as regSuporte, comandos as cSuporte } from './systems/suporte.mjs';
-import { register as regAtendimento, comandos as cAtendimento } from './systems/atendimento.mjs';
-import { register as regAvaliacoes, comandos as cAvaliacoes } from './systems/avaliacoes.mjs';
-import { register as regAdministracao, comandos as cAdministracao } from './systems/administracao.mjs';
-import { register as regLogs, comandos as cLogs } from './systems/logs.mjs';
-import { register as regAntiAbuso, comandos as cAntiAbuso } from './systems/antiabuso.mjs';
-import { register as regEstatisticas, comandos as cEstatisticas } from './systems/estatisticas.mjs';
-import { register as regGenero, comandos as cGenero } from './systems/genero.mjs';
-import { register as regMeuPerfil, comandos as cMeuPerfil } from './systems/meuperfil.mjs';
+// ── Imports — register + comandos (SAFE) ─────────────────────────────
+import { register as regAjuda, comandos as cAjuda = [] } from './systems/ajuda.mjs';
+import { register as regDiversao, comandos as cDiversao = [] } from './systems/diversao.mjs';
+import { register as regConversao, comandos as cConversao = [] } from './systems/conversao.mjs';
+import { register as regRoblox, comandos as cRoblox = [] } from './systems/roblox.mjs';
+import { register as regRelacionamentos, comandos as cRelacionamentos = [] } from './systems/relacionamentos.mjs';
+import { register as regAfinidade, comandos as cAfinidade = [] } from './systems/afinidade.mjs';
+import { register as regInteracoes, comandos as cInteracoes = [] } from './systems/interacoes.mjs';
+import { register as regReputacao, comandos as cReputacao = [] } from './systems/reputacao.mjs';
+import { register as regXpNiveis, comandos as cXpNiveis = [] } from './systems/xpniveis.mjs';
+import { register as regQuiz, comandos as cQuiz = [] } from './systems/quiz.mjs';
+import { register as regForca, comandos as cForca = [] } from './systems/forca.mjs';
+import { register as regConquistas, comandos as cConquistas = [] } from './systems/conquistas.mjs';
+import { register as regMissoes, comandos as cMissoes = [] } from './systems/missoes.mjs';
+import { register as regTitulos, comandos as cTitulos = [] } from './systems/titulos.mjs';
+import { register as regLoja, comandos as cLoja = [] } from './systems/loja.mjs';
+import { register as regPerfilVisual, comandos as cPerfilVisual = [] } from './systems/perfilvisual.mjs';
+import { register as regShip, comandos as cShip = [] } from './systems/ship.mjs';
+import { register as regProdutos, comandos as cProdutos = [] } from './systems/produtos.mjs';
+import { register as regSuporte, comandos as cSuporte = [] } from './systems/suporte.mjs';
+import { register as regAtendimento, comandos as cAtendimento = [] } from './systems/atendimento.mjs';
+import { register as regAvaliacoes, comandos as cAvaliacoes = [] } from './systems/avaliacoes.mjs';
+import { register as regAdministracao, comandos as cAdministracao = [] } from './systems/administracao.mjs';
+import { register as regLogs, comandos as cLogs = [] } from './systems/logs.mjs';
+import { register as regAntiAbuso, comandos as cAntiAbuso = [] } from './systems/antiabuso.mjs';
+import { register as regEstatisticas, comandos as cEstatisticas = [] } from './systems/estatisticas.mjs';
+import { register as regGenero, comandos as cGenero = [] } from './systems/genero.mjs';
+import { register as regMeuPerfil, comandos as cMeuPerfil = [] } from './systems/meuperfil.mjs';
 
 const configs = new Map();
+
+/* =========================
+   VISUAL
+========================= */
 
 const visual = {
   'Ajuda': { emoji: '❓', cor: 0x5865f2 },
@@ -62,6 +66,10 @@ const visual = {
   'Meu Perfil': { emoji: '👤', cor: 0x5865f2 },
 };
 
+/* =========================
+   CONFIG DB
+========================= */
+
 async function carregarConfigs() {
   if (!isDBConnected()) return;
 
@@ -74,12 +82,13 @@ async function carregarConfigs() {
 
     console.log(`[Loader] ${todas.length} configuracoes carregadas.`);
   } catch (e) {
-    console.warn(
-      '[Loader] Nao foi possivel carregar configuracoes:',
-      e.message
-    );
+    console.warn('[Loader] Nao foi possivel carregar configuracoes:', e.message);
   }
 }
+
+/* =========================
+   MAIN LOADER
+========================= */
 
 export async function loadSystems(client) {
   if (client.__systemsLoaded) return;
@@ -87,10 +96,9 @@ export async function loadSystems(client) {
 
   const dbOk = initDB();
 
-  console.log(
-    dbOk
-      ? '[DB] ✔ SQLite pronto.'
-      : '[DB] ✖ Banco de dados nao iniciado.'
+  console.log(dbOk
+    ? '[DB] ✔ SQLite pronto.'
+    : '[DB] ✖ Banco de dados nao iniciado.'
   );
 
   await carregarConfigs();
@@ -103,10 +111,7 @@ export async function loadSystems(client) {
       const cfg = await Config.findOneAndUpdate(
         { guildId: guild.id },
         { $setOnInsert: { guildId: guild.id } },
-        {
-          upsert: true,
-          new: true,
-        }
+        { upsert: true, new: true }
       );
 
       if (cfg) configs.set(guild.id, cfg);
@@ -143,9 +148,7 @@ export async function loadSystems(client) {
     ['Meu Perfil', regMeuPerfil, cMeuPerfil],
   ];
 
-  if (!client.systems) {
-    client.systems = new Map();
-  }
+  if (!client.systems) client.systems = new Map();
 
   let ok = 0;
   let fail = 0;
@@ -157,10 +160,7 @@ export async function loadSystems(client) {
 
       const cmdList = Array.isArray(cmds) ? cmds : [];
 
-      const metaVisual = visual[nome] || {
-        emoji: '📦',
-        cor: 0x5865f2,
-      };
+      const metaVisual = visual[nome] || { emoji: '📦', cor: 0x5865f2 };
 
       client.systems.set(nome, {
         id: nome,
@@ -173,28 +173,19 @@ export async function loadSystems(client) {
       totalCmds += cmdList.length;
       ok++;
 
-      console.log(
-        `[Loader] ✔ ${nome} — ${cmdList.length} comando(s)`
-      );
+      console.log(`[Loader] ✔ ${nome} — ${cmdList.length} comando(s)`);
     } catch (e) {
       fail++;
-
-      console.error(
-        `[Loader] ✖ ${nome}:`,
-        e.stack || e.message
-      );
+      console.error(`[Loader] ✖ ${nome}:`, e.stack || e.message);
     }
   }
-
-  const dbStatus = isDBConnected()
-    ? 'SQLite ativo'
-    : 'sem banco de dados';
 
   console.log(
     `[Loader] FiskBot pronto — ${ok} sistemas ativos` +
     `${fail ? `, ${fail} com erro` : ''} — ` +
-    `${totalCmds} comandos registrados — ${dbStatus}`
+    `${totalCmds} comandos registrados — ` +
+    `${isDBConnected() ? 'SQLite ativo' : 'sem banco de dados'}`
   );
 
   return configs;
-  }
+}
