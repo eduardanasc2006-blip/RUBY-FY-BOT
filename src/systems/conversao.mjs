@@ -18,24 +18,63 @@ export function register(client, configs) {
     const taxa = cfg?.taxa || 38;
 
     /* =========================
-      ROBUX -> BRL
+      ROBUX -> BRL (ATUALIZADO)
     ========================= */
     if (cmd === 'robux') {
       const robux = parseInt(args[0]?.replace(/[\.\s]/g, ''));
-      if (!robux || isNaN(robux))
-        return msg.reply({ embeds: [embedErro('Use: `!robux <quantidade>`')] });
 
-      const valor = (robux / 1000) * taxa;
+      if (!robux || isNaN(robux)) {
+        return msg.reply({
+          embeds: [embedErro('Use: `!robux <quantidade>`')]
+        });
+      }
 
-      return msg.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0x00a2ff)
-            .setTitle('💰 Conversão Robux → BRL')
-            .setDescription(`**${robux.toLocaleString('pt-BR')} Robux** = **R$${valor.toFixed(2)}**`)
-            .addFields({ name: '📊 Taxa', value: `1.000 Robux = R$${taxa.toFixed(2)}` })
-        ]
-      });
+      // 💰 valor em reais
+      const valorBRL = (robux / 1000) * taxa;
+
+      // 🎮 gamepass (Roblox retém 30%)
+      const valorGamepass = Math.ceil(robux / 0.7);
+
+      const embed = new EmbedBuilder()
+        .setColor(0x00a2ff)
+        .setTitle('💰 Conversão Robux → BRL')
+        .setDescription(`**${robux.toLocaleString('pt-BR')} Robux**`)
+
+        .addFields(
+          {
+            name: '💵 Valor em reais',
+            value: `R$ ${valorBRL.toFixed(2)}`,
+            inline: true
+          },
+          {
+            name: '🎮 Gamepass necessária',
+            value: `${valorGamepass.toLocaleString('pt-BR')} Robux`,
+            inline: true
+          },
+          {
+            name: '📊 Taxa base',
+            value: `1.000 Robux = R$${taxa.toFixed(2)}`,
+            inline: false
+          }
+        )
+
+        .setFooter({
+          text: 'Roblox aplica ~30% de taxa em gamepasses'
+        });
+
+      // 📊 LOG COMPLETO
+      await registrarLog(
+        client,
+        msg.guild.id,
+        'conversao',
+        msg.author.id,
+        {
+          descricao: `Conversão: ${robux} Robux → R$${valorBRL.toFixed(2)} | Gamepass: ${valorGamepass}`,
+        },
+        configs
+      );
+
+      return msg.reply({ embeds: [embed] });
     }
 
     /* =========================
@@ -43,10 +82,25 @@ export function register(client, configs) {
     ========================= */
     if (cmd === 'brl') {
       const valor = parseFloat(args[0]?.replace(',', '.'));
-      if (!valor || isNaN(valor))
-        return msg.reply({ embeds: [embedErro('Use: `!brl <valor>`')] });
+
+      if (!valor || isNaN(valor)) {
+        return msg.reply({
+          embeds: [embedErro('Use: `!brl <valor>`')]
+        });
+      }
 
       const robux = Math.floor((valor / taxa) * 1000);
+
+      await registrarLog(
+        client,
+        msg.guild.id,
+        'conversao',
+        msg.author.id,
+        {
+          descricao: `Conversão: R$${valor.toFixed(2)} → ${robux} Robux`,
+        },
+        configs
+      );
 
       return msg.reply({
         embeds: [
@@ -79,8 +133,11 @@ export function register(client, configs) {
       const v1 = parseInt(args[0]);
       const v2 = parseInt(args[1]);
 
-      if (!v1 || isNaN(v1))
-        return msg.reply({ embeds: [embedErro('Use: `!simular <min> <max>`')] });
+      if (!v1 || isNaN(v1)) {
+        return msg.reply({
+          embeds: [embedErro('Use: `!simular <min> <max>`')]
+        });
+      }
 
       const min = v1;
       const max = v2 && !isNaN(v2) ? v2 : v1 * 10;
@@ -102,17 +159,17 @@ export function register(client, configs) {
     }
 
     /* =========================
-      META NOVA (ATUALIZADO)
-      !meta 300 600
+      META
     ========================= */
     if (cmd === 'meta') {
       const saldo = parseInt(args[0]?.replace(/\D/g, ''));
       const meta = parseInt(args[1]?.replace(/\D/g, ''));
 
-      if (!saldo || !meta || isNaN(saldo) || isNaN(meta))
+      if (!saldo || !meta || isNaN(saldo) || isNaN(meta)) {
         return msg.reply({
-          embeds: [embedErro('Use: `!meta <saldo> <meta>`\nExemplo: `!meta 300 600`')]
+          embeds: [embedErro('Use: `!meta <saldo> <meta>`')]
         });
+      }
 
       const valorSaldo = (saldo / 1000) * taxa;
       const valorMeta = (meta / 1000) * taxa;
@@ -139,7 +196,7 @@ export function register(client, configs) {
         embed.setDescription('📊 Progresso da meta')
           .addFields(
             { name: '🎯 Meta', value: `${meta} Robux`, inline: true },
-            { name: '💰 Saldo atual', value: `${saldo} Robux`, inline: true },
+            { name: '💰 Saldo', value: `${saldo} Robux`, inline: true },
             { name: '❌ Falta', value: `${faltaRobux} Robux`, inline: true },
             { name: '💵 Valor faltando', value: `R$${faltaValor.toFixed(2)}`, inline: true }
           );
@@ -152,18 +209,29 @@ export function register(client, configs) {
       SET TAXA
     ========================= */
     if (cmd === 'settaxa') {
-      if (!isAdmin(msg.member, cfg))
+      if (!isAdmin(msg.member, cfg)) {
         return msg.reply({ embeds: [embedErro('Sem permissão.')] });
+      }
 
       const nova = parseFloat(args[0]?.replace(',', '.'));
-      if (!nova || isNaN(nova))
-        return msg.reply({ embeds: [embedErro('Use: `!settaxa <valor>`')] });
+
+      if (!nova || isNaN(nova)) {
+        return msg.reply({
+          embeds: [embedErro('Use: `!settaxa <valor>`')]
+        });
+      }
 
       await Config.findOneAndUpdate(
         { guildId: msg.guild.id },
         {
           $set: { taxa: nova },
-          $push: { taxaHistorico: { taxa: nova, adminId: msg.author.id, data: new Date() } }
+          $push: {
+            taxaHistorico: {
+              taxa: nova,
+              adminId: msg.author.id,
+              data: new Date()
+            }
+          }
         },
         { upsert: true }
       );
@@ -175,7 +243,9 @@ export function register(client, configs) {
         msg.guild.id,
         'admin',
         msg.author.id,
-        { descricao: `<@${msg.author.id}> alterou a taxa para R$${nova.toFixed(2)}` },
+        {
+          descricao: `Taxa alterada para R$${nova.toFixed(2)}`
+        },
         configs
       );
 
@@ -206,4 +276,4 @@ function gerarSteps(min, max) {
   if (!res.includes(max)) res.push(max);
 
   return [...new Set(res)].slice(0, 10);
-                       }
+        }
