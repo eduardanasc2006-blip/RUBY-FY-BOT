@@ -1,11 +1,3 @@
-export async function loadSystems(client) {
-
-  if (client.__systemsLoaded) {
-    console.log('[Loader] Sistemas já carregados.');
-    return configs;
-  }
-
-  client.__systemsLoaded = true;
 import { initDB, isDBConnected } from './db/sqlite.mjs';
 import Config from './db/models/Config.mjs';
 
@@ -29,7 +21,7 @@ import { register as regPerfilVisual,   comandos as cPerfilVisual }   from './sy
 import { register as regShip,           comandos as cShip }           from './systems/ship.mjs';
 import { register as regProdutos,       comandos as cProdutos }       from './systems/produtos.mjs';
 import { register as regSuporte,        comandos as cSuporte }        from './systems/suporte.mjs';
-import { register as regAtendimento, comandos as cAtendimento }       from './systems/atendimento.mjs';
+import { register as regAtendimento,      comandos as cAtendimento }      from './systems/atendimento.mjs';
 import { register as regAvaliacoes,     comandos as cAvaliacoes }     from './systems/avaliacoes.mjs';
 import { register as regAdministracao,  comandos as cAdministracao }  from './systems/administracao.mjs';
 import { register as regLogs,           comandos as cLogs }           from './systems/logs.mjs';
@@ -92,7 +84,7 @@ export async function loadSystems(client) {
     ['Ship',            regShip,           cShip],
     ['Produtos',        regProdutos,       cProdutos],
     ['Suporte',         regSuporte,        cSuporte],
-    ['Atendimento', regAtendimento, cAtendimento],
+    ['Atendimento',       regAtendimento,      cAtendimento],
     ['Avaliações',      regAvaliacoes,     cAvaliacoes],
     ['Administração',   regAdministracao,  cAdministracao],
     ['Logs',            regLogs,           cLogs],
