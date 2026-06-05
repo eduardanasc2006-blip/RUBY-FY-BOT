@@ -44,13 +44,13 @@ const FUNDOS = [
 ];
 
 /* =========================
-   UTIL
+   UTILITÁRIOS
 ========================= */
 
 function gerarBarra(atual, total, size = 12) {
   const p = Math.min(1, atual / Math.max(1, total));
-  const f = Math.round(p * size);
-  return '█'.repeat(f) + '░'.repeat(size - f);
+  const filled = Math.round(p * size);
+  return '█'.repeat(filled) + '░'.repeat(size - filled);
 }
 
 function nomeMoldura(id) {
@@ -76,11 +76,11 @@ function corMoldura(id) {
 }
 
 /* =========================
-   PERFIL
+   PERFIL PRINCIPAL
 ========================= */
 
 async function mostrarPerfil(alvo, guildId, guild, replyFn) {
-  const [u, conquistas, casamento] = await Promise.all([
+  const [usuario, conquistas, casamento] = await Promise.all([
     Usuario.findOne({ userId: alvo.id, guildId }),
     Conquista.findOne({ userId: alvo.id, guildId }),
     Casamento.findOne({
@@ -90,29 +90,29 @@ async function mostrarPerfil(alvo, guildId, guild, replyFn) {
     }),
   ]);
 
-  if (!u) {
+  if (!usuario) {
     return replyFn({ embeds: [embedErro('Usuário não encontrado.')] });
   }
 
   /* =========================
-     XP SYSTEM (NOVO)
+     XP SYSTEM
   ========================= */
 
-  const xpTotal = u.xpTotal || u.xp || 0;
-  const xpDisponivel = u.xpDisponivel || 0;
+  const xpTotal = usuario.xpTotal || usuario.xp || 0;
+  const xpDisponivel = usuario.xpDisponivel || 0;
 
   const { nivel, xpAtual, xpProximo } = calcularNivel(xpTotal);
   const faixa = getFaixa(nivel);
 
-  const moldura = u.inventario?.moldura || 'padrao';
-  const fundo = u.inventario?.fundo || 'escuro';
-  const streak = u.streak || 0;
+  const moldura = usuario.inventario?.moldura || 'padrao';
+  const fundo = usuario.inventario?.fundo || 'escuro';
+  const streak = usuario.streak || 0;
 
   const barra = gerarBarra(xpAtual, xpProximo);
   const pct = Math.round((xpAtual / xpProximo) * 100);
 
   /* =========================
-     CASAMENTO + XP 12K REGRAS
+     CASAMENTO + AFINIDADE
   ========================= */
 
   let parceiroNome = null;
@@ -120,7 +120,9 @@ async function mostrarPerfil(alvo, guildId, guild, replyFn) {
 
   if (casamento) {
     const parceiroId =
-      casamento.userId1 === alvo.id ? casamento.userId2 : casamento.userId1;
+      casamento.userId1 === alvo.id
+        ? casamento.userId2
+        : casamento.userId1;
 
     const membro = await guild.members.fetch(parceiroId).catch(() => null);
 
@@ -187,7 +189,7 @@ async function mostrarPerfil(alvo, guildId, guild, replyFn) {
 }
 
 /* =========================
-   REGISTER
+   REGISTER COMANDO
 ========================= */
 
 export const comandos = [
@@ -208,12 +210,14 @@ export function register(client, configs) {
 
     if (cmd !== 'meuperfil') return;
 
-    if (!isDBConnected())
+    if (!isDBConnected()) {
       return msg.reply({ embeds: [embedErro('Banco offline.')] });
+    }
 
     const cd = checkCooldown(`perfil:${msg.author.id}:${msg.guild.id}`, 8000);
-    if (cd)
+    if (cd) {
       return msg.reply({ embeds: [embedErro(`Aguarde ${formatarTempo(cd)}`)] });
+    }
 
     const alvo = msg.mentions.users.first() || msg.author;
 
@@ -221,4 +225,4 @@ export function register(client, configs) {
       msg.reply(opts)
     );
   });
-}
+    }
