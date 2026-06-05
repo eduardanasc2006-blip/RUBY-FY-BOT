@@ -1,129 +1,202 @@
 import { EmbedBuilder } from 'discord.js';
 import Missao from '../db/models/Missao.mjs';
-import { embedErro } from '../utils/embeds.mjs';
 import { ganharXP } from './xpSystem.mjs';
+import { embedErro } from '../utils/embeds.mjs';
 
-const DIARIAS_BASE = [
-  { id: 'd1', tipo: 'mensagem',  descricao: 'Enviar 20 mensagens',       meta: 20, recompensa: 100 },
-  { id: 'd2', tipo: 'quiz',      descricao: 'Responder 3 quizzes',       meta: 3,  recompensa: 80  },
-  { id: 'd3', tipo: 'interacao', descricao: 'Usar 5 interações sociais', meta: 5,  recompensa: 60  },
-  { id: 'd4', tipo: 'reputacao', descricao: 'Dar reputação para alguém', meta: 1,  recompensa: 50  },
-  { id: 'd5', tipo: 'comando',   descricao: 'Usar 10 comandos',          meta: 10, recompensa: 70  },
+// =========================
+// POOL GRANDE DE MISSÕES
+// =========================
+
+const POOL_DIARIO = [
+  { id: 'd1', tipo: 'mensagem', descricao: 'Enviar 10 mensagens', meta: 10, xp: 50 },
+  { id: 'd2', tipo: 'mensagem', descricao: 'Enviar 30 mensagens', meta: 30, xp: 120 },
+  { id: 'd3', tipo: 'quiz', descricao: 'Responder 2 quizzes', meta: 2, xp: 70 },
+  { id: 'd4', tipo: 'quiz', descricao: 'Responder 5 quizzes', meta: 5, xp: 150 },
+  { id: 'd5', tipo: 'interacao', descricao: 'Fazer 5 interações', meta: 5, xp: 60 },
+  { id: 'd6', tipo: 'interacao', descricao: 'Fazer 15 interações', meta: 15, xp: 140 },
+  { id: 'd7', tipo: 'reputacao', descricao: 'Dar 1 reputação', meta: 1, xp: 70 },
+  { id: 'd8', tipo: 'reputacao', descricao: 'Dar 3 reputações', meta: 3, xp:200 },
 ];
 
-const SEMANAIS_BASE = [
-  { id: 's1', tipo: 'xp',       descricao: 'Ganhar 500 XP',             meta: 500, recompensa: 500 },
-  { id: 's2', tipo: 'quiz',     descricao: 'Completar 20 quizzes',       meta: 20,  recompensa: 400 },
-  { id: 's3', tipo: 'forca',    descricao: 'Vencer 5 partidas de forca', meta: 5,   recompensa: 350 },
-  { id: 's4', tipo: 'interacao',descricao: 'Fazer 30 interações',        meta: 30,  recompensa: 300 },
+const POOL_SEMANAL = [
+  { id: 's1', tipo: 'xp', descricao: 'Ganhar 300 XP', meta: 300, xp: 350 },
+  { id: 's2', tipo: 'xp', descricao: 'Ganhar 800 XP', meta: 800, xp: 600 },
+  { id: 's3', tipo: 'quiz', descricao: 'Completar 10 quizzes', meta: 10, xp: 400 },
+  { id: 's4', tipo: 'quiz', descricao: 'Completar 25 quizzes', meta: 25, xp: 900 },
+  { id: 's5', tipo: 'interacao', descricao: 'Fazer 20 interações', meta: 20, xp: 300 },
+  { id: 's6', tipo: 'mensagem', descricao: 'Enviar 200 mensagens', meta: 200, xp: 600 },
 ];
 
-function expiracaoDiaria() {
-  const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(0, 0, 0, 0); return d;
+// =========================
+// RESET POR DATA REAL
+// =========================
+
+function getDia() {
+  return new Date().toISOString().split('T')[0];
 }
-function expiracaoSemanal() {
-  const d = new Date(); d.setDate(d.getDate() + (7 - d.getDay())); d.setHours(23, 59, 59, 0); return d;
+
+function getSemana() {
+  const d = new Date();
+  const start = new Date(d.getFullYear(), 0, 1);
+  const diff = Math.floor((d - start) / 86400000);
+  return `${d.getFullYear()}-W${Math.ceil((diff + start.getDay() + 1) / 7)}`;
 }
+
+// =========================
+// RANDOM MISSIONS (4 FIXAS)
+// =========================
+
+function sortear(lista, qtd = 4) {
+  const copia = [...lista];
+  const resultado = [];
+
+  while (resultado.length < qtd && copia.length) {
+    const i = Math.floor(Math.random() * copia.length);
+    resultado.push(copia.splice(i, 1)[0]);
+  }
+
+  return resultado;
+}
+
+// =========================
+// GARANTIR MISSÕES
+// =========================
 
 async function garantirMissoes(userId, guildId) {
-  const agora = new Date();
   let doc = await Missao.findOne({ userId, guildId });
-  if (!doc) doc = new Missao({ userId, guildId });
 
-  const renovarD = !doc.ultimaRenovacaoDiaria || (agora - doc.ultimaRenovacaoDiaria) >= 86400000;
-  const renovarS = !doc.ultimaRenovacaoSemanal || (agora - doc.ultimaRenovacaoSemanal) >= 604800000;
+  const hoje = getDia();
+  const semana = getSemana();
 
-  if (renovarD) {
-    doc.diarias = DIARIAS_BASE.map(m => ({ ...m, atual: 0, concluida: false, expira: expiracaoDiaria() }));
-    doc.ultimaRenovacaoDiaria = agora;
+  if (!doc) {
+    doc = new Missao({
+      userId,
+      guildId,
+      diarias: [],
+      semanais: [],
+      resetDia: hoje,
+      resetSemana: semana,
+    });
   }
-  if (renovarS) {
-    doc.semanais = SEMANAIS_BASE.map(m => ({ ...m, atual: 0, concluida: false, expira: expiracaoSemanal() }));
-    doc.ultimaRenovacaoSemanal = agora;
+
+  // 🔥 RESET DIÁRIO (NOVAS MISSÕES)
+  if (doc.resetDia !== hoje) {
+    doc.diarias = sortear(POOL_DIARIO, 4).map(m => ({
+      ...m,
+      atual: 0,
+      concluida: false,
+    }));
+    doc.resetDia = hoje;
   }
+
+  // 🔥 RESET SEMANAL (NOVAS MISSÕES)
+  if (doc.resetSemana !== semana) {
+    doc.semanais = sortear(POOL_SEMANAL, 4).map(m => ({
+      ...m,
+      atual: 0,
+      concluida: false,
+    }));
+    doc.resetSemana = semana;
+  }
+
   await doc.save();
   return doc;
 }
 
-function formatarMissao(m) {
-  const barra = gerarBarra(m.atual, m.meta, 8);
-  const status = m.concluida ? '✅' : '⏳';
-  return `${status} **${m.descricao}**\n${barra} \`${m.atual}/${m.meta}\` • +${m.recompensa} XP`;
+// =========================
+// BARRA
+// =========================
+
+function barra(atual, meta) {
+  const total = 8;
+  const p = Math.min(1, atual / meta);
+  const f = Math.round(p * total);
+  return '█'.repeat(f) + '░'.repeat(total - f);
 }
 
-function gerarBarra(atual, total, tamanho = 8) {
-  const p = Math.min(1, atual / Math.max(1, total));
-  const f = Math.round(p * tamanho);
-  return '█'.repeat(Math.max(0, f)) + '░'.repeat(Math.max(0, tamanho - f));
+function formatar(m) {
+  const status = m.concluida ? '✅' : '⏳';
+  return `${status} **${m.descricao}**\n${barra(m.atual, m.meta)} \`${m.atual}/${m.meta}\` +${m.xp} XP`;
 }
+
+// =========================
+// COMANDO !missoes
+// =========================
 
 export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
+
     const cfg = configs.get(msg.guild.id);
     const prefixo = cfg?.prefixo || '!';
     if (!msg.content.startsWith(prefixo)) return;
 
-    const args = msg.content.slice(prefixo.length).trim().split(/\s+/);
-    const cmd = args.shift().toLowerCase();
-    const guildId = msg.guild.id;
+    const cmd = msg.content.slice(prefixo.length).trim().split(/\s+/)[0];
+    if (cmd !== 'missoes') return;
 
-    if (cmd === 'missoes') {
-      let doc;
-      try {
-        doc = await garantirMissoes(msg.author.id, guildId);
-      } catch (e) {
-        return msg.reply({ embeds: [embedErro('Erro ao carregar missões. Verifique a conexão com o banco de dados.')] });
-      }
-
-      const diarias = doc.diarias || [];
-      const semanais = doc.semanais || [];
-
-      const concluiDiarias = diarias.filter(m => m.concluida).length;
-      const concluiSemanais = semanais.filter(m => m.concluida).length;
-
-      const textoDiarias = diarias.length
-        ? diarias.map(formatarMissao).join('\n\n')
-        : 'Nenhuma missão diária.';
-
-      const textoSemanais = semanais.length
-        ? semanais.map(formatarMissao).join('\n\n')
-        : 'Nenhuma missão semanal.';
+    try {
+      const doc = await garantirMissoes(msg.author.id, msg.guild.id);
 
       const embed = new EmbedBuilder()
         .setColor(0x3498db)
-        .setTitle('📋 Suas Missões')
-        .setDescription(`Conclua missões para ganhar XP!\n\n📅 **Diárias:** ${concluiDiarias}/${diarias.length} concluídas\n📆 **Semanais:** ${concluiSemanais}/${semanais.length} concluídas`)
+        .setTitle('📋 Missões Diárias & Semanais')
+        .setDescription(
+          `📅 Hoje: **${doc.resetDia}**\n📆 Semana: **${doc.resetSemana}**`
+        )
+        .addFields(
+          {
+            name: '📅 Diárias (4 aleatórias)',
+            value: doc.diarias.map(formatar).join('\n\n') || 'Nenhuma missão',
+          },
+          {
+            name: '📆 Semanais (4 aleatórias)',
+            value: doc.semanais.map(formatar).join('\n\n') || 'Nenhuma missão',
+          }
+        )
         .setTimestamp();
 
-      const limitField = (txt) => txt.slice(0, 1020);
-      embed.addFields(
-        { name: '📅 Missões Diárias', value: limitField(textoDiarias), inline: false },
-        { name: '📆 Missões Semanais', value: limitField(textoSemanais), inline: false },
-      );
-
       return msg.reply({ embeds: [embed] });
+
+    } catch (err) {
+      console.error('[MISSOES ERROR]', err);
+      return msg.reply({
+        embeds: [embedErro('Erro ao carregar missões. Banco offline.')]
+      });
     }
   });
 }
 
-export async function progredirMissao(userId, guildId, tipo, quantidade = 1) {
+// =========================
+// PROGRESSO + XP AUTOMÁTICO
+// =========================
+
+export async function progredirMissao(userId, guildId, tipo, qtd = 1, channel = null) {
   try {
     const doc = await garantirMissoes(userId, guildId);
-    let atualizado = false;
 
     for (const lista of [doc.diarias, doc.semanais]) {
-      for (const m of lista) {
-        if (m.tipo === tipo && !m.concluida) {
-          m.atual = Math.min(m.atual + quantidade, m.meta);
-          if (m.atual >= m.meta) {
-            m.concluida = true;
-            await ganharXP(userId, guildId, m.recompensa, 'missao');
+      for (const m of lista || []) {
+        if (m.tipo !== tipo || m.concluida) continue;
+
+        m.atual += qtd;
+
+        if (m.atual >= m.meta) {
+          m.concluida = true;
+
+          await ganharXP(userId, guildId, m.xp, 'missao');
+
+          // 💬 FEEDBACK AUTOMÁTICO
+          if (channel) {
+            channel.send({
+              content: `🏆 <@${userId}> concluiu **${m.descricao}** +${m.xp} XP!`
+            }).catch(() => {});
           }
-          atualizado = true;
         }
       }
     }
-    if (atualizado) await doc.save();
-  } catch {}
-}
+
+    await doc.save();
+  } catch (err) {
+    console.error('[PROGRESS ERROR]', err);
+  }
+    }
