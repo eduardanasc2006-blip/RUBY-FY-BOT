@@ -9,6 +9,11 @@ const STATUS_TEXTO = { disponivel: 'Disponível', poucas: 'Poucas Vagas', fechad
 
 const sessoesCriacao = new Map();
 
+export const comandos = [
+  { cmd: '!catalogo / !servicos', desc: 'Ver catálogo de produtos/serviços.' },
+  { cmd: '!preco <nome>',         desc: 'Ver preço de um produto.' },
+];
+
 export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;

@@ -5,6 +5,12 @@ import Ticket from '../db/models/Ticket.mjs';
 import QuizModel from '../db/models/Quiz.mjs';
 import Afinidade from '../db/models/Afinidade.mjs';
 
+export const comandos = [
+  { cmd: '!stats',   desc: 'Estatísticas gerais do servidor.' },
+  { cmd: '!botinfo', desc: 'Informações e status do FiskBot.' },
+  { cmd: '!versao',  desc: 'Versão atual do bot.' },
+];
+
 export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;

@@ -23,6 +23,11 @@ function chaveAfin(u1, u2) {
   return u1 < u2 ? [u1, u2] : [u2, u1];
 }
 
+export const comandos = [
+  { cmd: '!rep @user', desc: 'Dá +1 reputação (1x por dia, +20 XP).' },
+  { cmd: '!ranking',   desc: 'Top 10 reputação do servidor.' },
+];
+
 export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;

@@ -24,6 +24,11 @@ const FORCA_ARTE = [
 
 const jogosAtivos = new Map();
 
+export const comandos = [
+  { cmd: '!forca [categoria]', desc: 'Jogo da forca (+120 XP por vitória).' },
+  { cmd: '!forcaranking',      desc: 'Ranking de vitórias na forca.' },
+];
+
 export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
@@ -90,7 +95,7 @@ export function register(client, configs) {
       if (ganhou) {
         await ForcaModel.findOneAndUpdate({ userId: msg.author.id, guildId }, { $inc: { vitorias: 1 }, $setOnInsert: { userId: msg.author.id, guildId } }, { upsert: true });
         await ganharXP(msg.author.id, guildId, XP_EVENTS.FORCA, 'forca');
-        await progredirMissao(msg.author.id, guildId, 'forca').catch(() => {});
+        await progredirMissao(msg.author.id, guildId, 'forca', 1, msg.channel).catch(() => {});
         const embed = new EmbedBuilder().setColor(0x2ecc71).setTitle('🎉 Você venceu!').setDescription(`A palavra era: **${jogo.palavra}**\n+${XP_EVENTS.FORCA} XP!`).setTimestamp();
         return msg.channel.send({ embeds: [embed] });
       } else {

@@ -32,6 +32,13 @@ async function resolverUsuario(nome) {
   return null;
 }
 
+export const comandos = [
+  { cmd: '!perfil <usuário>', desc: 'Perfil Roblox de um usuário.' },
+  { cmd: '!avatar <usuário>', desc: 'Avatar 2D do perfil Roblox.' },
+  { cmd: '!grupo <id>',       desc: 'Informações de um grupo Roblox.' },
+  { cmd: '!gamepass <id>',    desc: 'Informações de uma Gamepass.' },
+];
+
 export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;

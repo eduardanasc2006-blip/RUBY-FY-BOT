@@ -49,6 +49,11 @@ export async function addAfinidade(guildId, userId1, userId2, pontos) {
   return { pontos: novo.pontos, ganhou: true, pontosGanhos: pontos };
 }
 
+export const comandos = [
+  { cmd: '!afinidade @user', desc: 'Ver afinidade com outro usuário.' },
+  { cmd: '!topafinidade',    desc: 'Ranking de casais por afinidade.' },
+];
+
 export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;

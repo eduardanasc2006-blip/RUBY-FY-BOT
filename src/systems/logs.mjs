@@ -3,6 +3,10 @@ import Log from '../db/models/Log.mjs';
 import { isAdmin } from '../utils/permissions.mjs';
 import { embedErro } from '../utils/embeds.mjs';
 
+export const comandos = [
+  { cmd: '!logs [tipo]', desc: 'Ver últimos logs do servidor (admin).' },
+];
+
 export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;

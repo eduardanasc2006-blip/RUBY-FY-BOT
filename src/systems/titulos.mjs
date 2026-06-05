@@ -30,6 +30,11 @@ const TITULOS_DISPONIVEIS = [
   { id: 'cupido_supremo', nome: '💘 Cupido Supremo', raridade: 'lendario', origem: 'conquista', conquista: 'primeiro_casamento', secreta: true },
 ];
 
+export const comandos = [
+  { cmd: '!titulos',              desc: 'Ver títulos desbloqueados por raridade.' },
+  { cmd: '!equipartitulo <nome>', desc: 'Equipar um título desbloqueado.' },
+];
+
 export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
@@ -45,7 +50,7 @@ export function register(client, configs) {
       const u = await Usuario.findOne({ userId: msg.author.id, guildId });
       const conquistasDoc = await Conquista.findOne({ userId: msg.author.id, guildId });
       const conquistas = conquistasDoc?.conquistas || [];
-      const { nivel } = calcularNivel(u?.xp || 0);
+      const { nivel } = calcularNivel(u?.xpTotal || 0);
 
       const disponiveis = TITULOS_DISPONIVEIS.filter(t => {
         if (t.secreta && !conquistas.includes(t.conquista)) return false;
@@ -93,7 +98,7 @@ export function register(client, configs) {
 
       const u = await Usuario.findOne({ userId: msg.author.id, guildId });
       const conquistas = (await Conquista.findOne({ userId: msg.author.id, guildId }))?.conquistas || [];
-      const { nivel } = calcularNivel(u?.xp || 0);
+      const { nivel } = calcularNivel(u?.xpTotal || 0);
 
       const disponivel = (titulo.origem === 'nivel' && nivel >= titulo.nivel) ||
         (titulo.origem === 'conquista' && conquistas.includes(titulo.conquista));

@@ -5,6 +5,11 @@ import { checkCooldown, formatarTempo } from '../utils/cooldown.mjs';
 
 const sessoesAvaliacao = new Map();
 
+export const comandos = [
+  { cmd: '!avaliar <nota> [comentário]', desc: 'Avaliar o servidor (1–5 estrelas).' },
+  { cmd: '!avaliacoes',                  desc: 'Ver avaliações do servidor.' },
+];
+
 export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;

@@ -1,6 +1,8 @@
 const recentesMsgs = new Map();
 const ultimasMensagens = new Map();
 
+export const comandos = [];
+
 export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;

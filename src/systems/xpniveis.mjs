@@ -1,8 +1,3 @@
-export const comandos = [
-  { cmd: '!xp', desc: 'Mostra seu XP e nível' },
-  { cmd: '!rank', desc: 'Ranking de XP do servidor' },
-  { cmd: '!xplogs', desc: 'Histórico de XP' }
-];
 import { EmbedBuilder } from 'discord.js';
 import Usuario from '../db/models/Usuario.mjs';
 import { calcularNivel, getFaixa } from '../utils/nivelCalc.mjs';
@@ -38,6 +33,13 @@ function multiplicadorStreak(streak) {
 /* =========================
    REGISTER
 ========================= */
+
+export const comandos = [
+  { cmd: '!xp [@user]',    desc: 'Ver XP, nível e progresso.' },
+  { cmd: '!rank',          desc: 'Top 10 XP do servidor.' },
+  { cmd: '!topxp',         desc: 'Ranking por XP total.' },
+  { cmd: '!xplogs [@user]',desc: 'Histórico das últimas 10 transações de XP.' },
+];
 
 export function register(client, configs) {
   client.on('messageCreate', async (msg) => {

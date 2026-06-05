@@ -17,6 +17,11 @@ const LABEL_GENERO = {
   outro:     'Outro',
 };
 
+export const comandos = [
+  { cmd: '!genero',         desc: 'Ver gênero configurado no perfil.' },
+  { cmd: '!setgenero <g>',  desc: 'Definir gênero (masculino/feminino/outro).' },
+];
+
 export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
