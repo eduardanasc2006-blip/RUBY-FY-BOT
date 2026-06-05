@@ -136,6 +136,11 @@ function _createTables() {
     `ALTER TABLE usuarios ADD COLUMN genero TEXT`,
     `ALTER TABLE usuarios ADD COLUMN moldura TEXT NOT NULL DEFAULT 'padrao'`,
     `ALTER TABLE usuarios ADD COLUMN fundo TEXT NOT NULL DEFAULT 'escuro'`,
+    `ALTER TABLE usuarios ADD COLUMN badges TEXT NOT NULL DEFAULT '[]'`,
+    `ALTER TABLE usuarios ADD COLUMN efeitos TEXT NOT NULL DEFAULT '[]'`,
+    `ALTER TABLE usuarios ADD COLUMN inventario TEXT NOT NULL DEFAULT '{}'`,
+    `ALTER TABLE missoes ADD COLUMN ultimaDiaMissao TEXT`,
+    `ALTER TABLE missoes ADD COLUMN ultimaSemanaMissao TEXT`,
   ];
   for (const sql of migrations) {
     try { _db.exec(sql); } catch {}
