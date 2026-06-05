@@ -1,8 +1,8 @@
 import {
-  EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  AttachmentBuilder,
 } from 'discord.js';
 
 import Usuario from '../db/models/Usuario.mjs';
@@ -15,64 +15,98 @@ import { embedErro } from '../utils/embeds.mjs';
 import { isDBConnected } from '../utils/dbGuard.mjs';
 import { checkCooldown, formatarTempo } from '../utils/cooldown.mjs';
 
-/* =========================
-   MOLDURAS
-========================= */
-
-const MOLDURAS = [
-  { id: 'padrao', nome: 'Padrão', emoji: '⬜' },
-  { id: 'bronze', nome: 'Bronze', emoji: '🟫' },
-  { id: 'prata', nome: 'Prata', emoji: '⬜' },
-  { id: 'ouro', nome: 'Ouro', emoji: '🟨' },
-  { id: 'diamante', nome: 'Diamante', emoji: '🔷' },
-  { id: 'neon_azul', nome: 'Neon Azul', emoji: '🟦' },
-  { id: 'neon_roxo', nome: 'Neon Roxo', emoji: '🟪' },
-  { id: 'cosmica', nome: 'Cósmica', emoji: '🌌' },
-];
+import { createCanvas, loadImage } from '@napi-rs/canvas';
 
 /* =========================
-   FUNDOS
+   FUNDO
 ========================= */
 
-const FUNDOS = [
-  { id: 'escuro', nome: 'Escuro' },
-  { id: 'galaxia', nome: 'Galáxia' },
-  { id: 'floresta', nome: 'Floresta' },
-  { id: 'oceano', nome: 'Oceano' },
-  { id: 'pordosol', nome: 'Pôr do Sol' },
-  { id: 'neon', nome: 'Neon' },
-];
-
-/* =========================
-   UTILITÁRIOS
-========================= */
-
-function gerarBarra(atual, total, size = 12) {
-  const p = Math.min(1, atual / Math.max(1, total));
-  const filled = Math.round(p * size);
-  return '█'.repeat(filled) + '░'.repeat(size - filled);
-}
-
-function nomeMoldura(id) {
-  return MOLDURAS.find(m => m.id === id)?.nome || 'Padrão';
-}
-
-function nomeFundo(id) {
-  return FUNDOS.find(f => f.id === id)?.nome || 'Escuro';
-}
-
-function corMoldura(id) {
+function corFundo(id) {
   const mapa = {
-    padrao: 0x5865f2,
-    bronze: 0xcd7f32,
-    prata: 0xc0c0c0,
-    ouro: 0xffd700,
-    diamante: 0xb9f2ff,
-    neon_azul: 0x00bfff,
-    neon_roxo: 0xa855f7,
-    cosmica: 0xff00ff,
+    escuro: '#1e1f22',
+    galaxia: '#2b2d31',
+    floresta: '#1f3b2c',
+    oceano: '#0d2b45',
+    pordosol: '#ff7a59',
+    neon: '#8a2be2',
   };
-  return mapa[id] || 0x5865f2;
+  return mapa[id] || '#1e1f22';
+}
+
+/* =========================
+   BARRA XP
+========================= */
+
+function drawBar(ctx, x, y, w, h, p) {
+  ctx.fillStyle = '#2b2d31';
+  ctx.fillRect(x, y, w, h);
+
+  ctx.fillStyle = '#00ff88';
+  ctx.fillRect(x, y, w * p, h);
+}
+
+/* =========================
+   CANVAS PERFIL
+========================= */
+
+async function renderPerfil({
+  user,
+  nivel,
+  xpAtual,
+  xpProximo,
+  xpTotal,
+  streak,
+  fundo,
+  avatarURL,
+}) {
+  const canvas = createCanvas(900, 300);
+  const ctx = canvas.getContext('2d');
+
+  /* FUNDO */
+  ctx.fillStyle = corFundo(fundo);
+  ctx.fillRect(0, 0, 900, 300);
+
+  /* CARD */
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(40, 40, 820, 220);
+
+  /* NOME */
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 28px Sans';
+  ctx.fillText(user.username, 180, 95);
+
+  /* NÍVEL */
+  ctx.font = '20px Sans';
+  ctx.fillText(`Nível ${nivel}`, 180, 130);
+
+  /* XP */
+  ctx.font = '16px Sans';
+  ctx.fillText(`${xpAtual} / ${xpProximo} XP`, 180, 160);
+
+  /* BARRA XP */
+  const p = Math.min(1, xpAtual / Math.max(1, xpProximo));
+  drawBar(ctx, 180, 175, 500, 18, p);
+
+  /* STREAK */
+  ctx.fillText(`🔥 Streak: ${streak || 0} dias`, 180, 230);
+
+  /* AVATAR */
+  const avatar = await loadImage(avatarURL);
+
+  const x = 70;
+  const y = 80;
+  const size = 100;
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x + 50, y + 50, 50, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.clip();
+
+  ctx.drawImage(avatar, x, y, size, size);
+  ctx.restore();
+
+  return canvas.toBuffer('image/png');
 }
 
 /* =========================
@@ -94,27 +128,17 @@ async function mostrarPerfil(alvo, guildId, guild, replyFn) {
     return replyFn({ embeds: [embedErro('Usuário não encontrado.')] });
   }
 
-  /* =========================
-     XP SYSTEM
-  ========================= */
-
+  /* XP */
   const xpTotal = usuario.xpTotal || usuario.xp || 0;
   const xpDisponivel = usuario.xpDisponivel || 0;
 
   const { nivel, xpAtual, xpProximo } = calcularNivel(xpTotal);
   const faixa = getFaixa(nivel);
 
-  const moldura = usuario.inventario?.moldura || 'padrao';
-  const fundo = usuario.inventario?.fundo || 'escuro';
   const streak = usuario.streak || 0;
+  const fundo = usuario.inventario?.fundo || 'escuro';
 
-  const barra = gerarBarra(xpAtual, xpProximo);
-  const pct = Math.round((xpAtual / xpProximo) * 100);
-
-  /* =========================
-     CASAMENTO + AFINIDADE
-  ========================= */
-
+  /* CASAMENTO */
   let parceiroNome = null;
   let afinidadePct = null;
 
@@ -139,40 +163,23 @@ async function mostrarPerfil(alvo, guildId, guild, replyFn) {
     }
   }
 
-  /* =========================
-     EMBED
-  ========================= */
+  /* IMAGEM FINAL */
+  const buffer = await renderPerfil({
+    user: alvo,
+    nivel,
+    xpAtual,
+    xpProximo,
+    xpTotal,
+    streak,
+    fundo,
+    avatarURL: alvo.displayAvatarURL({ extension: 'png', size: 256 }),
+  });
 
-  const embed = new EmbedBuilder()
-    .setColor(corMoldura(moldura))
-    .setTitle(`👤 ${alvo.globalName || alvo.username}`)
-    .setThumbnail(alvo.displayAvatarURL({ size: 256 }))
-    .setAuthor({
-      name: `Lv ${nivel} • ${faixa.nome}`,
-      iconURL: alvo.displayAvatarURL(),
-    })
-    .addFields(
-      { name: `${faixa.emoji} Nível`, value: `${barra} ${pct}%`, inline: false },
-      { name: '⭐ XP Total', value: `${xpTotal}`, inline: true },
-      { name: '💰 XP Disponível', value: `${xpDisponivel}`, inline: true },
-      { name: '🔥 Streak', value: streak ? `${streak} dias` : '—', inline: true },
-      { name: '🏆 Conquistas', value: `${conquistas?.conquistas?.length || 0}`, inline: true },
-      { name: '🎖️ Última Conquista', value: conquistas?.conquistas?.slice(-1)[0] || 'Nenhuma', inline: false },
-      { name: '🖼️ Moldura', value: nomeMoldura(moldura), inline: true },
-      { name: '🌌 Fundo', value: nomeFundo(fundo), inline: true },
-    );
+  const file = new AttachmentBuilder(buffer, {
+    name: 'perfil.png',
+  });
 
-  if (casamento) {
-    embed.addFields(
-      { name: '💍 Casado(a) com', value: parceiroNome, inline: true },
-      { name: '💘 Afinidade', value: `${afinidadePct || 0}%`, inline: true }
-    );
-  }
-
-  /* =========================
-     BOTÕES
-  ========================= */
-
+  /* BOTÕES */
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`perfil:moldura:${alvo.id}:${guildId}`)
@@ -185,15 +192,18 @@ async function mostrarPerfil(alvo, guildId, guild, replyFn) {
       .setStyle(ButtonStyle.Secondary)
   );
 
-  return replyFn({ embeds: [embed], components: [row] });
+  return replyFn({
+    files: [file],
+    components: [row],
+  });
 }
 
 /* =========================
-   REGISTER COMANDO
+   REGISTER
 ========================= */
 
 export const comandos = [
-  { cmd: '!meuperfil [@user]', desc: 'Perfil completo (XP, nível, conquistas, casamento).' },
+  { cmd: '!meuperfil [@user]', desc: 'Perfil em imagem (XP, nível, streak, etc).' },
 ];
 
 export function register(client, configs) {
@@ -225,4 +235,4 @@ export function register(client, configs) {
       msg.reply(opts)
     );
   });
-    }
+}
