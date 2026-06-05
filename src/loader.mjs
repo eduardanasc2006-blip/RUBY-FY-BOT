@@ -44,6 +44,8 @@ async function carregarConfigs() {
 }
 
 export async function loadSystems(client) {
+  if (client.__systemsLoaded) return;
+  client.__systemsLoaded = true;
   // ── Banco de dados ──────────────────────────────────────────
   const dbOk = initDB();
   console.log(dbOk ? '[DB] ✔ SQLite pronto.' : '[DB] ✖ Aviso: banco de dados nao iniciado.');
@@ -103,7 +105,7 @@ export async function loadSystems(client) {
     try {
       fn(client, configs);
       const cmdList = Array.isArray(cmds) ? cmds : [];
-      client.systems.set(nome, { comandos: cmdList });
+      client.systems.set(nome, { id: nome, label: nome, emoji: '📦', cor: 0x5865f2, comandos: cmdList });
       totalCmds += cmdList.length;
       ok++;
       console.log(`[Loader] ✔ ${nome} — ${cmdList.length} comando(s)`);
