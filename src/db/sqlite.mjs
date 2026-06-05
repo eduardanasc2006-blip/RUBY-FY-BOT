@@ -7,152 +7,279 @@ const DB_PATH = path.join(__dirname, '../../fiskbot.db');
 
 let _db = null;
 
-export function isDBConnected() { return _db !== null; }
-export function getDB() { return _db; }
+export function isDBConnected() {
+  return _db !== null;
+}
 
-// ── Table creation ───────────────────────────────────────────
+export function getDB() {
+  return _db;
+}
+
+// ─────────────────────────────────────────────
+// TABLE CREATION
+// ─────────────────────────────────────────────
 function _createTables() {
   _db.exec(`
     CREATE TABLE IF NOT EXISTS usuarios (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      userId TEXT NOT NULL, guildId TEXT NOT NULL,
+      userId TEXT NOT NULL,
+      guildId TEXT NOT NULL,
       xpTotal INTEGER NOT NULL DEFAULT 0,
       xpDisponivel INTEGER NOT NULL DEFAULT 0,
       nivel INTEGER NOT NULL DEFAULT 1,
-      reputacao INTEGER NOT NULL DEFAULT 0, ultimaRep TEXT,
-      tituloEquipado TEXT, titulos TEXT NOT NULL DEFAULT '[]',
-      mensagens INTEGER NOT NULL DEFAULT 0, ultimaMensagem TEXT, ultimoXP TEXT,
-      streak INTEGER NOT NULL DEFAULT 0, ultimoDiaAtivo TEXT,
+      reputacao INTEGER NOT NULL DEFAULT 0,
+      ultimaRep TEXT,
+      tituloEquipado TEXT,
+      titulos TEXT NOT NULL DEFAULT '[]',
+      mensagens INTEGER NOT NULL DEFAULT 0,
+      ultimaMensagem TEXT,
+      ultimoXP TEXT,
+      streak INTEGER NOT NULL DEFAULT 0,
+      ultimoDiaAtivo TEXT,
+      genero TEXT,
+      moldura TEXT NOT NULL DEFAULT 'padrao',
+      fundo TEXT NOT NULL DEFAULT 'escuro',
+      badges TEXT NOT NULL DEFAULT '[]',
+      efeitos TEXT NOT NULL DEFAULT '[]',
+      inventario TEXT NOT NULL DEFAULT '{}',
       createdAt TEXT NOT NULL DEFAULT (datetime('now')),
       updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(userId, guildId)
     );
+
     CREATE TABLE IF NOT EXISTS configs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guildId TEXT NOT NULL UNIQUE, prefixo TEXT NOT NULL DEFAULT '!',
-      canalLogs TEXT, canalSuporte TEXT, canalDenuncias TEXT, canalSugestoes TEXT,
-      cargoEquipe TEXT, cargoSuporte TEXT, cargoVendedor TEXT,
-      cargoAdmin TEXT, cargoServicos TEXT, canalBemVindo TEXT, mensagemBemVindo TEXT,
-      autoRole TEXT, taxa REAL NOT NULL DEFAULT 38,
+      guildId TEXT NOT NULL UNIQUE,
+      prefixo TEXT NOT NULL DEFAULT '!',
+      canalLogs TEXT,
+      canalSuporte TEXT,
+      canalDenuncias TEXT,
+      canalSugestoes TEXT,
+      cargoEquipe TEXT,
+      cargoSuporte TEXT,
+      cargoVendedor TEXT,
+      cargoAdmin TEXT,
+      cargoServicos TEXT,
+      canalBemVindo TEXT,
+      mensagemBemVindo TEXT,
+      autoRole TEXT,
+      taxa REAL NOT NULL DEFAULT 38,
       taxaHistorico TEXT NOT NULL DEFAULT '[]',
       levelRoles TEXT NOT NULL DEFAULT '[]',
       createdAt TEXT NOT NULL DEFAULT (datetime('now')),
       updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
     CREATE TABLE IF NOT EXISTS casamentos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guildId TEXT NOT NULL, userId1 TEXT NOT NULL, userId2 TEXT NOT NULL,
+      guildId TEXT NOT NULL,
+      userId1 TEXT NOT NULL,
+      userId2 TEXT NOT NULL,
       ativo INTEGER NOT NULL DEFAULT 1,
       dataCasamento TEXT NOT NULL DEFAULT (datetime('now')),
       dataFim TEXT
     );
+
     CREATE TABLE IF NOT EXISTS afinidades (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guildId TEXT NOT NULL, userId1 TEXT NOT NULL, userId2 TEXT NOT NULL,
-      pontos INTEGER NOT NULL DEFAULT 0, interacoes INTEGER NOT NULL DEFAULT 0,
+      guildId TEXT NOT NULL,
+      userId1 TEXT NOT NULL,
+      userId2 TEXT NOT NULL,
+      pontos INTEGER NOT NULL DEFAULT 0,
+      interacoes INTEGER NOT NULL DEFAULT 0,
       ultimaInteracao TEXT,
       UNIQUE(guildId, userId1, userId2)
     );
+
     CREATE TABLE IF NOT EXISTS tickets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      ticketId TEXT NOT NULL, guildId TEXT NOT NULL, userId TEXT NOT NULL,
-      categoria TEXT NOT NULL, channelId TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'aberto', responsavel TEXT,
+      ticketId TEXT NOT NULL,
+      guildId TEXT NOT NULL,
+      userId TEXT NOT NULL,
+      categoria TEXT NOT NULL,
+      channelId TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'aberto',
+      responsavel TEXT,
       transcript TEXT NOT NULL DEFAULT '[]',
       createdAt TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(guildId, ticketId)
     );
+
     CREATE TABLE IF NOT EXISTS conquistas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      userId TEXT NOT NULL, guildId TEXT NOT NULL,
-      conquistas TEXT NOT NULL DEFAULT '[]', badges TEXT NOT NULL DEFAULT '[]',
+      userId TEXT NOT NULL,
+      guildId TEXT NOT NULL,
+      conquistas TEXT NOT NULL DEFAULT '[]',
+      badges TEXT NOT NULL DEFAULT '[]',
       UNIQUE(userId, guildId)
     );
+
     CREATE TABLE IF NOT EXISTS missoes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      userId TEXT NOT NULL, guildId TEXT NOT NULL,
-      diarias TEXT NOT NULL DEFAULT '[]', semanais TEXT NOT NULL DEFAULT '[]',
-      ultimaRenovacaoDiaria TEXT, ultimaRenovacaoSemanal TEXT,
+      userId TEXT NOT NULL,
+      guildId TEXT NOT NULL,
+      diarias TEXT NOT NULL DEFAULT '[]',
+      semanais TEXT NOT NULL DEFAULT '[]',
+      ultimaRenovacaoDiaria TEXT,
+      ultimaRenovacaoSemanal TEXT,
+      ultimaDiaMissao TEXT,
+      ultimaSemanaMissao TEXT,
       UNIQUE(userId, guildId)
     );
+
     CREATE TABLE IF NOT EXISTS produtos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guildId TEXT NOT NULL, nome TEXT NOT NULL, categoria TEXT NOT NULL,
-      descricao TEXT NOT NULL DEFAULT '', imagem TEXT,
+      guildId TEXT NOT NULL,
+      nome TEXT NOT NULL,
+      categoria TEXT NOT NULL,
+      descricao TEXT NOT NULL DEFAULT '',
+      imagem TEXT,
       tabela TEXT NOT NULL DEFAULT '[]',
       status TEXT NOT NULL DEFAULT 'disponivel'
     );
+
     CREATE TABLE IF NOT EXISTS quiz_stats (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      userId TEXT NOT NULL, guildId TEXT NOT NULL,
-      total INTEGER NOT NULL DEFAULT 0, acertos INTEGER NOT NULL DEFAULT 0,
-      erros INTEGER NOT NULL DEFAULT 0, categoriaFavorita TEXT,
+      userId TEXT NOT NULL,
+      guildId TEXT NOT NULL,
+      total INTEGER NOT NULL DEFAULT 0,
+      acertos INTEGER NOT NULL DEFAULT 0,
+      erros INTEGER NOT NULL DEFAULT 0,
+      categoriaFavorita TEXT,
       categoriasContagem TEXT NOT NULL DEFAULT '{}',
       UNIQUE(userId, guildId)
     );
+
     CREATE TABLE IF NOT EXISTS denuncias (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guildId TEXT NOT NULL, denuncianteId TEXT NOT NULL, denunciadoId TEXT NOT NULL,
-      motivo TEXT NOT NULL, descricao TEXT NOT NULL DEFAULT '',
-      provas TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'pendente',
+      guildId TEXT NOT NULL,
+      denuncianteId TEXT NOT NULL,
+      denunciadoId TEXT NOT NULL,
+      motivo TEXT NOT NULL,
+      descricao TEXT NOT NULL DEFAULT '',
+      provas TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'pendente',
       createdAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
     CREATE TABLE IF NOT EXISTS avaliacoes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guildId TEXT NOT NULL, userId TEXT NOT NULL,
-      nota INTEGER NOT NULL, comentario TEXT NOT NULL DEFAULT '',
+      guildId TEXT NOT NULL,
+      userId TEXT NOT NULL,
+      nota INTEGER NOT NULL,
+      comentario TEXT NOT NULL DEFAULT '',
       createdAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
     CREATE TABLE IF NOT EXISTS logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guildId TEXT NOT NULL, tipo TEXT NOT NULL, userId TEXT,
+      guildId TEXT NOT NULL,
+      tipo TEXT NOT NULL,
+      userId TEXT,
       dados TEXT NOT NULL DEFAULT '{}',
       createdAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
     CREATE TABLE IF NOT EXISTS forca (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      userId TEXT NOT NULL, guildId TEXT NOT NULL,
-      vitorias INTEGER NOT NULL DEFAULT 0, derrotas INTEGER NOT NULL DEFAULT 0,
+      userId TEXT NOT NULL,
+      guildId TEXT NOT NULL,
+      vitorias INTEGER NOT NULL DEFAULT 0,
+      derrotas INTEGER NOT NULL DEFAULT 0,
       UNIQUE(userId, guildId)
     );
+
     CREATE TABLE IF NOT EXISTS xp_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       userId TEXT NOT NULL,
       guildId TEXT NOT NULL,
       tipo TEXT NOT NULL DEFAULT 'ganho',
       valor INTEGER NOT NULL DEFAULT 0,
-      origem TEXT NOT NULL DEFAULT 'sistema',
+      saldoAntes INTEGER NOT NULL DEFAULT 0,
       saldoApos INTEGER NOT NULL DEFAULT 0,
+      xpTotalAntes INTEGER NOT NULL DEFAULT 0,
+      xpTotalApos INTEGER NOT NULL DEFAULT 0,
+      origem TEXT NOT NULL DEFAULT 'sistema',
+      descricao TEXT NOT NULL DEFAULT '',
+      referenciaId TEXT,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS historico (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guildId TEXT NOT NULL,
+      userId TEXT NOT NULL,
+      sistema TEXT NOT NULL,
+      acao TEXT NOT NULL,
+      dados TEXT NOT NULL DEFAULT '{}',
       createdAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
 
-  // Migrações seguras — adiciona colunas se ainda não existirem
-  const migrations = [
-    `ALTER TABLE usuarios ADD COLUMN xpTotal INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE usuarios ADD COLUMN xpDisponivel INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE usuarios ADD COLUMN streak INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE usuarios ADD COLUMN ultimoDiaAtivo TEXT`,
-    `ALTER TABLE usuarios ADD COLUMN genero TEXT`,
-    `ALTER TABLE usuarios ADD COLUMN moldura TEXT NOT NULL DEFAULT 'padrao'`,
-    `ALTER TABLE usuarios ADD COLUMN fundo TEXT NOT NULL DEFAULT 'escuro'`,
-    `ALTER TABLE usuarios ADD COLUMN badges TEXT NOT NULL DEFAULT '[]'`,
-    `ALTER TABLE usuarios ADD COLUMN efeitos TEXT NOT NULL DEFAULT '[]'`,
-    `ALTER TABLE usuarios ADD COLUMN inventario TEXT NOT NULL DEFAULT '{}'`,
-    `ALTER TABLE missoes ADD COLUMN ultimaDiaMissao TEXT`,
-    `ALTER TABLE missoes ADD COLUMN ultimaSemanaMissao TEXT`,
-  ];
-  for (const sql of migrations) {
-    try { _db.exec(sql); } catch {}
+  // ─────────────────────────────
+  // INDEXES
+  // ─────────────────────────────
+  try {
+    _db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_usuario ON usuarios(userId, guildId);
+      CREATE INDEX IF NOT EXISTS idx_xplogs_usuario ON xp_logs(userId, guildId);
+      CREATE INDEX IF NOT EXISTS idx_historico_usuario ON historico(userId, guildId);
+      CREATE INDEX IF NOT EXISTS idx_logs_guild ON logs(guildId);
+    `);
+  } catch (e) {
+    console.error('[SQLite] erro ao criar índices:', e.message);
   }
-}
 
+// ─────────────────────────────
+// SAFE MIGRATIONS (FULL)
+// ─────────────────────────────
+const migrations = [
+  // usuarios
+  `ALTER TABLE usuarios ADD COLUMN xpTotal INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE usuarios ADD COLUMN xpDisponivel INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE usuarios ADD COLUMN streak INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE usuarios ADD COLUMN ultimoDiaAtivo TEXT`,
+  `ALTER TABLE usuarios ADD COLUMN genero TEXT`,
+  `ALTER TABLE usuarios ADD COLUMN moldura TEXT NOT NULL DEFAULT 'padrao'`,
+  `ALTER TABLE usuarios ADD COLUMN fundo TEXT NOT NULL DEFAULT 'escuro'`,
+  `ALTER TABLE usuarios ADD COLUMN badges TEXT NOT NULL DEFAULT '[]'`,
+  `ALTER TABLE usuarios ADD COLUMN efeitos TEXT NOT NULL DEFAULT '[]'`,
+  `ALTER TABLE usuarios ADD COLUMN inventario TEXT NOT NULL DEFAULT '{}'`,
+
+  // missoes
+  `ALTER TABLE missoes ADD COLUMN ultimaDiaMissao TEXT`,
+  `ALTER TABLE missoes ADD COLUMN ultimaSemanaMissao TEXT`,
+
+  // xp_logs
+  `ALTER TABLE xp_logs ADD COLUMN saldoAntes INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE xp_logs ADD COLUMN xpTotalAntes INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE xp_logs ADD COLUMN xpTotalApos INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE xp_logs ADD COLUMN descricao TEXT NOT NULL DEFAULT ''`,
+  `ALTER TABLE xp_logs ADD COLUMN referenciaId TEXT`
+];
+
+// execução segura
+for (const sql of migrations) {
+  try {
+    _db.prepare(sql).run();
+  } catch (e) {
+    // ignora coluna duplicada, mas mostra outros erros reais
+    if (!e.message.includes('duplicate column')) {
+      console.warn('[Migration error]', sql, '->', e.message);
+    }
+  }
+  }
+// ─────────────────────────────────────────────
+// INIT DB
+// ─────────────────────────────────────────────
 export function initDB() {
   try {
     _db = new Database(DB_PATH);
     _db.pragma('journal_mode = WAL');
     _db.pragma('synchronous = NORMAL');
+
     _createTables();
+
     console.log('[SQLite] Banco de dados iniciado:', DB_PATH);
     return true;
   } catch (e) {
@@ -160,7 +287,8 @@ export function initDB() {
     _db = null;
     return false;
   }
-}
+ }
+
 
 // ── Filter builder ───────────────────────────────────────────
 function buildWhere(filter) {
