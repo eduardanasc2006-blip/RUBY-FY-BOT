@@ -1,234 +1,202 @@
 import { EmbedBuilder } from 'discord.js';
-import Usuario from '../db/models/Usuario.mjs';
-import { calcularNivel, getFaixa } from '../utils/nivelCalc.mjs';
-import { registrarLog } from '../utils/logger.mjs';
+import Missao from '../db/models/Missao.mjs';
+import { ganharXP } from './xpSystem.mjs';
 import { embedErro } from '../utils/embeds.mjs';
-import { verificarConquistas } from './conquistas.mjs';
-import { isDBConnected } from '../utils/dbGuard.mjs';
-import { ganharXP, XP_EVENTS, historicoXP } from './xpSystem.mjs';
 
-const MSGS_RECENTES = new Map();
+// =========================
+// POOL GRANDE DE MISSÕES
+// =========================
 
-/* =========================
-   UTILS
-========================= */
-
-function gerarBarra(atual, total, tamanho = 10) {
-  const p = Math.min(1, atual / Math.max(1, total));
-  const f = Math.round(p * tamanho);
-  return '█'.repeat(f) + '░'.repeat(tamanho - f);
-}
-
-function diaAtual() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function multiplicadorStreak(streak) {
-  if (streak >= 30) return 2.0;
-  if (streak >= 14) return 1.5;
-  if (streak >= 7) return 1.2;
-  return 1.0;
-}
-
-/* =========================
-   REGISTER
-========================= */
-
-export const comandos = [
-  { cmd: '!xp [@user]',    desc: 'Ver XP, nível e progresso.' },
-  { cmd: '!rank',          desc: 'Top 10 XP do servidor.' },
-  { cmd: '!topxp',         desc: 'Ranking por XP total.' },
-  { cmd: '!xplogs [@user]',desc: 'Histórico das últimas 10 transações de XP.' },
+const POOL_DIARIO = [
+  { id: 'd1', tipo: 'mensagem', descricao: 'Enviar 10 mensagens', meta: 10, xp: 100 },
+  { id: 'd2', tipo: 'mensagem', descricao: 'Enviar 30 mensagens', meta: 30, xp: 190 },
+  { id: 'd3', tipo: 'quiz', descricao: 'Responder 2 quizzes', meta: 2, xp: 70 },
+  { id: 'd4', tipo: 'quiz', descricao: 'Responder 5 quizzes', meta: 5, xp: 250 },
+  { id: 'd5', tipo: 'interacao', descricao: 'Fazer 5 interações', meta: 5, xp: 60 },
+  { id: 'd6', tipo: 'interacao', descricao: 'Fazer 15 interações', meta: 15, xp: 180 },
+  { id: 'd7', tipo: 'reputacao', descricao: 'Dar 1 reputação', meta: 1, xp: 70 },
+  { id: 'd8', tipo: 'reputacao', descricao: 'Dar 3 reputações', meta: 3, xp: 200 },
 ];
+
+const POOL_SEMANAL = [
+  { id: 's1', tipo: 'xp', descricao: 'Ganhar 300 XP', meta: 300, xp: 350 },
+  { id: 's2', tipo: 'xp', descricao: 'Ganhar 800 XP', meta: 800, xp: 600 },
+  { id: 's3', tipo: 'quiz', descricao: 'Completar 10 quizzes', meta: 10, xp: 400 },
+  { id: 's4', tipo: 'quiz', descricao: 'Completar 25 quizzes', meta: 25, xp: 900 },
+  { id: 's5', tipo: 'interacao', descricao: 'Fazer 20 interações', meta: 20, xp: 500 },
+  { id: 's6', tipo: 'mensagem', descricao: 'Enviar 200 mensagens', meta: 200, xp: 800 },
+];
+
+// =========================
+// RESET POR DATA REAL
+// =========================
+
+function getDia() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function getSemana() {
+  const d = new Date();
+  const start = new Date(d.getFullYear(), 0, 1);
+  const diff = Math.floor((d - start) / 86400000);
+  return `${d.getFullYear()}-W${Math.ceil((diff + start.getDay() + 1) / 7)}`;
+}
+
+// =========================
+// RANDOM MISSIONS (4 FIXAS)
+// =========================
+
+function sortear(lista, qtd = 4) {
+  const copia = [...lista];
+  const resultado = [];
+
+  while (resultado.length < qtd && copia.length) {
+    const i = Math.floor(Math.random() * copia.length);
+    resultado.push(copia.splice(i, 1)[0]);
+  }
+
+  return resultado;
+}
+
+// =========================
+// GARANTIR MISSÕES
+// =========================
+
+async function garantirMissoes(userId, guildId) {
+  let doc = await Missao.findOne({ userId, guildId });
+
+  const hoje = getDia();
+  const semana = getSemana();
+
+  if (!doc) {
+    doc = new Missao({
+      userId,
+      guildId,
+      diarias: [],
+      semanais: [],
+      resetDia: hoje,
+      resetSemana: semana,
+    });
+  }
+
+  // 🔥 RESET DIÁRIO (NOVAS MISSÕES)
+  if (doc.resetDia !== hoje) {
+    doc.diarias = sortear(POOL_DIARIO, 4).map(m => ({
+      ...m,
+      atual: 0,
+      concluida: false,
+    }));
+    doc.resetDia = hoje;
+  }
+
+  // 🔥 RESET SEMANAL (NOVAS MISSÕES)
+  if (doc.resetSemana !== semana) {
+    doc.semanais = sortear(POOL_SEMANAL, 4).map(m => ({
+      ...m,
+      atual: 0,
+      concluida: false,
+    }));
+    doc.resetSemana = semana;
+  }
+
+  await doc.save();
+  return doc;
+}
+
+// =========================
+// BARRA
+// =========================
+
+function barra(atual, meta) {
+  const total = 8;
+  const p = Math.min(1, atual / meta);
+  const f = Math.round(p * total);
+  return '█'.repeat(f) + '░'.repeat(total - f);
+}
+
+function formatar(m) {
+  const status = m.concluida ? '✅' : '⏳';
+  return `${status} **${m.descricao}**\n${barra(m.atual, m.meta)} \`${m.atual}/${m.meta}\` +${m.xp} XP`;
+}
+
+// =========================
+// COMANDO !missoes
+// =========================
 
 export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
-    if (!isDBConnected()) return;
 
     const cfg = configs.get(msg.guild.id);
     const prefixo = cfg?.prefixo || '!';
-    const guildId = msg.guild.id;
+    if (!msg.content.startsWith(prefixo)) return;
 
-    /* =====================
-       COMANDOS
-    ===================== */
+    const cmd = msg.content.slice(prefixo.length).trim().split(/\s+/)[0];
+    if (cmd !== 'missoes') return;
 
-    if (msg.content.startsWith(prefixo)) {
-      const args = msg.content.slice(prefixo.length).trim().split(/\s+/);
-      const cmd = args.shift().toLowerCase();
+    try {
+      const doc = await garantirMissoes(msg.author.id, msg.guild.id);
 
-      /* ===== XP ===== */
-      if (cmd === 'xp') {
-        const alvo = msg.mentions.users.first() || msg.author;
-        const u = await Usuario.findOne({ userId: alvo.id, guildId });
+      const embed = new EmbedBuilder()
+        .setColor(0x3498db)
+        .setTitle('📋 Missões Diárias & Semanais')
+        .setDescription(
+          `📅 Hoje: **${doc.resetDia}**\n📆 Semana: **${doc.resetSemana}**`
+        )
+        .addFields(
+          {
+            name: '📅 Diárias (4 aleatórias)',
+            value: doc.diarias.map(formatar).join('\n\n') || 'Nenhuma missão',
+          },
+          {
+            name: '📆 Semanais (4 aleatórias)',
+            value: doc.semanais.map(formatar).join('\n\n') || 'Nenhuma missão',
+          }
+        )
+        .setTimestamp();
 
-        const total = u?.xpTotal || 0;
-        const disponivel = u?.xpDisponivel || 0;
+      return msg.reply({ embeds: [embed] });
 
-        const { nivel, xpAtual, xpProximo } = calcularNivel(total);
-        const faixa = getFaixa(nivel);
-
-        const barra = gerarBarra(xpAtual, xpProximo);
-        const pct = Math.floor((xpAtual / xpProximo) * 100);
-
-        return msg.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor(faixa.cor)
-              .setTitle(`${faixa.emoji} XP de ${alvo.globalName || alvo.username}`)
-              .setThumbnail(alvo.displayAvatarURL({ size: 128 }))
-              .addFields(
-                { name: '🏆 Nível', value: `**${nivel}**`, inline: true },
-                { name: '⭐ XP Total', value: `**${total.toLocaleString('pt-BR')}**`, inline: true },
-                { name: '💰 XP Disponível', value: `**${disponivel.toLocaleString('pt-BR')}**`, inline: true },
-                {
-                  name: `📊 Progresso (${pct}%)`,
-                  value: `${barra}\n${xpAtual} / ${xpProximo}`,
-                  inline: false
-                },
-                {
-                  name: '🔥 Streak',
-                  value: `${u?.streak || 0} dias`,
-                  inline: true
-                }
-              )
-              .setFooter({ text: 'FiskBot • Sistema de XP' })
-          ]
-        });
-      }
-
-      /* ===== XP LOGS ===== */
-      if (cmd === 'xplogs') {
-        const alvo = msg.mentions.users.first() || msg.author;
-        const logs = await historicoXP(alvo.id, guildId, 10);
-
-        if (!logs.length)
-          return msg.reply({ embeds: [embedErro('Nenhum histórico de XP ainda.')] });
-
-        const emojis = { ganho: '🟢', gasto: '🔴' };
-        const linhas = logs.map(l => {
-          const sinal  = l.tipo === 'ganho' ? `+${l.valor}` : `${l.valor}`;
-          const emoji  = emojis[l.tipo] || '⚪';
-          const data   = l.createdAt ? new Date(l.createdAt).toLocaleString('pt-BR') : '?';
-          return `${emoji} \`${sinal.padStart(6)} XP\` — **${l.origem}** • ${data}`;
-        });
-
-        return msg.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor(0x3498db)
-              .setTitle(`📋 Histórico de XP — ${alvo.globalName || alvo.username}`)
-              .setDescription(linhas.join('\n'))
-              .setFooter({ text: 'Últimas 10 transações • FiskBot' })
-              .setTimestamp()
-          ]
-        });
-      }
-
-      /* ===== RANK ===== */
-      if (cmd === 'rank' || cmd === 'leaderboard' || cmd === 'topxp') {
-        const top = await Usuario.find({ guildId })
-          .sort({ xpTotal: -1 })
-          .limit(10)
-          .lean();
-
-        if (!top.length)
-          return msg.reply({ embeds: [embedErro('Nenhum dado de XP ainda.')] });
-
-        const linhas = top.map((u, i) => {
-          const { nivel } = calcularNivel(u.xpTotal || 0);
-          const medal = ['🥇', '🥈', '🥉'][i] || `#${i + 1}`;
-          return `${medal} <@${u.userId}> — Nível **${nivel}** • ${u.xpTotal} XP`;
-        });
-
-        return msg.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor(0xf1c40f)
-              .setTitle('🏆 Top XP')
-              .setDescription(linhas.join('\n'))
-          ]
-        });
-      }
-    }
-
-    /* =====================
-       XP PASSIVO
-    ===================== */
-
-    if (!msg.content.trim() || msg.content.length < 5) return;
-
-    const chave = `xp:${msg.author.id}:${guildId}`;
-    const agora = Date.now();
-    if (agora - (MSGS_RECENTES.get(chave) || 0) < 60000) return;
-
-    MSGS_RECENTES.set(chave, agora);
-
-    const uAtual = await Usuario.findOne({ userId: msg.author.id, guildId });
-
-    /* ===== STREAK ===== */
-    const hoje = diaAtual();
-    const ultimo = uAtual?.ultimoDiaAtivo;
-
-    let streak = 1;
-
-    if (ultimo === hoje) {
-      streak = uAtual?.streak || 1;
-    } else {
-      const ontem = new Date();
-      ontem.setUTCDate(ontem.getUTCDate() - 1);
-      const ontemStr = ontem.toISOString().slice(0, 10);
-
-      if (ultimo === ontemStr) streak = (uAtual?.streak || 0) + 1;
-    }
-
-    /* ===== XP GANHO — usa XP_EVENTS.CHAT + multiplicador streak ===== */
-    const chatMin  = XP_EVENTS.CHAT.base;
-    const chatMax  = XP_EVENTS.CHAT.max;
-    const base     = Math.floor(Math.random() * (chatMax - chatMin + 1)) + chatMin;
-    const mult     = multiplicadorStreak(streak);
-
-    // Atualiza campos NÃO-XP: mensagens, streak, ultimoDiaAtivo
-    await Usuario.findOneAndUpdate(
-      { userId: msg.author.id, guildId },
-      {
-        $inc: { mensagens: 1 },
-        $set: { streak, ultimoDiaAtivo: hoje },
-        $setOnInsert: { userId: msg.author.id, guildId }
-      },
-      { upsert: true }
-    );
-
-    // Todo XP passa pelo controlador central (ganharXP)
-    // mult é passado como multiplicador → ganharXP faz Math.round(base * mult)
-    const { usuario: u, levelUp, nivelNovo } = await ganharXP(
-      msg.author.id, guildId, base, 'chat', mult
-    );
-    if (!u) return;
-
-    /* ===== LEVEL UP (detectado dentro de ganharXP, anunciado aqui) ===== */
-    if (levelUp) {
-      const faixa = getFaixa(nivelNovo);
-
-      await msg.channel.send({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(faixa.cor)
-            .setTitle('🎉 Level Up!')
-            .setDescription(
-              `<@${u.userId}> chegou ao nível **${nivelNovo}** ${faixa.emoji}`
-            )
-        ]
+    } catch (err) {
+      console.error('[MISSOES ERROR]', err);
+      return msg.reply({
+        embeds: [embedErro('Erro ao carregar missões. Banco offline.')]
       });
-
-      await registrarLog(client, guildId, 'nivel', u.userId, {
-        descricao: `<@${u.userId}> subiu para o nível ${nivelNovo}`
-      }, configs);
     }
-
-    /* ===== CONQUISTAS ===== */
-    await verificarConquistas(client, msg.author.id, guildId, u, configs)
-      .catch(() => {});
   });
 }
+
+// =========================
+// PROGRESSO + XP AUTOMÁTICO
+// =========================
+
+export async function progredirMissao(userId, guildId, tipo, qtd = 1, channel = null) {
+  try {
+    const doc = await garantirMissoes(userId, guildId);
+
+    for (const lista of [doc.diarias, doc.semanais]) {
+      for (const m of lista || []) {
+        if (m.tipo !== tipo || m.concluida) continue;
+
+        m.atual += qtd;
+
+        if (m.atual >= m.meta) {
+          m.concluida = true;
+
+          await ganharXP(userId, guildId, m.xp, 'missao');
+
+          // 💬 FEEDBACK AUTOMÁTICO
+          if (channel) {
+            channel.send({
+              content: `🏆 <@${userId}> concluiu **${m.descricao}** +${m.xp} XP!`
+            }).catch(() => {});
+          }
+        }
+      }
+    }
+
+    await doc.save();
+  } catch (err) {
+    console.error('[PROGRESS ERROR]', err);
+  }
+                         }
