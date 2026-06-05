@@ -1,3 +1,7 @@
+if (client.__systemsLoaded) {
+  return;
+}
+client.__systemsLoaded = true;
 import { initDB, isDBConnected } from './db/sqlite.mjs';
 import Config from './db/models/Config.mjs';
 
