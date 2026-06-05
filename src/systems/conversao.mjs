@@ -4,17 +4,6 @@ import { isAdmin } from '../utils/permissions.mjs';
 import { embedErro } from '../utils/embeds.mjs';
 import { registrarLog } from '../utils/logger.mjs';
 
-export const comandos = [
-  { cmd: '!robux <qtd>',        desc: 'Converte Robux → BRL.' },
-  { cmd: '!brl <valor>',        desc: 'Converte BRL → Robux.' },
-  { cmd: '!taxa',               desc: 'Taxa atual de conversão.' },
-  { cmd: '!simular <min> <max>',desc: 'Tabela de preços simulados.' },
-  { cmd: '!historico',          desc: 'Histórico de alterações de taxa.' },
-  { cmd: '!comparar <robux>',   desc: 'Valor bruto em reais.' },
-  { cmd: '!meta <atual> <meta>',desc: 'Mostra quanto falta para atingir meta.' },
-  { cmd: '!settaxa <valor>',    desc: 'Define taxa (Robux → BRL).' },
-];
-
 export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
@@ -25,53 +14,106 @@ export function register(client, configs) {
 
     const args = msg.content.slice(prefixo.length).trim().split(/\s+/);
     const cmd = args.shift().toLowerCase();
+
     const taxa = cfg?.taxa || 38;
 
     /* =========================
-       ROBUX → BRL
+      ROBUX -> BRL (ATUALIZADO)
     ========================= */
     if (cmd === 'robux') {
-      const robux = parseInt(args[0]?.replace(/\D/g, ''));
-      if (!robux) return msg.reply({ embeds: [embedErro('Use: `!robux 1000`')] });
+      const robux = parseInt(args[0]?.replace(/[\.\s]/g, ''));
 
-      const valor = (robux / 1000) * taxa;
+      if (!robux || isNaN(robux)) {
+        return msg.reply({
+          embeds: [embedErro('Use: `!robux <quantidade>`')]
+        });
+      }
 
-      return msg.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0x00a2ff)
-            .setTitle('💰 Conversão Robux → BRL')
-            .setDescription(`**${robux.toLocaleString('pt-BR')} Robux**`)
-            .addFields(
-              { name: '💵 Valor em reais', value: `R$${valor.toFixed(2)}`, inline: true },
-              { name: '📊 Taxa atual', value: `1.000 Robux = R$${taxa.toFixed(2)}`, inline: true },
-            )
-            .setFooter({ text: 'FiskBot • Conversão' })
-        ]
-      });
+      // 💰 valor em reais
+      const valorBRL = (robux / 1000) * taxa;
+
+      // 🎮 gamepass (Roblox retém 30%)
+      const valorGamepass = Math.ceil(robux / 0.7);
+
+      const embed = new EmbedBuilder()
+        .setColor(0x00a2ff)
+        .setTitle('💰 Conversão Robux → BRL')
+        .setDescription(`**${robux.toLocaleString('pt-BR')} Robux**`)
+
+        .addFields(
+          {
+            name: '💵 Valor em reais',
+            value: `R$ ${valorBRL.toFixed(2)}`,
+            inline: true
+          },
+          {
+            name: '🎮 Gamepass necessária',
+            value: `${valorGamepass.toLocaleString('pt-BR')} Robux`,
+            inline: true
+          },
+          {
+            name: '📊 Taxa base',
+            value: `1.000 Robux = R$${taxa.toFixed(2)}`,
+            inline: false
+          }
+        )
+
+        .setFooter({
+          text: 'Roblox aplica ~30% de taxa em gamepasses'
+        });
+
+      // 📊 LOG COMPLETO
+      await registrarLog(
+        client,
+        msg.guild.id,
+        'conversao',
+        msg.author.id,
+        {
+          descricao: `Conversão: ${robux} Robux → R$${valorBRL.toFixed(2)} | Gamepass: ${valorGamepass}`,
+        },
+        configs
+      );
+
+      return msg.reply({ embeds: [embed] });
     }
 
     /* =========================
-       BRL → ROBUX
+      BRL -> ROBUX
     ========================= */
     if (cmd === 'brl') {
       const valor = parseFloat(args[0]?.replace(',', '.'));
-      if (!valor) return msg.reply({ embeds: [embedErro('Use: `!brl 10`')] });
+
+      if (!valor || isNaN(valor)) {
+        return msg.reply({
+          embeds: [embedErro('Use: `!brl <valor>`')]
+        });
+      }
 
       const robux = Math.floor((valor / taxa) * 1000);
+
+      await registrarLog(
+        client,
+        msg.guild.id,
+        'conversao',
+        msg.author.id,
+        {
+          descricao: `Conversão: R$${valor.toFixed(2)} → ${robux} Robux`,
+        },
+        configs
+      );
 
       return msg.reply({
         embeds: [
           new EmbedBuilder()
             .setColor(0x00a2ff)
             .setTitle('💰 Conversão BRL → Robux')
-            .setDescription(`R$${valor.toFixed(2)} = **${robux.toLocaleString('pt-BR')} Robux**`)
+            .setDescription(`**R$${valor.toFixed(2)}** = **${robux.toLocaleString('pt-BR')} Robux**`)
         ]
       });
     }
 
     /* =========================
-       TAXA
+      TAXA
     ========================= */
     if (cmd === 'taxa') {
       return msg.reply({
@@ -79,82 +121,113 @@ export function register(client, configs) {
           new EmbedBuilder()
             .setColor(0x00a2ff)
             .setTitle('📊 Taxa Atual')
-            .setDescription(`1.000 Robux = R$${taxa.toFixed(2)}`)
+            .setDescription(`**1.000 Robux = R$${taxa.toFixed(2)}**`)
         ]
       });
     }
 
     /* =========================
-       COMPARAR (SEM TAXAS EXTRAS)
+      SIMULAR
     ========================= */
-    if (cmd === 'comparar') {
-      const robux = parseInt(args[0]?.replace(/\D/g, ''));
-      if (!robux) return msg.reply({ embeds: [embedErro('Use: `!comparar 5000`')] });
+    if (cmd === 'simular') {
+      const v1 = parseInt(args[0]);
+      const v2 = parseInt(args[1]);
 
-      const valor = (robux / 1000) * taxa;
-
-      return msg.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0x00a2ff)
-            .setTitle(`💱 Conversão — ${robux.toLocaleString('pt-BR')} Robux`)
-            .setDescription('Valor bruto em reais')
-            .addFields(
-              { name: '💰 Valor', value: `R$${valor.toFixed(2)}`, inline: true },
-            )
-        ]
-      });
-    }
-
-    /* =========================
-       META (ATUAL → META)
-    ========================= */
-    if (cmd === 'meta') {
-      const atual = parseInt(args[0]?.replace(/\D/g, ''));
-      const meta = parseInt(args[1]?.replace(/\D/g, ''));
-
-      if (!atual || !meta) {
-        return msg.reply({ embeds: [embedErro('Use: `!meta 300 600`')] });
+      if (!v1 || isNaN(v1)) {
+        return msg.reply({
+          embeds: [embedErro('Use: `!simular <min> <max>`')]
+        });
       }
 
-      const falta = Math.max(meta - atual, 0);
-      const valor = (meta / 1000) * taxa;
+      const min = v1;
+      const max = v2 && !isNaN(v2) ? v2 : v1 * 10;
+
+      const steps = gerarSteps(min, max);
+
+      const linhas = steps.map(r =>
+        `**${r.toLocaleString('pt-BR')}** Robux → **R$${((r / 1000) * taxa).toFixed(2)}**`
+      );
 
       return msg.reply({
         embeds: [
           new EmbedBuilder()
             .setColor(0x00a2ff)
-            .setTitle('🎯 Progresso de Meta')
-            .addFields(
-              { name: '📦 Atual', value: `${atual.toLocaleString('pt-BR')} Robux`, inline: true },
-              { name: '🎯 Meta', value: `${meta.toLocaleString('pt-BR')} Robux`, inline: true },
-              { name: '📉 Faltam', value: `${falta.toLocaleString('pt-BR')} Robux`, inline: true },
-              { name: '💰 Valor total da meta', value: `R$${valor.toFixed(2)}`, inline: false },
-            )
+            .setTitle('📋 Simulação')
+            .setDescription(linhas.join('\n'))
         ]
       });
     }
 
     /* =========================
-       SETTAXA (ROBUX → REAL)
+      META
+    ========================= */
+    if (cmd === 'meta') {
+      const saldo = parseInt(args[0]?.replace(/\D/g, ''));
+      const meta = parseInt(args[1]?.replace(/\D/g, ''));
+
+      if (!saldo || !meta || isNaN(saldo) || isNaN(meta)) {
+        return msg.reply({
+          embeds: [embedErro('Use: `!meta <saldo> <meta>`')]
+        });
+      }
+
+      const valorSaldo = (saldo / 1000) * taxa;
+      const valorMeta = (meta / 1000) * taxa;
+
+      let embed = new EmbedBuilder()
+        .setColor(0x00a2ff)
+        .setTitle('🎯 Meta de Robux');
+
+      if (saldo >= meta) {
+        const excedenteRobux = saldo - meta;
+        const excedenteValor = (excedenteRobux / 1000) * taxa;
+
+        embed.setDescription('🎉 Você já atingiu sua meta!')
+          .addFields(
+            { name: '📌 Meta', value: `${meta} Robux`, inline: true },
+            { name: '💰 Saldo', value: `${saldo} Robux`, inline: true },
+            { name: '📈 Excedente', value: `+${excedenteRobux} Robux`, inline: true },
+            { name: '💵 Valor extra', value: `R$${excedenteValor.toFixed(2)}`, inline: true }
+          );
+      } else {
+        const faltaRobux = meta - saldo;
+        const faltaValor = (faltaRobux / 1000) * taxa;
+
+        embed.setDescription('📊 Progresso da meta')
+          .addFields(
+            { name: '🎯 Meta', value: `${meta} Robux`, inline: true },
+            { name: '💰 Saldo', value: `${saldo} Robux`, inline: true },
+            { name: '❌ Falta', value: `${faltaRobux} Robux`, inline: true },
+            { name: '💵 Valor faltando', value: `R$${faltaValor.toFixed(2)}`, inline: true }
+          );
+      }
+
+      return msg.reply({ embeds: [embed] });
+    }
+
+    /* =========================
+      SET TAXA
     ========================= */
     if (cmd === 'settaxa') {
       if (!isAdmin(msg.member, cfg)) {
         return msg.reply({ embeds: [embedErro('Sem permissão.')] });
       }
 
-      const novaTaxa = parseFloat(args[0]?.replace(',', '.'));
-      if (!novaTaxa) {
-        return msg.reply({ embeds: [embedErro('Use: `!settaxa 40`')] });
+      const nova = parseFloat(args[0]?.replace(',', '.'));
+
+      if (!nova || isNaN(nova)) {
+        return msg.reply({
+          embeds: [embedErro('Use: `!settaxa <valor>`')]
+        });
       }
 
       await Config.findOneAndUpdate(
         { guildId: msg.guild.id },
         {
-          $set: { taxa: novaTaxa },
+          $set: { taxa: nova },
           $push: {
             taxaHistorico: {
-              taxa: novaTaxa,
+              taxa: nova,
               adminId: msg.author.id,
               data: new Date()
             }
@@ -163,14 +236,16 @@ export function register(client, configs) {
         { upsert: true }
       );
 
-      if (cfg) cfg.taxa = novaTaxa;
+      if (cfg) cfg.taxa = nova;
 
       await registrarLog(
         client,
         msg.guild.id,
         'admin',
         msg.author.id,
-        { descricao: `alterou taxa para R$${novaTaxa}` },
+        {
+          descricao: `Taxa alterada para R$${nova.toFixed(2)}`
+        },
         configs
       );
 
@@ -178,9 +253,27 @@ export function register(client, configs) {
         embeds: [
           new EmbedBuilder()
             .setColor(0x2ecc71)
-            .setDescription(`✅ Taxa atualizada: **1.000 Robux = R$${novaTaxa}**`)
+            .setDescription(`✅ Taxa atualizada para **R$${nova.toFixed(2)}**`)
         ]
       });
     }
   });
 }
+
+/* =========================
+  HELPERS
+========================= */
+function gerarSteps(min, max) {
+  const qtd = 8;
+  const step = Math.ceil((max - min) / (qtd - 1));
+  const res = [];
+
+  for (let i = 0; i < qtd; i++) {
+    const v = min + step * i;
+    if (v <= max) res.push(v);
+  }
+
+  if (!res.includes(max)) res.push(max);
+
+  return [...new Set(res)].slice(0, 10);
+        }
