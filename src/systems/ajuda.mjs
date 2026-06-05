@@ -6,10 +6,6 @@ import {
   ButtonStyle,
 } from 'discord.js';
 
-/* =========================
-   CONFIG
-========================= */
-
 const ITENS_POR_PAGINA = 10;
 
 /* =========================
@@ -40,9 +36,11 @@ function getCategorias(client) {
 
 function embedPrincipal(client, page = 0) {
   const cats = getCategorias(client);
-  const totalPages = Math.ceil(cats.length / ITENS_POR_PAGINA) || 1;
+  const totalPages = Math.max(1, Math.ceil(cats.length / ITENS_POR_PAGINA));
 
-  const start = page * ITENS_POR_PAGINA;
+  const safePage = Math.min(Math.max(page, 0), totalPages - 1);
+
+  const start = safePage * ITENS_POR_PAGINA;
   const items = cats.slice(start, start + ITENS_POR_PAGINA);
 
   return new EmbedBuilder()
@@ -52,7 +50,7 @@ function embedPrincipal(client, page = 0) {
       '**Criado por Finix Yin**\n\n' +
       items.map(c => `${c.emoji} **${c.label}**`).join('\n')
     )
-    .setFooter({ text: `Página ${page + 1}/${totalPages}` });
+    .setFooter({ text: `Página ${safePage + 1}/${totalPages}` });
 }
 
 /* =========================
@@ -84,13 +82,16 @@ function embedCategoria(client, id) {
 
 function menuPrincipal(client, userId, page = 0) {
   const cats = getCategorias(client);
+  const totalPages = Math.max(1, Math.ceil(cats.length / ITENS_POR_PAGINA));
 
-  const start = page * ITENS_POR_PAGINA;
+  const safePage = Math.min(Math.max(page, 0), totalPages - 1);
+
+  const start = safePage * ITENS_POR_PAGINA;
   const items = cats.slice(start, start + ITENS_POR_PAGINA);
 
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
-      .setCustomId(`ajuda_menu:${userId}`)
+      .setCustomId(`ajuda_menu:${userId}:${safePage}`)
       .setPlaceholder('📂 Selecione uma categoria')
       .addOptions(
         items.map(c => ({
@@ -103,25 +104,32 @@ function menuPrincipal(client, userId, page = 0) {
 }
 
 /* =========================
-   BOTÕES DE NAVEGAÇÃO
+   BOTÕES
 ========================= */
 
 function navegacao(client, userId, page = 0) {
   const cats = getCategorias(client);
-  const totalPages = Math.ceil(cats.length / ITENS_POR_PAGINA) || 1;
+  const totalPages = Math.max(1, Math.ceil(cats.length / ITENS_POR_PAGINA));
+
+  const safePage = Math.min(Math.max(page, 0), totalPages - 1);
 
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`ajuda_prev:${userId}:${page}`)
+      .setCustomId(`ajuda_prev:${userId}:${safePage}`)
       .setLabel('⬅')
       .setStyle(ButtonStyle.Secondary)
-      .setDisabled(page <= 0),
+      .setDisabled(safePage <= 0),
 
     new ButtonBuilder()
-      .setCustomId(`ajuda_next:${userId}:${page}`)
+      .setCustomId(`ajuda_menu:${userId}:${safePage}`)
+      .setLabel('🏠 Menu')
+      .setStyle(ButtonStyle.Primary),
+
+    new ButtonBuilder()
+      .setCustomId(`ajuda_next:${userId}:${safePage}`)
       .setLabel('➡')
       .setStyle(ButtonStyle.Secondary)
-      .setDisabled(page >= totalPages - 1)
+      .setDisabled(safePage >= totalPages - 1)
   );
 }
 
@@ -138,11 +146,7 @@ export function register(client, configs) {
 
     if (!msg.content.startsWith(prefixo)) return;
 
-    const cmd = msg.content
-      .slice(prefixo.length)
-      .trim()
-      .split(/\s+/)[0]
-      .toLowerCase();
+    const cmd = msg.content.slice(prefixo.length).trim().split(/\s+/)[0].toLowerCase();
 
     if (!['ajuda', 'help', 'comandos'].includes(cmd)) return;
 
@@ -159,7 +163,7 @@ export function register(client, configs) {
     if (!interaction.isButton() && !interaction.isStringSelectMenu()) return;
 
     const [type, userId, pageRaw] = interaction.customId.split(':');
-    const page = parseInt(pageRaw ?? '0', 10);
+    let page = parseInt(pageRaw ?? '0', 10);
 
     if (interaction.user.id !== userId) {
       return interaction.reply({
@@ -169,7 +173,9 @@ export function register(client, configs) {
     }
 
     const cats = getCategorias(client);
-    const totalPages = Math.ceil(cats.length / ITENS_POR_PAGINA) || 1;
+    const totalPages = Math.max(1, Math.ceil(cats.length / ITENS_POR_PAGINA));
+
+    page = Math.min(Math.max(page, 0), totalPages - 1);
 
     /* =========================
        SELECT MENU
@@ -179,23 +185,25 @@ export function register(client, configs) {
 
       return interaction.update({
         embeds: [embedCategoria(client, id)],
-        components: [],
+        components: [
+          navegacao(client, userId, page),
+        ],
       });
     }
 
     /* =========================
-       PAGINAÇÃO
+       BOTÕES
     ========================= */
 
     let newPage = page;
 
-    if (type === 'ajuda_prev') {
-      newPage = Math.max(0, page - 1);
-    }
+    if (type === 'ajuda_prev') newPage = page - 1;
+    if (type === 'ajuda_next') newPage = page + 1;
 
-    if (type === 'ajuda_next') {
-      newPage = Math.min(totalPages - 1, page + 1);
-    }
+    // voltar menu
+    if (type === 'ajuda_menu') newPage = 0;
+
+    newPage = Math.min(Math.max(newPage, 0), totalPages - 1);
 
     return interaction.update({
       embeds: [embedPrincipal(client, newPage)],
