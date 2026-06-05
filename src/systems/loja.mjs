@@ -31,53 +31,76 @@ const ITENS = [
   { id: 'xp_boost_max', nome: '🚀 XP Boost Max', tipo: 'consumivel', preco: 500, desc: '+150 XP instantâneos.' },
 ];
 
+const ITENS_POR_PAGINA = 5;
+
 /* =========================
-   PREVIEW
+   PREVIEW PERFIL
 ========================= */
 
-async function renderItem(item) {
-  const canvas = createCanvas(600, 300);
+async function renderPreviewPerfil(userId, item) {
+  const canvas = createCanvas(700, 350);
   const ctx = canvas.getContext('2d');
 
   ctx.fillStyle = '#1e1f22';
-  ctx.fillRect(0, 0, 600, 300);
+  ctx.fillRect(0, 0, 700, 350);
 
   ctx.fillStyle = '#2b2d31';
-  ctx.fillRect(30, 30, 540, 240);
+  ctx.fillRect(20, 20, 660, 310);
 
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 26px Sans';
-  ctx.fillText(item.nome, 60, 90);
+  ctx.font = 'bold 28px Sans';
+  ctx.fillText(`Usuário ${userId}`, 60, 80);
 
-  ctx.font = '18px Sans';
+  // HEADER ITEM (NOVO)
+  ctx.font = 'bold 22px Sans';
+  ctx.fillStyle = '#00a2ff';
+  ctx.fillText(`Preview: ${item.nome}`, 60, 120);
+
+  ctx.font = '16px Sans';
   ctx.fillStyle = '#aaa';
-  ctx.fillText(`Tipo: ${item.tipo}`, 60, 130);
+  ctx.fillText(item.desc, 60, 150);
 
   ctx.fillStyle = '#00ff88';
-  ctx.fillText(`${item.preco} XP`, 60, 170);
+  ctx.fillText(`${item.preco} XP`, 60, 180);
 
-  ctx.fillStyle = '#ddd';
-  ctx.fillText(item.desc, 60, 220);
+  // efeitos visuais simples por tipo
+  if (item.tipo === 'moldura') {
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(30, 30, 640, 290);
+  }
+
+  if (item.tipo === 'efeito') {
+    for (let i = 0; i < 40; i++) {
+      ctx.fillStyle = '#00ff88';
+      ctx.fillRect(Math.random() * 700, Math.random() * 350, 3, 3);
+    }
+  }
 
   return canvas.toBuffer('image/png');
 }
 
 /* =========================
-   EMBED
+   LOJA EMBED
 ========================= */
 
-function embedLoja(page = 0) {
-  const itens = ITENS.slice(page * 5, page * 5 + 5);
+function embedLoja(page = 0, index = 0) {
+  const start = page * ITENS_POR_PAGINA;
+  const itens = ITENS.slice(start, start + ITENS_POR_PAGINA);
+
+  const itemAtual = ITENS[index];
 
   return new EmbedBuilder()
     .setColor(0x00a2ff)
     .setTitle('🛍️ Loja FiskBot')
     .setDescription(
-      itens
-        .map(i => `🛒 **${i.nome}** — ${i.preco} XP\n\`${i.id}\``)
-        .join('\n\n')
+      itens.map(i => `🛒 **${i.nome}** — ${i.preco} XP`).join('\n\n')
     )
-    .setFooter({ text: `Página ${page + 1}` });
+    .addFields({
+      name: '🔎 Item selecionado',
+      value: `**${itemAtual.nome}**\n${itemAtual.desc}\n💰 ${itemAtual.preco} XP`
+    })
+    .setFooter({ text: `Página ${page + 1} | Item ${index + 1}/${ITENS.length}` });
 }
 
 /* =========================
@@ -85,10 +108,6 @@ function embedLoja(page = 0) {
 ========================= */
 
 export function register(client, configs) {
-
-  /* =========================
-     COMANDO LOJA
-  ========================= */
 
   client.on('messageCreate', async (msg) => {
     if (!msg.guild || msg.author.bot) return;
@@ -103,139 +122,163 @@ export function register(client, configs) {
 
     if (cmd !== 'loja') return;
 
-    const page = Math.max(0, (parseInt(args[0]) || 1) - 1);
+    const index = 0;
+    const page = 0;
 
-    const itens = ITENS.slice(page * 5, page * 5 + 5);
+    const itens = ITENS.slice(0, ITENS_POR_PAGINA);
+    const itemAtual = ITENS[index];
 
-    const embed = embedLoja(page);
+    const buffer = await renderPreviewPerfil(msg.author.id, itemAtual);
+    const file = new AttachmentBuilder(buffer, { name: 'preview.png' });
 
-    const row = new ActionRowBuilder().addComponents(
-      itens.map(item =>
+    const rowItens = new ActionRowBuilder().addComponents(
+      itens.map((item, i) =>
         new ButtonBuilder()
-          .setCustomId(`shop_view:${msg.author.id}:${item.id}`)
-          .setLabel('Ver item')
+          .setCustomId(`shop_select:${msg.author.id}:${i}`)
+          .setLabel(item.nome.slice(0, 12))
           .setStyle(ButtonStyle.Primary)
       )
     );
 
-    return msg.reply({ embeds: [embed], components: [row] });
-  });
+    const rowNav = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`shop_prev:${msg.author.id}:${index}`)
+        .setLabel('⬅')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(index <= 0),
 
-  /* =========================
-     INTERAÇÕES
-  ========================= */
+      new ButtonBuilder()
+        .setCustomId(`shop_next:${msg.author.id}:${index}`)
+        .setLabel('➡')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(index >= ITENS.length - 1),
+
+      new ButtonBuilder()
+        .setCustomId(`shop_buy:${msg.author.id}:${index}`)
+        .setLabel('Comprar')
+        .setStyle(ButtonStyle.Success),
+    );
+
+    return msg.reply({
+      embeds: [embedLoja(page, index)],
+      files: [file],
+      components: [rowItens, rowNav],
+    });
+  });
 
   client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
 
-    const [type, userId, itemId] = interaction.customId.split(':');
+    const [type, userId, value] = interaction.customId.split(':');
 
     if (interaction.user.id !== userId) {
-      return interaction.reply({
-        content: '❌ Este menu não é seu.',
-        ephemeral: true,
-      });
+      return interaction.reply({ content: '❌ Não é seu menu.', ephemeral: true });
     }
 
-    const item = ITENS.find(i => i.id === itemId);
+    let index = parseInt(value);
 
     /* =========================
-       VIEW ITEM
+       SELEÇÃO
     ========================= */
 
-    if (type === 'shop_view') {
-      if (!item) {
-        return interaction.reply({
-          content: 'Item não encontrado.',
-          ephemeral: true,
-        });
-      }
+    if (type === 'shop_select') {
+      const item = ITENS[index];
 
-      const buffer = await renderItem(item);
-      const file = new AttachmentBuilder(buffer, { name: 'item.png' });
+      const buffer = await renderPreviewPerfil(userId, item);
+      const file = new AttachmentBuilder(buffer, { name: 'preview.png' });
 
-      const row = new ActionRowBuilder().addComponents(
+      const rowNav = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setCustomId(`shop_confirm_yes:${userId}:${item.id}`)
-          .setLabel(`Sim, comprar (${item.preco} XP)`)
+          .setCustomId(`shop_prev:${userId}:${index}`)
+          .setLabel('⬅')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(index <= 0),
+
+        new ButtonBuilder()
+          .setCustomId(`shop_next:${userId}:${index}`)
+          .setLabel('➡')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(index >= ITENS.length - 1),
+
+        new ButtonBuilder()
+          .setCustomId(`shop_buy:${userId}:${index}`)
+          .setLabel('Comprar')
           .setStyle(ButtonStyle.Success),
+      );
+
+      return interaction.update({
+        embeds: [embedLoja(0, index)],
+        files: [file],
+        components: [rowNav],
+      });
+    }
+
+    /* =========================
+       PRÓXIMO ITEM
+    ========================= */
+
+    if (type === 'shop_next') {
+      index = Math.min(ITENS.length - 1, index + 1);
+    }
+
+    /* =========================
+       ITEM ANTERIOR
+    ========================= */
+
+    if (type === 'shop_prev') {
+      index = Math.max(0, index - 1);
+    }
+
+    if (type === 'shop_prev' || type === 'shop_next') {
+      const item = ITENS[index];
+
+      const buffer = await renderPreviewPerfil(userId, item);
+      const file = new AttachmentBuilder(buffer, { name: 'preview.png' });
+
+      const rowNav = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`shop_prev:${userId}:${index}`)
+          .setLabel('⬅')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(index <= 0),
 
         new ButtonBuilder()
-          .setCustomId(`shop_confirm_no:${userId}:${item.id}`)
-          .setLabel('Não')
-          .setStyle(ButtonStyle.Danger)
+          .setCustomId(`shop_next:${userId}:${index}`)
+          .setLabel('➡')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(index >= ITENS.length - 1),
+
+        new ButtonBuilder()
+          .setCustomId(`shop_buy:${userId}:${index}`)
+          .setLabel('Comprar')
+          .setStyle(ButtonStyle.Success),
       );
 
-      return interaction.reply({
-        files: [file],
-        components: [row],
-        ephemeral: true,
-      });
-    }
-
-    /* =========================
-       CANCELAR
-    ========================= */
-
-    if (type === 'shop_confirm_no') {
       return interaction.update({
-        content: '❌ Compra cancelada.',
-        components: [],
-        files: [],
+        embeds: [embedLoja(0, index)],
+        files: [file],
+        components: [rowNav],
       });
     }
 
     /* =========================
-       CONFIRMAR COMPRA
+       COMPRA
     ========================= */
 
-    if (type === 'shop_confirm_yes') {
-      if (!item) {
-        return interaction.update({
-          content: 'Item não encontrado.',
-          components: [],
-          files: [],
-        });
-      }
+    if (type === 'shop_buy') {
+      const item = ITENS[index];
 
-      const ok = await gastarXP(
-        userId,
-        interaction.guild.id,
-        item.preco,
-        `shop_${item.id}`
-      );
+      const ok = await gastarXP(userId, interaction.guild.id, item.preco, `shop_${item.id}`);
 
       if (!ok) {
-        return interaction.update({
-          content: '❌ XP insuficiente.',
-          components: [],
-          files: [],
-        });
-      }
-
-      const filter = { userId, guildId: interaction.guild.id };
-
-      if (item.tipo === 'badge') {
-        await Usuario.findOneAndUpdate(filter, { $addToSet: { badges: item.id } }, { upsert: true });
-
-      } else if (item.tipo === 'efeito') {
-        await Usuario.findOneAndUpdate(filter, { $addToSet: { efeitos: item.id } }, { upsert: true });
-
-      } else if (item.tipo === 'moldura') {
-        await Usuario.findOneAndUpdate(filter, { $set: { moldura: item.id } }, { upsert: true });
-
-      } else if (item.tipo === 'consumivel') {
-        const xpBonus = item.id === 'xp_boost_max' ? 150 : 50;
-
-        const mod = await import('./xpSystem.mjs');
-        await mod.ganharXP(userId, interaction.guild.id, xpBonus, 'shop_boost');
+        return interaction.reply({ content: '❌ XP insuficiente.', ephemeral: true });
       }
 
       return interaction.update({
-        content: `✅ Compra realizada: **${item.nome}**`,
+        content: `✅ Comprado: **${item.nome}**`,
         components: [],
         files: [],
       });
     }
   });
-}
+    }
