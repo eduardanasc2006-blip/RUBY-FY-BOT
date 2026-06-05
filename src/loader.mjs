@@ -1,7 +1,6 @@
 import { initDB, isDBConnected } from './db/sqlite.mjs';
 import Config from './db/models/Config.mjs';
 
-// ── Imports — register + comandos (SAFE) ─────────────────────────────
 import { register as regAjuda, comandos as cAjuda } from './systems/ajuda.mjs';
 import { register as regDiversao, comandos as cDiversao } from './systems/diversao.mjs';
 import { register as regConversao, comandos as cConversao } from './systems/conversao.mjs';
@@ -16,7 +15,7 @@ import { register as regForca, comandos as cForca } from './systems/forca.mjs';
 import { register as regConquistas, comandos as cConquistas } from './systems/conquistas.mjs';
 import { register as regMissoes, comandos as cMissoes } from './systems/missoes.mjs';
 import { register as regTitulos, comandos as cTitulos } from './systems/titulos.mjs';
-import { register as regLoja } from './systems/loja.mjs'; // 🔥 FIX AQUI (SEM comandos)
+import { register as regLoja } from './systems/loja.mjs';
 import { register as regPerfilVisual, comandos as cPerfilVisual } from './systems/perfilvisual.mjs';
 import { register as regShip, comandos as cShip } from './systems/ship.mjs';
 import { register as regProdutos, comandos as cProdutos } from './systems/produtos.mjs';
@@ -37,32 +36,32 @@ const configs = new Map();
 ========================= */
 
 const visual = {
-  'Ajuda': { emoji: '❓', cor: 0x5865f2 },
-  'Diversão': { emoji: '🎮', cor: 0xff66cc },
+  Ajuda: { emoji: '❓', cor: 0x5865f2 },
+  Diversão: { emoji: '🎮', cor: 0xff66cc },
   'Robux & Conversão': { emoji: '💸', cor: 0x00ff99 },
-  'Roblox': { emoji: '🟥', cor: 0xe74c3c },
-  'Relacionamentos': { emoji: '💍', cor: 0xff5fa2 },
-  'Afinidade': { emoji: '💜', cor: 0x9b59b6 },
-  'Interações': { emoji: '🤝', cor: 0x3498db },
-  'Reputação': { emoji: '🏆', cor: 0xf1c40f },
+  Roblox: { emoji: '🟥', cor: 0xe74c3c },
+  Relacionamentos: { emoji: '💍', cor: 0xff5fa2 },
+  Afinidade: { emoji: '💜', cor: 0x9b59b6 },
+  Interações: { emoji: '🤝', cor: 0x3498db },
+  Reputação: { emoji: '🏆', cor: 0xf1c40f },
   'XP & Níveis': { emoji: '⭐', cor: 0xf39c12 },
-  'Quiz': { emoji: '❓', cor: 0x1abc9c },
-  'Forca': { emoji: '🎯', cor: 0xe67e22 },
-  'Conquistas': { emoji: '🏅', cor: 0xf1c40f },
-  'Missões': { emoji: '📜', cor: 0x2ecc71 },
-  'Títulos': { emoji: '👑', cor: 0xf39c12 },
-  'Loja': { emoji: '🛍️', cor: 0x00b894 },
+  Quiz: { emoji: '❓', cor: 0x1abc9c },
+  Forca: { emoji: '🎯', cor: 0xe67e22 },
+  Conquistas: { emoji: '🏅', cor: 0xf1c40f },
+  Missões: { emoji: '📜', cor: 0x2ecc71 },
+  Títulos: { emoji: '👑', cor: 0xf39c12 },
+  Loja: { emoji: '🛍️', cor: 0x00b894 },
   'Perfil Visual': { emoji: '🖼️', cor: 0x6c5ce7 },
-  'Ship': { emoji: '❤️', cor: 0xff4d6d },
-  'Produtos': { emoji: '📦', cor: 0x00cec9 },
-  'Suporte': { emoji: '🎫', cor: 0x3498db },
-  'Atendimento': { emoji: '📞', cor: 0x2ecc71 },
-  'Avaliações': { emoji: '⭐', cor: 0xf1c40f },
-  'Administração': { emoji: '🛠️', cor: 0xe74c3c },
-  'Logs': { emoji: '📋', cor: 0x95a5a6 },
+  Ship: { emoji: '❤️', cor: 0xff4d6d },
+  Produtos: { emoji: '📦', cor: 0x00cec9 },
+  Suporte: { emoji: '🎫', cor: 0x3498db },
+  Atendimento: { emoji: '📞', cor: 0x2ecc71 },
+  Avaliações: { emoji: '⭐', cor: 0xf1c40f },
+  Administração: { emoji: '🛠️', cor: 0xe74c3c },
+  Logs: { emoji: '📋', cor: 0x95a5a6 },
   'Anti-Abuso': { emoji: '🛡️', cor: 0xc0392b },
-  'Estatísticas': { emoji: '📊', cor: 0x2980b9 },
-  'Gênero': { emoji: '⚧️', cor: 0xe056fd },
+  Estatísticas: { emoji: '📊', cor: 0x2980b9 },
+  Gênero: { emoji: '⚧️', cor: 0xe056fd },
   'Meu Perfil': { emoji: '👤', cor: 0x5865f2 },
 };
 
@@ -75,14 +74,10 @@ async function carregarConfigs() {
 
   try {
     const todas = await Config.find({}).lean();
-
-    for (const cfg of todas) {
-      configs.set(cfg.guildId, cfg);
-    }
-
-    console.log(`[Loader] ${todas.length} configuracoes carregadas.`);
+    for (const cfg of todas) configs.set(cfg.guildId, cfg);
+    console.log(`[Loader] ${todas.length} configs carregadas.`);
   } catch (e) {
-    console.warn('[Loader] Nao foi possivel carregar configuracoes:', e.message);
+    console.warn('[Loader] erro configs:', e.message);
   }
 }
 
@@ -94,30 +89,16 @@ export async function loadSystems(client) {
   if (client.__systemsLoaded) return;
   client.__systemsLoaded = true;
 
-  const dbOk = initDB();
+  initDB();
 
-  console.log(
-    dbOk
-      ? '[DB] ✔ SQLite pronto.'
-      : '[DB] ✖ Banco de dados nao iniciado.'
+  console.log(isDBConnected()
+    ? '[DB] ✔ SQLite pronto.'
+    : '[DB] ✖ Banco não iniciado.'
   );
 
   await carregarConfigs();
 
-  client.on('guildCreate', async (guild) => {
-    if (!isDBConnected()) return;
-    if (configs.has(guild.id)) return;
-
-    try {
-      const cfg = await Config.findOneAndUpdate(
-        { guildId: guild.id },
-        { $setOnInsert: { guildId: guild.id } },
-        { upsert: true, new: true }
-      );
-
-      if (cfg) configs.set(guild.id, cfg);
-    } catch {}
-  });
+  if (!client.systems) client.systems = new Map();
 
   const sistemas = [
     ['Ajuda', regAjuda, cAjuda],
@@ -134,7 +115,7 @@ export async function loadSystems(client) {
     ['Conquistas', regConquistas, cConquistas],
     ['Missões', regMissoes, cMissoes],
     ['Títulos', regTitulos, cTitulos],
-    ['Loja', regLoja, []], // 🔥 FIX: agora não quebra e ainda aparece no !ajuda
+    ['Loja', regLoja, []],
     ['Perfil Visual', regPerfilVisual, cPerfilVisual],
     ['Ship', regShip, cShip],
     ['Produtos', regProdutos, cProdutos],
@@ -149,11 +130,7 @@ export async function loadSystems(client) {
     ['Meu Perfil', regMeuPerfil, cMeuPerfil],
   ];
 
-  if (!client.systems) client.systems = new Map();
-
-  let ok = 0;
-  let fail = 0;
-  let totalCmds = 0;
+  let ok = 0, fail = 0, totalCmds = 0;
 
   for (const [nome, fn, cmds] of sistemas) {
     try {
@@ -161,31 +138,28 @@ export async function loadSystems(client) {
 
       const cmdList = Array.isArray(cmds) ? cmds : [];
 
-      const metaVisual = visual[nome] || { emoji: '📦', cor: 0x5865f2 };
+      const meta = visual[nome] || { emoji: '📦', cor: 0x5865f2 };
 
       client.systems.set(nome, {
         id: nome,
         label: nome,
-        emoji: metaVisual.emoji,
-        cor: metaVisual.cor,
+        emoji: meta.emoji,
+        cor: meta.cor,
         comandos: cmdList,
       });
 
       totalCmds += cmdList.length;
       ok++;
 
-      console.log(`[Loader] ✔ ${nome} — ${cmdList.length} comando(s)`);
+      console.log(`[Loader] ✔ ${nome} — ${cmdList.length} comandos`);
     } catch (e) {
       fail++;
-      console.error(`[Loader] ✖ ${nome}:`, e.stack || e.message);
+      console.error(`[Loader] ✖ ${nome}`, e.message);
     }
   }
 
   console.log(
-    `[Loader] FiskBot pronto — ${ok} sistemas ativos` +
-    `${fail ? `, ${fail} com erro` : ''} — ` +
-    `${totalCmds} comandos registrados — ` +
-    `${isDBConnected() ? 'SQLite ativo' : 'sem banco de dados'}`
+    `[Loader] pronto — ${ok} sistemas — ${fail} erros — ${totalCmds} comandos`
   );
 
   return configs;
