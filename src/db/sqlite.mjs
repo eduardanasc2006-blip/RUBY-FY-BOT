@@ -16,7 +16,7 @@ export function getDB() {
 }
 
 // ─────────────────────────────────────────────
-// TABLE CREATION (CLEAN)
+// TABLE CREATION
 // ─────────────────────────────────────────────
 function _createTables() {
   _db.exec(`
@@ -53,6 +53,7 @@ function _createTables() {
       prefixo TEXT NOT NULL DEFAULT '!',
       canalLogs TEXT,
       canalSuporte TEXT,
+      canalDenuncias TEXT,
       canalSugestoes TEXT,
       cargoEquipe TEXT,
       cargoSuporte TEXT,
@@ -149,6 +150,18 @@ function _createTables() {
       UNIQUE(userId, guildId)
     );
 
+    CREATE TABLE IF NOT EXISTS denuncias (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guildId TEXT NOT NULL,
+      denuncianteId TEXT NOT NULL,
+      denunciadoId TEXT NOT NULL,
+      motivo TEXT NOT NULL,
+      descricao TEXT NOT NULL DEFAULT '',
+      provas TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'pendente',
+      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS avaliacoes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       guildId TEXT NOT NULL,
@@ -217,42 +230,46 @@ function _createTables() {
     console.error('[SQLite] erro ao criar índices:', e.message);
   }
 
-  // ─────────────────────────────
-  // MIGRATIONS (SAFE)
-  // ─────────────────────────────
-  const migrations = [
-    `ALTER TABLE usuarios ADD COLUMN xpTotal INTEGER DEFAULT 0`,
-    `ALTER TABLE usuarios ADD COLUMN xpDisponivel INTEGER DEFAULT 0`,
-    `ALTER TABLE usuarios ADD COLUMN streak INTEGER DEFAULT 0`,
-    `ALTER TABLE usuarios ADD COLUMN ultimoDiaAtivo TEXT`,
-    `ALTER TABLE usuarios ADD COLUMN genero TEXT`,
-    `ALTER TABLE usuarios ADD COLUMN moldura TEXT DEFAULT 'padrao'`,
-    `ALTER TABLE usuarios ADD COLUMN fundo TEXT DEFAULT 'escuro'`,
-    `ALTER TABLE usuarios ADD COLUMN badges TEXT DEFAULT '[]'`,
-    `ALTER TABLE usuarios ADD COLUMN efeitos TEXT DEFAULT '[]'`,
-    `ALTER TABLE usuarios ADD COLUMN inventario TEXT DEFAULT '{}'`,
+// ─────────────────────────────
+// SAFE MIGRATIONS (FULL)
+// ─────────────────────────────
+const migrations = [
+  // usuarios
+  `ALTER TABLE usuarios ADD COLUMN xpTotal INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE usuarios ADD COLUMN xpDisponivel INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE usuarios ADD COLUMN streak INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE usuarios ADD COLUMN ultimoDiaAtivo TEXT`,
+  `ALTER TABLE usuarios ADD COLUMN genero TEXT`,
+  `ALTER TABLE usuarios ADD COLUMN moldura TEXT NOT NULL DEFAULT 'padrao'`,
+  `ALTER TABLE usuarios ADD COLUMN fundo TEXT NOT NULL DEFAULT 'escuro'`,
+  `ALTER TABLE usuarios ADD COLUMN badges TEXT NOT NULL DEFAULT '[]'`,
+  `ALTER TABLE usuarios ADD COLUMN efeitos TEXT NOT NULL DEFAULT '[]'`,
+  `ALTER TABLE usuarios ADD COLUMN inventario TEXT NOT NULL DEFAULT '{}'`,
 
-    `ALTER TABLE missoes ADD COLUMN ultimaDiaMissao TEXT`,
-    `ALTER TABLE missoes ADD COLUMN ultimaSemanaMissao TEXT`,
+  // missoes
+  `ALTER TABLE missoes ADD COLUMN ultimaDiaMissao TEXT`,
+  `ALTER TABLE missoes ADD COLUMN ultimaSemanaMissao TEXT`,
 
-    `ALTER TABLE xp_logs ADD COLUMN saldoAntes INTEGER DEFAULT 0`,
-    `ALTER TABLE xp_logs ADD COLUMN xpTotalAntes INTEGER DEFAULT 0`,
-    `ALTER TABLE xp_logs ADD COLUMN xpTotalApos INTEGER DEFAULT 0`,
-    `ALTER TABLE xp_logs ADD COLUMN descricao TEXT DEFAULT ''`,
-    `ALTER TABLE xp_logs ADD COLUMN referenciaId TEXT`
-  ];
+  // xp_logs
+  `ALTER TABLE xp_logs ADD COLUMN saldoAntes INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE xp_logs ADD COLUMN xpTotalAntes INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE xp_logs ADD COLUMN xpTotalApos INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE xp_logs ADD COLUMN descricao TEXT NOT NULL DEFAULT ''`,
+  `ALTER TABLE xp_logs ADD COLUMN referenciaId TEXT`
+];
 
-  for (const sql of migrations) {
-    try {
-      _db.prepare(sql).run();
-    } catch (e) {
-      if (!e.message.includes('duplicate column')) {
-        console.warn('[Migration]', e.message);
-      }
+// execução segura
+for (const sql of migrations) {
+  try {
+    _db.prepare(sql).run();
+  } catch (e) {
+    // ignora coluna duplicada, mas mostra outros erros reais
+    if (!e.message.includes('duplicate column')) {
+      console.warn('[Migration error]', sql, '->', e.message);
     }
   }
+  }
 }
-
 // ─────────────────────────────────────────────
 // INIT DB
 // ─────────────────────────────────────────────
@@ -271,7 +288,9 @@ export function initDB() {
     _db = null;
     return false;
   }
-}
+ }
+
+
 // ── Filter builder ───────────────────────────────────────────
 function buildWhere(filter) {
   const parts = [];
