@@ -1,5 +1,3 @@
-export const comandos = [{ cmd: '!ajuda', desc: 'Mostra todas as categorias e comandos' }];
-
 import {
   EmbedBuilder,
   ActionRowBuilder,
@@ -8,16 +6,22 @@ import {
   ButtonStyle,
 } from 'discord.js';
 
-/**
- * 🔥 GARANTE EMOJI VÁLIDO PRO DISCORD
- */
+export const comandos = [
+  {
+    cmd: '!ajuda',
+    desc: 'Abre o painel de ajuda do bot',
+  },
+];
+
+const ITENS_POR_PAGINA = 25;
+
+/* ========================================= */
+
 function safeEmoji(e) {
   if (!e || typeof e !== 'string') return '📦';
 
-  // emoji unicode normal
   if (/^\p{Extended_Pictographic}$/u.test(e)) return e;
 
-  // emoji custom discord
   if (e.startsWith('<:') && e.endsWith('>')) return e;
 
   return '📦';
@@ -25,6 +29,7 @@ function safeEmoji(e) {
 
 function getCategorias(client) {
   const cats = {};
+
   if (!client.systems) return cats;
 
   for (const [id, meta] of client.systems.entries()) {
@@ -40,8 +45,18 @@ function getCategorias(client) {
   return cats;
 }
 
-function embedPrincipal(client) {
-  const categorias = getCategorias(client);
+/* ========================================= */
+
+function embedPrincipal(client, pagina = 0) {
+  const categorias = Object.values(getCategorias(client));
+
+  const totalPaginas =
+    Math.ceil(categorias.length / ITENS_POR_PAGINA) || 1;
+
+  const inicio = pagina * ITENS_POR_PAGINA;
+  const fim = inicio + ITENS_POR_PAGINA;
+
+  const visiveis = categorias.slice(inicio, fim);
 
   return new EmbedBuilder()
     .setColor(0x5865f2)
@@ -49,21 +64,29 @@ function embedPrincipal(client) {
     .setDescription(
       '**Criado por Finix Yin**\n\n' +
       'Selecione uma categoria abaixo para ver os comandos.\n\n' +
-      Object.values(categorias)
+      visiveis
         .map(c => `${c.emoji} **${c.label}**`)
         .join('\n')
     )
+    .setFooter({
+      text: `Página ${pagina + 1}/${totalPaginas}`,
+    })
     .setTimestamp();
 }
 
+/* ========================================= */
+
 function embedCategoria(client, id) {
   const categorias = getCategorias(client);
+
   const cat = categorias[id];
 
   if (!cat) return null;
 
   const linhas = cat.comandos.length
-    ? cat.comandos.map(c => `\`${c.cmd}\`\n┗ ${c.desc}`).join('\n\n')
+    ? cat.comandos
+        .map(c => `\`${c.cmd}\`\n┗ ${c.desc}`)
+        .join('\n\n')
     : 'Nenhum comando registrado.';
 
   return new EmbedBuilder()
@@ -73,36 +96,74 @@ function embedCategoria(client, id) {
     .setTimestamp();
 }
 
-/**
- * 🚀 MENU 100% SEGURO
- */
-function menuPrincipal(client, userId) {
-  const categorias = getCategorias(client);
+/* ========================================= */
 
-  const opcoes = Object.values(categorias)
-    .map(cat => ({
-      label: String(cat.label).slice(0, 100),
-      value: String(cat.id).slice(0, 100),
-      emoji: safeEmoji(cat.emoji),
-    }))
-    .slice(0, 25);
+function menuPrincipal(client, userId, pagina = 0) {
+  const categorias = Object.values(getCategorias(client));
+
+  const inicio = pagina * ITENS_POR_PAGINA;
+  const fim = inicio + ITENS_POR_PAGINA;
+
+  const visiveis = categorias.slice(inicio, fim);
+
+  const opcoes = visiveis.map(cat => ({
+    label: String(cat.label).slice(0, 100),
+    value: String(cat.id).slice(0, 100),
+    emoji: safeEmoji(cat.emoji),
+  }));
+
+  if (!opcoes.length) {
+    opcoes.push({
+      label: 'Nenhuma categoria',
+      value: 'vazio',
+      emoji: '📦',
+    });
+  }
 
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
-      .setCustomId(`ajuda_menu:${userId}`)
+      .setCustomId(`ajuda_menu:${userId}:${pagina}`)
       .setPlaceholder('📂 Selecione uma categoria...')
       .addOptions(opcoes)
   );
 }
 
-function botaoVoltar(userId) {
+/* ========================================= */
+
+function navegacao(client, userId, pagina = 0) {
+  const totalCategorias =
+    Object.keys(getCategorias(client)).length;
+
+  const totalPaginas =
+    Math.ceil(totalCategorias / ITENS_POR_PAGINA) || 1;
+
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`ajuda_voltar:${userId}`)
+      .setCustomId(`ajuda_prev:${userId}:${pagina}`)
+      .setLabel('⬅ Anterior')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(pagina <= 0),
+
+    new ButtonBuilder()
+      .setCustomId(`ajuda_next:${userId}:${pagina}`)
+      .setLabel('➡ Próxima')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(pagina >= totalPaginas - 1)
+  );
+}
+
+/* ========================================= */
+
+function botaoVoltar(userId, pagina = 0) {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`ajuda_voltar:${userId}:${pagina}`)
       .setLabel('⬅ Voltar')
       .setStyle(ButtonStyle.Secondary)
   );
 }
+
+/* ========================================= */
 
 export function register(client, configs) {
   console.log('[AJUDA] Sistema carregado');
@@ -122,13 +183,16 @@ export function register(client, configs) {
         .split(/\s+/)[0]
         .toLowerCase();
 
-      if (!['ajuda', 'help', 'comandos'].includes(cmd)) return;
+      if (!['ajuda', 'help', 'comandos'].includes(cmd))
+        return;
 
       await msg.reply({
-        embeds: [embedPrincipal(client)],
-        components: [menuPrincipal(client, msg.author.id)],
+        embeds: [embedPrincipal(client, 0)],
+        components: [
+          menuPrincipal(client, msg.author.id, 0),
+          navegacao(client, msg.author.id, 0),
+        ],
       });
-
     } catch (err) {
       console.error('ERRO AJUDA:', err);
     }
@@ -136,9 +200,16 @@ export function register(client, configs) {
 
   client.on('interactionCreate', async (interaction) => {
     try {
-      if (!interaction.isStringSelectMenu() && !interaction.isButton()) return;
+      if (
+        !interaction.isStringSelectMenu() &&
+        !interaction.isButton()
+      )
+        return;
 
-      const userId = interaction.customId.split(':')[1];
+      const partes = interaction.customId.split(':');
+
+      const userId = partes[1];
+
       if (interaction.user.id !== userId) {
         return interaction.reply({
           content: '❌ Não é seu menu.',
@@ -147,38 +218,71 @@ export function register(client, configs) {
       }
 
       if (interaction.isStringSelectMenu()) {
-        const id = interaction.values[0];
-        const embed = embedCategoria(client, id);
+        const categoria = interaction.values[0];
 
-        if (!embed) {
-          return interaction.reply({
-            content: '❌ Categoria inválida.',
-            ephemeral: true,
-          });
-        }
+        if (categoria === 'vazio')
+          return interaction.deferUpdate();
+
+        const embed = embedCategoria(client, categoria);
 
         return interaction.update({
           embeds: [embed],
-          components: [botaoVoltar(userId)],
+          components: [
+            botaoVoltar(userId, Number(partes[2]) || 0),
+          ],
         });
       }
 
-      if (interaction.isButton()) {
+      if (interaction.customId.startsWith('ajuda_prev')) {
+        let pagina = Number(partes[2]) || 0;
+
+        pagina--;
+
         return interaction.update({
-          embeds: [embedPrincipal(client)],
-          components: [menuPrincipal(client, userId)],
+          embeds: [embedPrincipal(client, pagina)],
+          components: [
+            menuPrincipal(client, userId, pagina),
+            navegacao(client, userId, pagina),
+          ],
         });
       }
 
-    } catch (e) {
-      console.error(e);
+      if (interaction.customId.startsWith('ajuda_next')) {
+        let pagina = Number(partes[2]) || 0;
+
+        pagina++;
+
+        return interaction.update({
+          embeds: [embedPrincipal(client, pagina)],
+          components: [
+            menuPrincipal(client, userId, pagina),
+            navegacao(client, userId, pagina),
+          ],
+        });
+      }
+
+      if (interaction.customId.startsWith('ajuda_voltar')) {
+        const pagina = Number(partes[2]) || 0;
+
+        return interaction.update({
+          embeds: [embedPrincipal(client, pagina)],
+          components: [
+            menuPrincipal(client, userId, pagina),
+            navegacao(client, userId, pagina),
+          ],
+        });
+      }
+    } catch (err) {
+      console.error(err);
 
       if (!interaction.replied) {
-        interaction.reply({
-          content: '❌ Erro ao carregar ajuda.',
-          ephemeral: true,
-        }).catch(() => {});
+        interaction
+          .reply({
+            content: '❌ Erro ao carregar ajuda.',
+            ephemeral: true,
+          })
+          .catch(() => {});
       }
     }
   });
-      }
+        }
