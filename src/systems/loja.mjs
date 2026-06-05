@@ -101,33 +101,24 @@ export function register(client, configs) {
     const args = msg.content.slice(prefixo.length).trim().split(/\s+/);
     const cmd = args.shift().toLowerCase();
 
-    const guildId = msg.guild.id;
+    if (cmd !== 'loja') return;
 
-    if (cmd === 'loja') {
-      const page = Math.max(0, (parseInt(args[0]) || 1) - 1);
+    const page = Math.max(0, (parseInt(args[0]) || 1) - 1);
 
-      const u = await Usuario.findOne({ userId: msg.author.id, guildId });
-      const saldo = u?.xpDisponivel || 0;
+    const itens = ITENS.slice(page * 5, page * 5 + 5);
 
-      const itens = ITENS.slice(page * 5, page * 5 + 5);
+    const embed = embedLoja(page);
 
-      const embed = embedLoja(page).addFields({
-        name: '💰 Seu saldo',
-        value: `${saldo} XP`,
-        inline: true,
-      });
+    const row = new ActionRowBuilder().addComponents(
+      itens.map(item =>
+        new ButtonBuilder()
+          .setCustomId(`shop_view:${msg.author.id}:${item.id}`)
+          .setLabel('Ver item')
+          .setStyle(ButtonStyle.Primary)
+      )
+    );
 
-      const row = new ActionRowBuilder().addComponents(
-        itens.map(item =>
-          new ButtonBuilder()
-            .setCustomId(`shop_item:${msg.author.id}:${item.id}`)
-            .setLabel('Ver item')
-            .setStyle(ButtonStyle.Primary)
-        )
-      );
-
-      return msg.reply({ embeds: [embed], components: [row] });
-    }
+    return msg.reply({ embeds: [embed], components: [row] });
   });
 
   /* =========================
@@ -147,27 +138,32 @@ export function register(client, configs) {
     }
 
     const item = ITENS.find(i => i.id === itemId);
-    if (!item) {
-      return interaction.reply({
-        content: 'Item não encontrado.',
-        ephemeral: true,
-      });
-    }
 
     /* =========================
        VIEW ITEM
     ========================= */
 
-    if (type === 'shop_item') {
-      const buffer = await renderItem(item);
+    if (type === 'shop_view') {
+      if (!item) {
+        return interaction.reply({
+          content: 'Item não encontrado.',
+          ephemeral: true,
+        });
+      }
 
+      const buffer = await renderItem(item);
       const file = new AttachmentBuilder(buffer, { name: 'item.png' });
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId(`shop_confirm_yes:${userId}:${item.id}`)
-          .setLabel(`Comprar (${item.preco} XP)`)
-          .setStyle(ButtonStyle.Success)
+          .setLabel(`Sim, comprar (${item.preco} XP)`)
+          .setStyle(ButtonStyle.Success),
+
+        new ButtonBuilder()
+          .setCustomId(`shop_confirm_no:${userId}:${item.id}`)
+          .setLabel('Não')
+          .setStyle(ButtonStyle.Danger)
       );
 
       return interaction.reply({
@@ -194,6 +190,14 @@ export function register(client, configs) {
     ========================= */
 
     if (type === 'shop_confirm_yes') {
+      if (!item) {
+        return interaction.update({
+          content: 'Item não encontrado.',
+          components: [],
+          files: [],
+        });
+      }
+
       const ok = await gastarXP(
         userId,
         interaction.guild.id,
@@ -212,19 +216,13 @@ export function register(client, configs) {
       const filter = { userId, guildId: interaction.guild.id };
 
       if (item.tipo === 'badge') {
-        await Usuario.findOneAndUpdate(filter, {
-          $addToSet: { badges: item.id },
-        }, { upsert: true });
+        await Usuario.findOneAndUpdate(filter, { $addToSet: { badges: item.id } }, { upsert: true });
 
       } else if (item.tipo === 'efeito') {
-        await Usuario.findOneAndUpdate(filter, {
-          $addToSet: { efeitos: item.id },
-        }, { upsert: true });
+        await Usuario.findOneAndUpdate(filter, { $addToSet: { efeitos: item.id } }, { upsert: true });
 
       } else if (item.tipo === 'moldura') {
-        await Usuario.findOneAndUpdate(filter, {
-          $set: { moldura: item.id },
-        }, { upsert: true });
+        await Usuario.findOneAndUpdate(filter, { $set: { moldura: item.id } }, { upsert: true });
 
       } else if (item.tipo === 'consumivel') {
         const xpBonus = item.id === 'xp_boost_max' ? 150 : 50;
@@ -234,7 +232,7 @@ export function register(client, configs) {
       }
 
       return interaction.update({
-        content: `✅ Compra confirmada: **${item.nome}**`,
+        content: `✅ Compra realizada: **${item.nome}**`,
         components: [],
         files: [],
       });
