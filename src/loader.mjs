@@ -90,7 +90,7 @@ export async function loadSystems(client) {
   if (client.__systemsLoaded) return;
   client.__systemsLoaded = true;
 
-  initDB();
+  await initDB();
 
   console.log(isDBConnected()
     ? '[DB] ✔ SQLite pronto.'
