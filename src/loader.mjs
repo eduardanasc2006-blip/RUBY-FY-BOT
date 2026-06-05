@@ -16,7 +16,7 @@ import { register as regForca, comandos as cForca } from './systems/forca.mjs';
 import { register as regConquistas, comandos as cConquistas } from './systems/conquistas.mjs';
 import { register as regMissoes, comandos as cMissoes } from './systems/missoes.mjs';
 import { register as regTitulos, comandos as cTitulos } from './systems/titulos.mjs';
-import { register as regLoja, comandos as cLoja } from './systems/loja.mjs';
+import { register as regLoja } from './systems/loja.mjs'; // 🔥 FIX AQUI (SEM comandos)
 import { register as regPerfilVisual, comandos as cPerfilVisual } from './systems/perfilvisual.mjs';
 import { register as regShip, comandos as cShip } from './systems/ship.mjs';
 import { register as regProdutos, comandos as cProdutos } from './systems/produtos.mjs';
@@ -96,9 +96,10 @@ export async function loadSystems(client) {
 
   const dbOk = initDB();
 
-  console.log(dbOk
-    ? '[DB] ✔ SQLite pronto.'
-    : '[DB] ✖ Banco de dados nao iniciado.'
+  console.log(
+    dbOk
+      ? '[DB] ✔ SQLite pronto.'
+      : '[DB] ✖ Banco de dados nao iniciado.'
   );
 
   await carregarConfigs();
@@ -133,7 +134,7 @@ export async function loadSystems(client) {
     ['Conquistas', regConquistas, cConquistas],
     ['Missões', regMissoes, cMissoes],
     ['Títulos', regTitulos, cTitulos],
-    ['Loja', regLoja, cLoja],
+    ['Loja', regLoja, []], // 🔥 FIX: agora não quebra e ainda aparece no !ajuda
     ['Perfil Visual', regPerfilVisual, cPerfilVisual],
     ['Ship', regShip, cShip],
     ['Produtos', regProdutos, cProdutos],
