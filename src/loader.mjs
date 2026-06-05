@@ -28,7 +28,7 @@ import { register as regLogs, comandos as cLogs } from './systems/logs.mjs';
 import { register as regAntiAbuso, comandos as cAntiAbuso } from './systems/antiabuso.mjs';
 import { register as regEstatisticas, comandos as cEstatisticas } from './systems/estatisticas.mjs';
 import { register as regGenero, comandos as cGenero } from './systems/genero.mjs';
-import { register as regMeuPerfil, comandos as cMeuPerfil } from './systems/meuperfil.mjs';
+import { register as regMeuPerfil } from './systems/meuperfil.mjs';
 
 const configs = new Map();
 
@@ -41,29 +41,29 @@ const visual = {
   Diversão: { emoji: '🎮', cor: 0xff66cc },
   'Robux & Conversão': { emoji: '💸', cor: 0x00ff99 },
   Roblox: { emoji: '🟥', cor: 0xe74c3c },
+  'Perfil Visual': { emoji: '🖼️', cor: 0x6c5ce7 },
+  Gênero: { emoji: '⚧️', cor: 0xe056fd },
+  'Meu Perfil': { emoji: '👤', cor: 0x5865f2},
   Relacionamentos: { emoji: '💍', cor: 0xff5fa2 },
   Afinidade: { emoji: '💜', cor: 0x9b59b6 },
   Interações: { emoji: '🤝', cor: 0x3498db },
+  Ship: { emoji: '❤️', cor: 0xff4d6d },
   Reputação: { emoji: '🏆', cor: 0xf1c40f },
-  'XP & Níveis': { emoji: '⭐', cor: 0xf39c12 },
   Quiz: { emoji: '❓', cor: 0x1abc9c },
   Forca: { emoji: '🎯', cor: 0xe67e22 },
+ 'XP & Níveis': { emoji: '⭐', cor: 0xf39c12 },
   Conquistas: { emoji: '🏅', cor: 0xf1c40f },
   Missões: { emoji: '📜', cor: 0x2ecc71 },
   Títulos: { emoji: '👑', cor: 0xf39c12 },
   Loja: { emoji: '🛍️', cor: 0x00b894 },
-  'Perfil Visual': { emoji: '🖼️', cor: 0x6c5ce7 },
-  Ship: { emoji: '❤️', cor: 0xff4d6d },
   Produtos: { emoji: '📦', cor: 0x00cec9 },
   Suporte: { emoji: '🎫', cor: 0x3498db },
   Atendimento: { emoji: '📞', cor: 0x2ecc71 },
   Avaliações: { emoji: '⭐', cor: 0xf1c40f },
-  Administração: { emoji: '🛠️', cor: 0xe74c3c },
+ Administração: { emoji: '🛠️', cor: 0xe74c3c },
   Logs: { emoji: '📋', cor: 0x95a5a6 },
   'Anti-Abuso': { emoji: '🛡️', cor: 0xc0392b },
   Estatísticas: { emoji: '📊', cor: 0x2980b9 },
-  Gênero: { emoji: '⚧️', cor: 0xe056fd },
-  'Meu Perfil': { emoji: '👤', cor: 0x5865f2 },
 };
 
 /* =========================
@@ -128,7 +128,7 @@ export async function loadSystems(client) {
     ['Anti-Abuso', regAntiAbuso, cAntiAbuso],
     ['Estatísticas', regEstatisticas, cEstatisticas],
     ['Gênero', regGenero, cGenero],
-    ['Meu Perfil', regMeuPerfil, cMeuPerfil],
+    ['Meu Perfil', regMeuPerfil, []],
   ];
 
   let ok = 0, fail = 0, totalCmds = 0;
