@@ -102,7 +102,7 @@ export async function loadSystems(client) {
   if (!client.systems) client.systems = new Map();
 
   const sistemas = [
-    ['Ajuda', regAjuda, cAjuda],
+    ['Ajuda', regAjuda, []],
     ['Diversão', regDiversao, cDiversao],
     ['Robux & Conversão', regConversao, cConversao],
     ['Roblox', regRoblox, cRoblox],
