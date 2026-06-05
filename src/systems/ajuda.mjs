@@ -110,7 +110,7 @@ function menuPrincipal(client, userId, page = 0) {
 }
 
 /* =========================
-   NAVEGAÇÃO GLOBAL (← →)
+   NAVEGAÇÃO (← →)
 ========================= */
 
 function navegacao(client, userId, page = 0) {
