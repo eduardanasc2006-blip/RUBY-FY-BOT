@@ -44,7 +44,7 @@ async function resolverUsuario(nome) {
 }
 
 export const comandos = [
-  { cmd: '!perfil <usuário>', desc: 'Perfil Roblox de um usuário.' },
+  { cmd: '!perfilroblox <usuário>', desc: 'Perfil Roblox de um usuário.' },
   { cmd: '!avatar <usuário>', desc: 'Avatar 2D do perfil Roblox.' },
   { cmd: '!grupo <id>', desc: 'Informações de um grupo Roblox.' },
   { cmd: '!gamepass <id>', desc: 'Informações de uma Gamepass.' },
@@ -65,14 +65,14 @@ export function register(client, configs) {
     const CD_MS = 15_000;
 
     // ───────────────────────── PERFIL ─────────────────────────
-    if (cmd === 'perfil') {
+    if (cmd === 'perfilroblox') {
       const nome = args.join(' ');
       if (!nome)
         return msg.reply({
-          embeds: [embedErro('Use: `!perfil <usuário roblox>`')],
+          embeds: [embedErro('Use: `!perfilroblox <usuário roblox>`')],
         });
 
-      const espera = checkCooldown(CDKey('perfil'), CD_MS);
+      const espera = checkCooldown(CDKey('perfilroblox'), CD_MS);
       if (espera)
         return msg.reply({
           embeds: [embedErro(`Aguarde **${formatarTempo(espera)}**.`)],
