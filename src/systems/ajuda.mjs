@@ -6,7 +6,11 @@ import {
   ButtonStyle,
 } from 'discord.js';
 
-const ITENS_POR_PAGINA = 8;
+/* =========================
+   CONFIG
+========================= */
+
+const ITENS_POR_PAGINA = 10;
 
 /* =========================
    UTIL
@@ -31,7 +35,7 @@ function getCategorias(client) {
 }
 
 /* =========================
-   EMBED
+   EMBED PRINCIPAL
 ========================= */
 
 function embedPrincipal(client, page = 0) {
@@ -52,7 +56,7 @@ function embedPrincipal(client, page = 0) {
 }
 
 /* =========================
-   CATEGORIA
+   EMBED CATEGORIA
 ========================= */
 
 function embedCategoria(client, id) {
@@ -75,7 +79,7 @@ function embedCategoria(client, id) {
 }
 
 /* =========================
-   MENU
+   MENU SELECT
 ========================= */
 
 function menuPrincipal(client, userId, page = 0) {
@@ -99,7 +103,7 @@ function menuPrincipal(client, userId, page = 0) {
 }
 
 /* =========================
-   BOTÕES ← →
+   BOTÕES DE NAVEGAÇÃO
 ========================= */
 
 function navegacao(client, userId, page = 0) {
@@ -134,7 +138,11 @@ export function register(client, configs) {
 
     if (!msg.content.startsWith(prefixo)) return;
 
-    const cmd = msg.content.slice(prefixo.length).trim().split(/\s+/)[0].toLowerCase();
+    const cmd = msg.content
+      .slice(prefixo.length)
+      .trim()
+      .split(/\s+/)[0]
+      .toLowerCase();
 
     if (!['ajuda', 'help', 'comandos'].includes(cmd)) return;
 
@@ -151,7 +159,7 @@ export function register(client, configs) {
     if (!interaction.isButton() && !interaction.isStringSelectMenu()) return;
 
     const [type, userId, pageRaw] = interaction.customId.split(':');
-    const page = Number(pageRaw) || 0;
+    const page = parseInt(pageRaw ?? '0', 10);
 
     if (interaction.user.id !== userId) {
       return interaction.reply({
@@ -160,15 +168,14 @@ export function register(client, configs) {
       });
     }
 
-    const newPage = page;
+    const cats = getCategorias(client);
+    const totalPages = Math.ceil(cats.length / ITENS_POR_PAGINA) || 1;
 
     /* =========================
        SELECT MENU
     ========================= */
     if (interaction.isStringSelectMenu()) {
       const id = interaction.values[0];
-
-      if (id === 'vazio') return interaction.deferUpdate();
 
       return interaction.update({
         embeds: [embedCategoria(client, id)],
@@ -177,33 +184,25 @@ export function register(client, configs) {
     }
 
     /* =========================
-       ANTERIOR
+       PAGINAÇÃO
     ========================= */
+
+    let newPage = page;
+
     if (type === 'ajuda_prev') {
-      const pageAtual = Math.max(0, newPage - 1);
-
-      return interaction.update({
-        embeds: [embedPrincipal(client, pageAtual)],
-        components: [
-          menuPrincipal(client, userId, pageAtual),
-          navegacao(client, userId, pageAtual),
-        ],
-      });
+      newPage = Math.max(0, page - 1);
     }
 
-    /* =========================
-       PRÓXIMO
-    ========================= */
     if (type === 'ajuda_next') {
-      const pageAtual = newPage + 1;
-
-      return interaction.update({
-        embeds: [embedPrincipal(client, pageAtual)],
-        components: [
-          menuPrincipal(client, userId, pageAtual),
-          navegacao(client, userId, pageAtual),
-        ],
-      });
+      newPage = Math.min(totalPages - 1, page + 1);
     }
+
+    return interaction.update({
+      embeds: [embedPrincipal(client, newPage)],
+      components: [
+        menuPrincipal(client, userId, newPage),
+        navegacao(client, userId, newPage),
+      ],
+    });
   });
-}
+    }
