@@ -3,58 +3,54 @@ import Config from './db/models/Config.mjs';
 
 // ── Imports — register only ─────────────────────────────
 import { register as regAjuda } from './systems/ajuda.mjs';
-import { register as regDiversao, comandos as cDiversao } from './systems/diversao.mjs';
-import { register as regConversao, comandos as cConversao } from './systems/conversao.mjs';
-import { register as regRoblox, comandos as cRoblox } from './systems/roblox.mjs';
-import { register as regRelacionamentos, comandos as cRelacionamentos } from './systems/relacionamentos.mjs';
-import { register as regAfinidade, comandos as cAfinidade } from './systems/afinidade.mjs';
-import { register as regInteracoes, comandos as cInteracoes } from './systems/interacoes.mjs';
-import { register as regReputacao, comandos as cReputacao } from './systems/reputacao.mjs';
-import { register as regXpNiveis, comandos as cXpNiveis } from './systems/xpniveis.mjs';
-import { register as regQuiz, comandos as cQuiz } from './systems/quiz.mjs';
-import { register as regForca, comandos as cForca } from './systems/forca.mjs';
-import { register as regConquistas, comandos as cConquistas } from './systems/conquistas.mjs';
-import { register as regMissoes, comandos as cMissoes } from './systems/missoes.mjs';
-import { register as regTitulos, comandos as cTitulos } from './systems/titulos.mjs';
+import { register as regDiversao } from './systems/diversao.mjs';
+import { register as regConversao } from './systems/conversao.mjs';
+import { register as regRoblox } from './systems/roblox.mjs';
+import { register as regRelacionamentos } from './systems/relacionamentos.mjs';
+import { register as regAfinidade } from './systems/afinidade.mjs';
+import { register as regInteracoes } from './systems/interacoes.mjs';
+import { register as regReputacao } from './systems/reputacao.mjs';
+import { register as regXpNiveis } from './systems/xpniveis.mjs';
+import { register as regQuiz } from './systems/quiz.mjs';
+import { register as regForca } from './systems/forca.mjs';
+import { register as regConquistas } from './systems/conquistas.mjs';
+import { register as regMissoes } from './systems/missoes.mjs';
+import { register as regTitulos } from './systems/titulos.mjs';
 import { register as regLoja } from './systems/loja.mjs';
-import { register as regPerfilVisual, comandos as cPerfilVisual } from './systems/perfilvisual.mjs';
-import { register as regShip, comandos as cShip } from './systems/ship.mjs';
-import { register as regProdutos, comandos as cProdutos } from './systems/produtos.mjs';
-import { register as regSuporte, comandos as cSuporte } from './systems/suporte.mjs';
-import { register as regAtendimento, comandos as cAtendimento } from './systems/atendimento.mjs';
-import { register as regAvaliacoes, comandos as cAvaliacoes } from './systems/avaliacoes.mjs';
+import { register as regPerfilVisual } from './systems/perfilvisual.mjs';
+import { register as regShip } from './systems/ship.mjs';
+import { register as regProdutos } from './systems/produtos.mjs';
+import { register as regSuporte } from './systems/suporte.mjs';
+import { register as regAtendimento } from './systems/atendimento.mjs';
+import { register as regAvaliacoes } from './systems/avaliacoes.mjs';
 import { register as regAdministracao } from './systems/administracao.mjs';
-import { register as regLogs, comandos as cLogs } from './systems/logs.mjs';
-import { register as regAntiAbuso, comandos as cAntiAbuso } from './systems/antiabuso.mjs';
-import { register as regEstatisticas, comandos as cEstatisticas } from './systems/estatisticas.mjs';
-import { register as regGenero, comandos as cGenero } from './systems/genero.mjs';
+import { register as regLogs } from './systems/logs.mjs';
+import { register as regAntiAbuso } from './systems/antiabuso.mjs';
+import { register as regEstatisticas } from './systems/estatisticas.mjs';
+import { register as regGenero } from './systems/genero.mjs';
 import { register as regMeuPerfil } from './systems/meuperfil.mjs';
 
 const configs = new Map();
 
 /* =========================
-   SAFE EMOJI SYSTEM (FIX)
+   SAFE EMOJI SYSTEM
 ========================= */
 
 function safeEmoji(e) {
   if (!e) return '📦';
 
   if (typeof e === 'string') {
-    // emoji unicode normal
     if (!e.includes(':')) return e;
 
-    // emoji custom discord <:name:id>
     const match = e.match(/^<:([^:]+):(\d+)>$/);
-    if (match) {
-      return { name: match[1], id: match[2] };
-    }
+    if (match) return { name: match[1], id: match[2] };
   }
 
   return '📦';
 }
 
 /* =========================
-   VISUAL (CATEGORIAS)
+   VISUAL
 ========================= */
 
 const visual = {
@@ -125,31 +121,31 @@ export async function loadSystems(client) {
 
   const sistemas = [
     ['Ajuda', regAjuda, []],
-    ['Diversão', regDiversao, cDiversao],
-    ['Robux & Conversão', regConversao, cConversao],
-    ['Roblox', regRoblox, cRoblox],
-    ['Relacionamentos', regRelacionamentos, cRelacionamentos],
-    ['Afinidade', regAfinidade, cAfinidade],
-    ['Interações', regInteracoes, cInteracoes],
-    ['Reputação', regReputacao, cReputacao],
-    ['XP & Níveis', regXpNiveis, cXpNiveis],
-    ['Quiz', regQuiz, cQuiz],
-    ['Forca', regForca, cForca],
-    ['Conquistas', regConquistas, cConquistas],
-    ['Missões', regMissoes, cMissoes],
-    ['Títulos', regTitulos, cTitulos],
+    ['Diversão', regDiversao, []],
+    ['Robux & Conversão', regConversao, []],
+    ['Roblox', regRoblox, []],
+    ['Relacionamentos', regRelacionamentos, []],
+    ['Afinidade', regAfinidade, []],
+    ['Interações', regInteracoes, []],
+    ['Reputação', regReputacao, []],
+    ['XP & Níveis', regXpNiveis, []],
+    ['Quiz', regQuiz, []],
+    ['Forca', regForca, []],
+    ['Conquistas', regConquistas, []],
+    ['Missões', regMissoes, []],
+    ['Títulos', regTitulos, []],
     ['Loja', regLoja, []],
-    ['Perfil Visual', regPerfilVisual, cPerfilVisual],
-    ['Ship', regShip, cShip],
-    ['Produtos', regProdutos, cProdutos],
-    ['Suporte', regSuporte, cSuporte],
-    ['Atendimento', regAtendimento, cAtendimento],
-    ['Avaliações', regAvaliacoes, cAvaliacoes],
+    ['Perfil Visual', regPerfilVisual, []],
+    ['Ship', regShip, []],
+    ['Produtos', regProdutos, []],
+    ['Suporte', regSuporte, []],
+    ['Atendimento', regAtendimento, []],
+    ['Avaliações', regAvaliacoes, []],
     ['Administração', regAdministracao, []],
-    ['Logs', regLogs, cLogs],
-    ['Anti-Abuso', regAntiAbuso, cAntiAbuso],
-    ['Estatísticas', regEstatisticas, cEstatisticas],
-    ['Gênero', regGenero, cGenero],
+    ['Logs', regLogs, []],
+    ['Anti-Abuso', regAntiAbuso, []],
+    ['Estatísticas', regEstatisticas, []],
+    ['Gênero', regGenero, []],
     ['Meu Perfil', regMeuPerfil, []],
   ];
 
@@ -161,14 +157,14 @@ export async function loadSystems(client) {
     try {
       fn(client, configs);
 
-      const cmdList = Array.isArray(cmds) ? cmds : [];
-
       const metaRaw = visual[nome] || { emoji: '📦', cor: 0x5865f2 };
 
       const meta = {
         emoji: safeEmoji(metaRaw.emoji),
         cor: metaRaw.cor || 0x5865f2,
       };
+
+      const cmdList = Array.isArray(cmds) ? cmds : [];
 
       client.systems.set(nome, {
         id: nome,
