@@ -1,3 +1,5 @@
+export const comandos = [{ cmd: '!ajuda', desc: 'Mostra todas as categorias e comandos' }];
+
 import {
   EmbedBuilder,
   ActionRowBuilder,

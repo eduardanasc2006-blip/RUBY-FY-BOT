@@ -1,3 +1,5 @@
+export const comandos = [{ cmd: '!atendimento', desc: 'Abre o sistema de atendimento' }];
+
 import {
   EmbedBuilder,
   ActionRowBuilder,
