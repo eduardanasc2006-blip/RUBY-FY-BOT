@@ -38,7 +38,7 @@ function getCategorias(client) {
       emoji: safeEmoji(meta.emoji),
       label: meta.label || id,
       cor: meta.cor || 0x5865f2,
-      comandos: meta.comandos || [],
+      comandos: Array.isArray(meta.comandos) ? meta.comandos : [],
     };
   }
 
@@ -80,8 +80,12 @@ function embedCategoria(client, id) {
   const categorias = getCategorias(client);
 
   const cat = categorias[id];
-
-  if (!cat) return null;
+  if (!cat) {
+    return new EmbedBuilder()
+      .setColor(0xe74c3c)
+      .setTitle('❌ Categoria não encontrada')
+      .setDescription('Essa categoria não existe ou foi removida.');
+  }
 
   const linhas = cat.comandos.length
     ? cat.comandos
@@ -207,7 +211,6 @@ export function register(client, configs) {
         return;
 
       const partes = interaction.customId.split(':');
-
       const userId = partes[1];
 
       if (interaction.user.id !== userId) {
@@ -235,7 +238,6 @@ export function register(client, configs) {
 
       if (interaction.customId.startsWith('ajuda_prev')) {
         let pagina = Number(partes[2]) || 0;
-
         pagina--;
 
         return interaction.update({
@@ -249,7 +251,6 @@ export function register(client, configs) {
 
       if (interaction.customId.startsWith('ajuda_next')) {
         let pagina = Number(partes[2]) || 0;
-
         pagina++;
 
         return interaction.update({
@@ -276,13 +277,11 @@ export function register(client, configs) {
       console.error(err);
 
       if (!interaction.replied) {
-        interaction
-          .reply({
-            content: '❌ Erro ao carregar ajuda.',
-            ephemeral: true,
-          })
-          .catch(() => {});
+        interaction.reply({
+          content: '❌ Erro ao carregar ajuda.',
+          ephemeral: true,
+        }).catch(() => {});
       }
     }
   });
-        }
+}
