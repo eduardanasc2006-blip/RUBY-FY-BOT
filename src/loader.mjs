@@ -23,7 +23,7 @@ import { register as regProdutos, comandos as cProdutos } from './systems/produt
 import { register as regSuporte, comandos as cSuporte } from './systems/suporte.mjs';
 import { register as regAtendimento, comandos as cAtendimento } from './systems/atendimento.mjs';
 import { register as regAvaliacoes, comandos as cAvaliacoes } from './systems/avaliacoes.mjs';
-import { register as regAdministracao, comandos as cAdministracao } from './systems/administracao.mjs';
+import { register as regAdministracao } from './systems/administracao.mjs';
 import { register as regLogs, comandos as cLogs } from './systems/logs.mjs';
 import { register as regAntiAbuso, comandos as cAntiAbuso } from './systems/antiabuso.mjs';
 import { register as regEstatisticas, comandos as cEstatisticas } from './systems/estatisticas.mjs';
@@ -145,7 +145,7 @@ export async function loadSystems(client) {
     ['Suporte', regSuporte, cSuporte],
     ['Atendimento', regAtendimento, cAtendimento],
     ['Avaliações', regAvaliacoes, cAvaliacoes],
-    ['Administração', regAdministracao, cAdministracao],
+    ['Administração', regAdministracao, []],
     ['Logs', regLogs, cLogs],
     ['Anti-Abuso', regAntiAbuso, cAntiAbuso],
     ['Estatísticas', regEstatisticas, cEstatisticas],
