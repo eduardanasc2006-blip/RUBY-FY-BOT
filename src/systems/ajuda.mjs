@@ -6,118 +6,95 @@ import {
   ButtonStyle,
 } from 'discord.js';
 
-export const comandos = [
-  {
-    cmd: '!ajuda',
-    desc: 'Abre o painel de ajuda do bot',
-  },
-];
+const ITENS_POR_PAGINA = 8;
 
-const ITENS_POR_PAGINA = 25;
-
-/* ========================================= */
+/* =========================
+   UTIL
+========================= */
 
 function safeEmoji(e) {
   if (!e || typeof e !== 'string') return '📦';
-
-  if (/^\p{Extended_Pictographic}$/u.test(e)) return e;
-
   if (e.startsWith('<:') && e.endsWith('>')) return e;
-
-  return '📦';
+  return e;
 }
 
 function getCategorias(client) {
-  const cats = {};
+  if (!client.systems) return [];
 
-  if (!client.systems) return cats;
-
-  for (const [id, meta] of client.systems.entries()) {
-    cats[id] = {
-      id,
-      emoji: safeEmoji(meta.emoji),
-      label: meta.label || id,
-      cor: meta.cor || 0x5865f2,
-      comandos: Array.isArray(meta.comandos) ? meta.comandos : [],
-    };
-  }
-
-  return cats;
+  return Array.from(client.systems.values()).map(meta => ({
+    id: meta.id,
+    emoji: safeEmoji(meta.emoji),
+    label: meta.label || meta.id,
+    cor: meta.cor || 0x5865f2,
+    comandos: Array.isArray(meta.comandos) ? meta.comandos : [],
+  }));
 }
 
-/* ========================================= */
+/* =========================
+   EMBED PRINCIPAL
+========================= */
 
-function embedPrincipal(client, pagina = 0) {
-  const categorias = Object.values(getCategorias(client));
+function embedPrincipal(client, page = 0) {
+  const cats = getCategorias(client);
 
-  const totalPaginas =
-    Math.ceil(categorias.length / ITENS_POR_PAGINA) || 1;
+  const totalPages = Math.ceil(cats.length / ITENS_POR_PAGINA) || 1;
 
-  const inicio = pagina * ITENS_POR_PAGINA;
-  const fim = inicio + ITENS_POR_PAGINA;
-
-  const visiveis = categorias.slice(inicio, fim);
+  const start = page * ITENS_POR_PAGINA;
+  const items = cats.slice(start, start + ITENS_POR_PAGINA);
 
   return new EmbedBuilder()
     .setColor(0x5865f2)
     .setTitle('✨ FiskBot — Central de Comandos')
     .setDescription(
       '**Criado por Finix Yin**\n\n' +
-      'Selecione uma categoria abaixo para ver os comandos.\n\n' +
-      visiveis
-        .map(c => `${c.emoji} **${c.label}**`)
-        .join('\n')
+      'Use o menu ou navegue pelas categorias:\n\n' +
+      items.map(c => `${c.emoji} **${c.label}**`).join('\n')
     )
-    .setFooter({
-      text: `Página ${pagina + 1}/${totalPaginas}`,
-    })
-    .setTimestamp();
+    .setFooter({ text: `Página ${page + 1}/${totalPages}` });
 }
 
-/* ========================================= */
+/* =========================
+   CATEGORIA
+========================= */
 
 function embedCategoria(client, id) {
-  const categorias = getCategorias(client);
+  const cat = getCategorias(client).find(c => c.id === id);
 
-  const cat = categorias[id];
   if (!cat) {
     return new EmbedBuilder()
       .setColor(0xe74c3c)
       .setTitle('❌ Categoria não encontrada')
-      .setDescription('Essa categoria não existe ou foi removida.');
+      .setDescription('Essa categoria não existe mais.');
   }
 
-  const linhas = cat.comandos.length
-    ? cat.comandos
-        .map(c => `\`${c.cmd}\`\n┗ ${c.desc}`)
-        .join('\n\n')
+  const cmds = cat.comandos.length
+    ? cat.comandos.map(c => `\`${c.cmd}\`\n┗ ${c.desc}`).join('\n\n')
     : 'Nenhum comando registrado.';
 
   return new EmbedBuilder()
     .setColor(cat.cor)
     .setTitle(`${cat.emoji} ${cat.label}`)
-    .setDescription(linhas)
-    .setTimestamp();
+    .setDescription(cmds);
 }
 
-/* ========================================= */
+/* =========================
+   MENU
+========================= */
 
-function menuPrincipal(client, userId, pagina = 0) {
-  const categorias = Object.values(getCategorias(client));
+function menuPrincipal(client, userId, page = 0) {
+  const cats = getCategorias(client);
 
-  const inicio = pagina * ITENS_POR_PAGINA;
-  const fim = inicio + ITENS_POR_PAGINA;
+  const start = page * ITENS_POR_PAGINA;
+  const items = cats.slice(start, start + ITENS_POR_PAGINA);
 
-  const visiveis = categorias.slice(inicio, fim);
-
-  const opcoes = visiveis.map(cat => ({
-    label: String(cat.label).slice(0, 100),
-    value: String(cat.id).slice(0, 100),
-    emoji: safeEmoji(cat.emoji),
+  const options = items.map(c => ({
+    label: c.label.slice(0, 100),
+    value: c.id,
+    emoji: c.emoji,
   }));
 
-  if (!opcoes.length) {
-    opcoes.push({
+  if (!options.length) {
+    options.push({
       label: 'Nenhuma categoria',
       value: 'vazio',
       emoji: '📦',
@@ -126,162 +103,154 @@ function menuPrincipal(client, userId, pagina = 0) {
 
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
-      .setCustomId(`ajuda_menu:${userId}:${pagina}`)
-      .setPlaceholder('📂 Selecione uma categoria...')
-      .addOptions(opcoes)
+      .setCustomId(`ajuda_menu:${userId}:${page}`)
+      .setPlaceholder('📂 Selecione uma categoria')
+      .addOptions(options)
   );
 }
 
-/* ========================================= */
+/* =========================
+   NAVEGAÇÃO GLOBAL (← →)
+========================= */
 
-function navegacao(client, userId, pagina = 0) {
-  const totalCategorias =
-    Object.keys(getCategorias(client)).length;
-
-  const totalPaginas =
-    Math.ceil(totalCategorias / ITENS_POR_PAGINA) || 1;
+function navegacao(client, userId, page = 0) {
+  const total = getCategorias(client).length;
+  const totalPages = Math.ceil(total / ITENS_POR_PAGINA) || 1;
 
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`ajuda_prev:${userId}:${pagina}`)
-      .setLabel('⬅ Anterior')
+      .setCustomId(`ajuda_prev:${userId}:${page}`)
+      .setLabel('⬅')
       .setStyle(ButtonStyle.Secondary)
-      .setDisabled(pagina <= 0),
+      .setDisabled(page <= 0),
 
     new ButtonBuilder()
-      .setCustomId(`ajuda_next:${userId}:${pagina}`)
-      .setLabel('➡ Próxima')
+      .setCustomId(`ajuda_next:${userId}:${page}`)
+      .setLabel('➡')
       .setStyle(ButtonStyle.Secondary)
-      .setDisabled(pagina >= totalPaginas - 1)
+      .setDisabled(page >= totalPages - 1)
   );
 }
 
-/* ========================================= */
+/* =========================
+   VOLTAR
+========================= */
 
-function botaoVoltar(userId, pagina = 0) {
+function botaoVoltar(userId, page = 0) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`ajuda_voltar:${userId}:${pagina}`)
+      .setCustomId(`ajuda_back:${userId}:${page}`)
       .setLabel('⬅ Voltar')
       .setStyle(ButtonStyle.Secondary)
   );
 }
 
-/* ========================================= */
+/* =========================
+   REGISTER
+========================= */
 
 export function register(client, configs) {
   console.log('[AJUDA] Sistema carregado');
 
   client.on('messageCreate', async (msg) => {
-    try {
-      if (msg.author.bot || !msg.guild) return;
+    if (!msg.guild || msg.author.bot) return;
 
-      const cfg = configs.get(msg.guild.id);
-      const prefixo = cfg?.prefixo || '!';
+    const cfg = configs.get(msg.guild.id);
+    const prefixo = cfg?.prefixo || '!';
 
-      if (!msg.content.startsWith(prefixo)) return;
+    if (!msg.content.startsWith(prefixo)) return;
 
-      const cmd = msg.content
-        .slice(prefixo.length)
-        .trim()
-        .split(/\s+/)[0]
-        .toLowerCase();
+    const cmd = msg.content
+      .slice(prefixo.length)
+      .trim()
+      .split(/\s+/)[0]
+      .toLowerCase();
 
-      if (!['ajuda', 'help', 'comandos'].includes(cmd))
-        return;
+    if (!['ajuda', 'help', 'comandos'].includes(cmd)) return;
 
-      await msg.reply({
-        embeds: [embedPrincipal(client, 0)],
-        components: [
-          menuPrincipal(client, msg.author.id, 0),
-          navegacao(client, msg.author.id, 0),
-        ],
-      });
-    } catch (err) {
-      console.error('ERRO AJUDA:', err);
-    }
+    return msg.reply({
+      embeds: [embedPrincipal(client, 0)],
+      components: [
+        menuPrincipal(client, msg.author.id, 0),
+        navegacao(client, msg.author.id, 0),
+      ],
+    });
   });
 
   client.on('interactionCreate', async (interaction) => {
-    try {
-      if (
-        !interaction.isStringSelectMenu() &&
-        !interaction.isButton()
-      )
-        return;
+    if (!interaction.isButton() && !interaction.isStringSelectMenu())
+      return;
 
-      const partes = interaction.customId.split(':');
-      const userId = partes[1];
+    const parts = interaction.customId.split(':');
+    const userId = parts[1];
+    const page = Number(parts[2]) || 0;
 
-      if (interaction.user.id !== userId) {
-        return interaction.reply({
-          content: '❌ Não é seu menu.',
-          ephemeral: true,
-        });
-      }
+    if (interaction.user.id !== userId) {
+      return interaction.reply({
+        content: '❌ Não é seu menu.',
+        ephemeral: true,
+      });
+    }
 
-      if (interaction.isStringSelectMenu()) {
-        const categoria = interaction.values[0];
+    /* =========================
+       SELECT CATEGORIA
+    ========================= */
 
-        if (categoria === 'vazio')
-          return interaction.deferUpdate();
+    if (interaction.isStringSelectMenu()) {
+      const id = interaction.values[0];
 
-        const embed = embedCategoria(client, categoria);
+      if (id === 'vazio') return interaction.deferUpdate();
 
-        return interaction.update({
-          embeds: [embed],
-          components: [
-            botaoVoltar(userId, Number(partes[2]) || 0),
-          ],
-        });
-      }
+      return interaction.update({
+        embeds: [embedCategoria(client, id)],
+        components: [botaoVoltar(userId, page)],
+      });
+    }
 
-      if (interaction.customId.startsWith('ajuda_prev')) {
-        let pagina = Number(partes[2]) || 0;
-        pagina--;
+    /* =========================
+       ← ANTERIOR
+    ========================= */
 
-        return interaction.update({
-          embeds: [embedPrincipal(client, pagina)],
-          components: [
-            menuPrincipal(client, userId, pagina),
-            navegacao(client, userId, pagina),
-          ],
-        });
-      }
+    if (interaction.customId.startsWith('ajuda_prev')) {
+      const newPage = Math.max(0, page - 1);
 
-      if (interaction.customId.startsWith('ajuda_next')) {
-        let pagina = Number(partes[2]) || 0;
-        pagina++;
+      return interaction.update({
+        embeds: [embedPrincipal(client, newPage)],
+        components: [
+          menuPrincipal(client, userId, newPage),
+          navegacao(client, userId, newPage),
+        ],
+      });
+    }
 
-        return interaction.update({
-          embeds: [embedPrincipal(client, pagina)],
-          components: [
-            menuPrincipal(client, userId, pagina),
-            navegacao(client, userId, pagina),
-          ],
-        });
-      }
+    /* =========================
+       → PRÓXIMO
+    ========================= */
 
-      if (interaction.customId.startsWith('ajuda_voltar')) {
-        const pagina = Number(partes[2]) || 0;
+    if (interaction.customId.startsWith('ajuda_next')) {
+      const newPage = page + 1;
 
-        return interaction.update({
-          embeds: [embedPrincipal(client, pagina)],
-          components: [
-            menuPrincipal(client, userId, pagina),
-            navegacao(client, userId, pagina),
-          ],
-        });
-      }
-    } catch (err) {
-      console.error(err);
+      return interaction.update({
+        embeds: [embedPrincipal(client, newPage)],
+        components: [
+          menuPrincipal(client, userId, newPage),
+          navegacao(client, userId, newPage),
+        ],
+      });
+    }
 
-      if (!interaction.replied) {
-        interaction.reply({
-          content: '❌ Erro ao carregar ajuda.',
-          ephemeral: true,
-        }).catch(() => {});
-      }
+    /* =========================
+       VOLTAR CATEGORIA
+    ========================= */
+
+    if (interaction.customId.startsWith('ajuda_back')) {
+      return interaction.update({
+        embeds: [embedPrincipal(client, page)],
+        components: [
+          menuPrincipal(client, userId, page),
+          navegacao(client, userId, page),
+        ],
+      });
     }
   });
 }
