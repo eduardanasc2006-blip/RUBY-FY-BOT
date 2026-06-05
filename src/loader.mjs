@@ -1,7 +1,8 @@
 import { initDB, isDBConnected } from './db/sqlite.mjs';
 import Config from './db/models/Config.mjs';
 
-import { register as regAjuda, comandos as cAjuda } from './systems/ajuda.mjs';
+// ── Imports — register only ─────────────────────────────
+import { register as regAjuda } from './systems/ajuda.mjs';
 import { register as regDiversao, comandos as cDiversao } from './systems/diversao.mjs';
 import { register as regConversao, comandos as cConversao } from './systems/conversao.mjs';
 import { register as regRoblox, comandos as cRoblox } from './systems/roblox.mjs';
@@ -15,7 +16,7 @@ import { register as regForca, comandos as cForca } from './systems/forca.mjs';
 import { register as regConquistas, comandos as cConquistas } from './systems/conquistas.mjs';
 import { register as regMissoes, comandos as cMissoes } from './systems/missoes.mjs';
 import { register as regTitulos, comandos as cTitulos } from './systems/titulos.mjs';
-import { register as regLoja } from './systems/loja.mjs';
+import { register as regLoja } from './systems/loja.mjs'; // sem comandos
 import { register as regPerfilVisual, comandos as cPerfilVisual } from './systems/perfilvisual.mjs';
 import { register as regShip, comandos as cShip } from './systems/ship.mjs';
 import { register as regProdutos, comandos as cProdutos } from './systems/produtos.mjs';
