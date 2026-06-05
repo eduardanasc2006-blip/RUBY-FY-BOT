@@ -1,50 +1,23 @@
 import { AttachmentBuilder } from 'discord.js';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
-import { checkCooldown, formatarTempo } from '../utils/cooldown.mjs';
-import { embedErro } from '../utils/embeds.mjs';
-import Usuario from '../db/models/Usuario.mjs';
-import { isDBConnected } from '../utils/dbGuard.mjs';
 
-// ── Temas por porcentagem (VERSÃO MELHORADA) ─────────────────────────────
+import { embedErro } from '../utils/embeds.mjs';
+import { isDBConnected } from '../utils/dbGuard.mjs';
+import { registrarLog } from '../utils/logger.mjs';
+
+import Usuario from '../db/models/Usuario.mjs';
+import Casamento from '../db/models/Casamento.mjs';
+
+// ── Temas por porcentagem ─────────────────────────────
 const TEMAS = [
-  {
-    min: 0,
-    max: 20,
-    nome: 'Distantes',
-    msg: 'Entre vocês há um afastamento emocional.',
-    msg2: 'A conexão ainda não encontrou equilíbrio.'
-  },
-  {
-    min: 21,
-    max: 40,
-    nome: 'Conexão Fraca',
-    msg: 'Existe curiosidade, mas pouca sintonia.',
-    msg2: 'Com o tempo isso pode mudar.'
-  },
-  {
-    min: 41,
-    max: 60,
-    nome: 'Amizade',
-    msg: 'Há uma base sólida de amizade entre vocês.',
-    msg2: 'Existe potencial para algo maior.'
-  },
-  {
-    min: 61,
-    max: 80,
-    nome: 'Romance',
-    msg: 'A conexão entre vocês é forte e envolvente.',
-    msg2: 'Existe química e compatibilidade emocional.'
-  },
-  {
-    min: 81,
-    max: 100,
-    nome: 'Almas Gêmeas',
-    msg: 'Vocês parecem profundamente conectados.',
-    msg2: 'Uma ligação rara, intensa e duradoura.'
-  }
+  { min: 0, max: 20, nome: 'Distantes', msg: 'Entre vocês há um afastamento emocional.', msg2: 'A conexão ainda não encontrou equilíbrio.' },
+  { min: 21, max: 40, nome: 'Conexão Fraca', msg: 'Existe curiosidade, mas pouca sintonia.', msg2: 'Com o tempo isso pode mudar.' },
+  { min: 41, max: 60, nome: 'Amizade', msg: 'Há uma base sólida de amizade entre vocês.', msg2: 'Existe potencial para algo maior.' },
+  { min: 61, max: 80, nome: 'Romance', msg: 'A conexão entre vocês é forte e envolvente.', msg2: 'Existe química e compatibilidade emocional.' },
+  { min: 81, max: 100, nome: 'Almas Gêmeas', msg: 'Vocês parecem profundamente conectados.', msg2: 'Uma ligação rara, intensa e duradoura.' }
 ];
 
-// ── Cores por combinação de gênero ────────────────────────────
+// ── Cores por gênero ─────────────────────────────
 function getCoresGenero(g1, g2) {
   const a = g1 || 'none';
   const b = g2 || 'none';
@@ -60,13 +33,13 @@ function getCoresGenero(g1, g2) {
   return ['#39ff14', '#00bfff'];
 }
 
-// ── Canvas ────────────────────────────────────────────────────
+// ── Canvas ─────────────────────────────
 const W = 720;
-const H = 490;
+const H = 520;
 const AV_R = 88;
 const LEFT_CX = 158;
 const RIGHT_CX = W - 158;
-const AV_CY = 192;
+const AV_CY = 200;
 
 function getTema(pct) {
   return TEMAS.find(t => pct >= t.min && pct <= t.max) || TEMAS[4];
@@ -75,7 +48,7 @@ function getTema(pct) {
 function gerarPorcentagem(id1, id2) {
   const seed = (BigInt(id1) + BigInt(id2)).toString();
   let hash = 0;
-  for (const char of seed) hash = (hash * 31 + char.charCodeAt(0)) | 0;
+  for (const c of seed) hash = (hash * 31 + c.charCodeAt(0)) | 0;
   return Math.abs(hash) % 101;
 }
 
@@ -85,6 +58,17 @@ function hexToRgb(hex) {
     g: parseInt(hex.slice(3, 5), 16),
     b: parseInt(hex.slice(5, 7), 16),
   };
+}
+
+function drawGlow(ctx, cx, cy, r, color) {
+  const { r: cr, g: cg, b: cb } = hexToRgb(color);
+  for (let i = 6; i > 0; i--) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + i * 6, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(${cr},${cg},${cb},${0.05 + i * 0.01})`;
+    ctx.lineWidth = 10;
+    ctx.stroke();
+  }
 }
 
 function roundedRect(ctx, x, y, w, h, r) {
@@ -99,69 +83,6 @@ function roundedRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-function drawGlow(ctx, cx, cy, r, color, layers = 5) {
-  const { r: cr, g: cg, b: cb } = hexToRgb(color);
-  for (let i = layers; i >= 1; i--) {
-    ctx.beginPath();
-    ctx.arc(cx, cy, r + i * 7, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(${cr},${cg},${cb},${0.05 + 0.03 / i})`;
-    ctx.lineWidth = 9;
-    ctx.stroke();
-  }
-}
-
-function drawCircleAvatar(ctx, img, cx, cy, r) {
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.clip();
-
-  if (img) {
-    ctx.drawImage(img, cx - r, cy - r, r * 2, r * 2);
-  } else {
-    ctx.fillStyle = '#1e1e3a';
-    ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
-    ctx.font = 'bold 44px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('?', cx, cy);
-  }
-
-  ctx.restore();
-}
-
-function drawAvatarBorder(ctx, cx, cy, r, color) {
-  const { r: cr, g: cg, b: cb } = hexToRgb(color);
-  ctx.beginPath();
-  ctx.arc(cx, cy, r + 4, 0, Math.PI * 2);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 3;
-  ctx.shadowColor = `rgba(${cr},${cg},${cb},0.9)`;
-  ctx.shadowBlur = 20;
-  ctx.stroke();
-  ctx.shadowBlur = 0;
-}
-
-function fitText(ctx, text, maxWidth, fontSize, fontWeight = 'bold') {
-  let size = fontSize;
-  ctx.font = `${fontWeight} ${size}px sans-serif`;
-
-  while (ctx.measureText(text).width > maxWidth && size > 9) {
-    size--;
-    ctx.font = `${fontWeight} ${size}px sans-serif`;
-  }
-
-  if (ctx.measureText(text).width > maxWidth) {
-    while (text.length > 1 && ctx.measureText(text + '...').width > maxWidth) {
-      text = text.slice(0, -1);
-    }
-    text += '...';
-  }
-
-  return text;
-}
-
 async function fetchAvatar(url) {
   try {
     return await loadImage(url);
@@ -170,23 +91,24 @@ async function fetchAvatar(url) {
   }
 }
 
-async function gerarImagemShip(u1, u2, pct, corEsq, corDir) {
+async function gerarImagemShip(u1, u2, pct, corEsq, corDir, casados) {
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
 
+  // fundo
   const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, '#07071a');
-  bg.addColorStop(0.5, '#0e0826');
-  bg.addColorStop(1, '#07071a');
-
+  bg.addColorStop(0, '#050514');
+  bg.addColorStop(0.5, '#120a2a');
+  bg.addColorStop(1, '#050514');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  ctx.fillStyle = 'rgba(255,255,255,0.04)';
+  // partículas
+  ctx.fillStyle = 'rgba(255,255,255,0.05)';
   for (let i = 0; i < 90; i++) {
-    const sx = Math.floor(Math.abs(Math.sin(i * 137.508)) * (W - 4));
-    const sy = Math.floor(Math.abs(Math.cos(i * 97.318)) * (H - 4));
-    ctx.fillRect(sx, sy, i % 3 === 0 ? 2 : 1, i % 3 === 0 ? 2 : 1);
+    const x = Math.random() * W;
+    const y = Math.random() * H;
+    ctx.fillRect(x, y, 2, 2);
   }
 
   const [imgL, imgR] = await Promise.all([
@@ -194,78 +116,50 @@ async function gerarImagemShip(u1, u2, pct, corEsq, corDir) {
     fetchAvatar(u2.displayAvatarURL({ extension: 'png', size: 256 }))
   ]);
 
-  drawGlow(ctx, LEFT_CX, AV_CY, AV_R, corEsq);
-  drawGlow(ctx, RIGHT_CX, AV_CY, AV_R, corDir);
+  // glow diferenciado se casados
+  const glowL = casados ? '#ffd700' : corEsq;
+  const glowR = casados ? '#ffd700' : corDir;
 
-  drawCircleAvatar(ctx, imgL, LEFT_CX, AV_CY, AV_R);
-  drawCircleAvatar(ctx, imgR, RIGHT_CX, AV_CY, AV_R);
+  drawGlow(ctx, LEFT_CX, AV_CY, AV_R, glowL);
+  drawGlow(ctx, RIGHT_CX, AV_CY, AV_R, glowR);
 
-  drawAvatarBorder(ctx, LEFT_CX, AV_CY, AV_R, corEsq);
-  drawAvatarBorder(ctx, RIGHT_CX, AV_CY, AV_R, corDir);
+  // avatares
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(LEFT_CX, AV_CY, AV_R, 0, Math.PI * 2);
+  ctx.clip();
+  if (imgL) ctx.drawImage(imgL, LEFT_CX - AV_R, AV_CY - AV_R, AV_R * 2, AV_R * 2);
+  ctx.restore();
 
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(RIGHT_CX, AV_CY, AV_R, 0, Math.PI * 2);
+  ctx.clip();
+  if (imgR) ctx.drawImage(imgR, RIGHT_CX - AV_R, AV_CY - AV_R, AV_R * 2, AV_R * 2);
+  ctx.restore();
+
+  // percentual central
+  ctx.font = 'bold 54px sans-serif';
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.font = 'bold 52px sans-serif';
 
-  const pctGrad = ctx.createLinearGradient(W / 2 - 60, 0, W / 2 + 60, 0);
-  pctGrad.addColorStop(0, corEsq);
-  pctGrad.addColorStop(1, corDir);
-
-  ctx.fillStyle = pctGrad;
-  ctx.fillText(`${pct}%`, W / 2, AV_CY);
-
-  const tema = getTema(pct);
-
-  ctx.font = '13px sans-serif';
-  ctx.fillStyle = 'rgba(200,180,255,0.6)';
-  ctx.fillText(tema.nome, W / 2, AV_CY + 34);
-
-  const nameY = AV_CY + AV_R + 36;
-  const userY = nameY + 28;
-
-  ctx.font = 'bold 20px sans-serif';
-  ctx.fillStyle = '#fff';
-  ctx.fillText(fitText(ctx, u1.displayName, 185, 20), LEFT_CX, nameY);
-  ctx.fillText(fitText(ctx, u2.displayName, 185, 20), RIGHT_CX, nameY);
-
-  ctx.font = '14px sans-serif';
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.fillText(`@${u1.username}`, LEFT_CX, userY);
-  ctx.fillText(`@${u2.username}`, RIGHT_CX, userY);
-
-  const barTopY = userY + 50;
-
-  ctx.fillStyle = 'rgba(255,255,255,0.06)';
-  roundedRect(ctx, 78, barTopY, W - 156, 22, 11);
-  ctx.fill();
-
-  const fillW = Math.round((pct / 100) * (W - 156));
-
-  const grad = ctx.createLinearGradient(78, 0, 78 + fillW, 0);
+  const grad = ctx.createLinearGradient(0, 0, W, 0);
   grad.addColorStop(0, corEsq);
   grad.addColorStop(1, corDir);
 
   ctx.fillStyle = grad;
-  roundedRect(ctx, 78, barTopY, fillW, 22, 11);
-  ctx.fill();
+  ctx.fillText(`${pct}%`, W / 2, AV_CY);
 
-  const temaY = barTopY + 50;
-
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 17px sans-serif';
-  ctx.fillText(tema.msg, W / 2, temaY);
-
-  ctx.font = '13px sans-serif';
-  ctx.fillStyle = 'rgba(200,200,255,0.6)';
-  ctx.fillText(tema.msg2, W / 2, temaY + 22);
+  // badge casamento
+  if (casados) {
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillStyle = '#ffd700';
+    ctx.fillText('💍 CASAL OFICIAL', W / 2, AV_CY - 70);
+  }
 
   return canvas.toBuffer('image/png');
 }
 
-export const comandos = [
-  { cmd: '!ship @u1 @u2', desc: 'Compatibilidade amorosa entre dois usuários.' },
-];
-
+// ───────────────────────────────
 export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
@@ -282,27 +176,44 @@ export function register(client, configs) {
     const u2 = msg.mentions.users.at(1);
 
     if (!u1 || !u2)
-      return msg.reply({ embeds: [embedErro('Use: `!ship @usuario1 @usuario2`')] });
+      return msg.reply({ embeds: [embedErro('Use: `!ship @user1 @user2`')] });
 
     const pct = gerarPorcentagem(u1.id, u2.id);
 
     let g1 = null, g2 = null;
+    let casados = false;
 
     if (isDBConnected()) {
-      const [db1, db2] = await Promise.all([
+      const [db1, db2, casal] = await Promise.all([
         Usuario.findOne({ userId: u1.id, guildId: msg.guild.id }),
-        Usuario.findOne({ userId: u2.id, guildId: msg.guild.id })
+        Usuario.findOne({ userId: u2.id, guildId: msg.guild.id }),
+        Casamento.findOne({
+          guildId: msg.guild.id,
+          ativo: true,
+          $or: [
+            { userId1: u1.id, userId2: u2.id },
+            { userId1: u2.id, userId2: u1.id }
+          ]
+        })
       ]);
 
       g1 = db1?.genero;
       g2 = db2?.genero;
+      casados = !!casal;
     }
 
     const [corEsq, corDir] = getCoresGenero(g1, g2);
 
     try {
-      const buffer = await gerarImagemShip(u1, u2, pct, corEsq, corDir);
+      const buffer = await gerarImagemShip(u1, u2, pct, corEsq, corDir, casados);
       const attachment = new AttachmentBuilder(buffer, { name: 'ship.png' });
+
+      // ── LOG DO SHIP ──
+      await registrarLog(client, msg.guild.id, 'ship', msg.author.id, {
+        usuarios: [u1.id, u2.id],
+        porcentagem: pct,
+        casados
+      });
 
       return msg.reply({ files: [attachment] });
 
@@ -311,4 +222,4 @@ export function register(client, configs) {
       return msg.reply({ embeds: [embedErro('Erro ao gerar ship.')] });
     }
   });
-                                                    }
+                }
