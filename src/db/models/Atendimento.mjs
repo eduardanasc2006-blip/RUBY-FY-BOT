@@ -1,5 +1,5 @@
 import { makeModel } from '../sqlite.mjs';
-export default makeModel('denuncias', {
+export default makeModel('atendimento, {
   jsonFields: [],
   dateFields: ['createdAt'],
 });
