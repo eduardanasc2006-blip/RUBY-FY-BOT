@@ -16,7 +16,7 @@ import { register as regForca, comandos as cForca } from './systems/forca.mjs';
 import { register as regConquistas, comandos as cConquistas } from './systems/conquistas.mjs';
 import { register as regMissoes, comandos as cMissoes } from './systems/missoes.mjs';
 import { register as regTitulos, comandos as cTitulos } from './systems/titulos.mjs';
-import { register as regLoja } from './systems/loja.mjs'; // sem comandos
+import { register as regLoja } from './systems/loja.mjs';
 import { register as regPerfilVisual, comandos as cPerfilVisual } from './systems/perfilvisual.mjs';
 import { register as regShip, comandos as cShip } from './systems/ship.mjs';
 import { register as regProdutos, comandos as cProdutos } from './systems/produtos.mjs';
@@ -33,7 +33,28 @@ import { register as regMeuPerfil } from './systems/meuperfil.mjs';
 const configs = new Map();
 
 /* =========================
-   VISUAL
+   SAFE EMOJI SYSTEM (FIX)
+========================= */
+
+function safeEmoji(e) {
+  if (!e) return '📦';
+
+  if (typeof e === 'string') {
+    // emoji unicode normal
+    if (!e.includes(':')) return e;
+
+    // emoji custom discord <:name:id>
+    const match = e.match(/^<:([^:]+):(\d+)>$/);
+    if (match) {
+      return { name: match[1], id: match[2] };
+    }
+  }
+
+  return '📦';
+}
+
+/* =========================
+   VISUAL (CATEGORIAS)
 ========================= */
 
 const visual = {
@@ -43,7 +64,7 @@ const visual = {
   Roblox: { emoji: '🟥', cor: 0xe74c3c },
   'Perfil Visual': { emoji: '🖼️', cor: 0x6c5ce7 },
   Gênero: { emoji: '⚧️', cor: 0xe056fd },
-  'Meu Perfil': { emoji: '👤', cor: 0x5865f2},
+  'Meu Perfil': { emoji: '👤', cor: 0x5865f2 },
   Relacionamentos: { emoji: '💍', cor: 0xff5fa2 },
   Afinidade: { emoji: '💜', cor: 0x9b59b6 },
   Interações: { emoji: '🤝', cor: 0x3498db },
@@ -51,7 +72,7 @@ const visual = {
   Reputação: { emoji: '🏆', cor: 0xf1c40f },
   Quiz: { emoji: '❓', cor: 0x1abc9c },
   Forca: { emoji: '🎯', cor: 0xe67e22 },
- 'XP & Níveis': { emoji: '⭐', cor: 0xf39c12 },
+  'XP & Níveis': { emoji: '⭐', cor: 0xf39c12 },
   Conquistas: { emoji: '🏅', cor: 0xf1c40f },
   Missões: { emoji: '📜', cor: 0x2ecc71 },
   Títulos: { emoji: '👑', cor: 0xf39c12 },
@@ -60,7 +81,7 @@ const visual = {
   Suporte: { emoji: '🎫', cor: 0x3498db },
   Atendimento: { emoji: '📞', cor: 0x2ecc71 },
   Avaliações: { emoji: '⭐', cor: 0xf1c40f },
- Administração: { emoji: '🛠️', cor: 0xe74c3c },
+  Administração: { emoji: '🛠️', cor: 0xe74c3c },
   Logs: { emoji: '📋', cor: 0x95a5a6 },
   'Anti-Abuso': { emoji: '🛡️', cor: 0xc0392b },
   Estatísticas: { emoji: '📊', cor: 0x2980b9 },
@@ -92,9 +113,10 @@ export async function loadSystems(client) {
 
   await initDB();
 
-  console.log(isDBConnected()
-    ? '[DB] ✔ SQLite pronto.'
-    : '[DB] ✖ Banco não iniciado.'
+  console.log(
+    isDBConnected()
+      ? '[DB] ✔ SQLite pronto.'
+      : '[DB] ✖ Banco não iniciado.'
   );
 
   await carregarConfigs();
@@ -131,7 +153,9 @@ export async function loadSystems(client) {
     ['Meu Perfil', regMeuPerfil, []],
   ];
 
-  let ok = 0, fail = 0, totalCmds = 0;
+  let ok = 0;
+  let fail = 0;
+  let totalCmds = 0;
 
   for (const [nome, fn, cmds] of sistemas) {
     try {
@@ -139,7 +163,12 @@ export async function loadSystems(client) {
 
       const cmdList = Array.isArray(cmds) ? cmds : [];
 
-      const meta = visual[nome] || { emoji: '📦', cor: 0x5865f2 };
+      const metaRaw = visual[nome] || { emoji: '📦', cor: 0x5865f2 };
+
+      const meta = {
+        emoji: safeEmoji(metaRaw.emoji),
+        cor: metaRaw.cor || 0x5865f2,
+      };
 
       client.systems.set(nome, {
         id: nome,
@@ -164,4 +193,4 @@ export async function loadSystems(client) {
   );
 
   return configs;
-}
+   }
