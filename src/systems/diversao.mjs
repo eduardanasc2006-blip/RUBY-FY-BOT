@@ -182,27 +182,7 @@ if (aposta > 0 && vencedor) {
       'ppt_win'
     );
   }
-}
-const loser =
-vencedor === msg.author.id
-? alvo.id
-: msg.author.id;
 
-const perdeuXP = await gastarXP(
-  loser,
-  msg.guild.id,
-  aposta,
-  'ppt_loss'
-);
-
-if (perdeuXP) {
-  await ganharXP(
-    vencedor,
-    msg.guild.id,
-    aposta,
-    'ppt_win'
-  );
-}
 
 }
 
