@@ -54,7 +54,7 @@ function embedPrincipal(client, page = 0) {
 }
 
 /* =========================
-   EMBED CATEGORIA
+   CATEGORIA
 ========================= */
 
 function embedCategoria(client, id) {
@@ -77,13 +77,13 @@ function embedCategoria(client, id) {
 }
 
 /* =========================
-   MENU SELECT
+   MENU
 ========================= */
 
 function menuPrincipal(client, userId, page = 0) {
   const cats = getCategorias(client);
-  const totalPages = Math.max(1, Math.ceil(cats.length / ITENS_POR_PAGINA));
 
+  const totalPages = Math.max(1, Math.ceil(cats.length / ITENS_POR_PAGINA));
   const safePage = Math.min(Math.max(page, 0), totalPages - 1);
 
   const start = safePage * ITENS_POR_PAGINA;
@@ -91,7 +91,7 @@ function menuPrincipal(client, userId, page = 0) {
 
   return new ActionRowBuilder().addComponents(
     new StringSelectMenuBuilder()
-      .setCustomId(`ajuda_menu:${userId}:${safePage}`)
+      .setCustomId(`ajuda_menu:${userId}`)
       .setPlaceholder('📂 Selecione uma categoria')
       .addOptions(
         items.map(c => ({
@@ -109,8 +109,8 @@ function menuPrincipal(client, userId, page = 0) {
 
 function navegacao(client, userId, page = 0) {
   const cats = getCategorias(client);
-  const totalPages = Math.max(1, Math.ceil(cats.length / ITENS_POR_PAGINA));
 
+  const totalPages = Math.max(1, Math.ceil(cats.length / ITENS_POR_PAGINA));
   const safePage = Math.min(Math.max(page, 0), totalPages - 1);
 
   return new ActionRowBuilder().addComponents(
@@ -185,9 +185,7 @@ export function register(client, configs) {
 
       return interaction.update({
         embeds: [embedCategoria(client, id)],
-        components: [
-          navegacao(client, userId, page),
-        ],
+        components: [navegacao(client, userId, page)],
       });
     }
 
@@ -200,7 +198,6 @@ export function register(client, configs) {
     if (type === 'ajuda_prev') newPage = page - 1;
     if (type === 'ajuda_next') newPage = page + 1;
 
-    // voltar menu
     if (type === 'ajuda_menu') newPage = 0;
 
     newPage = Math.min(Math.max(newPage, 0), totalPages - 1);
@@ -213,4 +210,4 @@ export function register(client, configs) {
       ],
     });
   });
-    }
+                                 }
