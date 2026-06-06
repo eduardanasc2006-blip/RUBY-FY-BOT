@@ -3,7 +3,8 @@ import {
 } from 'discord.js';
 import {
   ganharXP,
-  gastarXP
+  gastarXP,
+  temXP
 } from './xpSystem.mjs';
 
 /* =========================
@@ -143,6 +144,45 @@ vencedor = alvo.id;
 }
 
 if (aposta > 0 && vencedor) {
+  const userTemXP = await temXP(
+    msg.author.id,
+    msg.guild.id,
+    aposta
+  );
+
+  const alvoTemXP = await temXP(
+    alvo.id,
+    msg.guild.id,
+    aposta
+  );
+
+  if (!userTemXP || !alvoTemXP) {
+    return msg.reply(
+      `❌ Ambos os jogadores precisam ter pelo menos ${aposta} XP disponível para apostar.`
+    );
+  }
+
+  const loser =
+    vencedor === msg.author.id
+      ? alvo.id
+      : msg.author.id;
+
+  const perdeuXP = await gastarXP(
+    loser,
+    msg.guild.id,
+    aposta,
+    'ppt_loss'
+  );
+
+  if (perdeuXP) {
+    await ganharXP(
+      vencedor,
+      msg.guild.id,
+      aposta,
+      'ppt_win'
+    );
+  }
+}
 const loser =
 vencedor === msg.author.id
 ? alvo.id
