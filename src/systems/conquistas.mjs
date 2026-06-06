@@ -139,3 +139,11 @@ export async function verificarConquistas(client, userId, guildId, usuario, conf
     console.error('Erro conquistas:', err);
   }
     }
+
+  // ─────────────────────────────────────────────
+  // REGISTER — módulo utilitário, sem comandos próprios
+  // ─────────────────────────────────────────────
+  export function register(client, configs) {
+    // conquistas.mjs é utilitário — chamado por outros sistemas via verificarConquistas()
+  }
+  
