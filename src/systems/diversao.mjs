@@ -20,7 +20,20 @@ export const comandos = [
 ========================= */
 
 const RESPOSTAS_8BALL = [
-  '✅ Sim, definitivamente!', '✅ Com certeza!', '🤔 Talvez...', '❌ Não parece.'
+  '✅ Com certeza!',
+  '✅ Sem dúvidas.',
+  '✅ Pode apostar nisso.',
+  '✅ Sim.',
+  '✨ Os sinais apontam que sim.',
+  '🤔 Talvez.',
+  '🤔 Difícil dizer agora.',
+  '🤔 Pergunte novamente mais tarde.',
+  '😶 Não tenho certeza.',
+  '❌ Não.',
+  '❌ Minhas fontes dizem que não.',
+  '❌ Muito improvável.',
+  '❌ Nem pensar.',
+  '💀 Melhor não contar com isso.'
 ];
 
 /* =========================
@@ -50,12 +63,12 @@ export function register(client, configs) {
       const resp = RESPOSTAS_8BALL[Math.floor(Math.random() * RESPOSTAS_8BALL.length)];
 
       const embed = new EmbedBuilder()
-        .setColor(0x9b59b6)
-        .setTitle('🎱 8Ball')
-        .addFields(
-          { name: 'Pergunta', value: pergunta },
-          { name: 'Resposta', value: resp }
-        );
+  .setColor(0x9b59b6)
+  .setTitle('🎱 Bola Mágica')
+  .setDescription(
+    `❓ **Pergunta**\n${pergunta}\n\n` +
+    `🔮 **Resposta**\n${resp}`
+  );
 
       return msg.reply({ embeds: [embed] });
     }
