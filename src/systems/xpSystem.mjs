@@ -205,3 +205,73 @@ async function _registrarLog({ userId, guildId, tipo, valor, origem, saldoApos }
     // Log nunca deve quebrar a operação principal
   }
 }
+
+  // ─────────────────────────────────────────────────────────────
+  //  6. transferirXP  — aposta / duelo (sem criar XP novo)
+  //
+  //  Remove xpDisponivel do perdedor e entrega ao vencedor.
+  //  NÃO altera xpTotal de ninguém — não é recompensa, é transferência.
+  //  Operação protegida: gasta primeiro, só credita se o gasto ok.
+  // ─────────────────────────────────────────────────────────────
+
+  /**
+   * Transfere XP disponível de um usuário para outro.
+   * Não cria nem destrói XP — apenas redistribui.
+   *
+   * @param {string} deUserId   — quem perde XP (perdedor)
+   * @param {string} paraUserId — quem recebe XP (vencedor)
+   * @param {string} guildId
+   * @param {number} valor      — quantidade a transferir (> 0)
+   * @param {string} motivo     — 'ppt' | 'duelo' | …
+   * @returns {Promise<boolean>} true = sucesso | false = saldo insuficiente
+   */
+  export async function transferirXP(deUserId, paraUserId, guildId, valor, motivo = 'transferencia') {
+    if (!deUserId || !paraUserId || !guildId || typeof valor !== 'number' || valor <= 0) return false;
+
+    // Valida saldo do perdedor
+    const perdedor = await Usuario.findOne({ userId: deUserId, guildId });
+    if (!perdedor || (perdedor.xpDisponivel ?? 0) < valor) return false;
+
+    // Deduz do perdedor
+    await Usuario.updateOne(
+      { userId: deUserId, guildId },
+      { $inc: { xpDisponivel: -valor } }
+    );
+
+    // Credita ao vencedor (apenas xpDisponivel — xpTotal não muda)
+    await Usuario.findOneAndUpdate(
+      { userId: paraUserId, guildId },
+      {
+        $inc: { xpDisponivel: valor },
+        $setOnInsert: { userId: paraUserId, guildId },
+      },
+      { upsert: true }
+    );
+
+    // Logs de transferência
+    const saldoPerdedorApos = (perdedor.xpDisponivel ?? 0) - valor;
+    const vencedor = await Usuario.findOne({ userId: paraUserId, guildId });
+    const saldoVencedorApos = (vencedor?.xpDisponivel ?? 0) + valor;
+
+    await Promise.all([
+      _registrarLog({
+        userId:    deUserId,
+        guildId,
+        tipo:      'transferencia',
+        valor:     -valor,
+        origem:    motivo,
+        saldoApos: saldoPerdedorApos,
+      }),
+      _registrarLog({
+        userId:    paraUserId,
+        guildId,
+        tipo:      'transferencia',
+        valor:     +valor,
+        origem:    motivo,
+        saldoApos: saldoVencedorApos,
+      }),
+    ]);
+
+    return true;
+  }
+  
