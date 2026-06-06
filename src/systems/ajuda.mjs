@@ -211,3 +211,9 @@ export function register(client, configs) {
     });
   });
                                  }
+
+  export const comandos = [
+    { cmd: '!ajuda',    desc: 'Abre o menu de ajuda com todas as categorias.' },
+    { cmd: '!help',     desc: 'Alias de !ajuda.' },
+    { cmd: '!comandos', desc: 'Alias de !ajuda.' },
+  ];

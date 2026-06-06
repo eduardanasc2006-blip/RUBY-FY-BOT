@@ -146,4 +146,5 @@ export async function verificarConquistas(client, userId, guildId, usuario, conf
   export function register(client, configs) {
     // conquistas.mjs é utilitário — chamado por outros sistemas via verificarConquistas()
   }
-  
+
+  export const comandos = [];

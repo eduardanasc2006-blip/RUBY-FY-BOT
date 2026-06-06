@@ -200,3 +200,7 @@ export async function progredirMissao(userId, guildId, tipo, qtd = 1, channel = 
     console.error('[PROGRESS ERROR]', err);
   }
                          }
+
+  export const comandos = [
+    { cmd: '!missoes', desc: 'Mostra suas missões diárias e semanais.' },
+  ];

@@ -224,3 +224,8 @@ export function register(client, configs) {
     }
   });
 }
+
+  export const comandos = [
+    { cmd: '!ship @user',        desc: 'Calcula a compatibilidade com alguém.' },
+    { cmd: '!ship @user1 @user2', desc: 'Calcula a compatibilidade entre dois usuários.' },
+  ];

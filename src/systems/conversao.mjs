@@ -277,3 +277,12 @@ function gerarSteps(min, max) {
 
   return [...new Set(res)].slice(0, 10);
         }
+
+  export const comandos = [
+    { cmd: '!robux <brl>',       desc: 'Converte BRL para Robux com a taxa atual.' },
+    { cmd: '!brl <robux>',       desc: 'Converte Robux para BRL.' },
+    { cmd: '!taxa',              desc: 'Mostra a taxa de conversão atual.' },
+    { cmd: '!simular <brl>',     desc: 'Simula uma venda de Robux.' },
+    { cmd: '!meta <brl>',        desc: 'Mostra quanto Robux precisa para uma meta em BRL.' },
+    { cmd: '!settaxa <valor>',   desc: 'Define a taxa de conversão (admin).' },
+  ];

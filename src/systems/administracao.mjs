@@ -352,3 +352,18 @@ export function register(client, configs) {
     }
   });
         }
+
+  export const comandos = [
+    { cmd: '!anuncio <msg>',        desc: 'Faz um anúncio no canal configurado.' },
+    { cmd: '!embed <título|msg>',   desc: 'Envia uma mensagem em embed.' },
+    { cmd: '!enquete <pergunta>',   desc: 'Cria uma enquete com reações.' },
+    { cmd: '!sorteio <prêmio>',     desc: 'Inicia um sorteio no servidor.' },
+    { cmd: '!limpar <n>',           desc: 'Apaga até 100 mensagens do canal.' },
+    { cmd: '!config',               desc: 'Exibe as configurações do servidor.' },
+    { cmd: '!setconfig',            desc: 'Configura opções do servidor.' },
+    { cmd: '!setwelcome <canal>',   desc: 'Define o canal de boas-vindas.' },
+    { cmd: '!setwelcomemsg <msg>',  desc: 'Define a mensagem de boas-vindas.' },
+    { cmd: '!setautorole <cargo>',  desc: 'Define o cargo automático para novos membros.' },
+    { cmd: '!removeautorole',       desc: 'Remove o cargo automático.' },
+    { cmd: '!testwelcome',          desc: 'Testa a mensagem de boas-vindas.' },
+  ];

@@ -282,3 +282,7 @@ export function register(client, configs) {
     }
   });
     }
+
+  export const comandos = [
+    { cmd: '!loja', desc: 'Abre a loja de itens cosméticos do perfil.' },
+  ];
