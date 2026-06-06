@@ -1,7 +1,10 @@
 import {
   EmbedBuilder
 } from 'discord.js';
-import { gastarXP } from './xpSystem.mjs';
+import {
+  ganharXP,
+  gastarXP
+} from './xpSystem.mjs';
 
 /* =========================
    COMANDOS EXPORTADOS
@@ -145,8 +148,21 @@ vencedor === msg.author.id
 ? alvo.id
 : msg.author.id;
 
-await gastarXP(loser, msg.guild.id, aposta, 'ppt_loss');
-await gastarXP(vencedor, msg.guild.id, aposta, 'ppt_win');
+const perdeuXP = await gastarXP(
+  loser,
+  msg.guild.id,
+  aposta,
+  'ppt_loss'
+);
+
+if (perdeuXP) {
+  await ganharXP(
+    vencedor,
+    msg.guild.id,
+    aposta,
+    'ppt_win'
+  );
+}
 
 }
 
