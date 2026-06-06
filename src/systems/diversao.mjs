@@ -1,5 +1,6 @@
-import { EmbedBuilder } from 'discord.js';
-import Usuario from '../db/models/Usuario.mjs';
+import {
+  EmbedBuilder
+} from 'discord.js';
 import { gastarXP } from './xpSystem.mjs';
 
 /* =========================
@@ -95,65 +96,87 @@ export function register(client, configs) {
        PPT (PvP + XP)
     ========================= */
 
-    if (cmd === 'ppt') {
-      const alvo = msg.mentions.users.first();
-      const aposta = parseInt(args.find(a => !isNaN(a))) || 0;
+   if (cmd === 'ppt') {
+const alvo = msg.mentions.users.first();
+const aposta = parseInt(args.find(a => !isNaN(a))) || 0;
 
-      if (!alvo) {
-        return msg.reply('❌ Use: `!ppt @usuario [xp]`');
-      }
+if (!alvo) {
+return msg.reply('❌ Use: `!ppt @usuario [xp]`');
+}
 
-      if (alvo.id === msg.author.id) {
-        return msg.reply('❌ Você não pode jogar contra você mesmo.');
-      }
+if (alvo.id === msg.author.id) {
+return msg.reply('❌ Você não pode jogar contra você mesmo.');
+}
 
-      const opcoes = ['🪨 Pedra', '📄 Papel', '✂️ Tesoura'];
+const opcoes = [
+'🪨 Pedra',
+'📄 Papel',
+'✂️ Tesoura'
+];
 
-      const escolhaUser = opcoes[Math.floor(Math.random() * opcoes.length)];
-      const escolhaBot = opcoes[Math.floor(Math.random() * opcoes.length)];
+const escolhaUser =
+opcoes[Math.floor(Math.random() * opcoes.length)];
 
-      let resultado = '🤝 Empate!';
+const escolhaAlvo =
+opcoes[Math.floor(Math.random() * opcoes.length)];
 
-      const ganhou =
-        (escolhaUser === opcoes[0] && escolhaBot === opcoes[2]) ||
-        (escolhaUser === opcoes[1] && escolhaBot === opcoes[0]) ||
-        (escolhaUser === opcoes[2] && escolhaBot === opcoes[1]);
+let resultado = '🤝 Empate!';
+let vencedor = null;
 
-      const perdeu = escolhaUser !== escolhaBot && !ganhou;
+const ganhou =
+(escolhaUser === '🪨 Pedra' && escolhaAlvo === '✂️ Tesoura') ||
+(escolhaUser === '📄 Papel' && escolhaAlvo === '🪨 Pedra') ||
+(escolhaUser === '✂️ Tesoura' && escolhaAlvo === '📄 Papel');
 
-      let vencedor = null;
+const perdeu =
+escolhaUser !== escolhaAlvo && !ganhou;
 
-      if (ganhou) {
-        resultado = `🏆 ${msg.author.username} venceu!`;
-        vencedor = msg.author.id;
-      } else if (perdeu) {
-        resultado = `🏆 ${alvo.username} venceu!`;
-        vencedor = alvo.id;
-      }
+if (ganhou) {
+resultado = `🏆 ${msg.author.username} venceu!`;
+vencedor = msg.author.id;
+} else if (perdeu) {
+resultado = `🏆 ${alvo.username} venceu!`;
+vencedor = alvo.id;
+}
 
-      /* =========================
-         XP BET
-      ========================= */
+if (aposta > 0 && vencedor) {
+const loser =
+vencedor === msg.author.id
+? alvo.id
+: msg.author.id;
 
-      if (aposta > 0 && vencedor) {
-        const loser = vencedor === msg.author.id ? alvo.id : msg.author.id;
+await gastarXP(loser, msg.guild.id, aposta, 'ppt_loss');
+await gastarXP(vencedor, msg.guild.id, aposta, 'ppt_win');
 
-        await gastarXP(loser, msg.guild.id, aposta, 'ppt_loss');
-        await gastarXP(vencedor, msg.guild.id, aposta, 'ppt_win');
-      }
+}
 
-      const embed = new EmbedBuilder()
-        .setColor(0x3498db)
-        .setTitle('✊ Pedra, Papel ou Tesoura')
-        .addFields(
-          { name: 'Você', value: escolhaUser, inline: true },
-          { name: 'Oponente', value: escolhaBot, inline: true },
-          { name: 'Resultado', value: resultado, inline: false }
-        );
-
-      return msg.reply({ embeds: [embed] });
+const embed = new EmbedBuilder()
+  .setColor(0x3498db)
+  .setTitle('⚔️ Duelo de Pedra, Papel ou Tesoura')
+  .addFields(
+    {
+      name: `👤 ${msg.author.username}`,
+      value: escolhaUser,
+      inline: true
+    },
+    {
+      name: `👤 ${alvo.username}`,
+      value: escolhaAlvo,
+      inline: true
+    },
+    {
+      name: '🏆 Resultado',
+      value: resultado,
+      inline: false
     }
-
+  )
+  .setFooter({
+    text: aposta > 0
+      ? `Aposta: ${aposta} XP`
+      : 'Partida amistosa'
+  });
+      return msg.reply({ embeds: [embed] });
+   }
     /* =========================
        ROLETA MELHORADA
     ========================= */
@@ -169,10 +192,18 @@ export function register(client, configs) {
       const escolhido = arr[Math.floor(Math.random() * arr.length)];
 
       const embed = new EmbedBuilder()
-        .setColor(0xf1c40f)
-        .setTitle('🎰 Roleta da Sorte')
-        .setDescription(`🎉 Sorteado: **${escolhido.displayName}**`)
-        .setFooter({ text: 'Boa sorte na próxima!' });
+.setColor(0xf1c40f)
+.setTitle('🎰 Roleta da Sorte')
+.setDescription(
+`🎲 Girando a roleta...
+
+👥 Participantes: ${arr.length}
+
+🏆 Sorteado:
+**${escolhido.displayName}**
+
+✨ Parabéns!`
+);
 
       return msg.reply({ embeds: [embed] });
     }
@@ -196,10 +227,13 @@ export function register(client, configs) {
 
       const escolha = opcoes[Math.floor(Math.random() * opcoes.length)];
 
-      const embed = new EmbedBuilder()
-        .setColor(0x2ecc71)
-        .setTitle('🎯 Escolha Aleatória')
-        .setDescription(`Opções: ${opcoes.join(', ')}\n\n👉 Escolha: **${escolha}**`);
+     const embed = new EmbedBuilder()
+  .setColor(0x2ecc71)
+  .setTitle('🎯 Escolha Aleatória')
+  .setDescription(
+    `📋 Opções:\n${opcoes.map(o => `• ${o}`).join('\n')}\n\n` +
+    `🏆 Resultado:\n**${escolha}**`
+  );
 
       return msg.reply({ embeds: [embed] });
     }
