@@ -37,16 +37,8 @@ const configs = new Map();
 ========================= */
 
 function safeEmoji(e) {
-  if (!e) return '📦';
-
-  if (typeof e === 'string') {
-    if (!e.includes(':')) return e;
-
-    const match = e.match(/^<:([^:]+):(\d+)>$/);
-    if (match) return { name: match[1], id: match[2] };
-  }
-
-  return '📦';
+  if (!e || typeof e !== 'string') return '📦';
+  return e;
 }
 
 /* =========================
@@ -160,7 +152,7 @@ export async function loadSystems(client) {
       const metaRaw = visual[nome] || { emoji: '📦', cor: 0x5865f2 };
 
       const meta = {
-        emoji: safeEmoji(metaRaw.emoji),
+        emoji: metaRaw.emoji || '📦',
         cor: metaRaw.cor || 0x5865f2,
       };
 
