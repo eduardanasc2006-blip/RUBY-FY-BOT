@@ -1,6 +1,8 @@
 import {
-  EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle,
-  StringSelectMenuBuilder, StringSelectMenuOptionBuilder,
+  EmbedBuilder,
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
+  StringSelectMenuOptionBuilder,
 } from 'discord.js';
 import QuizModel from '../db/models/Quiz.mjs';
 import { embedErro } from '../utils/embeds.mjs';
@@ -61,12 +63,15 @@ const PERGUNTAS = {
   ],
 };
 
-// Categoria "geral" — mistura de todas
 const TODAS_CATS = Object.keys(PERGUNTAS);
+const LETRAS     = ['A', 'B', 'C', 'D'];
+
+// Chave do jogo = canal + guild — qualquer pessoa no canal pode responder
+const jogosAtivos = new Map();
 
 function sortearPergunta(categoria) {
   if (categoria === 'geral') {
-    const cat = TODAS_CATS[Math.floor(Math.random() * TODAS_CATS.length)];
+    const cat  = TODAS_CATS[Math.floor(Math.random() * TODAS_CATS.length)];
     const pergs = PERGUNTAS[cat];
     return { pergunta: pergs[Math.floor(Math.random() * pergs.length)], categoria: cat };
   }
@@ -74,85 +79,164 @@ function sortearPergunta(categoria) {
   return { pergunta: pergs[Math.floor(Math.random() * pergs.length)], categoria };
 }
 
-const jogosAtivos = new Map();
-
-// Inicia o quiz (usado tanto pelo comando direto quanto pelo select menu)
-async function iniciarQuiz(channel, userId, guildId, categoria, replyFn) {
-  const chave = `${userId}:${guildId}`;
+async function iniciarQuiz(channel, iniciadorId, guildId, categoria) {
+  const chave = `${channel.id}:${guildId}`;
   if (jogosAtivos.has(chave)) {
-    await replyFn({ embeds: [embedErro('Você já tem um quiz em andamento!')] });
+    await channel.send({ embeds: [embedErro('Já há um quiz em andamento neste canal! Responda com **A**, **B**, **C** ou **D**.')] });
     return;
   }
 
   const { pergunta, categoria: catReal } = sortearPergunta(categoria);
   const catLabel = catReal.charAt(0).toUpperCase() + catReal.slice(1);
 
+  // Lista as opções no texto do embed — sem botões
+  const opcoesTxt = pergunta.ops
+    .map((op, i) => `${LETRAS[i]}) ${op}`)
+    .join('\n');
+
   const embed = new EmbedBuilder()
     .setColor(0x3498db)
     .setTitle(`🧠 Quiz — ${catLabel}`)
-    .setDescription(`**${pergunta.p}**`)
-    .setFooter({ text: 'Você tem 30 segundos para responder!' })
+    .setDescription(`**${pergunta.p}**\n\n${opcoesTxt}`)
+    .setFooter({ text: `Iniciado por <@${iniciadorId}> • Qualquer um pode responder! Digite A, B, C ou D no chat.` })
     .setTimestamp();
 
-  const botoes = pergunta.ops.map((op, i) =>
-    new ButtonBuilder()
-      .setCustomId(`quiz:${i}:${userId}:${guildId}`)
-      .setLabel(`${['A', 'B', 'C', 'D'][i]}) ${op}`)
-      .setStyle(ButtonStyle.Primary)
-  );
-  const row = new ActionRowBuilder().addComponents(botoes);
-  const quizMsg = await replyFn({ embeds: [embed], components: [row] });
+  await channel.send({ embeds: [embed] });
 
-  jogosAtivos.set(chave, { correto: pergunta.r, categoria: catReal, msgId: quizMsg?.id });
-  setTimeout(async () => {
+  // Timer de 30 segundos
+  const timer = setTimeout(async () => {
     if (!jogosAtivos.has(chave)) return;
+    const j = jogosAtivos.get(chave);
     jogosAtivos.delete(chave);
-    await channel.messages.fetch(quizMsg?.id || '').then(m => m.edit({ components: [] })).catch(() => {});
+    const certa = `${LETRAS[j.correto]}) ${j.pergunta.ops[j.correto]}`;
     await channel.send({
-      embeds: [new EmbedBuilder().setColor(0xe74c3c)
-        .setDescription(`⏰ <@${userId}> o tempo esgotou! A resposta era: **${['A', 'B', 'C', 'D'][pergunta.r]}) ${pergunta.ops[pergunta.r]}**`)]
+      embeds: [new EmbedBuilder()
+        .setColor(0xe74c3c)
+        .setDescription(`⏰ Tempo esgotado! Ninguém respondeu.\nA resposta era: **${certa}**`)
+        .setTimestamp()
+      ]
     }).catch(() => {});
   }, 30_000);
+
+  jogosAtivos.set(chave, {
+    correto: pergunta.r,
+    categoria: catReal,
+    pergunta,
+    iniciadorId,
+    timer,
+  });
 }
 
 export const comandos = [
-  { cmd: '!quiz [categoria]',  desc: `Quiz interativo (+${30} XP por acerto).` },
+  { cmd: '!quiz [categoria]',  desc: `Quiz interativo (+${30} XP por acerto). Responda com A/B/C/D no chat.` },
   { cmd: '!quizstats [@user]', desc: 'Estatísticas de quiz.' },
   { cmd: '!topquiz',           desc: 'Ranking de acertos no quiz.' },
 ];
 
 export function register(client, configs) {
+  if (client.__quizRegistrado) return;
+  client.__quizRegistrado = true;
+
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
-    const cfg = configs.get(msg.guild.id);
+    const cfg     = configs.get(msg.guild.id);
     const prefixo = cfg?.prefixo || '!';
-    if (!msg.content.startsWith(prefixo)) return;
-
-    const args = msg.content.slice(prefixo.length).trim().split(/\s+/);
-    const cmd = args.shift().toLowerCase();
     const guildId = msg.guild.id;
+    const chave   = `${msg.channel.id}:${guildId}`;
 
+    // ── Verificar resposta de quiz ativo (antes do prefixo) ─
+    const jogoAtual = jogosAtivos.get(chave);
+    if (jogoAtual && !msg.content.startsWith(prefixo)) {
+      const resposta = msg.content.trim().toUpperCase();
+      if (!LETRAS.includes(resposta)) return;
+
+      const idx     = LETRAS.indexOf(resposta);
+      const correto = idx === jogoAtual.correto;
+
+      clearTimeout(jogoAtual.timer);
+      jogosAtivos.delete(chave);
+
+      const certa = `${LETRAS[jogoAtual.correto]}) ${jogoAtual.pergunta.ops[jogoAtual.correto]}`;
+
+      if (correto) {
+        const xpGanho = XP_EVENTS?.QUIZ ?? 30;
+
+        try {
+          const stats    = await QuizModel.findOne({ userId: msg.author.id, guildId });
+          const contagem = (() => {
+            try { return JSON.parse(stats?.categoriasContagem || '{}'); } catch { return {}; }
+          })();
+          contagem[jogoAtual.categoria] = (contagem[jogoAtual.categoria] || 0) + 1;
+          const favorita = Object.entries(contagem).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+          await QuizModel.findOneAndUpdate(
+            { userId: msg.author.id, guildId },
+            {
+              $inc: { total: 1, acertos: 1 },
+              $set: { categoriasContagem: JSON.stringify(contagem), categoriaFavorita: favorita },
+              $setOnInsert: { userId: msg.author.id, guildId },
+            },
+            { upsert: true }
+          );
+        } catch {}
+
+        await ganharXP(msg.author.id, guildId, xpGanho, 'quiz').catch(() => {});
+        await progredirMissao(msg.author.id, guildId, 'quiz', 1, msg.channel).catch(() => {});
+
+        return msg.channel.send({
+          embeds: [new EmbedBuilder()
+            .setColor(0x2ecc71)
+            .setTitle('✅ Acertou!')
+            .setDescription(`<@${msg.author.id}> acertou! A resposta era **${certa}**\n+${xpGanho} XP!`)
+            .setTimestamp()
+          ]
+        });
+      } else {
+        try {
+          await QuizModel.findOneAndUpdate(
+            { userId: msg.author.id, guildId },
+            { $inc: { total: 1, erros: 1 }, $setOnInsert: { userId: msg.author.id, guildId } },
+            { upsert: true }
+          );
+        } catch {}
+
+        return msg.channel.send({
+          embeds: [new EmbedBuilder()
+            .setColor(0xe74c3c)
+            .setTitle('❌ Errou!')
+            .setDescription(`<@${msg.author.id}> errou! A resposta certa era **${certa}**\nOutros ainda podem responder... ah, espera — só uma tentativa por quiz!`)
+            .setTimestamp()
+          ]
+        });
+      }
+    }
+
+    // ── Comandos ────────────────────────────────────────────
+    if (!msg.content.startsWith(prefixo)) return;
+    const args = msg.content.slice(prefixo.length).trim().split(/\s+/);
+    const cmd  = args.shift().toLowerCase();
+
+    // !quiz
     if (cmd === 'quiz') {
-      const cdKey = `quiz:${msg.author.id}:${guildId}`;
+      const cdKey  = `quiz:${msg.author.id}:${guildId}`;
       const espera = checkCooldown(cdKey, 15_000);
-      if (espera) return msg.reply({ embeds: [embedErro(`Aguarde **${formatarTempo(espera)}** para jogar novamente.`)] });
+      if (espera)
+        return msg.reply({ embeds: [embedErro(`Aguarde **${formatarTempo(espera)}** para iniciar novo quiz.`)] });
 
       const categoriaInput = args[0]?.toLowerCase();
-
-      // Com argumento direto: !quiz roblox
       if (categoriaInput) {
-        const cat = TODAS_CATS.find(c => c.includes(categoriaInput)) || 'geral';
-        return iniciarQuiz(msg.channel, msg.author.id, guildId, cat, (opts) => msg.reply(opts));
+        const cat = TODAS_CATS.find(c => c.startsWith(categoriaInput)) || 'geral';
+        return iniciarQuiz(msg.channel, msg.author.id, guildId, cat);
       }
 
-      // Sem argumento: mostrar menu de categorias
+      // Sem argumento — menu de seleção de categoria (só o criador escolhe)
       const opcoes = [
         new StringSelectMenuOptionBuilder().setLabel('Geral').setValue('geral').setDescription('Perguntas de todas as categorias').setEmoji('🌐'),
         new StringSelectMenuOptionBuilder().setLabel('Roblox').setValue('roblox').setDescription('Perguntas sobre Roblox').setEmoji('🎮'),
-        new StringSelectMenuOptionBuilder().setLabel('Anime').setValue('anime').setDescription('Perguntas sobre anime e mangá').setEmoji('🎌'),
+        new StringSelectMenuOptionBuilder().setLabel('Anime').setValue('anime').setDescription('Anime e mangá').setEmoji('🎌'),
         new StringSelectMenuOptionBuilder().setLabel('Matemática').setValue('matematica').setDescription('Cálculos e lógica').setEmoji('🔢'),
         new StringSelectMenuOptionBuilder().setLabel('Tecnologia').setValue('tecnologia').setDescription('Informática e tech').setEmoji('💻'),
-        new StringSelectMenuOptionBuilder().setLabel('História').setValue('historia').setDescription('História do Brasil e do mundo').setEmoji('📜'),
+        new StringSelectMenuOptionBuilder().setLabel('História').setValue('historia').setDescription('Brasil e mundo').setEmoji('📜'),
       ];
 
       const menu = new StringSelectMenuBuilder()
@@ -160,124 +244,79 @@ export function register(client, configs) {
         .setPlaceholder('Escolha uma categoria...')
         .addOptions(opcoes);
 
-      const row = new ActionRowBuilder().addComponents(menu);
+      const row   = new ActionRowBuilder().addComponents(menu);
       const embed = new EmbedBuilder()
         .setColor(0x3498db)
         .setTitle('🧠 Quiz FiskBot')
-        .setDescription('Selecione uma categoria para começar!\n\nVocê tem **30 segundos** para escolher.')
+        .setDescription(
+          'Selecione uma categoria para começar!\n' +
+          'Você tem **30 segundos** para escolher.\n\n' +
+          '> Após o quiz iniciar, **qualquer pessoa** pode responder digitando\n' +
+          '> **A**, **B**, **C** ou **D** no chat — sem botões!'
+        )
         .addFields(
-          { name: '🌐 Geral', value: 'Mistura de todas', inline: true },
-          { name: '🎮 Roblox', value: 'Perguntas de Roblox', inline: true },
-          { name: '🎌 Anime', value: 'Anime & Mangá', inline: true },
-          { name: '🔢 Matemática', value: 'Cálculos', inline: true },
-          { name: '💻 Tecnologia', value: 'Tech & Info', inline: true },
-          { name: '📜 História', value: 'Brasil & Mundo', inline: true },
+          { name: '🌐 Geral',      value: 'Mistura de todas',    inline: true },
+          { name: '🎮 Roblox',     value: 'Perguntas de Roblox', inline: true },
+          { name: '🎌 Anime',      value: 'Anime & Mangá',        inline: true },
+          { name: '🔢 Matemática', value: 'Cálculos',             inline: true },
+          { name: '💻 Tecnologia', value: 'Tech & Info',          inline: true },
+          { name: '📜 História',   value: 'Brasil & Mundo',       inline: true },
         )
         .setFooter({ text: 'FiskBot • Quiz' });
 
       return msg.reply({ embeds: [embed], components: [row] });
     }
 
+    // !quizstats
     if (cmd === 'quizstats') {
       const alvo = msg.mentions.users.first() || msg.author;
-      const doc = await QuizModel.findOne({ userId: alvo.id, guildId });
-      if (!doc || doc.total === 0) return msg.reply({ embeds: [embedErro('Nenhum quiz registrado.')] });
+      const doc  = await QuizModel.findOne({ userId: alvo.id, guildId });
+      if (!doc || doc.total === 0)
+        return msg.reply({ embeds: [embedErro('Nenhum quiz registrado.')] });
       const precisao = ((doc.acertos / doc.total) * 100).toFixed(1);
       const embed = new EmbedBuilder()
         .setColor(0x3498db)
         .setTitle(`📊 Stats de Quiz — ${alvo.displayName}`)
         .addFields(
-          { name: '📝 Total', value: String(doc.total), inline: true },
-          { name: '✅ Acertos', value: String(doc.acertos), inline: true },
-          { name: '❌ Erros', value: String(doc.erros), inline: true },
-          { name: '🎯 Precisão', value: `${precisao}%`, inline: true },
+          { name: '📝 Total',    value: String(doc.total),            inline: true },
+          { name: '✅ Acertos',  value: String(doc.acertos),          inline: true },
+          { name: '❌ Erros',    value: String(doc.erros),            inline: true },
+          { name: '🎯 Precisão', value: `${precisao}%`,               inline: true },
           { name: '⭐ Favorita', value: doc.categoriaFavorita || 'N/A', inline: true },
-        ).setTimestamp();
+        )
+        .setTimestamp();
       return msg.reply({ embeds: [embed] });
     }
 
+    // !topquiz
     if (cmd === 'topquiz') {
       const top = await QuizModel.find({ guildId }).sort({ acertos: -1 }).limit(10).lean();
-      const linhas = top.map((u, i) => `**#${i + 1}** <@${u.userId}> — ✅ ${u.acertos} acertos (${u.total} jogos)`);
+      if (!top.length)
+        return msg.reply({ embeds: [embedErro('Nenhum dado de quiz ainda.')] });
+      const linhas = top.map((u, i) => {
+        const pct = u.total > 0 ? ((u.acertos / u.total) * 100).toFixed(0) : '0';
+        return `**#${i + 1}** <@${u.userId}> — ✅ ${u.acertos} acertos • ${u.total} jogos • 🎯 ${pct}%`;
+      });
       const embed = new EmbedBuilder()
-        .setColor(0x3498db)
+        .setColor(0xf1c40f)
         .setTitle('🏆 Top Quiz')
-        .setDescription(linhas.join('\n') || 'Nenhum dado.')
+        .setDescription(linhas.join('\n'))
         .setTimestamp();
       return msg.reply({ embeds: [embed] });
     }
   });
 
-  // ── Interactions (select menu de categoria + botões de resposta) ──
+  // Select menu — escolha de categoria (só o iniciador)
   client.on('interactionCreate', async (interaction) => {
-    // Select menu: escolha de categoria
-    if (interaction.isStringSelectMenu() && interaction.customId.startsWith('quizcat:')) {
-      const [, userId, guildId] = interaction.customId.split(':');
-      if (interaction.user.id !== userId)
-        return interaction.reply({ content: 'Este menu não é seu.', ephemeral: true });
+    if (!interaction.isStringSelectMenu()) return;
+    if (!interaction.customId.startsWith('quizcat:')) return;
 
-      const cdKey = `quiz:${userId}:${guildId}`;
-      // Remove o select menu e inicia o quiz
-      await interaction.update({ components: [] }).catch(() => {});
-
-      const categoria = interaction.values[0];
-      await iniciarQuiz(
-        interaction.channel,
-        userId,
-        guildId,
-        categoria,
-        (opts) => interaction.channel.send(opts)
-      );
-      return;
-    }
-
-    // Botão de resposta
-    if (!interaction.isButton() || !interaction.customId.startsWith('quiz:')) return;
-    const [, respostaStr, userId, guildId] = interaction.customId.split(':');
+    const [, userId, guildId] = interaction.customId.split(':');
     if (interaction.user.id !== userId)
-      return interaction.reply({ content: 'Este quiz não é seu.', ephemeral: true });
+      return interaction.reply({ content: 'Apenas quem usou !quiz pode escolher a categoria.', ephemeral: true });
 
-    const chave = `${userId}:${guildId}`;
-    const jogo = jogosAtivos.get(chave);
-    if (!jogo) return interaction.reply({ content: 'Este quiz expirou.', ephemeral: true });
-
-    jogosAtivos.delete(chave);
-    const resposta = parseInt(respostaStr);
-    const correto = resposta === jogo.correto;
-    const xpGanho = correto ? XP_EVENTS.QUIZ : 0;
-
-    // Atualizar stats — também rastreia categoria favorita
-    try {
-      const stats = await QuizModel.findOne({ userId, guildId });
-      const contagem = stats?.categoriasContagem || {};
-      contagem[jogo.categoria] = (contagem[jogo.categoria] || 0) + 1;
-      const favorita = Object.entries(contagem).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
-
-      await QuizModel.findOneAndUpdate(
-        { userId, guildId },
-        {
-          $inc: { total: 1, acertos: correto ? 1 : 0, erros: correto ? 0 : 1 },
-          $set: { categoriasContagem: JSON.stringify(contagem), categoriaFavorita: favorita },
-          $setOnInsert: { userId, guildId },
-        },
-        { upsert: true }
-      );
-    } catch {}
-
-    if (correto && xpGanho > 0) {
-      await ganharXP(userId, guildId, xpGanho, 'quiz').catch(() => {});
-    }
-
-    await progredirMissao(userId, guildId, 'quiz', 1, interaction.channel).catch(() => {});
-
-    const embed = new EmbedBuilder()
-      .setColor(correto ? 0x2ecc71 : 0xe74c3c)
-      .setDescription(
-        correto
-          ? `✅ Correto! <@${userId}> acertou! +${xpGanho} XP 🎉`
-          : `❌ Errado! A resposta certa era: **${['A', 'B', 'C', 'D'][jogo.correto]}**`
-      ).setTimestamp();
-
-    await interaction.update({ embeds: [embed], components: [] }).catch(() => {});
+    await interaction.update({ components: [] }).catch(() => {});
+    const categoria = interaction.values[0];
+    await iniciarQuiz(interaction.channel, userId, guildId, categoria);
   });
 }
