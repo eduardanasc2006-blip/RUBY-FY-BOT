@@ -131,6 +131,10 @@ if (alvo.bot && COMANDOS_REVIDA.includes(cmd)) {
         `⚔️ <@${msg.author.id}> tentou atacar o bot!\n\n💥 O bot desviou e atacou de volta!`
       );
 
+  console.log(
+  `[GIF TESTE] ${cmd}`,
+  gif
+);
     if (gif) embed.setImage(gif);
     console.log(
   `[INTERACAO] ${cmd} GIF =>`,
@@ -197,7 +201,7 @@ if (alvo.bot && COMANDOS_REVIDA.includes(cmd)) {
 
     if (!alvo.bot && afin.ganhou && pontos > 0) {
       embed.setFooter({
-  text: `+${pontos} Afinidade`
+  text: `+${pontos} Afinidade • Total: ${afin.pontos ?? '?'}`
 });
     } else if (!alvo.bot && pontos > 0) {
       embed.setFooter({ text: 'Afinidade: já ganhada hoje (próxima em 12h)' });
