@@ -116,6 +116,61 @@ export function register(client, configs) {
     if (!alvo) return msg.reply({ embeds: [embedErro('Mencione um usuário.')] });
     if (alvo.id === msg.author.id) return msg.reply({ embeds: [embedErro('Você não pode usar isso em si mesmo!')] });
 
+    const embed = new EmbedBuilder()
+  .setColor(CORES[cmd] || 0xa855f7)
+  .setTimestamp();
+
+const COMANDOS_REVIDA = ['atacar', 'bofetada', 'xingar'];
+
+if (alvo.bot && COMANDOS_REVIDA.includes(cmd)) {
+  if (cmd === 'atacar') {
+    const gif = GIFS.atacar?.[Math.floor(Math.random() * GIFS.atacar.length)];
+
+    embed
+      .setDescription(
+        `⚔️ <@${msg.author.id}> tentou atacar o bot!\n\n💥 O bot desviou e atacou de volta!`
+      );
+
+    if (gif) embed.setImage(gif);
+    console.log(
+  `[INTERACAO] ${cmd} GIF =>`,
+  gif
+);
+
+    return msg.reply({ embeds: [embed] });
+  }
+
+  if (cmd === 'bofetada') {
+    const gif = GIFS.bofetada?.[Math.floor(Math.random() * GIFS.bofetada.length)];
+
+    embed
+      .setDescription(
+        `👋 <@${msg.author.id}> tentou dar uma bofetada no bot!\n\n😤 O bot devolveu a bofetada!`
+      );
+
+    if (gif) embed.setImage(gif);
+
+    return msg.reply({ embeds: [embed] });
+  }
+
+  if (cmd === 'xingar') {
+    const respostas = [
+      'Você foi derrotado por um bot. 🤖',
+      'Erro 404: inteligência não encontrada. 💀',
+      'Seu Wi-Fi tem mais personalidade. 📶',
+      'Tente novamente quando evoluir de nível. 😏',
+      'Meu banco de dados ficou ofendido. 🗄️'
+    ];
+
+    embed.setDescription(
+      `😤 O bot respondeu para <@${msg.author.id}>:\n\n> ${
+        respostas[Math.floor(Math.random() * respostas.length)]
+      }`
+    );
+
+    return msg.reply({ embeds: [embed] });
+  }
+}
     const cdKey = `inter:${cmd}:${msg.author.id}:${msg.guild.id}`;
     const espera = checkCooldown(cdKey, 20_000);
     if (espera) return msg.reply({ embeds: [embedErro(`Aguarde **${formatarTempo(espera)}** para usar novamente.`)] });
@@ -125,8 +180,7 @@ export function register(client, configs) {
     if (pontos > 0 && !alvo.bot) {
       afin = await addAfinidade(msg.guild.id, msg.author.id, alvo.id, pontos).catch(() => ({ ganhou: false, pontosGanhos: 0 }));
     }
-
-    const embed = new EmbedBuilder().setColor(CORES[cmd] || 0xa855f7).setTimestamp();
+;
 
     if (cmd === 'elogiar') {
       const elogio = ELOGIOS[Math.floor(Math.random() * ELOGIOS.length)];
@@ -142,13 +196,27 @@ export function register(client, configs) {
     }
 
     if (!alvo.bot && afin.ganhou && pontos > 0) {
-      embed.setFooter({ text: `+${pontos} Afinidade! Total: ${afin.pontos ?? '?'} pts` });
+      embed.setFooter({
+  text: `+${pontos} Afinidade`
+});
     } else if (!alvo.bot && pontos > 0) {
       embed.setFooter({ text: 'Afinidade: já ganhada hoje (próxima em 12h)' });
     }
 
+    if (alvo.displayAvatarURL) {
+  embed.setThumbnail(
+    alvo.displayAvatarURL({
+      extension: 'png',
+      size: 512
+    })
+  );
+        }
     await msg.reply({ embeds: [embed] });
-    await atualizarMissoes(msg.author.id, msg.guild.id, 'interacao').catch(() => {});
+     await atualizarMissoes(
+  msg.author.id,
+  msg.guild.id,
+  cmd
+);
   });
 }
 
