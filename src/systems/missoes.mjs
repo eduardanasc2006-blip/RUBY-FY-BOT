@@ -114,8 +114,14 @@ async function garantirMissoes(userId, guildId) {
   const hoje   = diaAtual();
   const semana = semanaISO();
 
-  let doc = await Missao.findOne({ userId, guildId });
-  if (!doc) doc = new Missao({ userId, guildId });
+  // Garantir que o registro existe antes de ler
+    await Missao.findOneAndUpdate(
+      { userId, guildId },
+      { $setOnInsert: { userId, guildId } },
+      { upsert: true }
+    ).catch(() => {});
+    let doc = await Missao.findOne({ userId, guildId });
+    if (!doc) throw new Error('Banco não disponível');
 
   const renovarD = doc.ultimaDiaMissao !== hoje;
   const renovarS = doc.ultimaSemanaMissao !== semana;
@@ -131,7 +137,7 @@ async function garantirMissoes(userId, guildId) {
     doc.ultimaRenovacaoSemanal = new Date();
   }
 
-  await doc.save();
+  if (renovarD || renovarS) await doc.save();
   return doc;
 }
 
@@ -160,6 +166,9 @@ export const comandos = [
 ];
 
 export function register(client, configs) {
+  if (client.__missoesRegistrado) return;
+  client.__missoesRegistrado = true;
+
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
     const cfg     = configs.get(msg.guild.id);
@@ -253,5 +262,7 @@ export async function progredirMissao(userId, guildId, tipo, quantidade = 1, can
     }
 
     if (atualizado) await doc.save();
-  } catch {}
+  } catch (e) {
+    console.error('[Missoes:progredirMissao]', e.message);
+  }
 }

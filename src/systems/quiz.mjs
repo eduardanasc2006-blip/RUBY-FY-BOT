@@ -138,6 +138,7 @@ export function register(client, configs) {
   client.__quizRegistrado = true;
 
   client.on('messageCreate', async (msg) => {
+    try {
     if (msg.author.bot || !msg.guild) return;
     const cfg     = configs.get(msg.guild.id);
     const prefixo = cfg?.prefixo || '!';
@@ -304,18 +305,23 @@ export function register(client, configs) {
         .setTimestamp();
       return msg.reply({ embeds: [embed] });
     }
+    } catch (e) {
+      console.error('[Quiz:msg]', e.message);
+    }
   });
-
   // Select menu — escolha de categoria (só o iniciador)
   client.on('interactionCreate', async (interaction) => {
     if (!interaction.isStringSelectMenu()) return;
     if (!interaction.customId.startsWith('quizcat:')) return;
 
     const [, userId, guildId] = interaction.customId.split(':');
-    if (interaction.user.id !== userId)
-      return interaction.reply({ content: 'Apenas quem usou !quiz pode escolher a categoria.', ephemeral: true });
+    if (interaction.user.id !== userId) {
+      if (!interaction.replied && !interaction.deferred)
+        await interaction.reply({ content: 'Apenas quem usou !quiz pode escolher a categoria.', flags: 64 }).catch(() => {});
+      return;
+    }
 
-    await interaction.update({ components: [] }).catch(() => {});
+    try { await interaction.update({ components: [] }); } catch { /* interaction expired */ }
     const categoria = interaction.values[0];
     await iniciarQuiz(interaction.channel, userId, guildId, categoria);
   });

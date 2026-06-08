@@ -1,4 +1,5 @@
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { getDB } from '../db/sqlite.mjs';
 import Produto from '../db/models/Produto.mjs';
 import { embedErro, embedSucesso } from '../utils/embeds.mjs';
 import { isAdmin, isVendedor } from '../utils/permissions.mjs';
@@ -15,7 +16,11 @@ export const comandos = [
 ];
 
 export function register(client, configs) {
+  if (client.__produtosRegistrado) return;
+  client.__produtosRegistrado = true;
+
   client.on('messageCreate', async (msg) => {
+    try {
     if (msg.author.bot || !msg.guild) return;
     const cfg = configs.get(msg.guild.id);
     const prefixo = cfg?.prefixo || '!';
@@ -55,7 +60,8 @@ export function register(client, configs) {
       const nome = args.join(' ');
       if (!nome) return msg.reply({ embeds: [embedErro('Use: `!preco <nome do produto>`')] });
 
-      const produto = await Produto.findOne({ guildId, nome: { $regex: nome, $options: 'i' } });
+      const _todos = await Produto.find({ guildId }).lean();
+        const produto = _todos.find(p => p?.nome?.toLowerCase().includes(nome.toLowerCase()));
       if (!produto) return msg.reply({ embeds: [embedErro('Produto não encontrado.')] });
 
       const tabela = produto.tabela.map(t => `• **${t.quantidade}** — ${t.preco}`).join('\n');
@@ -97,7 +103,8 @@ export function register(client, configs) {
       const nomeProd = args.join(' ');
       if (!nomeProd) return msg.reply({ embeds: [embedErro('Use: `!addtabela <nome do produto>`')] });
 
-      const produto = await Produto.findOne({ guildId, nome: { $regex: nomeProd, $options: 'i' } });
+      const _allP = await Produto.find({ guildId }).lean();
+      const produto = _allP.find(p => p?.nome?.toLowerCase().includes(nomeProd.toLowerCase()));
       if (!produto) return msg.reply({ embeds: [embedErro('Produto não encontrado.')] });
 
       const sessaoKey = `tab:${msg.author.id}:${guildId}`;
@@ -117,7 +124,9 @@ export function register(client, configs) {
     if (cmd === 'delproduto') {
       if (!isAdmin(msg.member, cfg)) return msg.reply({ embeds: [embedErro('Apenas administradores podem remover produtos.')] });
       const nome = args.join(' ');
-      const produto = await Produto.findOneAndDelete({ guildId, nome: { $regex: nome, $options: 'i' } });
+      const _lista2 = await Produto.find({ guildId }).lean();
+      const produto = _lista2.find(p => p?.nome?.toLowerCase().includes(nome.toLowerCase()));
+      if (produto?.id) await Produto.deleteOne({ id: produto.id }).catch(() => {});
       if (!produto) return msg.reply({ embeds: [embedErro('Produto não encontrado.')] });
       await registrarLog(client, guildId, 'produto', msg.author.id, { descricao: `<@${msg.author.id}> removeu o produto **${produto.nome}**.` }, configs);
       return msg.reply({ embeds: [embedSucesso('Produto Removido', `**${produto.nome}** foi removido do catálogo.`)] });
@@ -137,7 +146,10 @@ export function register(client, configs) {
         return qtd && preco ? { quantidade: qtd, preco } : null;
       }).filter(Boolean);
       if (linhas.length) {
-        await Produto.findByIdAndUpdate(s.produtoId, { $push: { tabela: { $each: linhas } } });
+        const _prod = getDB()?.prepare('SELECT tabela FROM produtos WHERE id = ?').get(s.produtoId);
+          const _tab = (() => { try { return JSON.parse(_prod?.tabela || '[]'); } catch { return []; } })();
+          _tab.push(...linhas);
+          getDB()?.prepare('UPDATE produtos SET tabela = ? WHERE id = ?').run(JSON.stringify(_tab), s.produtoId);
         await msg.react('✅').catch(() => {});
       }
       return;
@@ -182,6 +194,8 @@ export function register(client, configs) {
       };
 
       await etapas[s.etapa]?.();
+    } catch (e) {
+      console.error('[Produtos:msg]', e.message);
     }
   });
 }

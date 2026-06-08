@@ -41,8 +41,11 @@ export const comandos = [
 export function register(client, configs) {
   if (client.__forcaRegistrado) return;
   client.__forcaRegistrado = true;
+  if (client.__forcaRegistrado) return;
+  client.__forcaRegistrado = true;
 
   client.on('messageCreate', async (msg) => {
+    try {
     if (msg.author.bot || !msg.guild) return;
     const cfg     = configs.get(msg.guild.id);
     const prefixo = cfg?.prefixo || '!';
@@ -161,6 +164,9 @@ export function register(client, configs) {
     }
 
     await enviarEstado(msg.channel, msg.author, jogo, false);
+    } catch (e) {
+      console.error('[Forca:msg]', e.message);
+    }
   });
 }
 

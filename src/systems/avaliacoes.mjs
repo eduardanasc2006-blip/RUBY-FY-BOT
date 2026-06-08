@@ -11,7 +11,11 @@ export const comandos = [
 ];
 
 export function register(client, configs) {
+  if (client.__avaliacoesRegistrado) return;
+  client.__avaliacoesRegistrado = true;
+
   client.on('messageCreate', async (msg) => {
+    try {
     if (msg.author.bot || !msg.guild) return;
     const cfg = configs.get(msg.guild.id);
     const prefixo = cfg?.prefixo || '!';
@@ -81,12 +85,15 @@ export function register(client, configs) {
         return msg.reply({ embeds: [new EmbedBuilder().setColor(0x2ecc71).setDescription(`✅ Obrigado pela avaliação de **${'⭐'.repeat(s.nota)}**!`)] });
       }
     }
+    } catch (e) {
+      console.error('[Avaliacoes:msg]', e.message);
+    }
   });
-
   client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton() || !interaction.customId.startsWith('avaliacao:nota:')) return;
+    if (interaction.replied || interaction.deferred) return;
     const [, , notaStr, userId, guildId] = interaction.customId.split(':');
-    if (interaction.user.id !== userId) return interaction.reply({ content: 'Este botão não é para você.', ephemeral: true });
+    if (interaction.user.id !== userId) return interaction.reply({ content: 'Este botão não é para você.', flags: 64 });
 
     const nota = parseInt(notaStr);
     const sessaoKey = `${userId}:${guildId}`;
@@ -95,12 +102,12 @@ export function register(client, configs) {
     s.etapa = 'comentario';
     sessoesAvaliacao.set(sessaoKey, s);
 
-    await interaction.update({
+    try { await interaction.update({
       embeds: [new EmbedBuilder()
         .setColor(0x2ecc71)
         .setTitle('⭐ Avaliação — Comentário')
         .setDescription(`Nota: ${'⭐'.repeat(nota)}\n\nEscreva um **comentário** (ou \`pular\`):`).setTimestamp()],
       components: [],
-    });
+    }); } catch { /* interaction expired */ }
   });
 }

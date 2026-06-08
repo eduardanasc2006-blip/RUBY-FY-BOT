@@ -123,6 +123,7 @@ export function register(client, configs) {
   client.__interacoesRegistrado = true;
 
   client.on('messageCreate', async (msg) => {
+    try {
     if (msg.author.bot || !msg.guild) return;
     const cfg     = configs.get(msg.guild.id);
     const prefixo = cfg?.prefixo || '!';
@@ -138,8 +139,6 @@ export function register(client, configs) {
       return msg.reply({ embeds: [embedErro('Você não pode usar isso em si mesmo!')] });
 
     // Logs de depuração
-    console.log('[CMD]', cmd);
-    console.log('[ALVO]', alvo.id, '| bot:', alvo.bot);
 
     // ── 1. COOLDOWN — sempre primeiro ─────────────────────
     const cdKey  = `inter:${cmd}:${msg.author.id}:${msg.guild.id}`;
@@ -155,12 +154,10 @@ export function register(client, configs) {
     if (alvo.bot && CMDS_AGRESSIVOS.includes(cmd)) {
       if (cmd === 'atacar') {
         const gif = GIFS.atacar[Math.floor(Math.random() * GIFS.atacar.length)];
-        console.log('[GIF]', cmd, gif);
         embed.setDescription(`⚔️ <@${msg.author.id}> tentou atacar o bot!\n\n💥 O bot desviou e atacou de volta!`);
         if (gif) embed.setImage(gif);
       } else if (cmd === 'bofetada') {
         const gif = GIFS.bofetada[Math.floor(Math.random() * GIFS.bofetada.length)];
-        console.log('[GIF]', cmd, gif);
         embed.setDescription(`👋 <@${msg.author.id}> tentou dar uma bofetada no bot!\n\n😤 O bot devolveu a bofetada!`);
         if (gif) embed.setImage(gif);
       } else if (cmd === 'xingar') {
@@ -183,7 +180,6 @@ export function register(client, configs) {
     } else {
       const gifs = GIFS[cmd];
       const gif  = gifs?.[Math.floor(Math.random() * gifs.length)];
-      console.log('[GIF]', cmd, gif);
       embed.setDescription(
         TEXTOS[cmd]?.(msg.author.id, alvo.id) || `<@${msg.author.id}> interagiu com <@${alvo.id}>`
       );
@@ -198,7 +194,6 @@ export function register(client, configs) {
     let afin = { ganhou: false, pontosGanhos: 0, pontos: 0 };
     if (pontos > 0) {
       afin = await addAfinidade(msg.guild.id, msg.author.id, alvo.id, pontos).catch(() => afin);
-      console.log('[AFINIDADE]', afin);
     }
 
     if (pontos > 0) {
@@ -212,7 +207,9 @@ export function register(client, configs) {
     await msg.reply({ embeds: [embed] });
 
     // ── 6. MISSÕES — tipo 'interacao' (nunca o nome do cmd) ─
-    console.log('[MISSAO] progredindo: interacao');
     await progredirMissao(msg.author.id, msg.guild.id, 'interacao', 1, msg.channel).catch(() => {});
+    } catch (e) {
+      msg.reply({ content: '❌ Ocorreu um erro.' }).catch(() => {});
+    }
   });
 }
