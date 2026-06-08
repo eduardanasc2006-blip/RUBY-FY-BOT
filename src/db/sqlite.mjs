@@ -214,7 +214,26 @@ function _createTables() {
       dados TEXT NOT NULL DEFAULT '{}',
       createdAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
-  `);
+
+      -- ─── ÍNDICES DE PERFORMANCE ────────────────────────────
+      CREATE INDEX IF NOT EXISTS idx_usuarios_user_guild
+        ON usuarios(userId, guildId);
+
+      CREATE INDEX IF NOT EXISTS idx_usuarios_xp_ranking
+        ON usuarios(guildId, xpTotal DESC);
+
+      CREATE INDEX IF NOT EXISTS idx_usuarios_nivel
+        ON usuarios(guildId, nivel DESC);
+
+      CREATE INDEX IF NOT EXISTS idx_afinidades_par
+        ON afinidades(guildId, userId1, userId2);
+
+      CREATE INDEX IF NOT EXISTS idx_casamentos_guild
+        ON casamentos(guildId, ativo);
+
+      CREATE INDEX IF NOT EXISTS idx_tickets_guild_user
+        ON tickets(guildId, userId, status);
+    `);
 
   // ─────────────────────────────
   // INDEXES
