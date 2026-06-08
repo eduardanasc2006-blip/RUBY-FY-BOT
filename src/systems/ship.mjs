@@ -220,16 +220,18 @@ export function register(client, configs) {
       });
 
       await registrarLog(
-        client,
-        msg.guild.id,
-        'ship',
-        msg.author.id,
-        {
-          usuarios: [u1.id, u2.id],
-          porcentagem: pct,
-          casados
-        }
-      );
+  client,
+  msg.guild.id,
+  'ship',
+  msg.author.id,
+  {
+    usuarios: [u1.id, u2.id],
+    porcentagem: pct,
+    casados,
+    descricao: `${u1.username} ❤️ ${u2.username} — ${pct}%`
+  },
+  configs
+);
 
       return msg.reply({
         content: `💫 **Destino:** ${destino}`,
