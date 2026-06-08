@@ -7,8 +7,12 @@ import {
 } from 'discord.js';
 
 import Usuario from '../db/models/Usuario.mjs';
-import { gastarXP, ganharXP } from './xpSystem.mjs';
+import { gastarXP } from './xpSystem.mjs';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
+
+/* =========================
+   ITENS
+========================= */
 
 const ITENS = [
   { id: 'moldura_ouro', nome: '🖼️ Moldura Dourada', tipo: 'moldura', preco: 500, desc: 'Moldura dourada para o perfil.' },
@@ -27,12 +31,16 @@ const ITENS = [
 ];
 
 const ITENS_POR_PAGINA = 5;
-const AVATAR_PADRAO = 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+/* =========================
+   PREVIEW (CONSISTENTE COM PERFIL)
+========================= */
 
 async function renderPreviewPerfil(userId, item) {
   const canvas = createCanvas(700, 350);
   const ctx = canvas.getContext('2d');
 
+  // fundo
   ctx.fillStyle = '#1e1f22';
   ctx.fillRect(0, 0, 700, 350);
 
@@ -59,9 +67,9 @@ async function renderPreviewPerfil(userId, item) {
   ctx.fillStyle = '#00ff88';
   ctx.fillText(`${item.preco} XP`, 200, 190);
 
-  // =========================
-  // MOLDURA REAL (IMPORTANTE)
-  // =========================
+  /* =========================
+     MOLDURA REAL
+  ========================= */
   if (item.tipo === 'moldura') {
     try {
       const frame = await loadImage(`assets/frames/${item.id}.png`);
@@ -73,18 +81,18 @@ async function renderPreviewPerfil(userId, item) {
     }
   }
 
-  // =========================
-  // BADGE REAL
-  // =========================
+  /* =========================
+     BADGE
+  ========================= */
   if (item.tipo === 'badge') {
     ctx.fillStyle = '#ffd700';
     ctx.font = 'bold 20px Sans';
-    ctx.fillText(item.nome, 200, 230);
+    ctx.fillText(`🏅 ${item.nome}`, 200, 230);
   }
 
-  // =========================
-  // EFEITO SIMPLIFICADO
-  // =========================
+  /* =========================
+     EFEITO
+  ========================= */
   if (item.tipo === 'efeito') {
     for (let i = 0; i < 25; i++) {
       ctx.fillStyle = '#00ff88';
@@ -94,6 +102,10 @@ async function renderPreviewPerfil(userId, item) {
 
   return canvas.toBuffer('image/png');
 }
+
+/* =========================
+   EMBED LOJA
+========================= */
 
 function embedLoja(page = 0, index = 0) {
   const start = page * ITENS_POR_PAGINA;
@@ -110,8 +122,12 @@ function embedLoja(page = 0, index = 0) {
       name: '🔎 Preview',
       value: `**${itemAtual.nome}**\n${itemAtual.desc}\n💰 ${itemAtual.preco} XP`,
     })
-    .setFooter({ text: `Página ${page + 1}` });
+    .setFooter({ text: `Página ${page + 1} | Item ${index + 1}/${ITENS.length}` });
 }
+
+/* =========================
+   BOTÕES
+========================= */
 
 function _buildNavRow(userId, index) {
   return new ActionRowBuilder().addComponents(
@@ -134,6 +150,10 @@ function _buildNavRow(userId, index) {
   );
 }
 
+/* =========================
+   REGISTER
+========================= */
+
 export function register(client, configs) {
   if (client.__lojaRegistrado) return;
   client.__lojaRegistrado = true;
@@ -149,8 +169,7 @@ export function register(client, configs) {
 
     if (cmd !== 'loja') return;
 
-    const item = ITENS[0];
-    const buffer = await renderPreviewPerfil(msg.author.id, item);
+    const buffer = await renderPreviewPerfil(msg.author.id, ITENS[0]);
 
     return msg.reply({
       embeds: [embedLoja(0, 0)],
@@ -163,19 +182,26 @@ export function register(client, configs) {
     if (!interaction.isButton()) return;
 
     const [type, userId, value] = interaction.customId.split(':');
+
     if (interaction.user.id !== userId)
       return interaction.reply({ content: '❌ Não é seu menu.', flags: 64 });
 
     let index = parseInt(value);
 
-    if (type === 'shop_next') index++;
-    if (type === 'shop_prev') index--;
+    if (type === 'shop_next') index = Math.min(ITENS.length - 1, index + 1);
+    if (type === 'shop_prev') index = Math.max(0, index - 1);
 
-    const item = ITENS[Math.max(0, Math.min(index, ITENS.length - 1))];
+    const item = ITENS[index];
     const buffer = await renderPreviewPerfil(userId, item);
 
+    /* =========================
+       COMPRA
+    ========================= */
     if (type === 'shop_buy') {
-      await gastarXP(userId, interaction.guild.id, item.preco, `shop_${item.id}`);
+      const ok = await gastarXP(userId, interaction.guild.id, item.preco, `shop_${item.id}`);
+
+      if (!ok)
+        return interaction.reply({ content: '❌ XP insuficiente.', flags: 64 });
 
       if (item.tipo === 'moldura')
         await Usuario.updateOne({ userId }, { $set: { moldura: item.id } });
@@ -187,11 +213,15 @@ export function register(client, configs) {
         await Usuario.updateOne({ userId }, { $push: { efeitos: item.id } });
 
       return interaction.update({
-        content: `✅ Comprou ${item.nome}`,
+        content: `✅ Comprou **${item.nome}**`,
         files: [],
         components: [],
       });
     }
+
+    /* =========================
+       UPDATE NORMAL
+    ========================= */
 
     return interaction.update({
       embeds: [embedLoja(0, index)],
@@ -202,5 +232,5 @@ export function register(client, configs) {
 }
 
 export const comandos = [
-  { cmd: '!loja', desc: 'Loja com preview real de itens do perfil.' },
+  { cmd: '!loja', desc: 'Loja com preview real do perfil.' },
 ];
