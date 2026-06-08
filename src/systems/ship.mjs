@@ -94,18 +94,22 @@ async function gerarImagemShip(u1, u2, pct, corEsq, corDir, casados) {
 
   // glow
   for (let i = 6; i > 0; i--) {
-    ctx.beginPath();
-    ctx.arc(LEFT_CX, AV_CY, AV_R + i * 6, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(255,255,255,${0.05 + i * 0.01})`;
-    ctx.stroke();
-  }
+  ctx.beginPath();
+  ctx.arc(LEFT_CX, AV_CY, AV_R + i * 6, 0, Math.PI * 2);
+  ctx.strokeStyle = corEsq;
+  ctx.globalAlpha = 0.05 + i * 0.01;
+  ctx.stroke();
+}
+ctx.globalAlpha = 1;
 
   for (let i = 6; i > 0; i--) {
-    ctx.beginPath();
-    ctx.arc(RIGHT_CX, AV_CY, AV_R + i * 6, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(255,255,255,${0.05 + i * 0.01})`;
-    ctx.stroke();
-  }
+  ctx.beginPath();
+  ctx.arc(RIGHT_CX, AV_CY, AV_R + i * 6, 0, Math.PI * 2);
+  ctx.strokeStyle = corDir;
+  ctx.globalAlpha = 0.05 + i * 0.01;
+  ctx.stroke();
+}
+ctx.globalAlpha = 1;
 
   // avatars
   ctx.save();
