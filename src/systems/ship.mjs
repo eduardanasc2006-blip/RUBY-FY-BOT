@@ -54,6 +54,9 @@ const RIGHT_CX = W - 158;
 const AV_CY = 200;
 
 // ── HELPERS ───────────────────────────────────────────
+function getTema(pct) {
+  return TEMAS.find(t => pct >= t.min && pct <= t.max) || TEMAS[4];
+}
 
 function gerarPorcentagem(id1, id2) {
   const seed = (BigInt(id1) + BigInt(id2)).toString();
@@ -198,6 +201,7 @@ export function register(client, configs) {
 
         const [corEsq, corDir] = getCoresGenero(g1, g2);
     const destino = randomDestino();
+    const tema = getTema(pct);
 
     try {
       const buffer = await gerarImagemShip(
@@ -228,9 +232,14 @@ export function register(client, configs) {
 );
 
       return msg.reply({
-        content: `💫 **Destino:** ${destino}`,
-        files: [attachment]
-      });
+  content:
+`💫 **Destino:** ${destino}
+
+💕 **${tema.nome}**
+${tema.msg}
+${tema.msg2}`,
+  files: [attachment]
+});
 
     } catch (err) {
       console.error('[SHIP]', err);
