@@ -54,9 +54,6 @@ const RIGHT_CX = W - 158;
 const AV_CY = 200;
 
 // ── HELPERS ───────────────────────────────────────────
-function getTema(pct) {
-  return TEMAS.find(t => pct >= t.min && pct <= t.max) || TEMAS[4];
-}
 
 function gerarPorcentagem(id1, id2) {
   const seed = (BigInt(id1) + BigInt(id2)).toString();
@@ -65,13 +62,7 @@ function gerarPorcentagem(id1, id2) {
   return Math.abs(hash) % 101;
 }
 
-function hexToRgb(hex) {
-  return {
-    r: parseInt(hex.slice(1, 3), 16),
-    g: parseInt(hex.slice(3, 5), 16),
-    b: parseInt(hex.slice(5, 7), 16),
-  };
-}
+
 
 function randomDestino() {
   return DESTINO[Math.floor(Math.random() * DESTINO.length)];
@@ -99,8 +90,7 @@ async function gerarImagemShip(u1, u2, pct, corEsq, corDir, casados) {
     loadImage(u2.displayAvatarURL({ extension: 'png', size: 256 }))
   ]);
 
-  const glowL = casados ? '#ffd700' : corEsq;
-  const glowR = casados ? '#ffd700' : corDir;
+  
 
   // glow
   for (let i = 6; i > 0; i--) {
