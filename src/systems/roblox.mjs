@@ -51,6 +51,8 @@ export const comandos = [
 ];
 
 export function register(client, configs) {
+  if (client.__robloxRegistrado) return;
+  client.__robloxRegistrado = true;
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
 

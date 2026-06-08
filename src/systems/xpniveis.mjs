@@ -1,6 +1,7 @@
 import { EmbedBuilder } from 'discord.js';
 import Missao from '../db/models/Missao.mjs';
 import { ganharXP } from './xpSystem.mjs';
+  import { isSpam, isFarm } from './antiabuso.mjs';
 import { embedErro } from '../utils/embeds.mjs';
 
 // =========================

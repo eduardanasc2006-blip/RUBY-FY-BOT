@@ -136,7 +136,7 @@ export async function verificarConquistas(client, userId, guildId, usuario, conf
     }
 
   } catch (err) {
-    console.error('Erro conquistas:', err);
+    // silently ignore — never let conquests crash the main flow
   }
     }
 

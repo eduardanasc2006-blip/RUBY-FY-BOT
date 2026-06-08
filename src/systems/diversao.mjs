@@ -48,6 +48,8 @@ import {
   ========================= */
 
   export function register(client, configs) {
+  if (client.__diversaoRegistrado) return;
+  client.__diversaoRegistrado = true;
     client.on('messageCreate', async (msg) => {
       if (!msg.guild || msg.author.bot) return;
 

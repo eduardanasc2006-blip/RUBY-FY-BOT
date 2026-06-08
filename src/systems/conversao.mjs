@@ -5,6 +5,8 @@ import { embedErro } from '../utils/embeds.mjs';
 import { registrarLog } from '../utils/logger.mjs';
 
 export function register(client, configs) {
+  if (client.__conversaoRegistrado) return;
+  client.__conversaoRegistrado = true;
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
 

@@ -8,6 +8,8 @@ export const comandos = [
 ];
 
 export function register(client, configs) {
+  if (client.__logsRegistrado) return;
+  client.__logsRegistrado = true;
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
     const cfg = configs.get(msg.guild.id);

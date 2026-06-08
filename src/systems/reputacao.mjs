@@ -7,6 +7,7 @@ import { checkCooldown, formatarTempo } from '../utils/cooldown.mjs';
 import { embedErro } from '../utils/embeds.mjs';
 import { registrarLog } from '../utils/logger.mjs';
 import { calcularNivel, getFaixa } from '../utils/nivelCalc.mjs';
+  import { ganharXP } from './xpSystem.mjs';
 import { semBanco } from '../utils/dbGuard.mjs';
 
 function nome(user) {
@@ -29,6 +30,8 @@ export const comandos = [
 ];
 
 export function register(client, configs) {
+    if (client.__reputacaoRegistrado) return;
+    client.__reputacaoRegistrado = true;
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
     const cfg = configs.get(msg.guild.id);

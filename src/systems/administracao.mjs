@@ -6,6 +6,8 @@ import { registrarLog } from '../utils/logger.mjs';
 import { semBanco } from '../utils/dbGuard.mjs';
 
 export function register(client, configs) {
+  if (client.__administracaoRegistrado) return;
+  client.__administracaoRegistrado = true;
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
 

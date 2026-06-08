@@ -155,6 +155,8 @@ async function gerarImagemShip(u1, u2, pct, corEsq, corDir, casados) {
 
 // ── REGISTER ──────────────────────────────────────────
 export function register(client, configs) {
+    if (client.__shipRegistrado) return;
+    client.__shipRegistrado = true;
   client.on('messageCreate', async (msg) => {
 
     const cfg = configs.get(msg.guild?.id);
@@ -204,7 +206,9 @@ export function register(client, configs) {
     const destino = randomDestino();
 
     try {
-      const buffer = await gerarImagemShip(u1, u2, pct, corEsq, corDir, casados);
+      let buffer;
+  try {
+    buffer = await gerarImagemShip(u1, u2, pct, corEsq, corDir, casados);
       const attachment = new AttachmentBuilder(buffer, { name: 'ship.png' });
 
       await registrarLog(client, msg.guild.id, 'ship', msg.author.id, {

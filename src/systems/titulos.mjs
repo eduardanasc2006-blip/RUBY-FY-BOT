@@ -36,6 +36,8 @@ export const comandos = [
 ];
 
 export function register(client, configs) {
+  if (client.__titulosRegistrado) return;
+  client.__titulosRegistrado = true;
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
     const cfg = configs.get(msg.guild.id);

@@ -37,6 +37,8 @@ export const comandos = [
 ];
 
 export function register(client, configs) {
+    if (client.__relacionamentosRegistrado) return;
+    client.__relacionamentosRegistrado = true;
   client.on('messageCreate', async (msg) => {
     if (!msg.guild || msg.author.bot) return;
 
@@ -254,13 +256,13 @@ export function register(client, configs) {
       const [, acao, deId, paraId] = customId.split(':');
 
       if (user.id !== paraId)
-        return interaction.reply({ content: 'Não é para você.', ephemeral: true });
+        return interaction.reply({ content: 'Não é para você.', flags: 64 });
 
       const chave = `${guild.id}:${paraId}`;
       const pedido = pedidosCasamento.get(chave);
 
       if (!pedido)
-        return interaction.reply({ content: 'Pedido expirado.', ephemeral: true });
+        return interaction.reply({ content: 'Pedido expirado.', flags: 64 });
 
       if (acao === 'aceitar') {
         const xpInicial = 100;
@@ -301,10 +303,10 @@ export function register(client, configs) {
       const pedido = pedidosDivorcio.get(chave);
 
       if (!pedido)
-        return interaction.reply({ content: 'Pedido expirado.', ephemeral: true });
+        return interaction.reply({ content: 'Pedido expirado.', flags: 64 });
 
       if (user.id !== pedido.parceiro && user.id !== userId)
-        return interaction.reply({ content: 'Não é para você.', ephemeral: true });
+        return interaction.reply({ content: 'Não é para você.', flags: 64 });
 
       if (acao === 'aceitar') {
         await Casamento.findByIdAndUpdate(pedido.casamentoId, {

@@ -29,6 +29,8 @@ function gerarTicketId() {
 }
 
 export function register(client, configs) {
+    if (client.__atendimentoRegistrado) return;
+    client.__atendimentoRegistrado = true;
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
 
@@ -109,7 +111,7 @@ export function register(client, configs) {
     if (user.id !== userId) {
       return interaction.reply({
         content: '❌ Esse botão não é seu.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -119,7 +121,7 @@ export function register(client, configs) {
     if (!cat) {
       return interaction.reply({
         content: '❌ Categoria inválida.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 
@@ -199,7 +201,7 @@ export function register(client, configs) {
 
     await interaction.reply({
       content: `✅ Atendimento criado: ${canal}`,
-      ephemeral: true,
+      flags: 64,
     });
 
     await registrarLog(
@@ -235,14 +237,14 @@ export function register(client, configs) {
     if (!ticket) {
       return interaction.reply({
         content: 'Ticket não encontrado.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 
     if (ticket.userId !== user.id) {
       return interaction.reply({
         content: '❌ Você não pode fechar este atendimento.',
-        ephemeral: true,
+        flags: 64,
       });
     }
 
