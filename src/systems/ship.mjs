@@ -202,20 +202,34 @@ export function register(client, configs) {
       casados = !!casal;
     }
 
-    const [corEsq, corDir] = getCoresGenero(g1, g2);
+        const [corEsq, corDir] = getCoresGenero(g1, g2);
     const destino = randomDestino();
 
     try {
-      let buffer;
-  try {
-    buffer = await gerarImagemShip(u1, u2, pct, corEsq, corDir, casados);
-      const attachment = new AttachmentBuilder(buffer, { name: 'ship.png' });
-
-      await registrarLog(client, msg.guild.id, 'ship', msg.author.id, {
-        usuarios: [u1.id, u2.id],
-        porcentagem: pct,
+      const buffer = await gerarImagemShip(
+        u1,
+        u2,
+        pct,
+        corEsq,
+        corDir,
         casados
+      );
+
+      const attachment = new AttachmentBuilder(buffer, {
+        name: 'ship.png'
       });
+
+      await registrarLog(
+        client,
+        msg.guild.id,
+        'ship',
+        msg.author.id,
+        {
+          usuarios: [u1.id, u2.id],
+          porcentagem: pct,
+          casados
+        }
+      );
 
       return msg.reply({
         content: `💫 **Destino:** ${destino}`,
@@ -223,13 +237,22 @@ export function register(client, configs) {
       });
 
     } catch (err) {
-      console.error(err);
-      return msg.reply({ embeds: [embedErro('Erro ao gerar ship.')] });
+      console.error('[SHIP]', err);
+
+      return msg.reply({
+        embeds: [embedErro('Erro ao gerar ship.')]
+      });
     }
   });
 }
 
   export const comandos = [
-    { cmd: '!ship @user',        desc: 'Calcula a compatibilidade com alguém.' },
-    { cmd: '!ship @user1 @user2', desc: 'Calcula a compatibilidade entre dois usuários.' },
-  ];
+  {
+    cmd: '!ship @user',
+    desc: 'Calcula a compatibilidade com alguém.'
+  },
+  {
+    cmd: '!ship @user1 @user2',
+    desc: 'Calcula a compatibilidade entre dois usuários.'
+  }
+];
