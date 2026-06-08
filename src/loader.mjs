@@ -180,3 +180,18 @@ export async function loadSystems(client) {
 
   return configs;
 }
+
+  // ─────────────────────────────────────────────────────────────
+  // TRATAMENTO GLOBAL DE ERROS
+  // Captura promises rejeitadas e exceções não tratadas.
+  // ─────────────────────────────────────────────────────────────
+
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('[UNHANDLED REJECTION]', reason);
+  });
+
+  process.on('uncaughtException', (err) => {
+    console.error('[UNCAUGHT EXCEPTION]', err);
+    // Não encerrar o processo — bot deve continuar rodando
+  });
+  
