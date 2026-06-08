@@ -94,11 +94,20 @@ function menuPrincipal(client, userId, page = 0) {
       .setCustomId(`ajuda_menu:${userId}`)
       .setPlaceholder('📂 Selecione uma categoria')
       .addOptions(
-        items.map(c => ({
-          label: c.label.slice(0, 100),
-          value: c.id,
-          emoji: c.emoji,
-        }))
+        items
+  .filter(c =>
+  c &&
+  c.id &&
+  c.label &&
+  String(c.label).trim().length >= 1 &&
+  String(c.label).trim().length <= 100 &&
+  String(c.id).trim().length >= 1 &&
+  String(c.id).trim().length <= 100
+)
+  .map(c => ({
+    label: String(c.label).slice(0, 100),
+    value: String(c.id).slice(0, 100),
+  }))
       )
   );
 }
