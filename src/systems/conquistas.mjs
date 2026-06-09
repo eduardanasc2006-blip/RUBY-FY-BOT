@@ -6,9 +6,26 @@ import {
 } from 'discord.js';
 
 import ConquistaModel from '../db/models/Conquista.mjs';
-import { LISTA_CONQUISTAS } from '../systems/conquistas.mjs';
 
-const PER_PAGE = 5;
+/* =========================
+   LISTA LOCAL (EVITA ERRO DE IMPORT CIRCULAR)
+========================= */
+const LISTA_CONQUISTAS = [
+  { id: 'primeira_mensagem', cat: 'mensagens', nome: '📢 Primeira Mensagem', secreta: false },
+  { id: 'mensagens_100', cat: 'mensagens', nome: '💬 Ativo', secreta: false },
+  { id: 'mensagens_500', cat: 'mensagens', nome: '📡 Comunicador', secreta: false },
+  { id: 'mensagens_1000', cat: 'mensagens', nome: '🧠 Veterano', secreta: false },
+  { id: 'mensagens_10000', cat: 'mensagens', nome: '💀 Sem Vida Social', secreta: true },
+
+  { id: 'nivel_5', cat: 'nivel', nome: '🌱 Iniciante', secreta: false },
+  { id: 'nivel_20', cat: 'nivel', nome: '⭐ Evoluindo', secreta: false },
+  { id: 'nivel_50', cat: 'nivel', nome: '🏆 Experiente', secreta: false },
+  { id: 'nivel_100', cat: 'nivel', nome: '👑 Elite', secreta: true },
+
+  { id: 'ship_0', cat: 'ship', nome: '💔 Amor Impossível', secreta: false },
+  { id: 'ship_100', cat: 'ship', nome: '💘 Destino Perfeito', secreta: false },
+  { id: 'friendzone', cat: 'ship', nome: '🤝 Friendzone', secreta: false },
+];
 
 /* =========================
    BARRA DE PROGRESSO
@@ -75,13 +92,9 @@ export function register(client, configs) {
       const list = itens.map(c => {
         const ok = conquistadas.includes(c.id);
 
-        if (c.secreta && !ok) {
-          return '🔒 Conquista Secreta';
-        }
+        if (c.secreta && !ok) return '🔒 Conquista Secreta';
 
-        return ok
-          ? `✅ ${c.nome}`
-          : `⬜ ${c.nome}`;
+        return ok ? `✅ ${c.nome}` : `⬜ ${c.nome}`;
       }).join('\n');
 
       const embed = new EmbedBuilder()
@@ -94,11 +107,12 @@ export function register(client, configs) {
         )
         .addFields({
           name: '📈 Progresso geral',
-          value: barra(conquistadas.length, LISTA_CONQUISTAS.filter(c => !c.secreta).length),
+          value: barra(
+            conquistadas.length,
+            LISTA_CONQUISTAS.filter(c => !c.secreta).length
+          ),
         })
-        .setFooter({
-          text: `Página ${page + 1}/${keys.length}`,
-        });
+        .setFooter({ text: `Página ${page + 1}/${keys.length}` });
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -117,16 +131,8 @@ export function register(client, configs) {
       return { embed, row };
     };
 
-    const { embed, row } = render();
+    const message = await msg.reply(render());
 
-    const message = await msg.reply({
-      embeds: [embed],
-      components: [row],
-    });
-
-    /* =========================
-       INTERACTIONS (FIX: NÃO DUPLICAR LISTENER)
-    ========================= */
     const collector = message.createMessageComponentCollector({
       time: 120000,
     });
@@ -145,12 +151,7 @@ export function register(client, configs) {
       if (page < 0) page = 0;
       if (page >= keys.length) page = keys.length - 1;
 
-      const { embed, row } = render();
-
-      await i.update({
-        embeds: [embed],
-        components: [row],
-      });
+      await i.update(render());
     });
 
     collector.on('end', async () => {
@@ -162,11 +163,11 @@ export function register(client, configs) {
 }
 
 /* =========================
-   COMANDO LISTADO (AJUDA)
+   AJUDA
 ========================= */
 export const comandos = [
   {
     cmd: '!conquistas',
-    desc: 'Mostra todas as conquistas com progresso e categorias',
+    desc: 'Mostra conquistas com categorias e progresso',
   },
 ];
