@@ -10,6 +10,17 @@ import ConquistaModel from '../db/models/Conquista.mjs';
 import { LISTA_CONQUISTAS } from './conquistasBase.mjs';
 
 /* =========================
+   SANITIZER (REMOVE □ / EMOJIS QUEBRADOS)
+========================= */
+function clean(text = '') {
+  return String(text)
+    .replace(/[\u{1F300}-\u{1FAFF}]/gu, '') // emojis
+    .replace(/[^\p{L}\p{N}\p{P}\p{Z}]/gu, '') // chars inválidos
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/* =========================
    CATEGORIAS
 ========================= */
 function getCategorias() {
@@ -34,7 +45,7 @@ function barra(atual, total, size = 18) {
 }
 
 /* =========================
-   IMAGEM DO MENU
+   IMAGEM
 ========================= */
 async function gerarImagem(target, cat, list, page, totalPages, progresso) {
   const canvas = createCanvas(900, 520);
@@ -42,49 +53,59 @@ async function gerarImagem(target, cat, list, page, totalPages, progresso) {
 
   // fundo
   const bg = ctx.createLinearGradient(0, 0, 900, 520);
-  bg.addColorStop(0, '#0b0b14');
-  bg.addColorStop(1, '#141428');
+  bg.addColorStop(0, '#0a0a12');
+  bg.addColorStop(1, '#15152a');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, 900, 520);
 
+  // card
+  ctx.fillStyle = 'rgba(255,255,255,0.04)';
+  ctx.fillRect(30, 30, 840, 460);
+
   // título
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 32px Arial';
-  ctx.fillText('CONQUISTAS', 40, 60);
+  ctx.font = 'bold 34px Arial';
+  ctx.fillText('CONQUISTAS', 50, 70);
 
+  ctx.fillStyle = '#aaa';
   ctx.font = '16px Arial';
-  ctx.fillStyle = '#aaaaaa';
-  ctx.fillText(`Categoria: ${cat.toUpperCase()}`, 40, 90);
+  ctx.fillText(`Categoria: ${clean(cat).toUpperCase()}`, 50, 100);
 
   // lista
-  ctx.font = '20px Arial';
   ctx.fillStyle = '#ffffff';
+  ctx.font = '20px Arial';
 
-  let y = 150;
+  let y = 160;
   for (const line of list) {
-    ctx.fillText(line, 60, y);
+    ctx.fillText(clean(line), 70, y);
     y += 30;
   }
 
-  // barra
-  const barX = 60;
-  const barY = 420;
-  const barW = 600;
-  const barH = 18;
+  // barra fundo
+  const x = 70;
+  const yBar = 420;
+  const w = 600;
+  const h = 18;
 
-  ctx.fillStyle = '#1e1e2f';
-  ctx.fillRect(barX, barY, barW, barH);
+  ctx.fillStyle = '#1b1b2b';
+  ctx.fillRect(x, yBar, w, h);
 
-  ctx.fillStyle = '#00d4ff';
-  ctx.fillRect(barX, barY, (barW * progresso) / 100, barH);
+  // barra progresso
+  const grad = ctx.createLinearGradient(x, 0, x + w, 0);
+  grad.addColorStop(0, '#ff4d6d');
+  grad.addColorStop(1, '#4dd6ff');
 
+  ctx.fillStyle = grad;
+  ctx.fillRect(x, yBar, (w * progresso) / 100, h);
+
+  // % texto
   ctx.fillStyle = '#fff';
-  ctx.font = '16px Arial';
-  ctx.fillText(`${progresso}%`, barX + barW + 20, barY + 15);
+  ctx.font = '14px Arial';
+  ctx.fillText(`${progresso}%`, x + w + 15, yBar + 14);
 
   // página
   ctx.fillStyle = '#888';
-  ctx.fillText(`Página ${page + 1}/${totalPages}`, 750, 490);
+  ctx.fillText(`Página ${page + 1}/${totalPages}`, 760, 490);
 
   return canvas.toBuffer('image/png');
 }
@@ -128,12 +149,14 @@ export function register(client, configs) {
       const list = itens.map(c => {
         const ok = conquistadas.includes(c.id);
 
-        if (c.secreta && !ok) return '🔒 Conquista Secreta';
-        return ok ? `✓ ${c.nome}` : `- ${c.nome}`;
+        if (c.secreta && !ok) return '🔒 Secreta';
+
+        return ok ? `✔ ${c.nome}` : `- ${c.nome}`;
       });
 
       const progresso = Math.round(
-        (conquistadas.length / LISTA_CONQUISTAS.filter(c => !c.secreta).length) * 100
+        (conquistadas.length /
+          LISTA_CONQUISTAS.filter(c => !c.secreta).length) * 100
       );
 
       const img = await gerarImagem(
@@ -149,12 +172,12 @@ export function register(client, configs) {
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setCustomId('prev')
+          .setCustomId(`conq_prev_${target.id}`)
           .setLabel('⬅')
           .setStyle(ButtonStyle.Secondary),
 
         new ButtonBuilder()
-          .setCustomId('next')
+          .setCustomId(`conq_next_${target.id}`)
           .setLabel('➡')
           .setStyle(ButtonStyle.Secondary),
       );
@@ -169,10 +192,16 @@ export function register(client, configs) {
     });
 
     collector.on('collect', async (i) => {
-      if (i.user.id !== msg.author.id) return i.deferUpdate();
+      // 🔥 FIX: agora só o dono do menu pode interagir
+      if (i.user.id !== target.id) {
+        return i.reply({
+          content: '❌ Este menu não é seu.',
+          ephemeral: true,
+        });
+      }
 
-      if (i.customId === 'next') page++;
-      if (i.customId === 'prev') page--;
+      if (i.customId.includes('next')) page++;
+      if (i.customId.includes('prev')) page--;
 
       if (page < 0) page = 0;
       if (page >= keys.length) page = keys.length - 1;
@@ -194,6 +223,6 @@ export function register(client, configs) {
 export const comandos = [
   {
     cmd: '!conquistas',
-    desc: 'Mostra conquistas em layout visual (imagem)',
+    desc: 'Exibe conquistas em layout visual em imagem',
   },
 ];
