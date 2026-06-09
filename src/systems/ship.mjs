@@ -1,78 +1,32 @@
-import { AttachmentBuilder } from 'discord.js';
-import { createCanvas, loadImage } from '@napi-rs/canvas';
+import { AttachmentBuilder } from "discord.js";
+import { createCanvas, loadImage } from "@napi-rs/canvas";
 
-import { embedErro } from '../utils/embeds.mjs';
-import { isDBConnected } from '../utils/dbGuard.mjs';
-import { registrarLog } from '../utils/logger.mjs';
+import { embedErro } from "../utils/embeds.mjs";
+import { isDBConnected } from "../utils/dbGuard.mjs";
+import { registrarLog } from "../utils/logger.mjs";
 
-import Usuario from '../db/models/Usuario.mjs';
-import Casamento from '../db/models/Casamento.mjs';
+import Casamento from "../db/models/Casamento.mjs";
 
 /* =========================
    TEMAS
 ========================= */
 
 const TEMAS = [
-  {
-    min: 0,
-    max: 20,
-    nome: "Distantes",
-    final: "❌ A conexão entre vocês é praticamente inexistente."
-  },
-  {
-    min: 21,
-    max: 40,
-    nome: "Conexão Fraca",
-    final: "⚠️ Existe alguma curiosidade, mas pouca sintonia."
-  },
-  {
-    min: 41,
-    max: 60,
-    nome: "Amizade",
-    final: "💫 Há uma base emocional, mas ainda instável."
-  },
-  {
-    min: 61,
-    max: 80,
-    nome: "Romance",
-    final: "💞 Existe uma forte conexão entre vocês."
-  },
-  {
-    min: 81,
-    max: 100,
-    nome: "Almas Gêmeas",
-    final: "💖 A conexão de vocês é extremamente rara."
-  }
+  { min: 0, max: 20, nome: "Distantes", final: "A conexão entre vocês é quase inexistente e instável." },
+  { min: 21, max: 40, nome: "Conexão Fraca", final: "Existe curiosidade, mas pouca sintonia emocional." },
+  { min: 41, max: 60, nome: "Amizade", final: "Há base emocional e conforto entre vocês." },
+  { min: 61, max: 80, nome: "Romance", final: "A conexão é forte e naturalmente envolvente." },
+  { min: 81, max: 100, nome: "Almas Gêmeas", final: "A ligação entre vocês é profunda e rara." }
 ];
-
-/* =========================
-   CORES
-========================= */
-
-function getCoresGenero(g1, g2) {
-  const a = g1 || 'none';
-  const b = g2 || 'none';
-
-  if (a === 'masculino' && b === 'masculino') return ['#00bfff', '#00e5ff'];
-  if (a === 'feminino' && b === 'feminino') return ['#ff69b4', '#c084fc'];
-
-  if ((a === 'masculino' && b === 'feminino') ||
-      (a === 'feminino' && b === 'masculino')) return ['#9b59b6', '#ff00ff'];
-
-  if (a === 'outro' || b === 'outro') return ['#a855f7', '#ffffff'];
-
-  return ['#39ff14', '#00bfff'];
-}
 
 /* =========================
    CANVAS CONFIG
 ========================= */
 
 const W = 820;
-const H = 480;
+const H = 520;
 
 const AVATAR_SIZE = 110;
-
 const LEFT_X = 210;
 const RIGHT_X = 610;
 const Y = 200;
@@ -93,52 +47,72 @@ function gerarPct(a, b) {
 }
 
 /* =========================
-   BAR
+   BAR (SHIPMETRO)
 ========================= */
 
 function drawBar(ctx, pct) {
   const x = 160;
-  const y = 340;
+  const y = 360;
   const w = 500;
-  const h = 20;
+  const h = 18;
 
-  ctx.fillStyle = "#1c1c2a";
-  ctx.roundRect(x, y, w, h, 10);
+  // fundo barra
+  ctx.fillStyle = "#1b1b25";
+  roundRect(ctx, x, y, w, h, 10);
   ctx.fill();
 
+  // preenchimento
   const grad = ctx.createLinearGradient(x, 0, x + w, 0);
   grad.addColorStop(0, "#ff4d6d");
   grad.addColorStop(1, "#4dd6ff");
 
   ctx.fillStyle = grad;
-  ctx.roundRect(x, y, (w * pct) / 100, h, 10);
+  roundRect(ctx, x, y, (w * pct) / 100, h, 10);
   ctx.fill();
 
-  ctx.fillStyle = "#fff";
+  // texto da barra
+  ctx.fillStyle = "#ffffff";
   ctx.font = "bold 14px Arial";
   ctx.textAlign = "center";
   ctx.fillText(`${pct}% compatibilidade`, x + w / 2, y - 10);
 }
 
 /* =========================
-   IMAGEM SHIP
+   ROUND RECT FIX
+========================= */
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+/* =========================
+   IMAGEM SHIP (NOVO DESIGN)
 ========================= */
 
 async function gerarImagemShip(u1, u2, pct, casados) {
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext("2d");
 
-  /* FUNDO */
+  /* BACKGROUND */
   const bg = ctx.createLinearGradient(0, 0, W, H);
   bg.addColorStop(0, "#0b0b14");
-  bg.addColorStop(1, "#15152a");
-
+  bg.addColorStop(1, "#141425");
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  /* CARD */
+  /* CARD PRINCIPAL */
   ctx.fillStyle = "rgba(255,255,255,0.04)";
-  ctx.roundRect(80, 60, 660, 360, 20);
+  roundRect(ctx, 80, 60, 660, 400, 20);
   ctx.fill();
 
   /* AVATARES */
@@ -147,15 +121,16 @@ async function gerarImagemShip(u1, u2, pct, casados) {
     loadImage(u2.displayAvatarURL({ extension: "png", size: 256 }))
   ]);
 
-  /* glow */
+  // glow esquerdo
   ctx.beginPath();
   ctx.arc(LEFT_X, Y, AVATAR_SIZE / 2 + 10, 0, Math.PI * 2);
-  ctx.fillStyle = "#ff4d6d55";
+  ctx.fillStyle = "rgba(255,77,109,0.25)";
   ctx.fill();
 
+  // glow direito
   ctx.beginPath();
   ctx.arc(RIGHT_X, Y, AVATAR_SIZE / 2 + 10, 0, Math.PI * 2);
-  ctx.fillStyle = "#4dd6ff55";
+  ctx.fillStyle = "rgba(77,214,255,0.25)";
   ctx.fill();
 
   /* avatar 1 */
@@ -174,27 +149,38 @@ async function gerarImagemShip(u1, u2, pct, casados) {
   ctx.drawImage(img2, RIGHT_X - AVATAR_SIZE / 2, Y - AVATAR_SIZE / 2, AVATAR_SIZE, AVATAR_SIZE);
   ctx.restore();
 
-  /* nome */
-  ctx.fillStyle = "#fff";
-  ctx.font = "bold 28px Arial";
+  /* TÍTULO (SEM EMOJI) */
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 26px Arial";
   ctx.textAlign = "center";
-  ctx.fillText(`${u1.username} ❤️ ${u2.username}`, W / 2, 120);
+  ctx.fillText("SHIPMETRO", W / 2, 95);
 
-  /* % */
+  /* USUÁRIOS */
+  ctx.font = "bold 18px Arial";
+  ctx.fillText(u1.username, LEFT_X, 330);
+  ctx.fillText(u2.username, RIGHT_X, 330);
+
+  ctx.font = "14px Arial";
+  ctx.fillStyle = "#aab";
+  ctx.fillText(`@${u1.username}`, LEFT_X, 350);
+  ctx.fillText(`@${u2.username}`, RIGHT_X, 350);
+
+  /* % CENTRAL */
   const grad = ctx.createLinearGradient(0, 0, W, 0);
   grad.addColorStop(0, "#ff4d6d");
   grad.addColorStop(1, "#4dd6ff");
 
   ctx.fillStyle = grad;
-  ctx.font = "bold 64px Arial";
-  ctx.fillText(`${pct}%`, W / 2, 200);
+  ctx.font = "bold 54px Arial";
+  ctx.fillText(`${pct}%`, W / 2, 210);
 
   if (casados) {
     ctx.fillStyle = "#ffd700";
     ctx.font = "bold 14px Arial";
-    ctx.fillText("💍 CASAL OFICIAL", W / 2, 160);
+    ctx.fillText("CASAL OFICIAL", W / 2, 170);
   }
 
+  /* BARRA */
   drawBar(ctx, pct);
 
   return canvas.toBuffer("image/png");
@@ -258,8 +244,7 @@ export function register(client, configs) {
 
     return msg.reply({
       content:
-`💞 **${tema.nome}**
-
+`${tema.nome}
 ${tema.final}`,
       files: [img]
     });
@@ -267,5 +252,5 @@ ${tema.final}`,
 }
 
 export const comandos = [
-  { cmd: "!ship @user", desc: "Sistema de compatibilidade redesenhado" }
+  { cmd: "!ship @user", desc: "Sistema SHIPMETRO redesenhado" }
 ];
