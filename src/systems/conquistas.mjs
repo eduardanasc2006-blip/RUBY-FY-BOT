@@ -8,22 +8,37 @@ import {
 import ConquistaModel from '../db/models/Conquista.mjs';
 import { LISTA_CONQUISTAS } from '../systems/conquistas.mjs';
 
-const PER_PAGE = 4;
+const PER_PAGE = 5;
 
-function barra(progresso, total, size = 10) {
-  const pct = Math.floor((progresso / total) * size);
-  return '█'.repeat(pct) + '░'.repeat(size - pct);
+/* =========================
+   BARRA DE PROGRESSO
+========================= */
+function barra(atual, total, size = 10) {
+  if (!total || total <= 0) return '░'.repeat(size);
+
+  const pct = Math.round((atual / total) * size);
+  const safe = Math.max(0, Math.min(size, pct));
+
+  return '█'.repeat(safe) + '░'.repeat(size - safe);
 }
 
+/* =========================
+   CATEGORIAS
+========================= */
 function getCategorias() {
   const cats = {};
+
   for (const c of LISTA_CONQUISTAS) {
     if (!cats[c.cat]) cats[c.cat] = [];
     cats[c.cat].push(c);
   }
+
   return cats;
 }
 
+/* =========================
+   REGISTER
+========================= */
 export function register(client, configs) {
   if (client.__conq) return;
   client.__conq = true;
@@ -35,7 +50,7 @@ export function register(client, configs) {
     if (!msg.content.startsWith(prefix)) return;
 
     const args = msg.content.slice(prefix.length).trim().split(/\s+/);
-    const cmd = args.shift().toLowerCase();
+    const cmd = args.shift()?.toLowerCase();
 
     if (cmd !== 'conquistas') return;
 
@@ -46,10 +61,7 @@ export function register(client, configs) {
       guildId: msg.guild.id,
     });
 
-    const conquistadas = doc?.conquistas || [];
-
-    const visiveis = LISTA_CONQUISTAS.filter(c => !c.secreta).length;
-    const total = conquistadas.length;
+    const conquistadas = doc?.conquistas ?? [];
 
     const categorias = getCategorias();
     const keys = Object.keys(categorias);
@@ -57,8 +69,8 @@ export function register(client, configs) {
     let page = 0;
 
     const render = () => {
-      const cat = keys[page];
-      const itens = categorias[cat];
+      const cat = keys[page] ?? keys[0];
+      const itens = categorias[cat] ?? [];
 
       const list = itens.map(c => {
         const ok = conquistadas.includes(c.id);
@@ -76,16 +88,17 @@ export function register(client, configs) {
         .setColor(0xf1c40f)
         .setTitle(`🏅 Conquistas de ${target.username}`)
         .setDescription(
-          `📊 Progresso geral: **${total}** desbloqueadas\n` +
-          `📦 Visíveis: **${visiveis}** conquistas\n\n` +
           `📂 Categoria: **${cat.toUpperCase()}**\n\n` +
-          `${list}`
+          `${list || 'Nenhuma conquista nesta categoria.'}\n\n` +
+          `📊 Desbloqueadas: **${conquistadas.length}**`
         )
         .addFields({
-          name: '📈 Progresso visual',
-          value: barra(total, visiveis),
+          name: '📈 Progresso geral',
+          value: barra(conquistadas.length, LISTA_CONQUISTAS.filter(c => !c.secreta).length),
         })
-        .setFooter({ text: `Página ${page + 1}/${keys.length}` });
+        .setFooter({
+          text: `Página ${page + 1}/${keys.length}`,
+        });
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -111,23 +124,49 @@ export function register(client, configs) {
       components: [row],
     });
 
-    client.on('interactionCreate', async (i) => {
-      if (!i.isButton()) return;
-      if (!i.customId.startsWith('conq_')) return;
-      if (i.user.id !== msg.author.id) return;
+    /* =========================
+       INTERACTIONS (FIX: NÃO DUPLICAR LISTENER)
+    ========================= */
+    const collector = message.createMessageComponentCollector({
+      time: 120000,
+    });
+
+    collector.on('collect', async (i) => {
+      if (i.user.id !== msg.author.id) {
+        return i.reply({
+          content: '❌ Este menu não é seu.',
+          ephemeral: true,
+        });
+      }
 
       if (i.customId.startsWith('conq_next')) page++;
       if (i.customId.startsWith('conq_prev')) page--;
 
+      if (page < 0) page = 0;
+      if (page >= keys.length) page = keys.length - 1;
+
       const { embed, row } = render();
-      await i.update({ embeds: [embed], components: [row] });
+
+      await i.update({
+        embeds: [embed],
+        components: [row],
+      });
+    });
+
+    collector.on('end', async () => {
+      try {
+        await message.edit({ components: [] });
+      } catch {}
     });
   });
 }
 
+/* =========================
+   COMANDO LISTADO (AJUDA)
+========================= */
 export const comandos = [
   {
     cmd: '!conquistas',
-    desc: 'Mostra suas conquistas com progresso detalhado',
+    desc: 'Mostra todas as conquistas com progresso e categorias',
   },
 ];
