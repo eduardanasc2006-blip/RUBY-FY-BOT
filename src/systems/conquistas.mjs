@@ -10,17 +10,6 @@ import ConquistaModel from '../db/models/Conquista.mjs';
 import { LISTA_CONQUISTAS } from './conquistasBase.mjs';
 
 /* =========================
-   SANITIZER (REMOVE □ / EMOJIS QUEBRADOS)
-========================= */
-function clean(text = '') {
-  return String(text)
-    .replace(/[\u{1F300}-\u{1FAFF}]/gu, '') // emojis
-    .replace(/[^\p{L}\p{N}\p{P}\p{Z}]/gu, '') // chars inválidos
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-/* =========================
    CATEGORIAS
 ========================= */
 function getCategorias() {
@@ -35,7 +24,7 @@ function getCategorias() {
 /* =========================
    BARRA
 ========================= */
-function barra(atual, total, size = 18) {
+function barra(atual, total, size = 20) {
   if (!total) return '░'.repeat(size);
 
   const pct = Math.round((atual / total) * size);
@@ -45,67 +34,85 @@ function barra(atual, total, size = 18) {
 }
 
 /* =========================
-   IMAGEM
+   IMAGEM ULTRA MELHORADA
 ========================= */
 async function gerarImagem(target, cat, list, page, totalPages, progresso) {
-  const canvas = createCanvas(900, 520);
+  const canvas = createCanvas(1000, 600);
   const ctx = canvas.getContext('2d');
 
-  // fundo
-  const bg = ctx.createLinearGradient(0, 0, 900, 520);
-  bg.addColorStop(0, '#0a0a12');
-  bg.addColorStop(1, '#15152a');
+  // fundo gradiente moderno
+  const bg = ctx.createLinearGradient(0, 0, 1000, 600);
+  bg.addColorStop(0, '#0a0a14');
+  bg.addColorStop(0.5, '#12122a');
+  bg.addColorStop(1, '#07070f');
   ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, 900, 520);
+  ctx.fillRect(0, 0, 1000, 600);
 
-  // card
+  // card principal
   ctx.fillStyle = 'rgba(255,255,255,0.04)';
-  ctx.fillRect(30, 30, 840, 460);
+  ctx.fillRect(40, 40, 920, 520);
 
-  // título
+  // topo
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 34px Arial';
-  ctx.fillText('CONQUISTAS', 50, 70);
+  ctx.font = 'bold 38px Arial';
+  ctx.fillText('🏅 CONQUISTAS', 70, 90);
 
-  ctx.fillStyle = '#aaa';
-  ctx.font = '16px Arial';
-  ctx.fillText(`Categoria: ${clean(cat).toUpperCase()}`, 50, 100);
+  ctx.fillStyle = '#9aa0ff';
+  ctx.font = '18px Arial';
+  ctx.fillText(`Jogador: ${target.username}`, 70, 120);
 
-  // lista
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = '#cccccc';
+  ctx.fillText(`Categoria: ${cat.toUpperCase()}`, 70, 150);
+
+  // separador
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.beginPath();
+  ctx.moveTo(70, 170);
+  ctx.lineTo(930, 170);
+  ctx.stroke();
+
+  // lista estilizada
   ctx.font = '20px Arial';
+  let y = 220;
 
-  let y = 160;
-  for (const line of list) {
-    ctx.fillText(clean(line), 70, y);
-    y += 30;
+  for (const line of list.slice(0, 10)) {
+    ctx.fillStyle = line.includes('✔')
+      ? '#4dff88'
+      : line.includes('🔒')
+      ? '#888'
+      : '#ffffff';
+
+    ctx.fillText(line, 90, y);
+    y += 34;
   }
 
-  // barra fundo
-  const x = 70;
-  const yBar = 420;
-  const w = 600;
-  const h = 18;
+  // barra de progresso moderna
+  const x = 90;
+  const yBar = 480;
+  const w = 700;
+  const h = 22;
 
-  ctx.fillStyle = '#1b1b2b';
+  // fundo barra
+  ctx.fillStyle = '#1a1a2e';
   ctx.fillRect(x, yBar, w, h);
 
-  // barra progresso
+  // gradiente barra
   const grad = ctx.createLinearGradient(x, 0, x + w, 0);
   grad.addColorStop(0, '#ff4d6d');
+  grad.addColorStop(0.5, '#6c63ff');
   grad.addColorStop(1, '#4dd6ff');
 
   ctx.fillStyle = grad;
   ctx.fillRect(x, yBar, (w * progresso) / 100, h);
 
-  // % texto
-  ctx.fillStyle = '#fff';
-  ctx.font = '14px Arial';
-  ctx.fillText(`${progresso}%`, x + w + 15, yBar + 14);
+  // porcentagem
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '16px Arial';
+  ctx.fillText(`${progresso}%`, x + w + 20, yBar + 16);
 
   // página
-  ctx.fillStyle = '#888';
-  ctx.fillText(`Página ${page + 1}/${totalPages}`, 760, 490);
+  ctx.fillStyle = '#777';
+  ctx.fillText(`Página ${page + 1}/${totalPages}`, 820, 560);
 
   return canvas.toBuffer('image/png');
 }
@@ -142,6 +149,9 @@ export function register(client, configs) {
 
     let page = 0;
 
+    // ID ÚNICO DO MENU (CORREÇÃO DO ERRO "não é seu menu")
+    const menuId = `${msg.id}-${Date.now()}`;
+
     const render = async () => {
       const cat = keys[page] ?? keys[0];
       const itens = categorias[cat] ?? [];
@@ -149,9 +159,8 @@ export function register(client, configs) {
       const list = itens.map(c => {
         const ok = conquistadas.includes(c.id);
 
-        if (c.secreta && !ok) return '🔒 Secreta';
-
-        return ok ? `✔ ${c.nome}` : `- ${c.nome}`;
+        if (c.secreta && !ok) return '🔒 Conquista Secreta';
+        return ok ? `✔ ${c.nome}` : `✖ ${c.nome}`;
       });
 
       const progresso = Math.round(
@@ -168,16 +177,18 @@ export function register(client, configs) {
         progresso
       );
 
-      const file = new AttachmentBuilder(img, { name: 'conquistas.png' });
+      const file = new AttachmentBuilder(img, {
+        name: 'conquistas.png',
+      });
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setCustomId(`conq_prev_${target.id}`)
+          .setCustomId(`conq_prev_${menuId}`)
           .setLabel('⬅')
           .setStyle(ButtonStyle.Secondary),
 
         new ButtonBuilder()
-          .setCustomId(`conq_next_${target.id}`)
+          .setCustomId(`conq_next_${menuId}`)
           .setLabel('➡')
           .setStyle(ButtonStyle.Secondary),
       );
@@ -192,13 +203,16 @@ export function register(client, configs) {
     });
 
     collector.on('collect', async (i) => {
-      // 🔥 FIX: agora só o dono do menu pode interagir
-      if (i.user.id !== target.id) {
+      // 🔥 CORREÇÃO DEFINITIVA DO "não é seu menu"
+      if (i.user.id !== msg.author.id) {
         return i.reply({
           content: '❌ Este menu não é seu.',
           ephemeral: true,
         });
       }
+
+      // garante que não pega outro menu antigo
+      if (!i.customId.includes(menuId)) return;
 
       if (i.customId.includes('next')) page++;
       if (i.customId.includes('prev')) page--;
@@ -223,6 +237,6 @@ export function register(client, configs) {
 export const comandos = [
   {
     cmd: '!conquistas',
-    desc: 'Exibe conquistas em layout visual em imagem',
+    desc: 'Mostra conquistas em painel visual moderno',
   },
 ];
