@@ -6,9 +6,15 @@ import {
   AttachmentBuilder,
 } from 'discord.js';
 
-import Usuario from '../db/models/Usuario.mjs';
 import { gastarXP } from './xpSystem.mjs';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
+import { getDB } from '../db/sqlite.mjs';
+
+/* =========================
+   DB
+========================= */
+
+const db = getDB();
 
 /* =========================
    ITENS
@@ -26,39 +32,32 @@ const ITENS = [
   { id: 'efeito_confete', nome: '🎊 Efeito Confete', tipo: 'efeito', preco: 600, desc: 'Confetes no perfil.' },
   { id: 'efeito_aurora', nome: '🌌 Efeito Aurora', tipo: 'efeito', preco: 900, desc: 'Aurora boreal.' },
 
-  { id: 'xp_boost_mini', nome: '⚡ XP Boost Mini', tipo: 'consumivel', preco: 200, desc: '+50 XP', xpBonus: 50 },
-  { id: 'xp_boost_max', nome: '🚀 XP Boost Max', tipo: 'consumivel', preco: 500, desc: '+150 XP', xpBonus: 150 },
+  { id: 'xp_boost_mini', nome: '⚡ XP Boost Mini', tipo: 'consumivel', preco: 200, desc: '+50 XP' },
+  { id: 'xp_boost_max', nome: '🚀 XP Boost Max', tipo: 'consumivel', preco: 500, desc: '+150 XP' },
 ];
 
 const ITENS_POR_PAGINA = 5;
 
 /* =========================
-   PREVIEW (CONSISTENTE COM PERFIL)
+   PREVIEW
 ========================= */
 
 async function renderPreviewPerfil(userId, item) {
   const canvas = createCanvas(700, 350);
   const ctx = canvas.getContext('2d');
 
-  // fundo
   ctx.fillStyle = '#1e1f22';
   ctx.fillRect(0, 0, 700, 350);
 
   ctx.fillStyle = '#2b2d31';
   ctx.fillRect(20, 20, 660, 310);
 
-  // avatar fake
-  ctx.fillStyle = '#444';
-  ctx.beginPath();
-  ctx.arc(110, 120, 50, 0, Math.PI * 2);
-  ctx.fill();
-
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 24px Sans';
   ctx.fillText('Preview do Perfil', 200, 80);
 
-  ctx.font = '18px Sans';
   ctx.fillStyle = '#00a2ff';
+  ctx.font = '18px Sans';
   ctx.fillText(item.nome, 200, 120);
 
   ctx.fillStyle = '#aaa';
@@ -67,9 +66,6 @@ async function renderPreviewPerfil(userId, item) {
   ctx.fillStyle = '#00ff88';
   ctx.fillText(`${item.preco} XP`, 200, 190);
 
-  /* =========================
-     MOLDURA REAL
-  ========================= */
   if (item.tipo === 'moldura') {
     try {
       const frame = await loadImage(`assets/frames/${item.id}.png`);
@@ -81,18 +77,12 @@ async function renderPreviewPerfil(userId, item) {
     }
   }
 
-  /* =========================
-     BADGE
-  ========================= */
   if (item.tipo === 'badge') {
     ctx.fillStyle = '#ffd700';
     ctx.font = 'bold 20px Sans';
     ctx.fillText(`🏅 ${item.nome}`, 200, 230);
   }
 
-  /* =========================
-     EFEITO
-  ========================= */
   if (item.tipo === 'efeito') {
     for (let i = 0; i < 25; i++) {
       ctx.fillStyle = '#00ff88';
@@ -104,7 +94,7 @@ async function renderPreviewPerfil(userId, item) {
 }
 
 /* =========================
-   EMBED LOJA
+   EMBED
 ========================= */
 
 function embedLoja(page = 0, index = 0) {
@@ -165,7 +155,7 @@ export function register(client, configs) {
 
     if (!msg.content.startsWith(prefixo)) return;
 
-    const cmd = msg.content.slice(prefixo.length).trim().split(/\s+/).shift();
+    const cmd = msg.content.slice(prefixo.length).trim().split(/\s+/)[0];
 
     if (cmd !== 'loja') return;
 
@@ -195,22 +185,48 @@ export function register(client, configs) {
     const buffer = await renderPreviewPerfil(userId, item);
 
     /* =========================
-       COMPRA
+       COMPRA (SQLITE FIX)
     ========================= */
+
     if (type === 'shop_buy') {
       const ok = await gastarXP(userId, interaction.guild.id, item.preco, `shop_${item.id}`);
 
       if (!ok)
         return interaction.reply({ content: '❌ XP insuficiente.', flags: 64 });
 
-      if (item.tipo === 'moldura')
-        await Usuario.updateOne({ userId }, { $set: { moldura: item.id } });
+      const user = db.prepare(`
+        SELECT * FROM usuarios WHERE userId = ? AND guildId = ?
+      `).get(userId, interaction.guild.id);
 
-      if (item.tipo === 'badge')
-        await Usuario.updateOne({ userId }, { $push: { badges: item.id } });
+      if (item.tipo === 'moldura') {
+        db.prepare(`
+          UPDATE usuarios
+          SET moldura = ?
+          WHERE userId = ? AND guildId = ?
+        `).run(item.id, userId, interaction.guild.id);
+      }
 
-      if (item.tipo === 'efeito')
-        await Usuario.updateOne({ userId }, { $push: { efeitos: item.id } });
+      if (item.tipo === 'badge') {
+        const badges = user?.badges ? JSON.parse(user.badges) : [];
+        badges.push(item.id);
+
+        db.prepare(`
+          UPDATE usuarios
+          SET badges = ?
+          WHERE userId = ? AND guildId = ?
+        `).run(JSON.stringify(badges), userId, interaction.guild.id);
+      }
+
+      if (item.tipo === 'efeito') {
+        const efeitos = user?.efeitos ? JSON.parse(user.efeitos) : [];
+        efeitos.push(item.id);
+
+        db.prepare(`
+          UPDATE usuarios
+          SET efeitos = ?
+          WHERE userId = ? AND guildId = ?
+        `).run(JSON.stringify(efeitos), userId, interaction.guild.id);
+      }
 
       return interaction.update({
         content: `✅ Comprou **${item.nome}**`,
@@ -218,10 +234,6 @@ export function register(client, configs) {
         components: [],
       });
     }
-
-    /* =========================
-       UPDATE NORMAL
-    ========================= */
 
     return interaction.update({
       embeds: [embedLoja(0, index)],
