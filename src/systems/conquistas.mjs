@@ -6,32 +6,13 @@ import {
 } from 'discord.js';
 
 import ConquistaModel from '../db/models/Conquista.mjs';
+import { LISTA_CONQUISTAS } from './conquistasBase.mjs';
 
 /* =========================
-   LISTA LOCAL (EVITA ERRO DE IMPORT CIRCULAR)
+   BARRA
 ========================= */
-const LISTA_CONQUISTAS = [
-  { id: 'primeira_mensagem', cat: 'mensagens', nome: '📢 Primeira Mensagem', secreta: false },
-  { id: 'mensagens_100', cat: 'mensagens', nome: '💬 Ativo', secreta: false },
-  { id: 'mensagens_500', cat: 'mensagens', nome: '📡 Comunicador', secreta: false },
-  { id: 'mensagens_1000', cat: 'mensagens', nome: '🧠 Veterano', secreta: false },
-  { id: 'mensagens_10000', cat: 'mensagens', nome: '💀 Sem Vida Social', secreta: true },
-
-  { id: 'nivel_5', cat: 'nivel', nome: '🌱 Iniciante', secreta: false },
-  { id: 'nivel_20', cat: 'nivel', nome: '⭐ Evoluindo', secreta: false },
-  { id: 'nivel_50', cat: 'nivel', nome: '🏆 Experiente', secreta: false },
-  { id: 'nivel_100', cat: 'nivel', nome: '👑 Elite', secreta: true },
-
-  { id: 'ship_0', cat: 'ship', nome: '💔 Amor Impossível', secreta: false },
-  { id: 'ship_100', cat: 'ship', nome: '💘 Destino Perfeito', secreta: false },
-  { id: 'friendzone', cat: 'ship', nome: '🤝 Friendzone', secreta: false },
-];
-
-/* =========================
-   BARRA DE PROGRESSO
-========================= */
-function barra(atual, total, size = 10) {
-  if (!total || total <= 0) return '░'.repeat(size);
+function barra(atual, total, size = 12) {
+  if (!total) return '░'.repeat(size);
 
   const pct = Math.round((atual / total) * size);
   const safe = Math.max(0, Math.min(size, pct));
@@ -102,33 +83,30 @@ export function register(client, configs) {
         .setTitle(`🏅 Conquistas de ${target.username}`)
         .setDescription(
           `📂 Categoria: **${cat.toUpperCase()}**\n\n` +
-          `${list || 'Nenhuma conquista nesta categoria.'}\n\n` +
+          `${list}\n\n` +
           `📊 Desbloqueadas: **${conquistadas.length}**`
         )
         .addFields({
           name: '📈 Progresso geral',
-          value: barra(
-            conquistadas.length,
-            LISTA_CONQUISTAS.filter(c => !c.secreta).length
-          ),
+          value: barra(conquistadas.length, LISTA_CONQUISTAS.filter(c => !c.secreta).length),
         })
         .setFooter({ text: `Página ${page + 1}/${keys.length}` });
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
-          .setCustomId(`conq_prev:${msg.author.id}`)
+          .setCustomId('conq_prev')
           .setLabel('⬅')
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(page === 0),
 
         new ButtonBuilder()
-          .setCustomId(`conq_next:${msg.author.id}`)
+          .setCustomId('conq_next')
           .setLabel('➡')
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(page === keys.length - 1),
       );
 
-      return { embed, row };
+      return { embeds: [embed], components: [row] };
     };
 
     const message = await msg.reply(render());
@@ -139,14 +117,11 @@ export function register(client, configs) {
 
     collector.on('collect', async (i) => {
       if (i.user.id !== msg.author.id) {
-        return i.reply({
-          content: '❌ Este menu não é seu.',
-          ephemeral: true,
-        });
+        return i.reply({ content: '❌ Não é seu menu.', ephemeral: true });
       }
 
-      if (i.customId.startsWith('conq_next')) page++;
-      if (i.customId.startsWith('conq_prev')) page--;
+      if (i.customId === 'conq_next') page++;
+      if (i.customId === 'conq_prev') page--;
 
       if (page < 0) page = 0;
       if (page >= keys.length) page = keys.length - 1;
@@ -168,6 +143,6 @@ export function register(client, configs) {
 export const comandos = [
   {
     cmd: '!conquistas',
-    desc: 'Mostra conquistas com categorias e progresso',
+    desc: 'Sistema completo de conquistas com categorias',
   },
 ];
