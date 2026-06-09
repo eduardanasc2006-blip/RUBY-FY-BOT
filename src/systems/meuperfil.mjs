@@ -6,8 +6,10 @@ import {
   AttachmentBuilder,
 } from 'discord.js';
 
-import Usuario from '../db/models/Usuario.mjs';
 import { createCanvas, loadImage } from '@napi-rs/canvas';
+import { getDB } from '../db/sqlite.mjs';
+
+const db = getDB();
 
 /* =========================
    CONFIG
@@ -16,18 +18,18 @@ import { createCanvas, loadImage } from '@napi-rs/canvas';
 const AVATAR_PADRAO = 'https://cdn.discordapp.com/embed/avatars/0.png';
 
 /* =========================
-   RENDER PERFIL (BASE ÚNICA)
+   RENDER PERFIL
 ========================= */
 
 export async function renderPerfil(data) {
   const canvas = createCanvas(800, 420);
   const ctx = canvas.getContext('2d');
 
-  // FUNDO
+  // fundo
   ctx.fillStyle = '#0b0d12';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // CARD BASE
+  // card
   ctx.fillStyle = '#11141b';
   ctx.fillRect(20, 20, 760, 380);
 
@@ -68,24 +70,31 @@ export async function renderPerfil(data) {
   ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
 
   /* =========================
-     MOLDURA (SISTEMA REAL)
+     MOLDURA (LOJA)
   ========================= */
 
   if (data.moldura) {
     try {
       const frame = await loadImage(`assets/frames/${data.moldura}.png`);
-
-      // overlay REAL do item comprado
       ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
-
     } catch {
-      console.warn('[perfil] moldura não encontrada:', data.moldura);
-
-      // fallback visual (NUNCA quebra o perfil)
       ctx.strokeStyle = '#ffd700';
       ctx.lineWidth = 6;
       ctx.strokeRect(25, 25, canvas.width - 50, canvas.height - 50);
     }
+  }
+
+  /* =========================
+     BADGES (PRONTO PRA FUTURO)
+  ========================= */
+
+  if (Array.isArray(data.badges)) {
+    ctx.fillStyle = '#ffd700';
+    ctx.font = '16px Sans';
+
+    data.badges.slice(0, 5).forEach((b, i) => {
+      ctx.fillText(`🏅 ${b}`, 220, 200 + i * 20);
+    });
   }
 
   return canvas.toBuffer('image/png');
@@ -106,21 +115,22 @@ export function register(client, configs) {
 
     if (!msg.content.startsWith(prefixo)) return;
 
-    const cmd = msg.content.slice(prefixo.length).trim().split(/\s+/).shift();
+    const cmd = msg.content.slice(prefixo.length).trim().split(/\s+/)[0];
 
     if (cmd !== 'meuperfil') return;
 
     try {
-      const user = await Usuario.findOne({
-        userId: msg.author.id,
-        guildId: msg.guild.id,
-      });
+      const user = db.prepare(`
+        SELECT * FROM usuarios
+        WHERE userId = ? AND guildId = ?
+      `).get(msg.author.id, msg.guild.id);
 
       const data = {
         nome: msg.author.username,
         avatar: msg.author.displayAvatarURL?.() || null,
         xp: user?.xpDisponivel || 0,
         moldura: user?.moldura || null,
+        badges: user?.badges ? JSON.parse(user.badges) : [],
       };
 
       const buffer = await renderPerfil(data);
