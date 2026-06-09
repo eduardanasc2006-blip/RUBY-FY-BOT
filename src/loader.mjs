@@ -20,10 +20,6 @@ import { register as regTitulos,         comandos as cTitulos         } from './
 import { register as regLoja,            comandos as cLoja            } from './systems/loja.mjs';
 import { register as regPerfilVisual,    comandos as cPerfilVisual    } from './systems/perfilvisual.mjs';
 import { register as regShip,            comandos as cShip            } from './systems/ship.mjs';
-import { register as regProdutos,        comandos as cProdutos        } from './systems/produtos.mjs';
-import { register as regSuporte,         comandos as cSuporte         } from './systems/suporte.mjs';
-import { register as regAtendimento,     comandos as cAtendimento     } from './systems/atendimento.mjs';
-import { register as regAvaliacoes,      comandos as cAvaliacoes      } from './systems/avaliacoes.mjs';
 import { register as regAdministracao,   comandos as cAdministracao   } from './systems/administracao.mjs';
 import { register as regLogs,            comandos as cLogs            } from './systems/logs.mjs';
 import { register as regAntiAbuso,       comandos as cAntiAbuso       } from './systems/antiabuso.mjs';
@@ -55,10 +51,6 @@ const visual = {
   Loja:                { emoji: '🛍️', cor: 0x00b894 },
   'Perfil Visual':     { emoji: '🖼️', cor: 0x6c5ce7 },
   Ship:                { emoji: '❤️', cor: 0xff4d6d },
-  Produtos:            { emoji: '📦', cor: 0x00cec9 },
-  Suporte:             { emoji: '🎫', cor: 0x3498db },
-  Atendimento:         { emoji: '📞', cor: 0x2ecc71 },
-  Avaliações:          { emoji: '⭐', cor: 0xf1c40f },
   Administração:       { emoji: '🛠️', cor: 0xe74c3c },
   Logs:                { emoji: '📋', cor: 0x95a5a6 },
   'Anti-Abuso':        { emoji: '🛡️', cor: 0xc0392b },
@@ -131,10 +123,6 @@ export async function loadSystems(client) {
       ['Loja',                regLoja,            cLoja],
       ['Perfil Visual',       regPerfilVisual,    cPerfilVisual],
       ['Ship',                regShip,            cShip],
-      ['Produtos',            regProdutos,        cProdutos],
-      ['Suporte',             regSuporte,         cSuporte],
-      ['Atendimento',         regAtendimento,     cAtendimento],
-      ['Avaliações',          regAvaliacoes,      cAvaliacoes],
       ['Administração',       regAdministracao,   cAdministracao],
       ['Logs',                regLogs,            cLogs],
       ['Anti-Abuso',          regAntiAbuso,       cAntiAbuso],
