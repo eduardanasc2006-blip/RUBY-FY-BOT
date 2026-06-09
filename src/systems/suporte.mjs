@@ -6,21 +6,22 @@ import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Permissions
   import { isDBConnected } from '../utils/dbGuard.mjs';
 
   const CATEGORIAS = [
-    { id: 'compra',    emoji: '🛒', label: 'Compra',    cor: 0x2ecc71 },
-    { id: 'duvida',    emoji: '❓', label: 'Dúvida',    cor: 0x3498db },
-    { id: 'problema',  emoji: '⚠️', label: 'Problema',  cor: 0xe74c3c },
-    { id: 'parceria',  emoji: '🤝', label: 'Parceria',  cor: 0x9b59b6 },
-  ];
+  { id: 'duvida', emoji: '❓', label: 'Dúvida', cor: 0x3498db },
+  { id: 'problema', emoji: '⚠️', label: 'Problema', cor: 0xe74c3c },
+  { id: 'parceria', emoji: '🤝', label: 'Parceria', cor: 0x9b59b6 },
+  { id: 'outro', emoji: '📩', label: 'Outro Assunto', cor: 0xf1c40f },
+];
 
   function gerarTicketId() {
     return `TK${Date.now().toString(36).toUpperCase().slice(-6)}`;
   }
 
   export const comandos = [
-    { cmd: '!suporte / !ticket', desc: 'Abrir ticket de suporte.' },
-    { cmd: '!fecharticket',      desc: 'Fechar ticket aberto.' },
-    { cmd: '!sugerir <texto>',   desc: 'Enviar sugestão para o servidor.' },
-  ];
+  { cmd: '!suporte / !ticket', desc: 'Abrir ticket de suporte.' },
+  { cmd: '!painelsuporte', desc: 'Cria o painel permanente de suporte.' },
+  { cmd: '!fecharticket', desc: 'Fechar ticket aberto.' },
+  { cmd: '!sugerir <texto>', desc: 'Enviar sugestão para o servidor.' },
+];
 
   export function register(client, configs) {
     if (client.__suporteRegistrado) return;
@@ -49,7 +50,51 @@ import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Permissions
       const args = msg.content.slice(prefixo.length).trim().split(/\s+/);
       const cmd = args.shift().toLowerCase();
       const guildId = msg.guild.id;
+if (cmd === 'painelsuporte') {
 
+  if (!isDBConnected()) {
+    return msg.reply({
+      embeds: [embedErro('Banco de dados offline.')]
+    });
+  }
+
+  if (!isEquipe(msg.member, cfg)) {
+    return msg.reply({
+      embeds: [embedErro('Apenas a equipe pode criar painéis.')]
+    });
+  }
+
+  const row = new ActionRowBuilder().addComponents(
+    CATEGORIAS.map(cat =>
+      new ButtonBuilder()
+        .setCustomId(`ticket:painel:${cat.id}`)
+        .setLabel(`${cat.emoji} ${cat.label}`)
+        .setStyle(ButtonStyle.Secondary)
+    )
+  );
+
+  const embed = new EmbedBuilder()
+    .setColor(0x7289da)
+    .setTitle('🎫 Central de Suporte')
+   .setDescription(
+  'Selecione a categoria do seu atendimento:\n\n' +
+  '❓ Dúvida\n' +
+  '⚠️ Problema\n' +
+  '🤝 Parceria\n' +
+  '📩 Outro Assunto'
+)
+    .setTimestamp();
+
+  await msg.channel.send({
+  embeds: [embed],
+  components: [row]
+});
+
+await msg.delete().catch(() => {});
+return;
+}
+      
+      
       if (cmd === 'suporte' || cmd === 'ticket') {
         if (!isDBConnected()) return msg.reply({ embeds: [embedErro('Sistema de tickets offline (banco de dados não configurado).')] });
 
@@ -111,10 +156,27 @@ import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Permissions
       if (!interaction.isButton()) return;
       const { customId, guild, user, member } = interaction;
 
-      if (customId.startsWith('ticket:abrir:')) {
+      if (
+  customId.startsWith('ticket:abrir:') ||
+  customId.startsWith('ticket:painel:')
+) {
         if (!isDBConnected()) return interaction.reply({ content: '⚠️ Sistema de tickets offline.', flags: 64 });
-        const [, , catId, userId] = customId.split(':');
-        if (user.id !== userId) return interaction.reply({ content: 'Este botão não é para você.', flags: 64 });
+       let catId;
+
+if (customId.startsWith('ticket:painel:')) {
+  catId = customId.split(':')[2];
+} else {
+  const [, , categoria, userId] = customId.split(':');
+
+  if (user.id !== userId) {
+    return interaction.reply({
+      content: 'Este botão não é para você.',
+      flags: 64
+    });
+  }
+
+  catId = categoria;
+}
 
         await interaction.deferReply({ flags: 64 });
 
@@ -122,6 +184,11 @@ import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Permissions
         const abertos = await Ticket.countDocuments({ guildId: guild.id, userId: user.id, status: 'aberto' });
         if (abertos >= 2) return interaction.editReply({ content: '❌ Você já tem 2 tickets abertos.' });
 
+        if (!catId) {
+  return interaction.editReply({
+    content: '❌ Categoria inválida.'
+  });
+}
         const cat = CATEGORIAS.find(c => c.id === catId);
         const ticketId = gerarTicketId();
         const cargo = guild.roles.cache.get(cfg?.cargoSuporte || cfg?.cargoEquipe);
