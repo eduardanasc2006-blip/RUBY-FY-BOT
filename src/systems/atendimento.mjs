@@ -1,4 +1,7 @@
-export const comandos = [{ cmd: '!atendimento', desc: 'Abre o sistema de atendimento' }];
+export const comandos = [
+  { cmd: '!atendimento', desc: 'Abre o sistema de atendimento' },
+  { cmd: '!painelatendimento', desc: 'Cria o painel permanente de atendimento' },
+];
 
 import {
   EmbedBuilder,
@@ -49,6 +52,49 @@ export function register(client, configs) {
      * !atendimento
      * =========================
      */
+   
+    if (cmd === 'painelatendimento') {
+      
+if (!isDBConnected()) {
+  return msg.reply({
+    embeds: [embedErro('Banco de dados offline.')]
+  });
+}
+      
+  if (!isEquipe(msg.member, cfg)) {
+    return msg.reply({
+      embeds: [embedErro('Apenas a equipe pode criar painéis.')]
+    });
+  }
+
+  const row = new ActionRowBuilder().addComponents(
+    CATEGORIAS.map(cat =>
+      new ButtonBuilder()
+        .setCustomId(`atendimento:painel:${cat.id}`)
+        .setLabel(`${cat.emoji} ${cat.label}`)
+        .setStyle(ButtonStyle.Primary)
+    )
+  );
+
+  const embed = new EmbedBuilder()
+    .setColor(0x5865f2)
+    .setTitle('🛒 Central de Atendimento')
+    .setDescription(
+      'Clique em uma opção abaixo para abrir um atendimento.\n\n' +
+      '🛒 Comprar Produto\n' +
+      '📊 Simular Compra\n\n' +
+      'Um canal privado será criado automaticamente.'
+    );
+
+  await msg.channel.send({
+    embeds: [embed],
+    components: [row],
+  });
+
+  return msg.reply({
+    content: '✅ Painel criado com sucesso.'
+  });
+}
     if (cmd === 'atendimento') {
       if (!isDBConnected()) {
         return msg.reply({
@@ -99,14 +145,22 @@ export function register(client, configs) {
    * INTERAÇÕES
    * =========================
    */
-  client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isButton()) return;
+ client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isButton()) return;
 
-    const { customId, guild, user } = interaction;
+  const { customId, guild, user } = interaction;
 
-    if (!customId.startsWith('atendimento:abrir:')) return;
+  if (
+    !customId.startsWith('atendimento:abrir:') &&
+    !customId.startsWith('atendimento:painel:')
+  ) return;
 
-    const [, , catId, userId] = customId.split(':');
+  let catId;
+
+  if (customId.startsWith('atendimento:painel:')) {
+    catId = customId.split(':')[2];
+  } else {
+    const [, , categoria, userId] = customId.split(':');
 
     if (user.id !== userId) {
       return interaction.reply({
@@ -115,7 +169,10 @@ export function register(client, configs) {
       });
     }
 
-    const cfg = configs.get(guild.id);
+    catId = categoria;
+  }
+
+  const cfg = configs.get(guild.id);
 
     const cat = CATEGORIAS.find(c => c.id === catId);
     if (!cat) {
@@ -235,18 +292,23 @@ export function register(client, configs) {
     });
 
     if (!ticket) {
-      return interaction.reply({
-        content: 'Ticket não encontrado.',
-        flags: 64,
-      });
-    }
+  return interaction.reply({
+    content: 'Ticket não encontrado.',
+    flags: 64,
+  });
+}
 
-    if (ticket.userId !== user.id) {
-      return interaction.reply({
-        content: '❌ Você não pode fechar este atendimento.',
-        flags: 64,
-      });
-    }
+const membro = guild.members.cache.get(user.id);
+
+if (
+  ticket.userId !== user.id &&
+  !isEquipe(membro, configs.get(guild.id))
+) {
+  return interaction.reply({
+    content: '❌ Você não pode fechar este atendimento.',
+    flags: 64,
+  });
+}
 
     await Ticket.updateOne({ _id: ticket._id }, { status: 'fechado' });
 
