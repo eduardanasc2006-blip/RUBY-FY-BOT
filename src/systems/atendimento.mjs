@@ -148,8 +148,15 @@ if (!isDBConnected()) {
  client.on('interactionCreate', async (interaction) => {
   if (!interaction.isButton()) return;
 
-  const { customId, guild, user } = interaction;
+ console.log(
+    '[ATENDIMENTO]',
+    interaction.customId,
+    'clicado por',
+    interaction.user.tag,
+    interaction.user.id
+  );
 
+  const { customId, guild, user } = interaction;
   if (
     !customId.startsWith('atendimento:abrir:') &&
     !customId.startsWith('atendimento:painel:')
