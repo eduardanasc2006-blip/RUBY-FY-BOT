@@ -2,10 +2,11 @@ import {
     EmbedBuilder
   } from 'discord.js';
   import {
-    transferirXP,
-    temXP
-  } from './xpSystem.mjs';
-
+  transferirXP,
+  temXP,
+  ganharXP,
+  gastarXP
+} from './xpSystem.mjs';
   /* =========================
      COMANDOS EXPORTADOS
   ========================= */
@@ -107,11 +108,109 @@ return msg.reply({ embeds: [embed] });
       /* =========================
          COINFLIP
       ========================= */
+if (cmd === 'coinflip') {
 
-      if (cmd === 'coinflip') {
-        return msg.reply(Math.random() < 0.5 ? '🪙 Cara' : '🪙 Coroa');
-      }
+  const alvo = msg.mentions.users.first();
 
+  // PvP
+  if (alvo) {
+
+    const aposta = parseInt(
+      args.find(a => /^\d+$/.test(a))
+    );
+
+    if (!aposta) {
+      return msg.reply(
+        '❌ Use: !coinflip @usuario <xp>'
+      );
+    }
+
+    if (!(await temXP(msg.author.id, msg.guild.id, aposta))) {
+      return msg.reply('❌ Você não tem XP suficiente.');
+    }
+
+    if (!(await temXP(alvo.id, msg.guild.id, aposta))) {
+      return msg.reply('❌ O adversário não tem XP suficiente.');
+    }
+
+    const vencedor =
+      Math.random() < 0.5
+        ? msg.author
+        : alvo;
+
+    const perdedor =
+      vencedor.id === msg.author.id
+        ? alvo
+        : msg.author;
+
+    await transferirXP(
+      perdedor.id,
+      vencedor.id,
+      msg.guild.id,
+      aposta,
+      'coinflip'
+    );
+
+    const embed = new EmbedBuilder()
+      .setColor(0xf1c40f)
+      .setTitle('🪙 Coinflip PvP')
+      .setDescription(
+        `💰 Pote: **${aposta * 2} XP**\n\n` +
+        `🏆 Vencedor: ${vencedor}\n` +
+        `📈 Ganhou: **${aposta} XP**`
+      );
+
+    return msg.reply({ embeds: [embed] });
+  }
+
+  // Contra BOT
+  if (args[0]?.toLowerCase() === 'bot') {
+
+    const escolha = args[1]?.toLowerCase();
+    const aposta = parseInt(args[2]);
+
+    if (!['cara', 'coroa'].includes(escolha)) {
+      return msg.reply(
+        '❌ Use: !coinflip bot <cara/coroa> <xp>'
+      );
+    }
+
+    const resultado =
+      Math.random() < 0.5
+        ? 'cara'
+        : 'coroa';
+
+    const venceu =
+      resultado === escolha;
+
+    if (venceu) {
+      await ganharXP(
+        msg.author.id,
+        msg.guild.id,
+        aposta,
+        'coinflip_bot'
+      );
+    } else {
+      await gastarXP(
+        msg.author.id,
+        msg.guild.id,
+        aposta,
+        'coinflip_bot'
+      );
+    }
+
+    return msg.reply(
+      `🪙 Caiu **${resultado}**!\n\n` +
+      (venceu
+        ? `🎉 Você ganhou ${aposta} XP!`
+        : `💀 Você perdeu ${aposta} XP!`)
+    );
+  }
+
+  return msg.reply(
+    '❌ Use:\n!coinflip bot cara 500\n!coinflip @usuario 500'
+  );
+}
       /* =========================
          PPT (PvP + XP)
          — usa transferirXP() para não inflar o xpTotal
