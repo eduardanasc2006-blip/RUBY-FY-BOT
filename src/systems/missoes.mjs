@@ -257,5 +257,7 @@ export async function progredirMissao(userId, guildId, tipo, quantidade = 1, can
     }
 
     if (atualizado) await doc.save();
-  } catch {}
-   }
+  } catch (e) {
+    console.error('[PROGREDIR MISSAO]', e);
+  }
+}
