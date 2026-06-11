@@ -170,15 +170,15 @@ if (alvo.bot) {
     );
 
     const embed = new EmbedBuilder()
-      .setColor(0xf1c40f)
-      .setTitle('🪙 Coinflip PvP')
-      .setDescription(
-  `🎟️ Cada jogador apostou **${aposta} XP**\n` +
-  `🏦 Pote total: **${aposta * 2} XP**\n\n` +
-  `🏆 Vencedor: ${vencedor}\n` +
-  `💰 Levou o pote inteiro!`
+  .setColor(0xf1c40f)
+  .setTitle('🪙 Coinflip PvP')
+  .setDescription(
+`🎟️ Cada jogador apostou **${aposta} XP**
+🏦 Pote total: **${aposta * 2} XP**
 
-      );
+🏆 Vencedor: ${vencedor}
+🤑 A sorte estava do seu lado hoje!
+  );
 
     return msg.reply({ embeds: [embed] });
   }
