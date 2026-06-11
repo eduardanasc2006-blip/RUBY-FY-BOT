@@ -13,10 +13,12 @@ import {
   export const comandos = [
     { cmd: '!8ball <pergunta>', desc: 'Bola mágica 8 — responde sua pergunta.' },
     { cmd: '!dado [faces]', desc: 'Rola um dado (padrão 6 faces).' },
-    { cmd: '!coinflip', desc: 'Cara ou coroa.' },
-    { cmd: '!ppt @user [xp]', desc: 'Pedra, papel ou tesoura valendo XP.' },
+   { cmd: '!coinflip bot <cara/coroa> <xp>', desc: 'Aposte XP contra o bot.' },
+{ cmd: '!coinflip @usuario <xp>', desc: 'Desafie alguém no cara ou coroa.' },
+{ cmd: '!ppt bot <xp>', desc: 'PPT contra o bot valendo XP.' },
+{ cmd: '!ppt @usuario <xp>', desc: 'PPT contra outro usuário.' },
+{ cmd: '!meme', desc: 'Meme aleatório.' },
     { cmd: '!roleta', desc: 'Sorteia um membro aleatório online.' },
-    { cmd: '!escolher item1, item2, item3', desc: 'Escolhe entre opções separadas por vírgula.' },
   ];
 
   /* =========================
@@ -89,7 +91,17 @@ import {
       if (cmd === 'dado') {
         const faces = parseInt(args[0]) || 6;
         const r = Math.floor(Math.random() * faces) + 1;
-        return msg.reply(`🎲 Resultado: **${r}**`);
+        const embed = new EmbedBuilder()
+.setColor(0x3498db)
+.setTitle('🎲 Rolagem de Dado')
+.setDescription(
+`🎯 Faces: **${faces}**
+
+🎲 Resultado:
+# ${r}`
+);
+
+return msg.reply({ embeds: [embed] });
       }
 
       /* =========================
@@ -238,6 +250,7 @@ import {
         const escolhido = arr[Math.floor(Math.random() * arr.length)];
 
         const embed = new EmbedBuilder()
+            .setImage('https://media.tenor.com/uK95REraK8AAAAAC/roulette-wheel.gif')
           .setColor(0xf1c40f)
           .setTitle('🎰 Roleta da Sorte')
           .setDescription(
@@ -249,35 +262,6 @@ import {
         return msg.reply({ embeds: [embed] });
       }
 
-      /* =========================
-         ESCOLHER
-      ========================= */
-
-      if (cmd === 'escolher') {
-        const texto = args.join(' ');
-
-        if (!texto.includes(',')) {
-          return msg.reply('❌ Use vírgulas! Ex: `!escolher pizza, hambúrguer, sushi`');
-        }
-
-        const opcoes = texto.split(',').map(s => s.trim()).filter(Boolean);
-
-        if (opcoes.length < 2) {
-          return msg.reply('❌ Preciso de pelo menos 2 opções.');
-        }
-
-        const escolha = opcoes[Math.floor(Math.random() * opcoes.length)];
-
-        const embed = new EmbedBuilder()
-          .setColor(0x2ecc71)
-          .setTitle('🎯 Escolha Aleatória')
-          .setDescription(
-            `📋 Opções:\n${opcoes.map(o => `• ${o}`).join('\n')}\n\n` +
-            `🏆 Resultado:\n**${escolha}**`
-          );
-
-        return msg.reply({ embeds: [embed] });
-      }
     });
   }
   
