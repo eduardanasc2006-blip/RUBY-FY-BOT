@@ -183,6 +183,12 @@ async function encerrarJogo(channel, chave, motivo) {
 /* ─────────────────────────────────────────────
    REGISTER
 ──────────────────────────────────────────── */
+export const comandos = [
+  {
+    cmd: '!quiz',
+    desc: 'Inicia um quiz de perguntas e respostas.'
+  }
+];
 export function register(client, configs) {
   if (client.__quizRegistrado) return;
   client.__quizRegistrado = true;
