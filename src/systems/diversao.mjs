@@ -115,9 +115,10 @@ import {
     );
 return msg.reply({ embeds: [embed] });
       }
-      /* =========================
-         COINFLIP
-      ========================= */
+
+ /* =========================
+   COINFLIP
+========================= */
 if (cmd === 'coinflip') {
 
   const alvo = msg.mentions.users.first();
@@ -125,13 +126,13 @@ if (cmd === 'coinflip') {
   // PvP
   if (alvo) {
 
-      if (alvo.id === msg.author.id) {
-  return msg.reply('❌ Você não pode apostar contra si mesmo.');
-}
+    if (alvo.id === msg.author.id) {
+      return msg.reply('❌ Você não pode apostar contra si mesmo.');
+    }
 
-if (alvo.bot) {
-  return msg.reply('❌ Você não pode apostar contra bots.');
-}
+    if (alvo.bot) {
+      return msg.reply('❌ Você não pode apostar contra bots.');
+    }
 
     const aposta = parseInt(
       args.find(a => /^\d+$/.test(a))
@@ -169,20 +170,19 @@ if (alvo.bot) {
       'coinflip'
     );
 
-   const embed = new EmbedBuilder()
-  .setColor(0xf1c40f)
-  .setTitle('🪙 Coinflip PvP')
-  .setDescription(
+    const embed = new EmbedBuilder()
+      .setColor(0xf1c40f)
+      .setTitle('🪙 Coinflip PvP')
+      .setDescription(
 `🎟️ Cada jogador apostou **${aposta} XP**
 🏦 Pote total: **${aposta * 2} XP**
 
-🏆 Vencedor: ${vencedor}
-🤑 A sorte estava do seu lado hoje!`
-  );
+🏆 Vencedor: **${vencedor.username}**
+🎰 Hoje a moeda caiu exatamente do seu lado!`
+      );
 
-return msg.reply({ embeds: [embed] });
-}
-
+    return msg.reply({ embeds: [embed] });
+  }
 
   // Contra BOT
   if (args[0]?.toLowerCase() === 'bot') {
@@ -195,24 +195,25 @@ return msg.reply({ embeds: [embed] });
         '❌ Use: !coinflip bot <cara/coroa> <xp>'
       );
     }
-if (!aposta || aposta < MIN_APOSTA || aposta > MAX_APOSTA) {
-  return msg.reply(
-    `❌ A aposta deve ser entre ${MIN_APOSTA} e ${MAX_APOSTA} XP.`
-  );
-}
 
-if (!(await temXP(msg.author.id, msg.guild.id, aposta))) {
-  return msg.reply(
-    `❌ Você não possui ${aposta} XP disponível.`
-  );
-}
+    if (!aposta || aposta < MIN_APOSTA || aposta > MAX_APOSTA) {
+      return msg.reply(
+        `❌ A aposta deve ser entre ${MIN_APOSTA} e ${MAX_APOSTA} XP.`
+      );
+    }
+
+    if (!(await temXP(msg.author.id, msg.guild.id, aposta))) {
+      return msg.reply(
+        `❌ Você não possui ${aposta} XP disponível.`
+      );
+    }
+
     const resultado =
       Math.random() < 0.5
         ? 'cara'
         : 'coroa';
 
-    const venceu =
-      resultado === escolha;
+    const venceu = resultado === escolha;
 
     if (venceu) {
       await ganharXP(
@@ -241,7 +242,8 @@ if (!(await temXP(msg.author.id, msg.guild.id, aposta))) {
   return msg.reply(
     '❌ Use:\n!coinflip bot cara 500\n!coinflip @usuario 500'
   );
-}
+  }
+
       /* =========================
          PPT (PvP + XP)
          — usa transferirXP() para não inflar o xpTotal
