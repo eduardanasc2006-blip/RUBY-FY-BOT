@@ -174,9 +174,13 @@ export function register(client, configs) {
 
     let doc;
     try {
-      doc = await garantirMissoes(msg.author.id, guildId);
-    } catch (e) {
-      return msg.reply({ embeds: [embedErro('Erro ao carregar missões. Tente novamente.')] });
+  doc = await garantirMissoes(msg.author.id, guildId);
+} catch (e) {
+  console.error('[MISSOES]', e);
+
+  return msg.reply({
+    embeds: [embedErro(`Erro ao carregar missões:\n${e.message}`)]
+  });
     }
 
     const diarias  = doc.diarias  || [];
