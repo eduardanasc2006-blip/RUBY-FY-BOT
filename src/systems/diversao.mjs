@@ -90,21 +90,31 @@ import {
       ========================= */
 
       if (cmd === 'dado') {
-        const faces = parseInt(args[0]) || 6;
-        const r = Math.floor(Math.random() * faces) + 1;
-        const embed = new EmbedBuilder()
-.setColor(0x3498db)
-.setTitle('🎲 Rolagem de Dado')
-.setDescription(
+
+  const faces = parseInt(args[0]) || 6;
+
+  if (faces < 2 || faces > 1000) {
+    return msg.reply(
+      '❌ Escolha um dado entre 2 e 1000 faces.'
+    );
+  }
+
+  const r = Math.floor(Math.random() * faces) + 1;
+
+  const embed = new EmbedBuilder()
+    .setColor(0x3498db)
+    .setTitle('🎲 Rolagem de Dado')
+    .setDescription(
 `🎯 Faces: **${faces}**
 
-🎲 Resultado:
-# ${r}`
-);
+🎲 O dado rolou...
 
+╭─────────╮
+│    ${r}    │
+╰─────────╯`
+    );
 return msg.reply({ embeds: [embed] });
       }
-
       /* =========================
          COINFLIP
       ========================= */
@@ -155,7 +165,7 @@ if (cmd === 'coinflip') {
       .setColor(0xf1c40f)
       .setTitle('🪙 Coinflip PvP')
       .setDescription(
-        `💰 Pote: **${aposta * 2} XP**\n\n` +
+        
         `🏆 Vencedor: ${vencedor}\n` +
         `📈 Ganhou: **${aposta} XP**`
       );
