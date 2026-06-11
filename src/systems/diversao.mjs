@@ -174,7 +174,17 @@ if (cmd === 'coinflip') {
         '❌ Use: !coinflip bot <cara/coroa> <xp>'
       );
     }
+if (!aposta || aposta < MIN_APOSTA || aposta > MAX_APOSTA) {
+  return msg.reply(
+    `❌ A aposta deve ser entre ${MIN_APOSTA} e ${MAX_APOSTA} XP.`
+  );
+}
 
+if (!(await temXP(msg.author.id, msg.guild.id, aposta))) {
+  return msg.reply(
+    `❌ Você não possui ${aposta} XP disponível.`
+  );
+}
     const resultado =
       Math.random() < 0.5
         ? 'cara'
