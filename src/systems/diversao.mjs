@@ -371,6 +371,31 @@ if (!(await temXP(msg.author.id, msg.guild.id, aposta))) {
         return msg.reply({ embeds: [embed] });
       }
 
+        /* =========================
+        MEME
+      ========================= */
+
+if (cmd === 'meme') {
+
+  const memes = [
+    'https://i.imgflip.com/30b1gx.jpg',
+    'https://i.imgflip.com/1bij.jpg',
+    'https://i.imgflip.com/26am.jpg',
+    'https://i.imgflip.com/2fm6x.jpg',
+    'https://i.imgflip.com/39t1o.jpg'
+  ];
+
+  const meme = memes[Math.floor(Math.random() * memes.length)];
+
+  const embed = new EmbedBuilder()
+    .setColor(0x2ecc71)
+    .setTitle('😂 Meme Aleatório')
+    .setImage(meme)
+    .setFooter({ text: `Pedido por ${msg.author.username}` });
+
+  return msg.reply({ embeds: [embed] });
+}
+        
     });
   }
   
