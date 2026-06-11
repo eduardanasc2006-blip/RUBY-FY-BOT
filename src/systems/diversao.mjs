@@ -179,10 +179,11 @@ if (alvo.bot) {
 🏆 Vencedor: ${vencedor}
 🤑 A sorte estava do seu lado hoje!`
   );
-  }
 
 return msg.reply({ embeds: [embed] });
-      
+}
+
+
   // Contra BOT
   if (args[0]?.toLowerCase() === 'bot') {
 
