@@ -125,6 +125,14 @@ if (cmd === 'coinflip') {
   // PvP
   if (alvo) {
 
+      if (alvo.id === msg.author.id) {
+  return msg.reply('❌ Você não pode apostar contra si mesmo.');
+}
+
+if (alvo.bot) {
+  return msg.reply('❌ Você não pode apostar contra bots.');
+}
+
     const aposta = parseInt(
       args.find(a => /^\d+$/.test(a))
     );
@@ -165,9 +173,11 @@ if (cmd === 'coinflip') {
       .setColor(0xf1c40f)
       .setTitle('🪙 Coinflip PvP')
       .setDescription(
-        
-        `🏆 Vencedor: ${vencedor}\n` +
-        `📈 Ganhou: **${aposta} XP**`
+  `🎟️ Cada jogador apostou **${aposta} XP**\n` +
+  `🏦 Pote total: **${aposta * 2} XP**\n\n` +
+  `🏆 Vencedor: ${vencedor}\n` +
+  `💰 Levou o pote inteiro!`
+
       );
 
     return msg.reply({ embeds: [embed] });
