@@ -169,7 +169,7 @@ if (alvo.bot) {
       'coinflip'
     );
 
-    const embed = new EmbedBuilder()
+   const embed = new EmbedBuilder()
   .setColor(0xf1c40f)
   .setTitle('🪙 Coinflip PvP')
   .setDescription(
@@ -177,12 +177,12 @@ if (alvo.bot) {
 🏦 Pote total: **${aposta * 2} XP**
 
 🏆 Vencedor: ${vencedor}
-🤑 A sorte estava do seu lado hoje!
+🤑 A sorte estava do seu lado hoje!`
   );
-
-    return msg.reply({ embeds: [embed] });
   }
 
+return msg.reply({ embeds: [embed] });
+      
   // Contra BOT
   if (args[0]?.toLowerCase() === 'bot') {
 
