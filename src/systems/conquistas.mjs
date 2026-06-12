@@ -33,86 +33,205 @@ function barra(atual, total, size = 20) {
   return '█'.repeat(safe) + '░'.repeat(size - safe);
 }
 
-/* =========================
-   IMAGEM ULTRA MELHORADA
-========================= */
 async function gerarImagem(target, cat, list, page, totalPages, progresso) {
   const canvas = createCanvas(1000, 600);
   const ctx = canvas.getContext('2d');
 
-  // fundo gradiente moderno
+  /* =========================
+     FUNDO FISK
+  ========================= */
+
   const bg = ctx.createLinearGradient(0, 0, 1000, 600);
-  bg.addColorStop(0, '#0a0a14');
-  bg.addColorStop(0.5, '#12122a');
-  bg.addColorStop(1, '#07070f');
+  bg.addColorStop(0, '#071426');
+  bg.addColorStop(0.5, '#10294a');
+  bg.addColorStop(1, '#0b1730');
+
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, 1000, 600);
 
-  // card principal
-  ctx.fillStyle = 'rgba(255,255,255,0.04)';
-  ctx.fillRect(40, 40, 920, 520);
+  /* brilho lateral */
 
-  // topo
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 38px Arial';
-  ctx.fillText('🏅 CONQUISTAS', 70, 90);
+  const glow = ctx.createRadialGradient(
+    850, 120, 0,
+    850, 120, 400
+  );
 
-  ctx.fillStyle = '#9aa0ff';
-  ctx.font = '18px Arial';
-  ctx.fillText(`Jogador: ${target.username}`, 70, 120);
+  glow.addColorStop(0, 'rgba(0,200,255,0.20)');
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
 
-  ctx.fillStyle = '#cccccc';
-  ctx.fillText(`Categoria: ${cat.toUpperCase()}`, 70, 150);
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, 1000, 600);
 
-  // separador
+  /* =========================
+     CARD
+  ========================= */
+
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.fillRect(35, 35, 930, 530);
+
   ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(35, 35, 930, 530);
+
+  /* =========================
+     TOPO
+  ========================= */
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 42px Sans';
+
+  ctx.fillText(
+    'CONQUISTAS',
+    70,
+    90
+  );
+
+  ctx.fillStyle = '#67d4ff';
+  ctx.font = '22px Sans';
+
+  ctx.fillText(
+    target.username,
+    70,
+    125
+  );
+
+  /* Badge categoria */
+
+  ctx.fillStyle = '#1f6fff';
   ctx.beginPath();
-  ctx.moveTo(70, 170);
-  ctx.lineTo(930, 170);
+  ctx.roundRect(70, 145, 210, 38, 10);
+  ctx.fill();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 18px Sans';
+
+  ctx.fillText(
+    cat.toUpperCase(),
+    88,
+    171
+  );
+
+  /* linha */
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+  ctx.beginPath();
+  ctx.moveTo(70, 205);
+  ctx.lineTo(930, 205);
   ctx.stroke();
 
-  // lista estilizada
-  ctx.font = '20px Arial';
-  let y = 220;
+  /* =========================
+     LISTA
+  ========================= */
+
+  let y = 255;
 
   for (const line of list.slice(0, 10)) {
-    ctx.fillStyle = line.includes('✔')
-      ? '#4dff88'
-      : line.includes('🔒')
-      ? '#888'
-      : '#ffffff';
 
-    ctx.fillText(line, 90, y);
-    y += 34;
+    const concluida = line.startsWith('✔');
+    const bloqueada = line.startsWith('✖');
+
+    if (concluida) {
+
+      ctx.fillStyle = '#2ecc71';
+
+      ctx.beginPath();
+      ctx.arc(80, y - 8, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '22px Sans';
+
+      ctx.fillText(
+        line.replace('✔ ', ''),
+        100,
+        y
+      );
+
+    } else if (bloqueada) {
+
+      ctx.fillStyle = '#ff6b6b';
+
+      ctx.beginPath();
+      ctx.arc(80, y - 8, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#d6d6d6';
+      ctx.font = '22px Sans';
+
+      ctx.fillText(
+        line.replace('✖ ', ''),
+        100,
+        y
+      );
+
+    } else {
+
+      ctx.fillStyle = '#888';
+
+      ctx.font = '22px Sans';
+
+      ctx.fillText(
+        line,
+        100,
+        y
+      );
+    }
+
+    y += 38;
   }
 
-  // barra de progresso moderna
-  const x = 90;
-  const yBar = 480;
-  const w = 700;
-  const h = 22;
+  /* =========================
+     BARRA PROGRESSO
+  ========================= */
 
-  // fundo barra
-  ctx.fillStyle = '#1a1a2e';
-  ctx.fillRect(x, yBar, w, h);
+  const bx = 70;
+  const by = 500;
+  const bw = 760;
+  const bh = 24;
 
-  // gradiente barra
-  const grad = ctx.createLinearGradient(x, 0, x + w, 0);
-  grad.addColorStop(0, '#ff4d6d');
-  grad.addColorStop(0.5, '#6c63ff');
-  grad.addColorStop(1, '#4dd6ff');
+  ctx.fillStyle = '#13233d';
+  ctx.fillRect(bx, by, bw, bh);
 
-  ctx.fillStyle = grad;
-  ctx.fillRect(x, yBar, (w * progresso) / 100, h);
+  const prog = ctx.createLinearGradient(
+    bx,
+    0,
+    bx + bw,
+    0
+  );
 
-  // porcentagem
+  prog.addColorStop(0, '#00d4ff');
+  prog.addColorStop(0.5, '#4f8cff');
+  prog.addColorStop(1, '#7d5fff');
+
+  ctx.fillStyle = prog;
+  ctx.fillRect(
+    bx,
+    by,
+    (bw * progresso) / 100,
+    bh
+  );
+
   ctx.fillStyle = '#ffffff';
-  ctx.font = '16px Arial';
-  ctx.fillText(`${progresso}%`, x + w + 20, yBar + 16);
+  ctx.font = 'bold 18px Sans';
 
-  // página
-  ctx.fillStyle = '#777';
-  ctx.fillText(`Página ${page + 1}/${totalPages}`, 820, 560);
+  ctx.fillText(
+    `${progresso}%`,
+    bx + bw + 20,
+    by + 18
+  );
+
+  /* =========================
+     RODAPÉ
+  ========================= */
+
+  ctx.fillStyle = '#9ea7b3';
+  ctx.font = '18px Sans';
+
+  ctx.fillText(
+    `Página ${page + 1}/${totalPages}`,
+    820,
+    555
+  );
 
   return canvas.toBuffer('image/png');
 }
