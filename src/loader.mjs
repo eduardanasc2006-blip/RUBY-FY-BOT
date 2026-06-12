@@ -11,7 +11,6 @@ import { register as regRelacionamentos, comandos as cRelacionamentos } from './
 import { register as regAfinidade,       comandos as cAfinidade       } from './systems/afinidade.mjs';
 import { register as regInteracoes,      comandos as cInteracoes      } from './systems/interacoes.mjs';
 import { register as regReputacao,       comandos as cReputacao       } from './systems/reputacao.mjs';
-import { register as regXpNiveis,        comandos as cXpNiveis        } from './systems/xpniveis.mjs';
 import { register as regQuiz,            comandos as cQuiz            } from './systems/quiz.mjs';
 import { register as regForca,           comandos as cForca           } from './systems/forca.mjs';
 import { register as regConquistas,      comandos as cConquistas      } from './systems/conquistas.mjs';
@@ -42,7 +41,6 @@ const visual = {
   Afinidade:           { emoji: '💜', cor: 0x9b59b6 },
   Interações:          { emoji: '🤝', cor: 0x3498db },
   Reputação:           { emoji: '🏆', cor: 0xf1c40f },
-  'XP & Níveis':       { emoji: '⭐', cor: 0xf39c12 },
   Quiz:                { emoji: '❓', cor: 0x1abc9c },
   Forca:               { emoji: '🎯', cor: 0xe67e22 },
   Conquistas:          { emoji: '🏅', cor: 0xf1c40f },
