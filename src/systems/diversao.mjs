@@ -243,6 +243,98 @@ const resultado =
       ========================= */
 
       if (cmd === 'ppt') {
+
+if (cmd === 'ppt') {
+
+  // ================= BOT =================
+
+  if (args[0]?.toLowerCase() === 'bot') {
+
+    const aposta = parseInt(args[1]);
+
+    if (!aposta || aposta < MIN_APOSTA || aposta > MAX_APOSTA) {
+      return msg.reply(
+        `❌ A aposta deve ser entre ${MIN_APOSTA} e ${MAX_APOSTA} XP.`
+      );
+    }
+
+    if (!(await temXP(msg.author.id, msg.guild.id, aposta))) {
+      return msg.reply(
+        `❌ Você não possui ${aposta} XP disponível.`
+      );
+    }
+
+    const escolhas = ['🪨 Pedra', '📄 Papel', '✂️ Tesoura'];
+
+    const user =
+      escolhas[Math.floor(Math.random() * escolhas.length)];
+
+    const bot =
+      escolhas[Math.floor(Math.random() * escolhas.length)];
+
+    const empate = user === bot;
+
+    const venceu =
+      (user === '🪨 Pedra' && bot === '✂️ Tesoura') ||
+      (user === '📄 Papel' && bot === '🪨 Pedra') ||
+      (user === '✂️ Tesoura' && bot === '📄 Papel');
+
+    if (!empate) {
+      if (venceu) {
+        await ganharXP(
+          msg.author.id,
+          msg.guild.id,
+          aposta,
+          'ppt_bot'
+        );
+      } else {
+        await gastarXP(
+          msg.author.id,
+          msg.guild.id,
+          aposta,
+          'ppt_bot'
+        );
+      }
+    }
+
+    const embed = new EmbedBuilder()
+      .setColor(
+        empate
+          ? 0x95a5a6
+          : venceu
+          ? 0x2ecc71
+          : 0xe74c3c
+      )
+      .setTitle('🤖 PPT contra o BOT')
+      .addFields(
+        { name: '👤 Você', value: user, inline: true },
+        { name: '🤖 BOT', value: bot, inline: true },
+        {
+          name: '🏆 Resultado',
+          value: empate
+            ? '🤝 Empate!'
+            : venceu
+            ? `🎉 Você ganhou ${aposta} XP`
+            : `💀 Você perdeu ${aposta} XP`,
+          inline: false
+        }
+      );
+
+    return msg.reply({ embeds: [embed] });
+  }
+
+  // ================= PvP =================
+
+  const alvo = msg.mentions.users.first();
+
+  if (!alvo) {
+    return msg.reply(
+      '❌ Use:\n!ppt bot 100\n!ppt @usuario 100'
+    );
+  }
+
+  // resto do seu código PvP...
+          
         const alvo = msg.mentions.users.first();
 
         if (!alvo) {
@@ -360,30 +452,6 @@ const resultado =
         return msg.reply({ embeds: [embed] });
       }
 
-          // ================= PPT CONTRA BOT =================
-if (alvo.bot) {
-
-  const escolhas = ['🪨 Pedra', '📄 Papel', '✂️ Tesoura'];
-
-  const user = escolhas[Math.floor(Math.random() * 3)];
-  const bot  = escolhas[Math.floor(Math.random() * 3)];
-
-  const venceu =
-    (user === '🪨 Pedra' && bot === '✂️ Tesoura') ||
-    (user === '📄 Papel' && bot === '🪨 Pedra') ||
-    (user === '✂️ Tesoura' && bot === '📄 Papel');
-
-  const embed = new EmbedBuilder()
-    .setColor(venceu ? 0x2ecc71 : 0xe74c3c)
-    .setTitle('🤖 PPT contra o BOT')
-    .addFields(
-      { name: `👤 Você`, value: user, inline: true },
-      { name: `🤖 Bot`, value: bot, inline: true },
-      { name: '🏆 Resultado', value: venceu ? 'Você venceu!' : 'Você perdeu!', inline: false }
-    );
-
-  return msg.reply({ embeds: [embed] });
-}
     
 
       /* =========================
