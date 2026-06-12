@@ -150,28 +150,94 @@ export function register(client, configs) {
       .setColor(CORES[cmd] || 0xa855f7)
       .setTimestamp();
 
-    // ── 2. REVIDA CONTRA BOT (agressivos) ─────────────────
-    if (alvo.bot && CMDS_AGRESSIVOS.includes(cmd)) {
-      if (cmd === 'atacar') {
-        const gif = GIFS.atacar[Math.floor(Math.random() * GIFS.atacar.length)];
-        embed.setDescription(`⚔️ <@${msg.author.id}> tentou atacar o bot!\n\n💥 O bot desviou e atacou de volta!`);
-        if (gif) embed.setImage(gif);
-      } else if (cmd === 'bofetada') {
-        const gif = GIFS.bofetada[Math.floor(Math.random() * GIFS.bofetada.length)];
-        embed.setDescription(`👋 <@${msg.author.id}> tentou dar uma bofetada no bot!\n\n😤 O bot devolveu a bofetada!`);
-        if (gif) embed.setImage(gif);
-      } else if (cmd === 'xingar') {
-        const resp = BOT_RESPOSTAS_XINGAR[Math.floor(Math.random() * BOT_RESPOSTAS_XINGAR.length)];
-        embed.setDescription(`😤 O bot respondeu para <@${msg.author.id}>:\n\n> ${resp}`);
-      }
-      return msg.reply({ embeds: [embed] });
-    }
+    // ── INTERAÇÕES COM BOT ────────────────────────────────
+if (alvo.bot) {
 
-    // ── 3. BLOQUEIA QUALQUER COMANDO EM BOTS ──────────────
-    if (alvo.bot) {
-      return msg.reply({ embeds: [embedErro('Você não pode usar esse comando em bots.')] });
-    }
+  // Agressivos
+  if (cmd === 'atacar') {
+    const gif = GIFS.atacar[Math.floor(Math.random() * GIFS.atacar.length)];
 
+    embed
+      .setDescription(
+        `⚔️ <@${msg.author.id}> tentou atacar o bot!\n\n💥 O bot desviou e contra-atacou!`
+      );
+
+    if (gif) embed.setImage(gif);
+
+    return msg.reply({ embeds: [embed] });
+  }
+
+  if (cmd === 'bofetada') {
+    const gif = GIFS.bofetada[Math.floor(Math.random() * GIFS.bofetada.length)];
+
+    embed
+      .setDescription(
+        `👋 <@${msg.author.id}> tentou dar uma bofetada no bot!\n\n😤 O bot devolveu na mesma intensidade!`
+      );
+
+    if (gif) embed.setImage(gif);
+
+    return msg.reply({ embeds: [embed] });
+  }
+
+  if (cmd === 'xingar') {
+    const resp =
+      BOT_RESPOSTAS_XINGAR[
+        Math.floor(Math.random() * BOT_RESPOSTAS_XINGAR.length)
+      ];
+
+    embed.setDescription(
+      `😤 <@${msg.author.id}> xingou o bot.\n\n🤖 ${resp}`
+    );
+
+    return msg.reply({ embeds: [embed] });
+  }
+
+  // BEIJO = FRIENDZONE
+  if (cmd === 'beijar') {
+    const gif = GIFS.beijar[Math.floor(Math.random() * GIFS.beijar.length)];
+
+    embed
+      .setColor(0xff69b4)
+      .setDescription(
+        `💋 <@${msg.author.id}> tentou beijar o bot.\n\n🤖 O bot ficou sem jeito...\n💔 "Desculpa, mas te vejo apenas como amigo(a)." #Friendzone`
+      );
+
+    if (gif) embed.setImage(gif);
+
+    return msg.reply({ embeds: [embed] });
+  }
+
+  // COMANDOS POSITIVOS
+  const gifs = GIFS[cmd];
+  const gif =
+    gifs?.[Math.floor(Math.random() * gifs.length)];
+
+  const respostasBot = {
+    abracar: '🤗 O bot retribuiu o abraço!',
+    cafune: '🥰 O bot adorou o cafuné!',
+    acariciar: '💕 O bot ficou feliz com o carinho!',
+    dancar: '💃 O bot entrou na dança!',
+    proteger: '🛡️ O bot agradece a proteção!',
+    tocaaqui: '🤚 Toca aqui aceito!',
+    elogiar: '😊 O bot ficou lisonjeado com o elogio!'
+  };
+
+  if (cmd === 'elogiar') {
+    embed.setDescription(
+      `💬 <@${msg.author.id}> elogiou o bot!\n\n🤖 Muito obrigado! ❤️`
+    );
+  } else {
+    embed.setDescription(
+      respostasBot[cmd] ||
+      `🤖 O bot interagiu com <@${msg.author.id}>`
+    );
+
+    if (gif) embed.setImage(gif);
+  }
+
+  return msg.reply({ embeds: [embed] });
+}
     // ── 4. INTERAÇÃO NORMAL ───────────────────────────────
     if (cmd === 'elogiar') {
       embed.setDescription(`💬 <@${msg.author.id}> elogiou <@${alvo.id}>:\n> *${ELOGIOS[Math.floor(Math.random() * ELOGIOS.length)]}*`);
