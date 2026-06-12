@@ -112,7 +112,6 @@ export async function loadSystems(client) {
       ['Afinidade',           regAfinidade,       cAfinidade],
       ['Interações',          regInteracoes,      cInteracoes],
       ['Reputação',           regReputacao,       cReputacao],
-      ['XP & Níveis',         regXpNiveis,        cXpNiveis],
       ['Quiz',                regQuiz,            cQuiz],
       ['Forca',               regForca,           cForca],
       ['Conquistas',          regConquistas,      cConquistas],
