@@ -56,6 +56,104 @@ import {
   export function register(client, configs) {
   if (client.__diversaoRegistrado) return;
   client.__diversaoRegistrado = true;
+    client.on('interactionCreate', async (interaction) => {
+
+  if (!interaction.isButton()) return;
+
+  if (!interaction.customId.startsWith('ppt_')) return;
+
+  const [, escolha, apostaStr] =
+    interaction.customId.split('_');
+
+  const aposta = parseInt(apostaStr);
+
+  const mapa = {
+    pedra: '🪨 Pedra',
+    papel: '📄 Papel',
+    tesoura: '✂️ Tesoura'
+  };
+
+  const escolhaUser = mapa[escolha];
+
+  const opcoes = [
+    '🪨 Pedra',
+    '📄 Papel',
+    '✂️ Tesoura'
+  ];
+
+  const escolhaBot =
+    opcoes[Math.floor(Math.random() * opcoes.length)];
+
+  const empate =
+    escolhaUser === escolhaBot;
+
+  const venceu =
+    (escolhaUser === '🪨 Pedra' && escolhaBot === '✂️ Tesoura') ||
+    (escolhaUser === '📄 Papel' && escolhaBot === '🪨 Pedra') ||
+    (escolhaUser === '✂️ Tesoura' && escolhaBot === '📄 Papel');
+
+  if (!empate) {
+
+    if (venceu) {
+
+      await ganharXP(
+        interaction.user.id,
+        interaction.guild.id,
+        aposta,
+        'ppt_bot'
+      );
+
+    } else {
+
+      await gastarXP(
+        interaction.user.id,
+        interaction.guild.id,
+        aposta,
+        'ppt_bot'
+      );
+    }
+  }
+
+  const resultado = new EmbedBuilder()
+    .setColor(
+      empate
+        ? 0x95a5a6
+        : venceu
+        ? 0x2ecc71
+        : 0xe74c3c
+    )
+    .setTitle('🤖 Pedra, Papel ou Tesoura')
+    .addFields(
+      {
+        name: '👤 Você',
+        value: escolhaUser,
+        inline: true
+      },
+      {
+        name: '🤖 FiskBot',
+        value: escolhaBot,
+        inline: true
+      },
+      {
+        name: '🏆 Resultado',
+        value:
+          empate
+            ? '🤝 Empate! Nenhum XP foi movimentado.'
+            : venceu
+            ? `🎉 Você ganhou **${aposta} XP**`
+            : `💀 Você perdeu **${aposta} XP**`,
+        inline: false
+      }
+    )
+    .setFooter({
+      text: `Aposta: ${aposta} XP`
+    });
+
+  return interaction.update({
+    embeds: [resultado],
+    components: []
+  });
+      });
     client.on('messageCreate', async (msg) => {
       if (!msg.guild || msg.author.bot) return;
 
