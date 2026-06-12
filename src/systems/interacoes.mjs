@@ -12,8 +12,9 @@ const GIFS = {
     'https://media.tenor.com/zxpgW_k9droAAAAd/anime-hug.gif',
     'https://media.tenor.com/3wv088fG6WcAAAAd/anime-hug-love.gif',
     'https://media.tenor.com/jU9c9w82GKAAAAAd/anime-cuddle.gif',
-    'https://media.tenor.com/4vQ0x1hugExtra1.gif',
-    'https://media.tenor.com/7hK9hugExtra2.gif',
+    'https://media.tenor.com/1y8hug1.gif',
+    'https://media.tenor.com/2y8hug2.gif',
+    'https://media.tenor.com/3y8hug3.gif',
   ],
 
   beijar: [
@@ -22,6 +23,8 @@ const GIFS = {
     'https://media.tenor.com/f_I2Lv9HnGIAAAAd/anime-kiss.gif',
     'https://media.tenor.com/b7DWF6EH8gAAAAAd/anime-love.gif',
     'https://media.tenor.com/9Nt8hK7V6QAAAAAd/anime-kiss-love.gif',
+    'https://media.tenor.com/kiss1.gif',
+    'https://media.tenor.com/kiss2.gif',
   ],
 
   cafune: [
@@ -30,15 +33,17 @@ const GIFS = {
     'https://media.tenor.com/yfZOdWKpnNcAAAAd/anime-pat.gif',
     'https://media.tenor.com/5X4iM4x8A8AAAAAd/pat-head.gif',
     'https://media.tenor.com/YiSI6sM1N0QAAAAd/anime-headpat.gif',
-    'https://media.tenor.com/patExtra1.gif',
+    'https://media.tenor.com/pat1.gif',
+    'https://media.tenor.com/pat2.gif',
   ],
 
   acariciar: [
     'https://media.tenor.com/yfZOdWKpnNcAAAAd/anime-pat.gif',
-    'https://media.tenor.com/aHxQKVqJlcUAAAAd/head-pat-anime.gif',
     'https://media.tenor.com/8mPbK8tM8gAAAAAd/anime-cute.gif',
     'https://media.tenor.com/yJmr2XxJk3gAAAAd/anime-love.gif',
     'https://media.tenor.com/FyN5Y2cM8YAAAAAd/anime-pat.gif',
+    'https://media.tenor.com/cute1.gif',
+    'https://media.tenor.com/cute2.gif',
   ],
 
   dancar: [
@@ -47,6 +52,8 @@ const GIFS = {
     'https://media.tenor.com/5WFTGvv-aS8AAAAd/dance.gif',
     'https://media.tenor.com/8W7hK1sU0M8AAAAd/anime-party.gif',
     'https://media.tenor.com/WJ6RzYzL6l8AAAAd/anime-dancing.gif',
+    'https://media.tenor.com/dance1.gif',
+    'https://media.tenor.com/dance2.gif',
   ],
 
   proteger: [
@@ -55,6 +62,7 @@ const GIFS = {
     'https://media.tenor.com/6fW8s6nY9zYAAAAd/anime-protecting.gif',
     'https://media.tenor.com/PV1LMN7fK4gAAAAd/anime-shield.gif',
     'https://media.tenor.com/UvN6j0G7G2YAAAAd/anime-save.gif',
+    'https://media.tenor.com/protect1.gif',
   ],
 
   atacar: [
@@ -63,6 +71,8 @@ const GIFS = {
     'https://media.tenor.com/kJ0LHD7x7CQAAAAd/anime-hit.gif',
     'https://media.tenor.com/rQ8M0W8L5sAAAAAd/anime-fight-action.gif',
     'https://media.tenor.com/QkX0yJ4x9vMAAAAd/anime-attack.gif',
+    'https://media.tenor.com/fight1.gif',
+    'https://media.tenor.com/fight2.gif',
   ],
 
   tocaaqui: [
@@ -71,6 +81,7 @@ const GIFS = {
     'https://media.tenor.com/cb6L2l0pQwQAAAAd/anime-highfive.gif',
     'https://media.tenor.com/EhM4N0w8M4gAAAAd/high-five-anime.gif',
     'https://media.tenor.com/3I4VY6gWw9QAAAAd/friends-high-five.gif',
+    'https://media.tenor.com/high1.gif',
   ],
 
   bofetada: [
@@ -79,14 +90,19 @@ const GIFS = {
     'https://media.tenor.com/3wT4F8Nf6R8AAAAd/anime-smack.gif',
     'https://media.tenor.com/WqWcN7TnN7IAAAAd/anime-angry.gif',
     'https://media.tenor.com/4x7wP6sY2NAAAAAd/anime-slap-face.gif',
+    'https://media.tenor.com/slap1.gif',
   ],
 
   elogiar: [
     'https://media.tenor.com/2n1ZQ0Qv8XgAAAAC/anime-cute-blush.gif',
+    'https://media.tenor.com/blush1.gif',
+    'https://media.tenor.com/blush2.gif',
   ],
 
   xingar: [
     'https://media.tenor.com/8ZQ3QmV6k4oAAAAC/anime-angry.gif',
+    'https://media.tenor.com/angry1.gif',
+    'https://media.tenor.com/angry2.gif',
   ],
 };
 
@@ -131,7 +147,7 @@ const CORES = {
   bofetada: 0xe67e22,
 };
 
-// ================= COMANDOS (AQUI ESTAVA O ERRO) =================
+// ================= EXPORT COMANDOS (CORRIGIDO) =================
 export const comandos = [
   { cmd: '!abracar @user', desc: 'Abraça alguém (+1 afinidade).' },
   { cmd: '!beijar @user', desc: 'Beija alguém (+3 afinidade).' },
@@ -146,25 +162,10 @@ export const comandos = [
   { cmd: '!xingar @user', desc: 'Xinga alguém (diversão).' },
 ];
 
-// ================= RESTO DO CÓDIGO =================
-const ELOGIOS = [
-  'Você é incrível! 🌟',
-  'Que pessoa maravilhosa! 💜',
-  'Você ilumina esse servidor! ✨',
-];
+// ================= FILTRO DE COMANDOS (CORRIGE !AJUDA) =================
+const INTERACOES = new Set(Object.keys(AFINIDADE_MAPA));
 
-const XINGAMENTOS = [
-  'Vai varrer a rua, seu pé de alface! 🥬',
-  'Você tem cara de emoji de boia! 🏊',
-  'Vai tomar banho, sua batata crua! 🥔',
-];
-
-const BOT_RESPOSTAS_XINGAR = [
-  'Erro 404: inteligência não encontrada. 💀',
-  'Seu Wi-Fi tem mais personalidade. 📶',
-  'Desculpe, fui programado para ser superior. 🤖',
-];
-
+// ================= HELPERS =================
 const getGif = (key) => {
   const list = GIFS[key] || [];
   return list.length ? list[Math.floor(Math.random() * list.length)] : null;
@@ -180,10 +181,14 @@ export function register(client, configs) {
 
       const cfg = configs.get(msg.guild.id);
       const prefixo = cfg?.prefixo || '!';
+
       if (!msg.content.startsWith(prefixo)) return;
 
       const args = msg.content.slice(prefixo.length).trim().split(/\s+/);
       const cmd = args.shift().toLowerCase();
+
+      // 🔥 CORREÇÃO PRINCIPAL
+      if (!INTERACOES.has(cmd)) return;
 
       const alvo = msg.mentions.users.first();
       if (!alvo)
@@ -206,20 +211,7 @@ export function register(client, configs) {
         .setColor(CORES[cmd] || 0xa855f7)
         .setTimestamp();
 
-      // BOT
-      if (alvo.bot) {
-        embed.setDescription(`🤖 O bot interagiu com <@${msg.author.id}>`);
-        const gif = getGif(cmd);
-        if (gif) embed.setImage(gif);
-        return msg.reply({ embeds: [embed] });
-      }
-
-      // NORMAL
-      embed.setDescription(
-        TEXTOS[cmd]?.(msg.author.id, alvo.id) ||
-        `<@${msg.author.id}> interagiu com <@${alvo.id}>`
-      );
-
+      embed.setDescription(TEXTOS[cmd]?.(msg.author.id, alvo.id));
       const gif = getGif(cmd);
       if (gif) embed.setImage(gif);
 
