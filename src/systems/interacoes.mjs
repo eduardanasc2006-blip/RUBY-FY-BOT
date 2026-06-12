@@ -5,7 +5,6 @@ import { addAfinidade } from './afinidade.mjs';
 import { progredirMissao } from './missoes.mjs';
 
 // ================= GIFS =================
-// ================= GIFS =================
 const GIFS = {
   abracar: [
     'https://media.tenor.com/gNxdFE9bHHcAAAAd/hug.gif',
@@ -23,8 +22,6 @@ const GIFS = {
     'https://media.tenor.com/f_I2Lv9HnGIAAAAd/anime-kiss.gif',
     'https://media.tenor.com/b7DWF6EH8gAAAAAd/anime-love.gif',
     'https://media.tenor.com/9Nt8hK7V6QAAAAAd/anime-kiss-love.gif',
-    'https://media.tenor.com/kissExtra1.gif',
-    'https://media.tenor.com/kissExtra2.gif',
   ],
 
   cafune: [
@@ -42,7 +39,6 @@ const GIFS = {
     'https://media.tenor.com/8mPbK8tM8gAAAAAd/anime-cute.gif',
     'https://media.tenor.com/yJmr2XxJk3gAAAAd/anime-love.gif',
     'https://media.tenor.com/FyN5Y2cM8YAAAAAd/anime-pat.gif',
-    'https://media.tenor.com/cuteExtra1.gif',
   ],
 
   dancar: [
@@ -51,7 +47,6 @@ const GIFS = {
     'https://media.tenor.com/5WFTGvv-aS8AAAAd/dance.gif',
     'https://media.tenor.com/8W7hK1sU0M8AAAAd/anime-party.gif',
     'https://media.tenor.com/WJ6RzYzL6l8AAAAd/anime-dancing.gif',
-    'https://media.tenor.com/danceExtra1.gif',
   ],
 
   proteger: [
@@ -60,7 +55,6 @@ const GIFS = {
     'https://media.tenor.com/6fW8s6nY9zYAAAAd/anime-protecting.gif',
     'https://media.tenor.com/PV1LMN7fK4gAAAAd/anime-shield.gif',
     'https://media.tenor.com/UvN6j0G7G2YAAAAd/anime-save.gif',
-    'https://media.tenor.com/protectExtra1.gif',
   ],
 
   atacar: [
@@ -69,7 +63,6 @@ const GIFS = {
     'https://media.tenor.com/kJ0LHD7x7CQAAAAd/anime-hit.gif',
     'https://media.tenor.com/rQ8M0W8L5sAAAAAd/anime-fight-action.gif',
     'https://media.tenor.com/QkX0yJ4x9vMAAAAd/anime-attack.gif',
-    'https://media.tenor.com/fightExtra1.gif',
   ],
 
   tocaaqui: [
@@ -78,7 +71,6 @@ const GIFS = {
     'https://media.tenor.com/cb6L2l0pQwQAAAAd/anime-highfive.gif',
     'https://media.tenor.com/EhM4N0w8M4gAAAAd/high-five-anime.gif',
     'https://media.tenor.com/3I4VY6gWw9QAAAAd/friends-high-five.gif',
-    'https://media.tenor.com/highfiveExtra1.gif',
   ],
 
   bofetada: [
@@ -87,19 +79,14 @@ const GIFS = {
     'https://media.tenor.com/3wT4F8Nf6R8AAAAd/anime-smack.gif',
     'https://media.tenor.com/WqWcN7TnN7IAAAAd/anime-angry.gif',
     'https://media.tenor.com/4x7wP6sY2NAAAAAd/anime-slap-face.gif',
-    'https://media.tenor.com/slapExtra1.gif',
   ],
 
   elogiar: [
     'https://media.tenor.com/2n1ZQ0Qv8XgAAAAC/anime-cute-blush.gif',
-    'https://media.tenor.com/blushExtra1.gif',
-    'https://media.tenor.com/blushExtra2.gif',
   ],
 
   xingar: [
     'https://media.tenor.com/8ZQ3QmV6k4oAAAAC/anime-angry.gif',
-    'https://media.tenor.com/angryExtra1.gif',
-    'https://media.tenor.com/angryExtra2.gif',
   ],
 };
 
@@ -144,6 +131,22 @@ const CORES = {
   bofetada: 0xe67e22,
 };
 
+// ================= COMANDOS (AQUI ESTAVA O ERRO) =================
+export const comandos = [
+  { cmd: '!abracar @user', desc: 'Abraça alguém (+1 afinidade).' },
+  { cmd: '!beijar @user', desc: 'Beija alguém (+3 afinidade).' },
+  { cmd: '!cafune @user', desc: 'Cafuné (+2 afinidade).' },
+  { cmd: '!acariciar @user', desc: 'Carinho (+2 afinidade).' },
+  { cmd: '!dancar @user', desc: 'Dança com alguém (+1 afinidade).' },
+  { cmd: '!elogiar @user', desc: 'Elogia alguém (+1 afinidade).' },
+  { cmd: '!proteger @user', desc: 'Protege alguém (+2 afinidade).' },
+  { cmd: '!atacar @user', desc: 'Ataca alguém.' },
+  { cmd: '!tocaaqui @user', desc: 'High five (+1 afinidade).' },
+  { cmd: '!bofetada @user', desc: 'Bofetada.' },
+  { cmd: '!xingar @user', desc: 'Xinga alguém (diversão).' },
+];
+
+// ================= RESTO DO CÓDIGO =================
 const ELOGIOS = [
   'Você é incrível! 🌟',
   'Que pessoa maravilhosa! 💜',
@@ -162,7 +165,6 @@ const BOT_RESPOSTAS_XINGAR = [
   'Desculpe, fui programado para ser superior. 🤖',
 ];
 
-// ================= HELPERS =================
 const getGif = (key) => {
   const list = GIFS[key] || [];
   return list.length ? list[Math.floor(Math.random() * list.length)] : null;
@@ -204,56 +206,22 @@ export function register(client, configs) {
         .setColor(CORES[cmd] || 0xa855f7)
         .setTimestamp();
 
-      // ================= BOT =================
+      // BOT
       if (alvo.bot) {
-        if (cmd === 'atacar' || cmd === 'bofetada') {
-          embed.setDescription(
-            cmd === 'atacar'
-              ? `⚔️ <@${msg.author.id}> tentou atacar o bot!`
-              : `👋 <@${msg.author.id}> tentou bater no bot!`
-          );
-          embed.setImage(getGif(cmd));
-          return msg.reply({ embeds: [embed] });
-        }
-
-        if (cmd === 'xingar') {
-          const resp =
-            BOT_RESPOSTAS_XINGAR[
-              Math.floor(Math.random() * BOT_RESPOSTAS_XINGAR.length)
-            ];
-
-          embed.setDescription(`😤 <@${msg.author.id}> xingou o bot.\n\n🤖 ${resp}`);
-          return msg.reply({ embeds: [embed] });
-        }
-
-        embed.setDescription(
-          `🤖 O bot interagiu com <@${msg.author.id}>`
-        );
-
+        embed.setDescription(`🤖 O bot interagiu com <@${msg.author.id}>`);
         const gif = getGif(cmd);
         if (gif) embed.setImage(gif);
-
         return msg.reply({ embeds: [embed] });
       }
 
-      // ================= NORMAL =================
-      if (cmd === 'elogiar') {
-        embed.setDescription(
-          `💬 <@${msg.author.id}> elogiou <@${alvo.id}>:\n> ${
-            ELOGIOS[Math.floor(Math.random() * ELOGIOS.length)]
-          }`
-        );
-      } else if (cmd === 'xingar') {
-        embed.setDescription(
-          `😤 <@${msg.author.id}> para <@${alvo.id}>:\n> ${
-            XINGAMENTOS[Math.floor(Math.random() * XINGAMENTOS.length)]
-          }`
-        );
-      } else {
-        embed.setDescription(TEXTOS[cmd]?.(msg.author.id, alvo.id));
-        const gif = getGif(cmd);
-        if (gif) embed.setImage(gif);
-      }
+      // NORMAL
+      embed.setDescription(
+        TEXTOS[cmd]?.(msg.author.id, alvo.id) ||
+        `<@${msg.author.id}> interagiu com <@${alvo.id}>`
+      );
+
+      const gif = getGif(cmd);
+      if (gif) embed.setImage(gif);
 
       embed.setThumbnail(alvo.displayAvatarURL({ size: 512 }));
 
