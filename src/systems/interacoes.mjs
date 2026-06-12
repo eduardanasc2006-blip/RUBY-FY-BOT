@@ -4,7 +4,8 @@ import { embedErro } from '../utils/embeds.mjs';
 import { addAfinidade } from './afinidade.mjs';
 import { progredirMissao } from './missoes.mjs';
 
-// GIFs — formato AAAAD (compatível com Discord em 2025)
+// ================= GIFS =================
+// ================= GIFS =================
 const GIFS = {
   abracar: [
     'https://media.tenor.com/gNxdFE9bHHcAAAAd/hug.gif',
@@ -12,6 +13,8 @@ const GIFS = {
     'https://media.tenor.com/zxpgW_k9droAAAAd/anime-hug.gif',
     'https://media.tenor.com/3wv088fG6WcAAAAd/anime-hug-love.gif',
     'https://media.tenor.com/jU9c9w82GKAAAAAd/anime-cuddle.gif',
+    'https://media.tenor.com/4vQ0x1hugExtra1.gif',
+    'https://media.tenor.com/7hK9hugExtra2.gif',
   ],
 
   beijar: [
@@ -20,6 +23,8 @@ const GIFS = {
     'https://media.tenor.com/f_I2Lv9HnGIAAAAd/anime-kiss.gif',
     'https://media.tenor.com/b7DWF6EH8gAAAAAd/anime-love.gif',
     'https://media.tenor.com/9Nt8hK7V6QAAAAAd/anime-kiss-love.gif',
+    'https://media.tenor.com/kissExtra1.gif',
+    'https://media.tenor.com/kissExtra2.gif',
   ],
 
   cafune: [
@@ -28,6 +33,7 @@ const GIFS = {
     'https://media.tenor.com/yfZOdWKpnNcAAAAd/anime-pat.gif',
     'https://media.tenor.com/5X4iM4x8A8AAAAAd/pat-head.gif',
     'https://media.tenor.com/YiSI6sM1N0QAAAAd/anime-headpat.gif',
+    'https://media.tenor.com/patExtra1.gif',
   ],
 
   acariciar: [
@@ -36,6 +42,7 @@ const GIFS = {
     'https://media.tenor.com/8mPbK8tM8gAAAAAd/anime-cute.gif',
     'https://media.tenor.com/yJmr2XxJk3gAAAAd/anime-love.gif',
     'https://media.tenor.com/FyN5Y2cM8YAAAAAd/anime-pat.gif',
+    'https://media.tenor.com/cuteExtra1.gif',
   ],
 
   dancar: [
@@ -44,6 +51,7 @@ const GIFS = {
     'https://media.tenor.com/5WFTGvv-aS8AAAAd/dance.gif',
     'https://media.tenor.com/8W7hK1sU0M8AAAAd/anime-party.gif',
     'https://media.tenor.com/WJ6RzYzL6l8AAAAd/anime-dancing.gif',
+    'https://media.tenor.com/danceExtra1.gif',
   ],
 
   proteger: [
@@ -52,6 +60,7 @@ const GIFS = {
     'https://media.tenor.com/6fW8s6nY9zYAAAAd/anime-protecting.gif',
     'https://media.tenor.com/PV1LMN7fK4gAAAAd/anime-shield.gif',
     'https://media.tenor.com/UvN6j0G7G2YAAAAd/anime-save.gif',
+    'https://media.tenor.com/protectExtra1.gif',
   ],
 
   atacar: [
@@ -60,6 +69,7 @@ const GIFS = {
     'https://media.tenor.com/kJ0LHD7x7CQAAAAd/anime-hit.gif',
     'https://media.tenor.com/rQ8M0W8L5sAAAAAd/anime-fight-action.gif',
     'https://media.tenor.com/QkX0yJ4x9vMAAAAd/anime-attack.gif',
+    'https://media.tenor.com/fightExtra1.gif',
   ],
 
   tocaaqui: [
@@ -68,6 +78,7 @@ const GIFS = {
     'https://media.tenor.com/cb6L2l0pQwQAAAAd/anime-highfive.gif',
     'https://media.tenor.com/EhM4N0w8M4gAAAAd/high-five-anime.gif',
     'https://media.tenor.com/3I4VY6gWw9QAAAAd/friends-high-five.gif',
+    'https://media.tenor.com/highfiveExtra1.gif',
   ],
 
   bofetada: [
@@ -76,236 +87,198 @@ const GIFS = {
     'https://media.tenor.com/3wT4F8Nf6R8AAAAd/anime-smack.gif',
     'https://media.tenor.com/WqWcN7TnN7IAAAAd/anime-angry.gif',
     'https://media.tenor.com/4x7wP6sY2NAAAAAd/anime-slap-face.gif',
+    'https://media.tenor.com/slapExtra1.gif',
   ],
 
-  elogiar: null,
-  xingar: null,
+  elogiar: [
+    'https://media.tenor.com/2n1ZQ0Qv8XgAAAAC/anime-cute-blush.gif',
+    'https://media.tenor.com/blushExtra1.gif',
+    'https://media.tenor.com/blushExtra2.gif',
+  ],
+
+  xingar: [
+    'https://media.tenor.com/8ZQ3QmV6k4oAAAAC/anime-angry.gif',
+    'https://media.tenor.com/angryExtra1.gif',
+    'https://media.tenor.com/angryExtra2.gif',
+  ],
+};
+
+// ================= DADOS =================
+const AFINIDADE_MAPA = {
+  abracar: 1,
+  beijar: 3,
+  cafune: 2,
+  acariciar: 2,
+  dancar: 1,
+  elogiar: 1,
+  xingar: 0,
+  proteger: 2,
+  atacar: 0,
+  tocaaqui: 1,
+  bofetada: 0,
+};
+
+const TEXTOS = {
+  abracar: (a, b) => `🤗 <@${a}> abraçou <@${b}>!`,
+  beijar: (a, b) => `💋 <@${a}> beijou <@${b}>!`,
+  cafune: (a, b) => `🥰 <@${a}> fez cafuné em <@${b}>!`,
+  acariciar: (a, b) => `💕 <@${a}> acariciou <@${b}>!`,
+  dancar: (a, b) => `💃 <@${a}> dançou com <@${b}>!`,
+  proteger: (a, b) => `🛡️ <@${a}> prometeu proteger <@${b}>!`,
+  atacar: (a, b) => `⚔️ <@${a}> atacou <@${b}>!`,
+  tocaaqui: (a, b) => `🤚 <@${a}> pediu toca aqui para <@${b}>!`,
+  bofetada: (a, b) => `👋 <@${a}> deu uma bofetada em <@${b}>! 😤`,
+};
+
+const CORES = {
+  abracar: 0xa855f7,
+  beijar: 0xff69b4,
+  cafune: 0xffd700,
+  acariciar: 0xa855f7,
+  dancar: 0x2ecc71,
+  proteger: 0x3498db,
+  elogiar: 0xf1c40f,
+  xingar: 0xe74c3c,
+  atacar: 0xe74c3c,
+  tocaaqui: 0x27ae60,
+  bofetada: 0xe67e22,
 };
 
 const ELOGIOS = [
   'Você é incrível! 🌟',
   'Que pessoa maravilhosa! 💜',
   'Você ilumina esse servidor! ✨',
-  'É uma honra ter você aqui! 🏆',
-  'Você é simplesmente perfeito(a)! 💫',
 ];
 
 const XINGAMENTOS = [
   'Vai varrer a rua, seu pé de alface! 🥬',
   'Você tem cara de emoji de boia! 🏊',
-  'Seu pé de moleque! 🥜',
-  'Você confunde pizza de banana com comida! 🍌',
   'Vai tomar banho, sua batata crua! 🥔',
 ];
 
 const BOT_RESPOSTAS_XINGAR = [
   'Erro 404: inteligência não encontrada. 💀',
   'Seu Wi-Fi tem mais personalidade. 📶',
-  'Tente novamente quando evoluir de nível. 😏',
-  'Meu banco de dados ficou ofendido. 🗄️',
   'Desculpe, fui programado para ser superior. 🤖',
 ];
 
-const AFINIDADE_MAPA = {
-  abracar: 1, beijar: 3, cafune: 2, acariciar: 2, dancar: 1,
-  elogiar: 1, xingar: 0, proteger: 2, atacar: 0, tocaaqui: 1, bofetada: 0,
+// ================= HELPERS =================
+const getGif = (key) => {
+  const list = GIFS[key] || [];
+  return list.length ? list[Math.floor(Math.random() * list.length)] : null;
 };
-
-const TEXTOS = {
-  abracar:   (a, b) => `🤗 <@${a}> abraçou <@${b}>!`,
-  beijar:    (a, b) => `💋 <@${a}> beijou <@${b}>!`,
-  cafune:    (a, b) => `🥰 <@${a}> fez cafuné em <@${b}>!`,
-  acariciar: (a, b) => `💕 <@${a}> acariciou <@${b}>!`,
-  dancar:    (a, b) => `💃 <@${a}> dançou com <@${b}>!`,
-  proteger:  (a, b) => `🛡️ <@${a}> prometeu proteger <@${b}>!`,
-  atacar:    (a, b) => `⚔️ <@${a}> atacou <@${b}>!`,
-  tocaaqui:  (a, b) => `🤚 <@${a}> pediu toca aqui para <@${b}>!`,
-  bofetada:  (a, b) => `👋 <@${a}> deu uma bofetada em <@${b}>! 😤`,
-};
-
-const CORES = {
-  abracar: 0xa855f7, beijar: 0xff69b4, cafune: 0xffd700,
-  acariciar: 0xa855f7, dancar: 0x2ecc71, proteger: 0x3498db,
-  elogiar: 0xf1c40f, xingar: 0xe74c3c, atacar: 0xe74c3c,
-  tocaaqui: 0x27ae60, bofetada: 0xe67e22,
-};
-
-const CMDS_AGRESSIVOS = ['atacar', 'bofetada', 'xingar'];
-const CMDS_POSITIVOS  = ['beijar', 'abracar', 'cafune', 'acariciar', 'dancar', 'elogiar', 'proteger', 'tocaaqui'];
-const ALL_CMDS        = [...CMDS_AGRESSIVOS, ...CMDS_POSITIVOS];
-
-export const comandos = [
-  { cmd: '!beijar @user',    desc: 'Beija alguém (+3 afinidade).' },
-  { cmd: '!abracar @user',   desc: 'Abraça alguém (+1 afinidade).' },
-  { cmd: '!cafune @user',    desc: 'Cafuné (+2 afinidade).' },
-  { cmd: '!acariciar @user', desc: 'Carinho (+2 afinidade).' },
-  { cmd: '!dancar @user',    desc: 'Dança juntos (+1 afinidade).' },
-  { cmd: '!elogiar @user',   desc: 'Elogia alguém (+1 afinidade).' },
-  { cmd: '!proteger @user',  desc: 'Protege alguém (+2 afinidade).' },
-  { cmd: '!atacar @user',    desc: 'Ataca alguém.' },
-  { cmd: '!tocaaqui @user',  desc: 'High five! (+1 afinidade).' },
-  { cmd: '!bofetada @user',  desc: 'Bofetada!' },
-  { cmd: '!xingar @user',    desc: 'Xinga alguém (diversão).' },
-];
 
 export function register(client, configs) {
-  // Guarda duplo — evita registrar o evento mais de uma vez
   if (client.__interacoesRegistrado) return;
   client.__interacoesRegistrado = true;
 
   client.on('messageCreate', async (msg) => {
     try {
-    if (msg.author.bot || !msg.guild) return;
-    const cfg     = configs.get(msg.guild.id);
-    const prefixo = cfg?.prefixo || '!';
-    if (!msg.content.startsWith(prefixo)) return;
+      if (msg.author.bot || !msg.guild) return;
 
-    const args = msg.content.slice(prefixo.length).trim().split(/\s+/);
-    const cmd  = args.shift().toLowerCase();
-    if (!ALL_CMDS.includes(cmd)) return;
+      const cfg = configs.get(msg.guild.id);
+      const prefixo = cfg?.prefixo || '!';
+      if (!msg.content.startsWith(prefixo)) return;
 
-    const alvo = msg.mentions.users.first();
-    if (!alvo) return msg.reply({ embeds: [embedErro('Mencione um usuário.')] });
-    if (alvo.id === msg.author.id)
-      return msg.reply({ embeds: [embedErro('Você não pode usar isso em si mesmo!')] });
+      const args = msg.content.slice(prefixo.length).trim().split(/\s+/);
+      const cmd = args.shift().toLowerCase();
 
-    // Logs de depuração
+      const alvo = msg.mentions.users.first();
+      if (!alvo)
+        return msg.reply({ embeds: [embedErro('Mencione um usuário.')] });
 
-    // ── 1. COOLDOWN — sempre primeiro ─────────────────────
-    const cdKey  = `inter:${cmd}:${msg.author.id}:${msg.guild.id}`;
-    const espera = checkCooldown(cdKey, 20_000);
-    if (espera)
-      return msg.reply({ embeds: [embedErro(`Aguarde **${formatarTempo(espera)}** para usar novamente.`)] });
+      if (alvo.id === msg.author.id)
+        return msg.reply({ embeds: [embedErro('Você não pode usar isso em si mesmo!')] });
 
-    const embed = new EmbedBuilder()
-      .setColor(CORES[cmd] || 0xa855f7)
-      .setTimestamp();
+      const cdKey = `inter:${cmd}:${msg.author.id}:${msg.guild.id}`;
+      const espera = checkCooldown(cdKey, 20000);
 
-    // ── INTERAÇÕES COM BOT ────────────────────────────────
-if (alvo.bot) {
+      if (espera)
+        return msg.reply({
+          embeds: [
+            embedErro(`Aguarde **${formatarTempo(espera)}** para usar novamente.`),
+          ],
+        });
 
-  // Agressivos
-  if (cmd === 'atacar') {
-    const gif = GIFS.atacar[Math.floor(Math.random() * GIFS.atacar.length)];
+      const embed = new EmbedBuilder()
+        .setColor(CORES[cmd] || 0xa855f7)
+        .setTimestamp();
 
-    embed
-      .setDescription(
-        `⚔️ <@${msg.author.id}> tentou atacar o bot!\n\n💥 O bot desviou e contra-atacou!`
-      );
+      // ================= BOT =================
+      if (alvo.bot) {
+        if (cmd === 'atacar' || cmd === 'bofetada') {
+          embed.setDescription(
+            cmd === 'atacar'
+              ? `⚔️ <@${msg.author.id}> tentou atacar o bot!`
+              : `👋 <@${msg.author.id}> tentou bater no bot!`
+          );
+          embed.setImage(getGif(cmd));
+          return msg.reply({ embeds: [embed] });
+        }
 
-    if (gif) embed.setImage(gif);
+        if (cmd === 'xingar') {
+          const resp =
+            BOT_RESPOSTAS_XINGAR[
+              Math.floor(Math.random() * BOT_RESPOSTAS_XINGAR.length)
+            ];
 
-    return msg.reply({ embeds: [embed] });
-  }
+          embed.setDescription(`😤 <@${msg.author.id}> xingou o bot.\n\n🤖 ${resp}`);
+          return msg.reply({ embeds: [embed] });
+        }
 
-  if (cmd === 'bofetada') {
-    const gif = GIFS.bofetada[Math.floor(Math.random() * GIFS.bofetada.length)];
+        embed.setDescription(
+          `🤖 O bot interagiu com <@${msg.author.id}>`
+        );
 
-    embed
-      .setDescription(
-        `👋 <@${msg.author.id}> tentou dar uma bofetada no bot!\n\n😤 O bot devolveu na mesma intensidade!`
-      );
+        const gif = getGif(cmd);
+        if (gif) embed.setImage(gif);
 
-    if (gif) embed.setImage(gif);
+        return msg.reply({ embeds: [embed] });
+      }
 
-    return msg.reply({ embeds: [embed] });
-  }
+      // ================= NORMAL =================
+      if (cmd === 'elogiar') {
+        embed.setDescription(
+          `💬 <@${msg.author.id}> elogiou <@${alvo.id}>:\n> ${
+            ELOGIOS[Math.floor(Math.random() * ELOGIOS.length)]
+          }`
+        );
+      } else if (cmd === 'xingar') {
+        embed.setDescription(
+          `😤 <@${msg.author.id}> para <@${alvo.id}>:\n> ${
+            XINGAMENTOS[Math.floor(Math.random() * XINGAMENTOS.length)]
+          }`
+        );
+      } else {
+        embed.setDescription(TEXTOS[cmd]?.(msg.author.id, alvo.id));
+        const gif = getGif(cmd);
+        if (gif) embed.setImage(gif);
+      }
 
-  if (cmd === 'xingar') {
-    const resp =
-      BOT_RESPOSTAS_XINGAR[
-        Math.floor(Math.random() * BOT_RESPOSTAS_XINGAR.length)
-      ];
+      embed.setThumbnail(alvo.displayAvatarURL({ size: 512 }));
 
-    embed.setDescription(
-      `😤 <@${msg.author.id}> xingou o bot.\n\n🤖 ${resp}`
-    );
+      const pontos = AFINIDADE_MAPA[cmd] || 0;
 
-    return msg.reply({ embeds: [embed] });
-  }
+      if (pontos > 0) {
+        await addAfinidade(
+          msg.guild.id,
+          msg.author.id,
+          alvo.id,
+          pontos
+        ).catch(() => {});
+      }
 
-  // BEIJO = FRIENDZONE
-  if (cmd === 'beijar') {
-    const gif = GIFS.beijar[Math.floor(Math.random() * GIFS.beijar.length)];
+      await msg.reply({ embeds: [embed] });
 
-    embed
-      .setColor(0xff69b4)
-      .setDescription(
-        `💋 <@${msg.author.id}> tentou beijar o bot.\n\n🤖 O bot ficou sem jeito...\n💔 "Desculpa, mas te vejo apenas como amigo(a)." #Friendzone`
-      );
-
-    if (gif) embed.setImage(gif);
-
-    return msg.reply({ embeds: [embed] });
-  }
-
-  // COMANDOS POSITIVOS
-  const gifs = GIFS[cmd];
-  const gif =
-    gifs?.[Math.floor(Math.random() * gifs.length)];
-
-  const respostasBot = {
-    abracar: '🤗 O bot retribuiu o abraço!',
-    cafune: '🥰 O bot adorou o cafuné!',
-    acariciar: '💕 O bot ficou feliz com o carinho!',
-    dancar: '💃 O bot entrou na dança!',
-    proteger: '🛡️ O bot agradece a proteção!',
-    tocaaqui: '🤚 Toca aqui aceito!',
-    elogiar: '😊 O bot ficou lisonjeado com o elogio!'
-  };
-
-  if (cmd === 'elogiar') {
-    embed.setDescription(
-      `💬 <@${msg.author.id}> elogiou o bot!\n\n🤖 Muito obrigado! ❤️`
-    );
-  } else {
-    embed.setDescription(
-      respostasBot[cmd] ||
-      `🤖 O bot interagiu com <@${msg.author.id}>`
-    );
-
-    if (gif) embed.setImage(gif);
-  }
-
-  return msg.reply({ embeds: [embed] });
-}
-    // ── 4. INTERAÇÃO NORMAL ───────────────────────────────
-    if (cmd === 'elogiar') {
-      embed.setDescription(`💬 <@${msg.author.id}> elogiou <@${alvo.id}>:\n> *${ELOGIOS[Math.floor(Math.random() * ELOGIOS.length)]}*`);
-    } else if (cmd === 'xingar') {
-      embed.setDescription(`😤 <@${msg.author.id}> para <@${alvo.id}>:\n> *${XINGAMENTOS[Math.floor(Math.random() * XINGAMENTOS.length)]}*`);
-    } else {
-      const gifs = GIFS[cmd];
-      const gif  = gifs?.[Math.floor(Math.random() * gifs.length)];
-      embed.setDescription(
-        TEXTOS[cmd]?.(msg.author.id, alvo.id) || `<@${msg.author.id}> interagiu com <@${alvo.id}>`
-      );
-      if (gif) embed.setImage(gif);
-    }
-
-    // Thumbnail do alvo
-    embed.setThumbnail(alvo.displayAvatarURL({ extension: 'png', size: 512 }));
-
-    // ── 5. AFINIDADE ──────────────────────────────────────
-    const pontos = AFINIDADE_MAPA[cmd] || 0;
-    let afin = { ganhou: false, pontosGanhos: 0, pontos: 0 };
-    if (pontos > 0) {
-      afin = await addAfinidade(msg.guild.id, msg.author.id, alvo.id, pontos).catch(() => afin);
-    }
-
-    if (pontos > 0) {
-      embed.setFooter(
-        afin.ganhou
-          ? { text: `+${pontos} Afinidade • Total: ${afin.pontos ?? '?'} pts` }
-          : { text: 'Afinidade: já ganhada hoje (próxima em 12h)' }
-      );
-    }
-
-    await msg.reply({ embeds: [embed] });
-
-    // ── 6. MISSÕES — tipo 'interacao' (nunca o nome do cmd) ─
-    await progredirMissao(msg.author.id, msg.guild.id, 'interacao', 1, msg.channel).catch(() => {});
+      await progredirMissao(
+        msg.author.id,
+        msg.guild.id,
+        'interacao',
+        1,
+        msg.channel
+      ).catch(() => {});
     } catch (e) {
+      console.error(e);
       msg.reply({ content: '❌ Ocorreu um erro.' }).catch(() => {});
     }
   });
