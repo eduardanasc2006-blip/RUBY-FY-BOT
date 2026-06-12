@@ -90,32 +90,24 @@ import {
       ========================= */
 
       if (cmd === 'dado') {
-
   const faces = parseInt(args[0]) || 6;
 
   if (faces < 2 || faces > 1000) {
-    return msg.reply(
-      '❌ Escolha um dado entre 2 e 1000 faces.'
-    );
+    return msg.reply('❌ Escolha entre 2 e 1000 faces.');
   }
 
   const r = Math.floor(Math.random() * faces) + 1;
 
   const embed = new EmbedBuilder()
     .setColor(0x3498db)
-    .setTitle('🎲 Rolagem de Dado')
+    .setTitle('🎲 Dado RPG')
     .setDescription(
-`🎯 Faces: **${faces}**
-
-🎲 O dado rolou...
-
-╭─────────╮
-│    ${r}    │
-╰─────────╯`
+      `🎯 Faces: **${faces}**\n\n` +
+      `🎲 Resultado: **${r}**`
     );
-return msg.reply({ embeds: [embed] });
-      }
 
+  return msg.reply({ embeds: [embed] });
+}
  /* =========================
    COINFLIP
 ========================= */
@@ -208,10 +200,11 @@ if (cmd === 'coinflip') {
       );
     }
 
-    const resultado =
-      Math.random() < 0.5
-        ? 'cara'
-        : 'coroa';
+    // BOT MAIS FRACO (40% chance de ganhar só)
+const resultado =
+  Math.random() < 0.6
+    ? escolha
+    : escolha === 'cara' ? 'coroa' : 'cara';
 
     const venceu = resultado === escolha;
 
@@ -367,6 +360,32 @@ if (cmd === 'coinflip') {
         return msg.reply({ embeds: [embed] });
       }
 
+          // ================= PPT CONTRA BOT =================
+if (alvo.bot) {
+
+  const escolhas = ['🪨 Pedra', '📄 Papel', '✂️ Tesoura'];
+
+  const user = escolhas[Math.floor(Math.random() * 3)];
+  const bot  = escolhas[Math.floor(Math.random() * 3)];
+
+  const venceu =
+    (user === '🪨 Pedra' && bot === '✂️ Tesoura') ||
+    (user === '📄 Papel' && bot === '🪨 Pedra') ||
+    (user === '✂️ Tesoura' && bot === '📄 Papel');
+
+  const embed = new EmbedBuilder()
+    .setColor(venceu ? 0x2ecc71 : 0xe74c3c)
+    .setTitle('🤖 PPT contra o BOT')
+    .addFields(
+      { name: `👤 Você`, value: user, inline: true },
+      { name: `🤖 Bot`, value: bot, inline: true },
+      { name: '🏆 Resultado', value: venceu ? 'Você venceu!' : 'Você perdeu!', inline: false }
+    );
+
+  return msg.reply({ embeds: [embed] });
+}
+    
+
       /* =========================
          ROLETA
       ========================= */
@@ -382,7 +401,7 @@ if (cmd === 'coinflip') {
         const escolhido = arr[Math.floor(Math.random() * arr.length)];
 
         const embed = new EmbedBuilder()
-            .setImage('https://media.tenor.com/uK95REraK8AAAAAC/roulette-wheel.gif')
+        .setImage('https://media.tenor.com/0JZf5Q8xXx0AAAAC/roulette.gif')
           .setColor(0xf1c40f)
           .setTitle('🎰 Roleta da Sorte')
           .setDescription(
@@ -395,8 +414,8 @@ if (cmd === 'coinflip') {
       }
 
         /* =========================
-        MEME
-      ========================= */
+   MEME
+========================= */
 
 if (cmd === 'meme') {
 
@@ -408,13 +427,34 @@ if (cmd === 'meme') {
     'https://i.imgflip.com/39t1o.jpg'
   ];
 
-  const meme = memes[Math.floor(Math.random() * memes.length)];
+  const frases = [
+    '💀 Esse meme escapou do porão da internet.',
+    '🔥 Meme recém-saído do forno.',
+    '🗿 Os anciões aprovaram este meme.',
+    '⚠️ Risco elevado de gargalhadas.',
+    '🤣 Seu QI pode diminuir após visualizar.',
+    '📡 Capturado diretamente dos confins da web.',
+    '🐒 Um macaco treinado escolheu este meme.',
+    '✨ Meme lendário desbloqueado.',
+    '🎭 Humor de procedência duvidosa.',
+    '🚨 Atenção: meme potencialmente perigoso.'
+  ];
+
+  const meme =
+    memes[Math.floor(Math.random() * memes.length)];
+
+  const frase =
+    frases[Math.floor(Math.random() * frases.length)];
 
   const embed = new EmbedBuilder()
     .setColor(0x2ecc71)
-    .setTitle('😂 Meme Aleatório')
+    .setTitle('😂 Central de Memes do Fisk')
+    .setDescription(frase)
     .setImage(meme)
-    .setFooter({ text: `Pedido por ${msg.author.username}` });
+    .setFooter({
+      text: `Pedido por ${msg.author.username}`
+    })
+    .setTimestamp();
 
   return msg.reply({ embeds: [embed] });
 }
