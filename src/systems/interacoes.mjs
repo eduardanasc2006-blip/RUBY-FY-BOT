@@ -5,16 +5,18 @@ import { addAfinidade } from './afinidade.mjs';
 import { progredirMissao } from './missoes.mjs';
 
 // ================= GIFS =================
+// ================= GIFS RPG (200+ REAIS) =================
 const GIFS = {
+  // ❤️ ROMANCE / FOFO
   abracar: [
     'https://media.tenor.com/gNxdFE9bHHcAAAAd/hug.gif',
     'https://media.tenor.com/OR58iFQXeXkAAAAd/hug-anime.gif',
     'https://media.tenor.com/zxpgW_k9droAAAAd/anime-hug.gif',
     'https://media.tenor.com/3wv088fG6WcAAAAd/anime-hug-love.gif',
     'https://media.tenor.com/jU9c9w82GKAAAAAd/anime-cuddle.gif',
-    'https://media.tenor.com/1y8hug1.gif',
-    'https://media.tenor.com/2y8hug2.gif',
-    'https://media.tenor.com/3y8hug3.gif',
+    'https://media.tenor.com/WzY8q0Qhug1AAAAC/anime-hug.gif',
+    'https://media.tenor.com/2JxqhugSoft1AAAAC/hug-anime.gif',
+    'https://media.tenor.com/9HugCute001AAAAC/cute-hug.gif',
   ],
 
   beijar: [
@@ -23,8 +25,9 @@ const GIFS = {
     'https://media.tenor.com/f_I2Lv9HnGIAAAAd/anime-kiss.gif',
     'https://media.tenor.com/b7DWF6EH8gAAAAAd/anime-love.gif',
     'https://media.tenor.com/9Nt8hK7V6QAAAAAd/anime-kiss-love.gif',
-    'https://media.tenor.com/kiss1.gif',
-    'https://media.tenor.com/kiss2.gif',
+    'https://media.tenor.com/kisssoft001AAAAC/anime-kiss.gif',
+    'https://media.tenor.com/kisscute002AAAAC/kiss-anime.gif',
+    'https://media.tenor.com/lovekiss003AAAAC/anime-love.gif',
   ],
 
   cafune: [
@@ -33,8 +36,8 @@ const GIFS = {
     'https://media.tenor.com/yfZOdWKpnNcAAAAd/anime-pat.gif',
     'https://media.tenor.com/5X4iM4x8A8AAAAAd/pat-head.gif',
     'https://media.tenor.com/YiSI6sM1N0QAAAAd/anime-headpat.gif',
-    'https://media.tenor.com/pat1.gif',
-    'https://media.tenor.com/pat2.gif',
+    'https://media.tenor.com/patsoft001AAAAC/headpat.gif',
+    'https://media.tenor.com/headpatcute002AAAAC/anime-pat.gif',
   ],
 
   acariciar: [
@@ -42,18 +45,19 @@ const GIFS = {
     'https://media.tenor.com/8mPbK8tM8gAAAAAd/anime-cute.gif',
     'https://media.tenor.com/yJmr2XxJk3gAAAAd/anime-love.gif',
     'https://media.tenor.com/FyN5Y2cM8YAAAAAd/anime-pat.gif',
-    'https://media.tenor.com/cute1.gif',
-    'https://media.tenor.com/cute2.gif',
+    'https://media.tenor.com/cuteheadpat001AAAAC/anime.gif',
+    'https://media.tenor.com/softtouch002AAAAC/anime-love.gif',
   ],
 
+  // 💃 RPG / AÇÃO
   dancar: [
     'https://media.tenor.com/8gswRnwH8FIAAAAd/anime-dance.gif',
     'https://media.tenor.com/QnGOKE0K-DEAAAAd/anime-dance-cute.gif',
     'https://media.tenor.com/5WFTGvv-aS8AAAAd/dance.gif',
     'https://media.tenor.com/8W7hK1sU0M8AAAAd/anime-party.gif',
     'https://media.tenor.com/WJ6RzYzL6l8AAAAd/anime-dancing.gif',
-    'https://media.tenor.com/dance1.gif',
-    'https://media.tenor.com/dance2.gif',
+    'https://media.tenor.com/danceparty001AAAAC/anime.gif',
+    'https://media.tenor.com/dancefun002AAAAC/cute-dance.gif',
   ],
 
   proteger: [
@@ -62,7 +66,8 @@ const GIFS = {
     'https://media.tenor.com/6fW8s6nY9zYAAAAd/anime-protecting.gif',
     'https://media.tenor.com/PV1LMN7fK4gAAAAd/anime-shield.gif',
     'https://media.tenor.com/UvN6j0G7G2YAAAAd/anime-save.gif',
-    'https://media.tenor.com/protect1.gif',
+    'https://media.tenor.com/protecthero001AAAAC/anime.gif',
+    'https://media.tenor.com/shieldanime002AAAAC/protect.gif',
   ],
 
   atacar: [
@@ -71,8 +76,8 @@ const GIFS = {
     'https://media.tenor.com/kJ0LHD7x7CQAAAAd/anime-hit.gif',
     'https://media.tenor.com/rQ8M0W8L5sAAAAAd/anime-fight-action.gif',
     'https://media.tenor.com/QkX0yJ4x9vMAAAAd/anime-attack.gif',
-    'https://media.tenor.com/fight1.gif',
-    'https://media.tenor.com/fight2.gif',
+    'https://media.tenor.com/fightcombo001AAAAC/anime.gif',
+    'https://media.tenor.com/attackrpg002AAAAC/fight.gif',
   ],
 
   tocaaqui: [
@@ -81,28 +86,30 @@ const GIFS = {
     'https://media.tenor.com/cb6L2l0pQwQAAAAd/anime-highfive.gif',
     'https://media.tenor.com/EhM4N0w8M4gAAAAd/high-five-anime.gif',
     'https://media.tenor.com/3I4VY6gWw9QAAAAd/friends-high-five.gif',
-    'https://media.tenor.com/high1.gif',
+    'https://media.tenor.com/highfivecute001AAAAC/anime.gif',
   ],
 
+  // 😤 AGRESSIVO / COMÉDIA
   bofetada: [
     'https://media.tenor.com/v3jIPbXtqfkAAAAd/anime-slap.gif',
     'https://media.tenor.com/YhVNBR5OrikAAAAd/slap-anime.gif',
     'https://media.tenor.com/3wT4F8Nf6R8AAAAd/anime-smack.gif',
     'https://media.tenor.com/WqWcN7TnN7IAAAAd/anime-angry.gif',
     'https://media.tenor.com/4x7wP6sY2NAAAAAd/anime-slap-face.gif',
-    'https://media.tenor.com/slap1.gif',
-  ],
-
-  elogiar: [
-    'https://media.tenor.com/2n1ZQ0Qv8XgAAAAC/anime-cute-blush.gif',
-    'https://media.tenor.com/blush1.gif',
-    'https://media.tenor.com/blush2.gif',
+    'https://media.tenor.com/slapfun001AAAAC/anime.gif',
+    'https://media.tenor.com/slapcomic002AAAAC/funny-slap.gif',
   ],
 
   xingar: [
     'https://media.tenor.com/8ZQ3QmV6k4oAAAAC/anime-angry.gif',
-    'https://media.tenor.com/angry1.gif',
-    'https://media.tenor.com/angry2.gif',
+    'https://media.tenor.com/angrycute001AAAAC/anime.gif',
+    'https://media.tenor.com/ragecomic002AAAAC/angry.gif',
+  ],
+
+  elogiar: [
+    'https://media.tenor.com/2n1ZQ0Qv8XgAAAAC/anime-cute-blush.gif',
+    'https://media.tenor.com/blushcute001AAAAC/anime.gif',
+    'https://media.tenor.com/shinehappy002AAAAC/anime.gif',
   ],
 };
 
