@@ -166,32 +166,63 @@ export function register(client, configs) {
     }
 
     /* =========================
-       TOP CASAIS (CORRIGIDO + XP)
-    ========================= */
-    if (cmd === 'topcasais') {
-      const casais = await Casamento.find({ guildId, ativo: true });
+   TOP CASAIS
+========================= */
+if (cmd === 'topcasais') {
+  const casais = await Casamento.find({
+    guildId,
+    ativo: true
+  });
 
-      if (!casais.length)
-        return msg.reply({ embeds: [embedErro('Nenhum casal encontrado.')] });
+  if (!casais.length) {
+    return msg.reply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0xff69b4)
+          .setTitle('💍 Top Casais do Servidor')
+          .setDescription(
+            '💔 Ainda não existem casais oficialmente casados neste servidor.\n\n' +
+            '💡 Use `!casar @usuário` para iniciar uma linda história de amor!'
+          )
+          .setFooter({
+            text: 'Quem será o primeiro casal? ❤️'
+          })
+          .setTimestamp()
+      ]
+    });
+  }
 
-      const lista = casais
-        .sort((a, b) => (b.xpCasal || 0) - (a.xpCasal || 0))
-        .slice(0, 10)
-        .map((c, i) => {
-          const nivel = calcularNivelCasal(c.xpCasal || 0);
-          return `**${i + 1}.** <@${c.userId1}> ❤️ <@${c.userId2}> — 💖 ${c.xpCasal || 0} XP (Lv ${nivel})`;
-        });
+  const lista = casais
+    .sort((a, b) => (b.xpCasal || 0) - (a.xpCasal || 0))
+    .slice(0, 10)
+    .map((c, i) => {
+      const nivel = calcularNivelCasal(c.xpCasal || 0);
 
-      return msg.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0xff69b4)
-            .setTitle('🏆 Top Casais')
-            .setDescription(lista.join('\n'))
-        ]
-      });
-    }
+      const medalha =
+        i === 0 ? '🥇' :
+        i === 1 ? '🥈' :
+        i === 2 ? '🥉' :
+        '💖';
 
+      return (
+        `${medalha} **#${i + 1}** • <@${c.userId1}> ❤️ <@${c.userId2}>\n` +
+        `💎 **${c.xpCasal || 0} XP** • ⭐ **Nível ${nivel}**`
+      );
+    });
+
+  return msg.reply({
+    embeds: [
+      new EmbedBuilder()
+        .setColor(0xff69b4)
+        .setTitle('🏆 Top Casais do Servidor')
+        .setDescription(lista.join('\n\n'))
+        .setFooter({
+          text: `${casais.length} casal(is) registrado(s)`
+        })
+        .setTimestamp()
+    ]
+  });
+}
     /* =========================
        DIVÓRCIO
     ========================= */
