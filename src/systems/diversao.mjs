@@ -1,6 +1,9 @@
 import {
-    EmbedBuilder
-  } from 'discord.js';
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle
+} from 'discord.js';
   import {
   transferirXP,
   temXP,
@@ -237,12 +240,12 @@ const resultado =
   );
   }
 
-      /* =========================
-         PPT (PvP + XP)
-         — usa transferirXP() para não inflar o xpTotal
-      ========================= */
+     
 
-      if (cmd === 'ppt') {
+ 
+       /* =========================
+   PPT (BOT + PvP)
+========================= */
 
 if (cmd === 'ppt') {
 
@@ -250,79 +253,53 @@ if (cmd === 'ppt') {
 
   if (args[0]?.toLowerCase() === 'bot') {
 
-    const aposta = parseInt(args[1]);
+  const aposta = parseInt(args[1]);
 
-    if (!aposta || aposta < MIN_APOSTA || aposta > MAX_APOSTA) {
-      return msg.reply(
-        `❌ A aposta deve ser entre ${MIN_APOSTA} e ${MAX_APOSTA} XP.`
-      );
-    }
-
-    if (!(await temXP(msg.author.id, msg.guild.id, aposta))) {
-      return msg.reply(
-        `❌ Você não possui ${aposta} XP disponível.`
-      );
-    }
-
-    const escolhas = ['🪨 Pedra', '📄 Papel', '✂️ Tesoura'];
-
-    const user =
-      escolhas[Math.floor(Math.random() * escolhas.length)];
-
-    const bot =
-      escolhas[Math.floor(Math.random() * escolhas.length)];
-
-    const empate = user === bot;
-
-    const venceu =
-      (user === '🪨 Pedra' && bot === '✂️ Tesoura') ||
-      (user === '📄 Papel' && bot === '🪨 Pedra') ||
-      (user === '✂️ Tesoura' && bot === '📄 Papel');
-
-    if (!empate) {
-      if (venceu) {
-        await ganharXP(
-          msg.author.id,
-          msg.guild.id,
-          aposta,
-          'ppt_bot'
-        );
-      } else {
-        await gastarXP(
-          msg.author.id,
-          msg.guild.id,
-          aposta,
-          'ppt_bot'
-        );
-      }
-    }
-
-    const embed = new EmbedBuilder()
-      .setColor(
-        empate
-          ? 0x95a5a6
-          : venceu
-          ? 0x2ecc71
-          : 0xe74c3c
-      )
-      .setTitle('🤖 PPT contra o BOT')
-      .addFields(
-        { name: '👤 Você', value: user, inline: true },
-        { name: '🤖 BOT', value: bot, inline: true },
-        {
-          name: '🏆 Resultado',
-          value: empate
-            ? '🤝 Empate!'
-            : venceu
-            ? `🎉 Você ganhou ${aposta} XP`
-            : `💀 Você perdeu ${aposta} XP`,
-          inline: false
-        }
-      );
-
-    return msg.reply({ embeds: [embed] });
+  if (!aposta || aposta < MIN_APOSTA || aposta > MAX_APOSTA) {
+    return msg.reply(
+      `❌ A aposta deve ser entre ${MIN_APOSTA} e ${MAX_APOSTA} XP.`
+    );
   }
 
+  if (!(await temXP(msg.author.id, msg.guild.id, aposta))) {
+    return msg.reply(
+      `❌ Você não possui ${aposta} XP disponível.`
+    );
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(0x5865f2)
+    .setTitle('🎮 Pedra, Papel ou Tesoura')
+    .setDescription(
+      `💰 Aposta: **${aposta} XP**\n\n` +
+      `Escolha sua jogada abaixo:`
+    );
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`ppt_pedra_${aposta}`)
+      .setLabel('Pedra')
+      .setEmoji('🪨')
+      .setStyle(ButtonStyle.Secondary),
+
+    new ButtonBuilder()
+      .setCustomId(`ppt_papel_${aposta}`)
+      .setLabel('Papel')
+      .setEmoji('📄')
+      .setStyle(ButtonStyle.Primary),
+
+    new ButtonBuilder()
+      .setCustomId(`ppt_tesoura_${aposta}`)
+      .setLabel('Tesoura')
+      .setEmoji('✂️')
+      .setStyle(ButtonStyle.Success)
+  );
+
+  return msg.reply({
+    embeds: [embed],
+    components: [row]
+  });
+}
   // ================= PvP =================
 
   const alvo = msg.mentions.users.first();
@@ -333,127 +310,159 @@ if (cmd === 'ppt') {
     );
   }
 
-  // resto do seu código PvP...
-          
-        const alvo = msg.mentions.users.first();
+  if (alvo.id === msg.author.id) {
+    return msg.reply(
+      '❌ Você não pode jogar contra você mesmo.'
+    );
+  }
 
-        if (!alvo) {
-          return msg.reply('❌ Use: `!ppt @usuario [xp]`');
-        }
+  if (alvo.bot) {
+    return msg.reply(
+      '❌ Você não pode apostar contra um bot.'
+    );
+  }
 
-        if (alvo.id === msg.author.id) {
-          return msg.reply('❌ Você não pode jogar contra você mesmo.');
-        }
+  const aposta = parseInt(
+    args.find(a => /^\d+$/.test(a))
+  ) || 0;
 
-        if (alvo.bot) {
-          return msg.reply('❌ Você não pode apostar contra um bot.');
-        }
+  if (aposta > 0) {
 
-        // ── Parse e validação da aposta ──────────────────────
-        const apostaRaw = parseInt(args.find(a => /^\d+$/.test(a))) || 0;
+    if (aposta < MIN_APOSTA) {
+      return msg.reply(
+        `❌ A aposta mínima é **${MIN_APOSTA} XP**.`
+      );
+    }
 
-        if (apostaRaw !== 0) {
-          if (apostaRaw < MIN_APOSTA) {
-            return msg.reply(`❌ A aposta mínima é **${MIN_APOSTA} XP**.`);
-          }
-          if (apostaRaw > MAX_APOSTA) {
-            return msg.reply(`❌ A aposta máxima é **${MAX_APOSTA} XP**.`);
-          }
-        }
+    if (aposta > MAX_APOSTA) {
+      return msg.reply(
+        `❌ A aposta máxima é **${MAX_APOSTA} XP**.`
+      );
+    }
 
-        const aposta = apostaRaw;
+    const autorTemXP = await temXP(
+      msg.author.id,
+      msg.guild.id,
+      aposta
+    );
 
-        // ── Jogo ─────────────────────────────────────────────
-        const opcoes = ['🪨 Pedra', '📄 Papel', '✂️ Tesoura'];
-        const escolhaUser = opcoes[Math.floor(Math.random() * opcoes.length)];
-        const escolhaAlvo = opcoes[Math.floor(Math.random() * opcoes.length)];
+    const alvoTemXP = await temXP(
+      alvo.id,
+      msg.guild.id,
+      aposta
+    );
 
-        const ganhou =
-          (escolhaUser === '🪨 Pedra'    && escolhaAlvo === '✂️ Tesoura') ||
-          (escolhaUser === '📄 Papel'    && escolhaAlvo === '🪨 Pedra')   ||
-          (escolhaUser === '✂️ Tesoura' && escolhaAlvo === '📄 Papel');
+    if (!autorTemXP || !alvoTemXP) {
+      return msg.reply(
+        `❌ Um dos jogadores não possui **${aposta} XP** disponíveis.`
+      );
+    }
+  }
 
-        const empate = escolhaUser === escolhaAlvo;
+  const opcoes = [
+    '🪨 Pedra',
+    '📄 Papel',
+    '✂️ Tesoura'
+  ];
 
-        let vencedorId  = null;
-        let perdedorId  = null;
-        let resultado   = '🤝 Empate!';
+  const escolhaAutor =
+    opcoes[Math.floor(Math.random() * opcoes.length)];
 
-        if (!empate) {
-          if (ganhou) {
-            vencedorId = msg.author.id;
-            perdedorId = alvo.id;
-            resultado  = `🏆 ${msg.author.username} venceu!`;
-          } else {
-            vencedorId = alvo.id;
-            perdedorId = msg.author.id;
-            resultado  = `🏆 ${alvo.username} venceu!`;
-          }
-        }
+  const escolhaAlvo =
+    opcoes[Math.floor(Math.random() * opcoes.length)];
 
-        // ── XP: apenas se há aposta e há vencedor ────────────
-        let xpMovimentado = false;
-        let footerText;
-        let movimentacaoField = null;
+  const empate =
+    escolhaAutor === escolhaAlvo;
 
-        if (aposta > 0 && !empate) {
-          const authorTemXP = await temXP(msg.author.id, msg.guild.id, aposta);
-          const alvoTemXP   = await temXP(alvo.id, msg.guild.id, aposta);
+  const autorVenceu =
+    (escolhaAutor === '🪨 Pedra' && escolhaAlvo === '✂️ Tesoura') ||
+    (escolhaAutor === '📄 Papel' && escolhaAlvo === '🪨 Pedra') ||
+    (escolhaAutor === '✂️ Tesoura' && escolhaAlvo === '📄 Papel');
 
-          if (!authorTemXP || !alvoTemXP) {
-            return msg.reply(
-              `❌ Um dos jogadores não possui XP suficiente ou ainda não possui perfil criado.\n` +
-              `Ambos precisam ter pelo menos **${aposta} XP disponível**.`
-            );
-          }
+  let resultado;
+  let footer = 'Partida amistosa';
+  let campoXP = null;
 
-          xpMovimentado = await transferirXP(
-            perdedorId,
-            vencedorId,
-            msg.guild.id,
-            aposta,
-            'ppt'
-          );
+  if (empate) {
 
-          const nomeVencedor = vencedorId === msg.author.id ? msg.author.username : alvo.username;
-          const nomePerdedor = perdedorId === msg.author.id ? msg.author.username : alvo.username;
+    resultado = '🤝 Empate!';
 
-          footerText = xpMovimentado
-            ? `${aposta} XP transferidos`
-            : `Aposta: ${aposta} XP (falha na transferência)`;
+    if (aposta > 0) {
+      footer = 'Empate — nenhum XP transferido';
+    }
 
-          movimentacaoField = xpMovimentado
-            ? {
-                name: '💰 Movimentação de XP',
-                value: `📈 ${nomeVencedor} recebeu **+${aposta} XP**\n📉 ${nomePerdedor} perdeu **-${aposta} XP**`,
-                inline: false,
-              }
-            : null;
+  } else {
 
-        } else if (empate && aposta > 0) {
-          footerText = 'Empate — nenhum XP transferido';
-        } else {
-          footerText = 'Partida amistosa';
-        }
+    const vencedor = autorVenceu
+      ? msg.author
+      : alvo;
 
-        // ── Embed ─────────────────────────────────────────────
-        const embed = new EmbedBuilder()
-          .setColor(empate ? 0x95a5a6 : ganhou ? 0x2ecc71 : 0xe74c3c)
-          .setTitle('⚔️ Duelo — Pedra, Papel ou Tesoura')
-          .addFields(
-            { name: `👤 ${msg.author.username}`, value: escolhaUser, inline: true },
-            { name: `👤 ${alvo.username}`,        value: escolhaAlvo, inline: true },
-            { name: '🏆 Resultado', value: resultado, inline: false }
-          )
-          .setFooter({ text: footerText });
+    const perdedor = autorVenceu
+      ? alvo
+      : msg.author;
 
-        if (movimentacaoField) embed.addFields(movimentacaoField);
+    resultado =
+      `🏆 ${vencedor.username} venceu!`;
 
-        return msg.reply({ embeds: [embed] });
+    if (aposta > 0) {
+
+      await transferirXP(
+        perdedor.id,
+        vencedor.id,
+        msg.guild.id,
+        aposta,
+        'ppt'
+      );
+
+      footer =
+        `${aposta} XP transferidos`;
+
+      campoXP = {
+        name: '💰 Movimentação de XP',
+        value:
+          `📈 ${vencedor.username}: +${aposta} XP\n` +
+          `📉 ${perdedor.username}: -${aposta} XP`,
+        inline: false
+      };
+    }
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(
+      empate
+        ? 0x95a5a6
+        : autorVenceu
+        ? 0x2ecc71
+        : 0xe74c3c
+    )
+    .setTitle('⚔️ Pedra, Papel ou Tesoura')
+    .addFields(
+      {
+        name: `👤 ${msg.author.username}`,
+        value: escolhaAutor,
+        inline: true
+      },
+      {
+        name: `👤 ${alvo.username}`,
+        value: escolhaAlvo,
+        inline: true
+      },
+      {
+        name: '🏆 Resultado',
+        value: resultado,
+        inline: false
       }
+    )
+    .setFooter({ text: footer });
 
-    
+  if (campoXP) {
+    embed.addFields(campoXP);
+  }
 
+  return msg.reply({
+    embeds: [embed]
+  });
+}
       /* =========================
          ROLETA
       ========================= */
