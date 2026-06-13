@@ -148,16 +148,19 @@ const valorBase = cfg?.valorBase || 38;
 
       const steps = gerarSteps(min, max);
 
-      const linhas = steps.map(r =>
-        `**${r.toLocaleString('pt-BR')}** Robux → **R$${((r / robuxBase) * valorBase).toFixed(2)}**`
-      return msg.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0x00a2ff)
-            .setTitle('📋 Simulação')
-            .setDescription(linhas.join('\n'))
-        ]
-      });
+     const linhas = steps.map(
+  r =>
+    `**${r.toLocaleString('pt-BR')}** Robux → **R$${((r / robuxBase) * valorBase).toFixed(2)}**`
+);
+
+return msg.reply({
+  embeds: [
+    new EmbedBuilder()
+      .setColor(0x00a2ff)
+      .setTitle('📋 Simulação')
+      .setDescription(linhas.join('\n'))
+  ]
+});
     }
 
     /* =========================
