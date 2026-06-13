@@ -17,7 +17,8 @@ export function register(client, configs) {
     const args = msg.content.slice(prefixo.length).trim().split(/\s+/);
     const cmd = args.shift().toLowerCase();
 
-    const taxa = cfg?.taxa || 38;
+   const robuxBase = cfg?.robuxBase || 1000;
+const valorBase = cfg?.valorBase || 38;
 
     /* =========================
       ROBUX -> BRL (ATUALIZADO)
@@ -32,7 +33,7 @@ export function register(client, configs) {
       }
 
       // 💰 valor em reais
-      const valorBRL = (robux / 1000) * taxa;
+      const valorBRL = (robux / robuxBase) * valorBase;
 
       // 🎮 gamepass (Roblox retém 30%)
       const valorGamepass = Math.ceil(robux / 0.7);
@@ -55,7 +56,7 @@ export function register(client, configs) {
           },
           {
             name: '📊 Taxa base',
-            value: `1.000 Robux = R$${taxa.toFixed(2)}`,
+            value: `${robuxBase.toLocaleString('pt-BR')} Robux = R$${valorBase.toFixed(2)}`,
             inline: false
           }
         )
@@ -91,8 +92,7 @@ export function register(client, configs) {
         });
       }
 
-      const robux = Math.floor((valor / taxa) * 1000);
-
+      const robux = Math.floor((valor / valorBase) * robuxBase);
       await registrarLog(
         client,
         msg.guild.id,
@@ -123,7 +123,9 @@ export function register(client, configs) {
           new EmbedBuilder()
             .setColor(0x00a2ff)
             .setTitle('📊 Taxa Atual')
-            .setDescription(`**1.000 Robux = R$${taxa.toFixed(2)}**`)
+           .setDescription(
+  `**${robuxBase.toLocaleString('pt-BR')} Robux = R$${valorBase.toFixed(2)}**`
+)
         ]
       });
     }
@@ -147,9 +149,7 @@ export function register(client, configs) {
       const steps = gerarSteps(min, max);
 
       const linhas = steps.map(r =>
-        `**${r.toLocaleString('pt-BR')}** Robux → **R$${((r / 1000) * taxa).toFixed(2)}**`
-      );
-
+        `**${r.toLocaleString('pt-BR')}** Robux → **R$${((r / robuxBase) * valorBase).toFixed(2)}**`
       return msg.reply({
         embeds: [
           new EmbedBuilder()
@@ -173,8 +173,8 @@ export function register(client, configs) {
         });
       }
 
-      const valorSaldo = (saldo / 1000) * taxa;
-      const valorMeta = (meta / 1000) * taxa;
+     const valorSaldo = (saldo / robuxBase) * valorBase;
+const valorMeta = (meta / robuxBase) * valorBase;
 
       let embed = new EmbedBuilder()
         .setColor(0x00a2ff)
@@ -182,7 +182,7 @@ export function register(client, configs) {
 
       if (saldo >= meta) {
         const excedenteRobux = saldo - meta;
-        const excedenteValor = (excedenteRobux / 1000) * taxa;
+        const excedenteValor = (excedenteRobux / robuxBase) * valorBase;
 
         embed.setDescription('🎉 Você já atingiu sua meta!')
           .addFields(
@@ -193,7 +193,7 @@ export function register(client, configs) {
           );
       } else {
         const faltaRobux = meta - saldo;
-        const faltaValor = (faltaRobux / 1000) * taxa;
+        const faltaValor = (faltaRobux / robuxBase) * valorBase;
 
         embed.setDescription('📊 Progresso da meta')
           .addFields(
@@ -210,55 +210,75 @@ export function register(client, configs) {
     /* =========================
       SET TAXA
     ========================= */
-    if (cmd === 'settaxa') {
-      if (!isAdmin(msg.member, cfg)) {
-        return msg.reply({ embeds: [embedErro('Sem permissão.')] });
+   if (cmd === 'settaxa') {
+  if (!isAdmin(msg.member, cfg)) {
+    return msg.reply({
+      embeds: [embedErro('Sem permissão.')]
+    });
+  }
+
+  const robux = parseInt(args[0]);
+  const valor = parseFloat(args[1]?.replace(',', '.'));
+
+  if (
+    !robux ||
+    isNaN(robux) ||
+    !valor ||
+    isNaN(valor)
+  ) {
+    return msg.reply({
+      embeds: [
+        embedErro(
+          'Use: `!settaxa <robux> <valor>`\nExemplo: `!settaxa 100 3,80`'
+        )
+      ]
+    });
+  }
+
+  await Config.findOneAndUpdate(
+    { guildId: msg.guild.id },
+    {
+      $set: {
+        robuxBase: robux,
+        valorBase: valor
+      },
+      $push: {
+        taxaHistorico: {
+          robux,
+          valor,
+          adminId: msg.author.id,
+          data: new Date()
+        }
       }
+    },
+    { upsert: true }
+  );
 
-      const nova = parseFloat(args[0]?.replace(',', '.'));
+  if (cfg) {
+    cfg.robuxBase = robux;
+    cfg.valorBase = valor;
+  }
 
-      if (!nova || isNaN(nova)) {
-        return msg.reply({
-          embeds: [embedErro('Use: `!settaxa <valor>`')]
-        });
-      }
+  await registrarLog(
+    client,
+    msg.guild.id,
+    'admin',
+    msg.author.id,
+    {
+      descricao: `${robux} Robux = R$${valor.toFixed(2)}`
+    },
+    configs
+  );
 
-      await Config.findOneAndUpdate(
-        { guildId: msg.guild.id },
-        {
-          $set: { taxa: nova },
-          $push: {
-            taxaHistorico: {
-              taxa: nova,
-              adminId: msg.author.id,
-              data: new Date()
-            }
-          }
-        },
-        { upsert: true }
-      );
-
-      if (cfg) cfg.taxa = nova;
-
-      await registrarLog(
-        client,
-        msg.guild.id,
-        'admin',
-        msg.author.id,
-        {
-          descricao: `Taxa alterada para R$${nova.toFixed(2)}`
-        },
-        configs
-      );
-
-      return msg.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0x2ecc71)
-            .setDescription(`✅ Taxa atualizada para **R$${nova.toFixed(2)}**`)
-        ]
-      });
-    }
+  return msg.reply({
+    embeds: [
+      new EmbedBuilder()
+        .setColor(0x2ecc71)
+        .setTitle('✅ Taxa atualizada')
+        .setDescription(
+          `**${robux.toLocaleString('pt-BR')} Robux = R$${valor.toFixed(2)}**`
+        )
+    ]
   });
 }
 
@@ -281,10 +301,10 @@ function gerarSteps(min, max) {
         }
 
   export const comandos = [
-    { cmd: '!robux <brl>',       desc: 'Converte BRL para Robux com a taxa atual.' },
-    { cmd: '!brl <robux>',       desc: 'Converte Robux para BRL.' },
+    { cmd: '!robux <quantidade>', desc: 'Converte Robux para reais.' },
+{ cmd: '!brl <valor>', desc: 'Converte reais para Robux.' },
     { cmd: '!taxa',              desc: 'Mostra a taxa de conversão atual.' },
     { cmd: '!simular <brl>',     desc: 'Simula uma venda de Robux.' },
     { cmd: '!meta <brl>',        desc: 'Mostra quanto Robux precisa para uma meta em BRL.' },
-    { cmd: '!settaxa <valor>',   desc: 'Define a taxa de conversão (admin).' },
+    { cmd: '!settaxa <robux> <valor>', desc: 'Define a equivalência Robux → Reais.' },
   ];
