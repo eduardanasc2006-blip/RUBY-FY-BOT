@@ -1,8 +1,4 @@
 import {
-  EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
   AttachmentBuilder,
 } from 'discord.js';
 
@@ -15,7 +11,8 @@ const db = getDB();
    CONFIG
 ========================= */
 
-const AVATAR_PADRAO = 'https://cdn.discordapp.com/embed/avatars/0.png';
+const AVATAR_PADRAO =
+  'https://cdn.discordapp.com/embed/avatars/0.png';
 
 /* =========================
    RENDER PERFIL
@@ -34,11 +31,12 @@ export async function renderPerfil(data) {
   ctx.fillRect(20, 20, 760, 380);
 
   /* =========================
-     AVATAR
+     AVATAR (SAFE)
   ========================= */
-
   try {
-    const avatar = await loadImage(data.avatar || AVATAR_PADRAO);
+    const avatar = await loadImage(
+      data.avatar || AVATAR_PADRAO
+    );
 
     ctx.save();
     ctx.beginPath();
@@ -47,22 +45,24 @@ export async function renderPerfil(data) {
     ctx.clip();
     ctx.drawImage(avatar, 50, 60, 140, 140);
     ctx.restore();
-  } catch {}
+  } catch (err) {
+    console.error('[perfil] avatar erro:', err);
+  }
 
   /* =========================
      TEXTO
   ========================= */
 
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 30px Sans';
+  ctx.font = 'bold 30px Arial';
   ctx.fillText(data.nome || 'Usuário', 220, 110);
 
   ctx.fillStyle = '#00ff88';
-  ctx.font = '20px Sans';
+  ctx.font = '20px Arial';
   ctx.fillText(`XP: ${data.xp || 0}`, 220, 160);
 
   /* =========================
-     BORDA BASE
+     BORDA
   ========================= */
 
   ctx.strokeStyle = '#00a2ff';
@@ -70,14 +70,19 @@ export async function renderPerfil(data) {
   ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
 
   /* =========================
-     MOLDURA (LOJA)
+     MOLDURA (SAFE)
   ========================= */
 
   if (data.moldura) {
     try {
-      const frame = await loadImage(`assets/frames/${data.moldura}.png`);
+      const frame = await loadImage(
+        `assets/frames/${data.moldura}.png`
+      );
+
       ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
-    } catch {
+    } catch (err) {
+      console.error('[perfil] moldura erro:', err);
+
       ctx.strokeStyle = '#ffd700';
       ctx.lineWidth = 6;
       ctx.strokeRect(25, 25, canvas.width - 50, canvas.height - 50);
@@ -85,12 +90,12 @@ export async function renderPerfil(data) {
   }
 
   /* =========================
-     BADGES (PRONTO PRA FUTURO)
+     BADGES
   ========================= */
 
   if (Array.isArray(data.badges)) {
     ctx.fillStyle = '#ffd700';
-    ctx.font = '16px Sans';
+    ctx.font = '16px Arial';
 
     data.badges.slice(0, 5).forEach((b, i) => {
       ctx.fillText(`🏅 ${b}`, 220, 200 + i * 20);
@@ -101,7 +106,7 @@ export async function renderPerfil(data) {
 }
 
 /* =========================
-   COMMAND: !meuperfil
+   COMMAND !meuperfil
 ========================= */
 
 export function register(client, configs) {
@@ -111,26 +116,40 @@ export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (!msg.guild || msg.author.bot) return;
 
-    const prefixo = configs.get(msg.guild.id)?.prefixo || '!';
+    const prefixo =
+      configs.get(msg.guild.id)?.prefixo || '!';
 
     if (!msg.content.startsWith(prefixo)) return;
 
-    const cmd = msg.content.slice(prefixo.length).trim().split(/\s+/)[0];
+    const cmd = msg.content
+      .slice(prefixo.length)
+      .trim()
+      .split(/\s+/)[0]
+      .toLowerCase();
 
     if (cmd !== 'meuperfil') return;
 
     try {
-      const user = db.prepare(`
+      const user = db
+        .prepare(
+          `
         SELECT * FROM usuarios
         WHERE userId = ? AND guildId = ?
-      `).get(msg.author.id, msg.guild.id);
+      `
+        )
+        .get(msg.author.id, msg.guild.id);
 
       const data = {
         nome: msg.author.username,
-        avatar: msg.author.displayAvatarURL?.() || null,
+        avatar: msg.author.displayAvatarURL({
+          extension: 'png',
+          size: 256,
+        }),
         xp: user?.xpDisponivel || 0,
         moldura: user?.moldura || null,
-        badges: user?.badges ? JSON.parse(user.badges) : [],
+        badges: user?.badges
+          ? JSON.parse(user.badges)
+          : [],
       };
 
       const buffer = await renderPerfil(data);
@@ -142,14 +161,23 @@ export function register(client, configs) {
       return msg.reply({
         files: [file],
       });
-
     } catch (err) {
-      console.error('[perfil] erro:', err);
-      return msg.reply('❌ erro ao gerar perfil.');
+      console.error('[perfil] erro completo:', err);
+
+      return msg.reply(
+        '❌ erro ao gerar perfil.'
+      );
     }
   });
 }
 
+/* =========================
+   EXPORT COMANDOS
+========================= */
+
 export const comandos = [
-  { cmd: '!meuperfil', desc: 'Mostra o perfil com moldura e XP.' },
+  {
+    cmd: '!meuperfil',
+    desc: 'Mostra o perfil com XP, badges e moldura.',
+  },
 ];
