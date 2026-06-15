@@ -70,7 +70,13 @@ export async function ganharXP(userId, guildId, valor, origem = 'sistema', multi
         xpTotal:      valorFinal,
         xpDisponivel: valorFinal,
       },
-      $setOnInsert: { userId, guildId },
+      $setOnInsert: { 
+        userId, 
+        guildId,
+        moldura: null,
+        badges: JSON.stringify([]),
+        efeitos: JSON.stringify([])
+      },
     },
     { upsert: true, new: true }
   );
@@ -207,7 +213,7 @@ async function _registrarLog({ userId, guildId, tipo, valor, origem, saldoApos }
 }
 
   // ─────────────────────────────────────────────────────────────
-  //  6. transferirXP  — aposta / duelo (sem criar XP novo)
+  //  7. transferirXP  — aposta / duelo (sem criar XP novo)
   //
   //  Remove xpDisponivel do perdedor e entrega ao vencedor.
   //  NÃO altera xpTotal de ninguém — não é recompensa, é transferência.
@@ -243,7 +249,13 @@ async function _registrarLog({ userId, guildId, tipo, valor, origem, saldoApos }
       { userId: paraUserId, guildId },
       {
         $inc: { xpDisponivel: valor },
-        $setOnInsert: { userId: paraUserId, guildId },
+        $setOnInsert: { 
+          userId: paraUserId, 
+          guildId,
+          moldura: null,
+          badges: JSON.stringify([]),
+          efeitos: JSON.stringify([])
+        },
       },
       { upsert: true }
     );
@@ -274,4 +286,3 @@ async function _registrarLog({ userId, guildId, tipo, valor, origem, saldoApos }
 
     return true;
   }
-  
