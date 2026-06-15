@@ -13,20 +13,22 @@ import { getDB } from '../db/sqlite.mjs';
 const db = getDB();
 
 /* =========================
-   ITENS
+   ITENS (ATUALIZADO COM SEUS ARQUIVOS)
 ========================= */
 
 const ITENS = [
-  { id: 'moldura_ouro', nome: '🖼️ Moldura Dourada', tipo: 'moldura', preco: 500, desc: 'Moldura dourada para o perfil.' },
-  { id: 'moldura_neon', nome: '🔮 Moldura Neon', tipo: 'moldura', preco: 800, desc: 'Moldura neon colorida.' },
-  { id: 'moldura_foguete', nome: '🚀 Moldura Galáxia', tipo: 'moldura', preco: 1200, desc: 'Moldura espacial premium.' },
+  { id: 'moldura_ouro', nome: '🖼️ Moldura Dourada', tipo: 'moldura', preco: 500, desc: 'Moldura dourada brilhante.' },
+  { id: 'moldura_neon', nome: '🔮 Moldura Neon', tipo: 'moldura', preco: 800, desc: 'Moldura colorida neon.' },
+  { id: 'moldura_galaxia', nome: '🚀 Moldura Galáxia', tipo: 'moldura', preco: 1200, desc: 'Moldura espacial premium.' },
+  { id: 'moldura_gelo', nome: '❄️ Moldura de Gelo', tipo: 'moldura', preco: 1500, desc: 'Moldura de cristal gelado.' },
+  { id: 'moldura_sombrio', nome: '🌑 Moldura Sombria', tipo: 'moldura', preco: 1800, desc: 'Moldura de magia antiga.' },
 
-  { id: 'badge_estrela', nome: '⭐ Badge Estrela', tipo: 'badge', preco: 300, desc: 'Badge de estrela.' },
-  { id: 'badge_fogo', nome: '🔥 Badge Chama', tipo: 'badge', preco: 400, desc: 'Badge de chama.' },
-  { id: 'badge_coroa', nome: '👑 Badge Realeza', tipo: 'badge', preco: 700, desc: 'Badge realeza.' },
+  { id: 'badge_estrela', nome: '⭐ Badge Estrela', tipo: 'badge', preco: 300, desc: 'Badge de conquista.' },
+  { id: 'badge_fogo', nome: '🔥 Badge Chama', tipo: 'badge', preco: 400, desc: 'Badge de bravura.' },
+  { id: 'badge_coroa', nome: '👑 Badge Realeza', tipo: 'badge', preco: 700, desc: 'Badge exclusivo.' },
 
-  { id: 'efeito_confete', nome: '🎊 Efeito Confete', tipo: 'efeito', preco: 600, desc: 'Confetes no perfil.' },
-  { id: 'efeito_aurora', nome: '🌌 Efeito Aurora', tipo: 'efeito', preco: 900, desc: 'Aurora boreal.' },
+  { id: 'efeito_confete', nome: '🎊 Efeito Confete', tipo: 'efeito', preco: 600, desc: 'Confetes leves no perfil.' },
+  { id: 'efeito_aurora', nome: '🌌 Efeito Aurora', tipo: 'efeito', preco: 900, desc: 'Luzes boreais mágicas.' },
 ];
 
 /* =========================
@@ -40,14 +42,12 @@ async function renderPreviewPerfil(userId, item) {
   // fundo igual ao perfil
   ctx.fillStyle = '#0b0d12';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
   ctx.fillStyle = '#11141b';
   ctx.fillRect(20, 20, 760, 380);
 
   /* =========================
      TEXTO
   ========================= */
-
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 28px Arial';
   ctx.fillText('Preview do Perfil', 220, 90);
@@ -63,7 +63,7 @@ async function renderPreviewPerfil(userId, item) {
   ctx.fillText(`${item.preco} XP`, 220, 210);
 
   /* =========================
-     MOLDURA (COMPATÍVEL PERFIL)
+     MOLDURA
   ========================= */
   if (item.tipo === 'moldura') {
     try {
@@ -77,21 +77,37 @@ async function renderPreviewPerfil(userId, item) {
   }
 
   /* =========================
-     BADGE PREVIEW
+     BADGE (IMAGEM NA PREVIEW)
   ========================= */
   if (item.tipo === 'badge') {
-    ctx.fillStyle = '#ffd700';
-    ctx.font = '20px Arial';
-    ctx.fillText(`🏅 Será exibido no !meuperfil`, 220, 250);
+    try {
+      const badgeImg = await loadImage(`assets/badges/${item.id}.png`);
+      ctx.drawImage(badgeImg, 220, 220, 40, 40);
+      ctx.fillStyle = '#ffd700';
+      ctx.font = '20px Arial';
+      ctx.fillText(`🏅 Adicionado ao perfil`, 270, 250);
+    } catch (err) {
+      ctx.fillStyle = '#ffd700';
+      ctx.font = '20px Arial';
+      ctx.fillText(`🏅 Será exibido no !meuperfil`, 220, 250);
+    }
   }
 
   /* =========================
-     EFEITO PREVIEW
+     EFEITO (IMAGEM REAL NA PREVIEW)
   ========================= */
   if (item.tipo === 'efeito') {
-    for (let i = 0; i < 30; i++) {
-      ctx.fillStyle = '#00ff88';
-      ctx.fillRect(Math.random() * 800, Math.random() * 420, 2, 2);
+    try {
+      const efeitoImg = await loadImage(`assets/frames/${item.id}.png`);
+      ctx.globalAlpha = 0.8; // leve transparência para ver texto
+      ctx.drawImage(efeitoImg, 0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = 1;
+    } catch (err) {
+      // fallback caso não ache
+      for (let i = 0; i < 15; i++) {
+        ctx.fillStyle = '#00ff88';
+        ctx.fillRect(Math.random() * 800, Math.random() * 420, 2, 2);
+      }
     }
   }
 
@@ -106,7 +122,6 @@ function embedLoja(page = 0, index = 0) {
   const perPage = 5;
   const start = page * perPage;
   const itens = ITENS.slice(start, start + perPage);
-
   const itemAtual = ITENS[index];
 
   return new EmbedBuilder()
@@ -122,7 +137,7 @@ function embedLoja(page = 0, index = 0) {
         : 'Nenhum item',
     })
     .setFooter({
-      text: `Item ${index + 1}/${ITENS.length}`,
+      text: `Item ${index + 1}/${ITENS.length} | Página ${page + 1}`,
     });
 }
 
@@ -130,22 +145,22 @@ function embedLoja(page = 0, index = 0) {
    BOTÕES
 ========================= */
 
-function buildRow(userId, index) {
+function buildRow(userId, index, page = 0) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`shop_prev:${userId}:${index}`)
+      .setCustomId(`shop_prev:${userId}:${index}:${page}`)
       .setLabel('⬅')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(index <= 0),
 
     new ButtonBuilder()
-      .setCustomId(`shop_next:${userId}:${index}`)
+      .setCustomId(`shop_next:${userId}:${index}:${page}`)
       .setLabel('➡')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(index >= ITENS.length - 1),
 
     new ButtonBuilder()
-      .setCustomId(`shop_buy:${userId}:${index}`)
+      .setCustomId(`shop_buy:${userId}:${index}:${page}`)
       .setLabel('Comprar')
       .setStyle(ButtonStyle.Success),
   );
@@ -161,28 +176,24 @@ export function register(client, configs) {
 
   client.on('messageCreate', async (msg) => {
     if (!msg.guild || msg.author.bot) return;
-
     const prefixo = configs.get(msg.guild.id)?.prefixo || '!';
-
     if (!msg.content.startsWith(prefixo)) return;
-
     const cmd = msg.content.slice(prefixo.length).trim().split(/\s+/)[0];
-
     if (cmd !== 'loja') return;
 
     const buffer = await renderPreviewPerfil(msg.author.id, ITENS[0]);
-
     return msg.reply({
       embeds: [embedLoja(0, 0)],
       files: [new AttachmentBuilder(buffer, { name: 'preview.png' })],
-      components: [buildRow(msg.author.id, 0)],
+      components: [buildRow(msg.author.id, 0, 0)],
     });
   });
 
   client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
 
-    const [type, userId, value] = interaction.customId.split(':');
+    const [type, userId, value, pageStr] = interaction.customId.split(':');
+    const page = parseInt(pageStr) || 0;
 
     if (interaction.user.id !== userId) {
       return interaction.reply({
@@ -202,7 +213,6 @@ export function register(client, configs) {
     /* =========================
        COMPRA
     ========================= */
-
     if (type === 'shop_buy') {
       const ok = await gastarXP(
         userId,
@@ -219,43 +229,34 @@ export function register(client, configs) {
       }
 
       const user = db
-        .prepare(
-          `SELECT * FROM usuarios WHERE userId = ? AND guildId = ?`
-        )
+        .prepare(`SELECT * FROM usuarios WHERE userId = ? AND guildId = ?`)
         .get(userId, interaction.guild.id);
 
       if (item.tipo === 'moldura') {
-        db.prepare(
-          `UPDATE usuarios SET moldura = ? WHERE userId = ? AND guildId = ?`
-        ).run(item.id, userId, interaction.guild.id);
+        db.prepare(`UPDATE usuarios SET moldura = ? WHERE userId = ? AND guildId = ?`)
+          .run(item.id, userId, interaction.guild.id);
       }
 
       if (item.tipo === 'badge') {
-        const badges = user?.badges
-          ? JSON.parse(user.badges)
-          : [];
-
-        badges.push(item.id);
-
-        db.prepare(
-          `UPDATE usuarios SET badges = ? WHERE userId = ? AND guildId = ?`
-        ).run(JSON.stringify(badges), userId, interaction.guild.id);
+        const badges = user?.badges ? JSON.parse(user.badges) : [];
+        if (!badges.includes(item.id)) { // evitar duplicata
+          badges.push(item.id);
+          db.prepare(`UPDATE usuarios SET badges = ? WHERE userId = ? AND guildId = ?`)
+            .run(JSON.stringify(badges), userId, interaction.guild.id);
+        }
       }
 
       if (item.tipo === 'efeito') {
-        const efeitos = user?.efeitos
-          ? JSON.parse(user.efeitos)
-          : [];
-
-        efeitos.push(item.id);
-
-        db.prepare(
-          `UPDATE usuarios SET efeitos = ? WHERE userId = ? AND guildId = ?`
-        ).run(JSON.stringify(efeitos), userId, interaction.guild.id);
+        const efeitos = user?.efeitos ? JSON.parse(user.efeitos) : [];
+        if (!efeitos.includes(item.id)) { // evitar duplicata
+          efeitos.push(item.id);
+          db.prepare(`UPDATE usuarios SET efeitos = ? WHERE userId = ? AND guildId = ?`)
+            .run(JSON.stringify(efeitos), userId, interaction.guild.id);
+        }
       }
 
       return interaction.update({
-        content: `✅ Comprou **${item.nome}**`,
+        content: `✅ Comprou **${item.nome}** com sucesso!`,
         embeds: [],
         files: [],
         components: [],
@@ -263,13 +264,13 @@ export function register(client, configs) {
     }
 
     return interaction.update({
-      embeds: [embedLoja(0, index)],
+      embeds: [embedLoja(page, index)],
       files: [new AttachmentBuilder(buffer, { name: 'preview.png' })],
-      components: [buildRow(userId, index)],
+      components: [buildRow(userId, index, page)],
     });
   });
 }
 
 export const comandos = [
-  { cmd: '!loja', desc: 'Loja compatível com perfil e molduras.' },
+  { cmd: '!loja', desc: 'Loja de molduras, badges e efeitos para perfil.' },
 ];
