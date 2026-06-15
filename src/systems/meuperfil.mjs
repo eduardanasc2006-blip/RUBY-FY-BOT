@@ -66,7 +66,7 @@ export async function renderPerfil(data) {
     for (const efeitoId of data.efeitos) {
       try {
         const efeitoImg = await loadImage(`assets/frames/${efeitoId}.png`);
-        ctx.globalAlpha = 0.75; // transparência para não tampar tudo
+        ctx.globalAlpha = 0.75; // transparência para não tampar texto
         ctx.drawImage(efeitoImg, 0, 0, canvas.width, canvas.height);
         ctx.globalAlpha = 1;
       } catch (err) {
@@ -76,23 +76,33 @@ export async function renderPerfil(data) {
   }
 
   // 7. BADGES (IMAGENS, ATÉ 5)
+  // Agora inclui TODOS os tipos: comprados, conquista e automáticos
   if (Array.isArray(data.badges)) {
     let posX = 220;
     const posY = 200;
-    const tamanho = 32;
+    const tamanho = 32; // Tamanho exato para caber bem
 
+    // Mostra no máximo 5 badges por linha
     for (const badgeId of data.badges.slice(0, 5)) {
       try {
+        // Carrega a imagem da pasta correta
         const badgeImg = await loadImage(`assets/badges/${badgeId}.png`);
         ctx.drawImage(badgeImg, posX, posY, tamanho, tamanho);
-        posX += tamanho + 8;
       } catch (err) {
-        // fallback texto se não achar imagem
+        // Se não encontrar a imagem, mostra ícone de texto
+        console.error('[perfil] badge erro:', badgeId, err);
         ctx.fillStyle = '#ffd700';
-        ctx.font = '16px Arial';
-        ctx.fillText(`🏅`, posX, posY + 20);
-        posX += 24;
+        ctx.font = '20px Arial';
+        ctx.fillText(`🏅`, posX, posY + 24);
       }
+      posX += tamanho + 8; // Espaçamento entre badges
+    }
+
+    // Se tiver mais de 5, mostra quantos faltam
+    if (data.badges.length > 5) {
+      ctx.fillStyle = '#aaa';
+      ctx.font = '14px Arial';
+      ctx.fillText(`+${data.badges.length - 5}`, posX, posY + 22);
     }
   }
 
@@ -117,20 +127,26 @@ export function register(client, configs) {
       const db = getDB();
       if (!db) return msg.reply('❌ Banco de dados não está pronto.');
 
-      const user = db.prepare(`SELECT * FROM usuarios WHERE userId = ? AND guildId = ?`).get(msg.author.id, msg.guild.id);
+      // Busca dados do usuário
+      const user = db.prepare(`
+        SELECT moldura, badges, efeitos, xpDisponivel 
+        FROM usuarios 
+        WHERE userId = ? AND guildId = ?
+      `).get(msg.author.id, msg.guild.id);
 
-      // Parse seguro dos dados
+      // Parse SEGURO (não quebra se estiver vazio ou corrompido)
       let badges = [];
       let efeitos = [];
       try { badges = user?.badges ? JSON.parse(user.badges) : []; } catch { badges = []; }
       try { efeitos = user?.efeitos ? JSON.parse(user.efeitos) : []; } catch { efeitos = []; }
 
+      // Dados prontos para renderizar
       const data = {
         nome: msg.author.username,
         avatar: msg.author.displayAvatarURL({ extension: 'png', size: 256 }),
         xp: user?.xpDisponivel || 0,
         moldura: user?.moldura || null,
-        badges,
+        badges, // <- Aqui entram: comprados, Veterano, Quiz, Lendário, Casado
         efeitos
       };
 
