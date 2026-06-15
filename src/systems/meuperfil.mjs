@@ -5,7 +5,6 @@ import {
 import { createCanvas, loadImage } from '@napi-rs/canvas';
 import { getDB } from '../db/sqlite.mjs';
 
-const db = getDB();
 
 /* =========================
    CONFIG
@@ -130,14 +129,32 @@ export function register(client, configs) {
     if (cmd !== 'meuperfil') return;
 
     try {
+      const db = getDB();
+
+      if (!db) {
+        return msg.reply(
+          '❌ Banco de dados não está pronto.'
+        );
+      }
+
       const user = db
-        .prepare(
-          `
-        SELECT * FROM usuarios
-        WHERE userId = ? AND guildId = ?
-      `
-        )
+        .prepare(`
+          SELECT *
+          FROM usuarios
+          WHERE userId = ?
+          AND guildId = ?
+        `)
         .get(msg.author.id, msg.guild.id);
+
+      let badges = [];
+
+      try {
+        badges = user?.badges
+          ? JSON.parse(user.badges)
+          : [];
+      } catch {
+        badges = [];
+      }
 
       const data = {
         nome: msg.author.username,
@@ -147,9 +164,7 @@ export function register(client, configs) {
         }),
         xp: user?.xpDisponivel || 0,
         moldura: user?.moldura || null,
-        badges: user?.badges
-          ? JSON.parse(user.badges)
-          : [],
+        badges,
       };
 
       const buffer = await renderPerfil(data);
@@ -162,7 +177,10 @@ export function register(client, configs) {
         files: [file],
       });
     } catch (err) {
-      console.error('[perfil] erro completo:', err);
+      console.error(
+        '[perfil] erro completo:',
+        err
+      );
 
       return msg.reply(
         '❌ erro ao gerar perfil.'
