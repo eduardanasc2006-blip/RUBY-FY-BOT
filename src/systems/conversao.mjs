@@ -166,25 +166,26 @@ export function register(client, configs) {
       }
 
       await Config.findOneAndUpdate(
-        { guildId: msg.guild.id },
-        {
-          $set: {
-            robuxBase: robux,
-            valorBase: valor,
-            taxa: robux,
-            updatedAt: new Date().toISOString()
-          },
-          $push: {
-            taxaHistorico: {
-              robux,
-              valor,
-              adminId: msg.author.id,
-              data: new Date().toISOString()
-            }
-          }
-        },
-        { upsert: true }
-      );
+  { guildId: msg.guild.id },
+  {
+    $set: {
+      guildId: msg.guild.id,
+      robuxBase: robux,
+      valorBase: valor,
+      taxa: robux,
+      updatedAt: new Date().toISOString()
+    },
+    $push: {
+      taxaHistorico: {
+        robux,
+        valor,
+        adminId: msg.author.id,
+        data: new Date().toISOString()
+      }
+    }
+  },
+  { upsert: true }
+);
 
       // atualiza cache local (sem duplicar push)
       if (cfg) {
