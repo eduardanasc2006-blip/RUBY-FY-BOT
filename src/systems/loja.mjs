@@ -1,3 +1,4 @@
+import path from 'path';
 import {
   EmbedBuilder,
   ActionRowBuilder,
@@ -41,7 +42,7 @@ const ITENS = [
   { id: 'moldura_neon', nome: '🔮 Moldura Neon', tipo: 'moldura', preco: 800, desc: 'Moldura colorida neon.' },
   { id: 'moldura_galaxia', nome: '🚀 Moldura Galáxia', tipo: 'moldura', preco: 1200, desc: 'Moldura espacial premium.' },
   { id: 'moldura_gelo', nome: '❄️ Moldura de Gelo', tipo: 'moldura', preco: 1500, desc: 'Moldura de cristal gelado.' },
-  { id: 'moldura_sombrio', nome: '🌑 Moldura Sombria', tipo: 'moldura', preco: 1800, desc: 'Moldura de magia antiga.' },
+  { id: 'moldura_sombria', nome: '🌑 Moldura Sombria', tipo: 'moldura', preco: 1800, desc: 'Moldura de magia antiga.' },
 
   // ✨ EFEITOS
   { id: 'efeito_confete', nome: '🎊 Efeito Confete', tipo: 'efeito', preco: 600, desc: 'Confetes leves no perfil.' },
@@ -87,51 +88,117 @@ async function renderPreviewPerfil(userId, item) {
   /* =========================
      MOLDURA
   ========================= */
+
   if (item.tipo === 'moldura') {
-    try {
-      const frame = await loadImage(`assets/frames/${item.id}.png`);
-      ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
-    } catch (err) {
-      ctx.strokeStyle = '#ffd700';
-      ctx.lineWidth = 6;
-      ctx.strokeRect(25, 25, 750, 370);
-    }
+  try {
+    const framePath = path.join(
+      process.cwd(),
+      'src',
+      'assets',
+      'frames',
+      `${item.id}.png`
+    );
+
+    console.log(
+      '[MOLDURA]',
+      framePath
+    );
+
+    const frame = await loadImage(
+      framePath
+    );
+
+    ctx.drawImage(
+      frame,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+  } catch (err) {
+    console.error(
+      '[MOLDURA ERRO]',
+      err
+    );
+
+    ctx.strokeStyle = '#ffd700';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(
+      25,
+      25,
+      750,
+      370
+    );
+  }
   }
 
   /* =========================
      BADGE (IMAGEM NA PREVIEW)
   ========================= */
   if (item.tipo.startsWith('badge')) {
-    try {
-      const badgeImg = await loadImage(`assets/badges/${item.id}.png`);
-      ctx.drawImage(badgeImg, 220, 220, 40, 40);
-      ctx.fillStyle = '#ffd700';
-      ctx.font = '20px Arial';
-      ctx.fillText(`🏅 Adicionado ao perfil`, 270, 250);
-    } catch (err) {
-      ctx.fillStyle = '#ffd700';
-      ctx.font = '20px Arial';
-      ctx.fillText(`🏅 Será exibido no !meuperfil`, 220, 250);
-    }
+  try {
+    const badgePath = path.join(
+      process.cwd(),
+      'src',
+      'assets',
+      'badges',
+      `${item.id}.png`
+    );
+
+    const badgeImg = await loadImage(badgePath);
+
+    ctx.drawImage(
+      badgeImg,
+      220,
+      220,
+      64,
+      64
+    );
+
+    ctx.fillStyle = '#ffd700';
+    ctx.font = '20px Arial';
+    ctx.fillText(
+      'Badge equipada no perfil',
+      300,
+      260
+    );
+  } catch (err) {
+    console.error('[BADGE]', err);
   }
+      }
 
   /* =========================
      EFEITO (IMAGEM REAL NA PREVIEW)
   ========================= */
-  if (item.tipo === 'efeito') {
-    try {
-      const efeitoImg = await loadImage(`assets/frames/${item.id}.png`);
-      ctx.globalAlpha = 0.8;
-      ctx.drawImage(efeitoImg, 0, 0, canvas.width, canvas.height);
-      ctx.globalAlpha = 1;
-    } catch (err) {
-      for (let i = 0; i < 15; i++) {
-        ctx.fillStyle = '#00ff88';
-        ctx.fillRect(Math.random() * 800, Math.random() * 420, 2, 2);
-      }
-    }
-  }
+if (item.tipo === 'efeito') {
+  try {
+    const efeitoPath = path.join(
+      process.cwd(),
+      'src',
+      'assets',
+      'effects',
+      `${item.id}.png`
+    );
 
+    const efeitoImg = await loadImage(
+      efeitoPath
+    );
+
+    ctx.globalAlpha = 0.85;
+
+    ctx.drawImage(
+      efeitoImg,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+    ctx.globalAlpha = 1;
+  } catch (err) {
+    console.error('[EFEITO]', err);
+  }
+}
   return canvas.toBuffer('image/png');
 }
 
