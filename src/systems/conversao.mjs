@@ -11,15 +11,15 @@ export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
 
-    const cfg = configs.get(msg.guild.id);
+    const cfg = await configs.findOne({ guildId: msg.guild.id });
     const prefixo = cfg?.prefixo || '!';
     if (!msg.content.startsWith(prefixo)) return;
 
     const args = msg.content.slice(prefixo.length).trim().split(/\s+/);
     const cmd = args.shift().toLowerCase();
 
-    const robuxBase = cfg?.robuxBase || 1000;
-    const valorBase = cfg?.valorBase || 38;
+    const robuxBase = cfg?.robuxBase ?? 1000;
+    const valorBase = cfg?.valorBase ?? 38;
 
     // =========================
     // ROBUX -> BRL
@@ -39,21 +39,9 @@ export function register(client, configs) {
         .setTitle('💰 Conversão Robux → BRL')
         .setDescription(`**${robux.toLocaleString('pt-BR')} Robux**`)
         .addFields(
-          {
-            name: '💵 Valor em reais',
-            value: `R$ ${valorBRL.toFixed(2)}`,
-            inline: true
-          },
-          {
-            name: '🎮 Gamepass necessária',
-            value: `${valorGamepass.toLocaleString('pt-BR')} Robux`,
-            inline: true
-          },
-          {
-            name: '📊 Taxa base',
-            value: `${robuxBase.toLocaleString('pt-BR')} Robux = R$${valorBase.toFixed(2)}`,
-            inline: false
-          }
+          { name: '💵 Valor em reais', value: `R$ ${valorBRL.toFixed(2)}`, inline: true },
+          { name: '🎮 Gamepass necessária', value: `${valorGamepass.toLocaleString('pt-BR')} Robux`, inline: true },
+          { name: '📊 Taxa base', value: `${robuxBase.toLocaleString('pt-BR')} Robux = R$${valorBase.toFixed(2)}` }
         )
         .setFooter({ text: 'Roblox aplica ~30% de taxa em gamepasses' });
 
@@ -99,9 +87,7 @@ export function register(client, configs) {
           new EmbedBuilder()
             .setColor(0x00a2ff)
             .setTitle('📊 Taxa Atual')
-            .setDescription(
-              `**${robuxBase.toLocaleString('pt-BR')} Robux = R$${valorBase.toFixed(2)}**`
-            )
+            .setDescription(`**${robuxBase.toLocaleString('pt-BR')} Robux = R$${valorBase.toFixed(2)}**`)
         ]
       });
     }
@@ -118,20 +104,20 @@ export function register(client, configs) {
       }
 
       const min = v1;
-      const max = !Number.isNaN(v2) ? v2 : v1 * 10;
+      const max = Number.isNaN(v2) ? v1 * 10 : v2;
 
       const steps = gerarSteps(min, max);
-
-      const linhas = steps.map(
-        r => `**${r.toLocaleString('pt-BR')}** Robux → **R$${((r / robuxBase) * valorBase).toFixed(2)}**`
-      );
 
       return msg.reply({
         embeds: [
           new EmbedBuilder()
             .setColor(0x00a2ff)
             .setTitle('📋 Simulação')
-            .setDescription(linhas.join('\n'))
+            .setDescription(
+              steps.map(r =>
+                `**${r.toLocaleString('pt-BR')}** Robux → **R$${((r / robuxBase) * valorBase).toFixed(2)}**`
+              ).join('\n')
+            )
         ]
       });
     }
@@ -147,35 +133,17 @@ export function register(client, configs) {
         return msg.reply({ embeds: [embedErro('Use: `!meta <saldo> <meta>`')] });
       }
 
-      if (saldo >= meta) {
-        const excedente = saldo - meta;
-
-        return msg.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor(0x2ecc71)
-              .setTitle('🎯 Meta de Robux')
-              .setDescription('🎉 Você já atingiu sua meta!')
-              .addFields({
-                name: '📈 Excedente',
-                value: `${excedente} Robux`,
-                inline: true
-              })
-          ]
-        });
-      }
-
-      const falta = meta - saldo;
+      const diff = meta - saldo;
 
       return msg.reply({
         embeds: [
           new EmbedBuilder()
-            .setColor(0x00a2ff)
+            .setColor(diff <= 0 ? 0x2ecc71 : 0x00a2ff)
             .setTitle('🎯 Meta de Robux')
-            .setDescription('📊 Progresso da meta')
+            .setDescription(diff <= 0 ? '🎉 Meta atingida!' : '📊 Progresso da meta')
             .addFields({
-              name: '❌ Falta',
-              value: `${falta} Robux`,
+              name: diff <= 0 ? '📈 Excedente' : '❌ Falta',
+              value: `${Math.abs(diff)} Robux`,
               inline: true
             })
         ]
@@ -183,7 +151,7 @@ export function register(client, configs) {
     }
 
     // =========================
-    // SETTAXA
+    // SETTAXA (CORRIGIDO)
     // =========================
     if (cmd === 'settaxa') {
       if (!isAdmin(msg.member, cfg)) {
@@ -194,30 +162,36 @@ export function register(client, configs) {
       const valor = Number(args[1]?.replace(',', '.'));
 
       if (Number.isNaN(robux) || Number.isNaN(valor)) {
-        return msg.reply({
-          embeds: [embedErro('Use: `!settaxa <robux> <valor>`')]
-        });
+        return msg.reply({ embeds: [embedErro('Use: `!settaxa <robux> <valor>`')] });
       }
 
       await Config.findOneAndUpdate(
         { guildId: msg.guild.id },
         {
-          $set: { robuxBase: robux, valorBase: valor },
+          $set: {
+            robuxBase: robux,
+            valorBase: valor,
+            taxa: robux,
+            updatedAt: new Date().toISOString()
+          },
           $push: {
             taxaHistorico: {
               robux,
               valor,
               adminId: msg.author.id,
-              data: new Date()
+              data: new Date().toISOString()
             }
           }
         },
         { upsert: true }
       );
 
+      // atualiza cache local (sem duplicar push)
       if (cfg) {
         cfg.robuxBase = robux;
         cfg.valorBase = valor;
+        cfg.taxa = robux;
+        cfg.taxaHistorico = cfg.taxaHistorico || [];
       }
 
       await registrarLog(client, msg.guild.id, 'admin', msg.author.id, {
@@ -237,7 +211,7 @@ export function register(client, configs) {
 }
 
 // =========================
-// HELPERS (fora do register)
+// HELPERS
 // =========================
 function gerarSteps(min, max) {
   const qtd = 8;
