@@ -25,6 +25,7 @@ import { register as regAntiAbuso,       comandos as cAntiAbuso       } from './
 import { register as regEstatisticas,    comandos as cEstatisticas    } from './systems/estatisticas.mjs';
 import { register as regGenero,          comandos as cGenero          } from './systems/genero.mjs';
 import { register as regMeuPerfil,       comandos as cMeuPerfil       } from './systems/meuperfil.mjs';
+import { register as regInventario, comandos as cInventario } from './systems/inventario.mjs';
 
 const configs = new Map();
 
@@ -55,6 +56,7 @@ const visual = {
   Estatísticas:        { emoji: '📊', cor: 0x2980b9 },
   Gênero:              { emoji: '⚧️', cor: 0xe056fd },
   'Meu Perfil':        { emoji: '👤', cor: 0x5865f2 },
+   Inventário: { emoji: '🎒', cor: 0x00d4ff },
 };
 
 /* =========================
@@ -126,6 +128,7 @@ export async function loadSystems(client) {
       ['Estatísticas',        regEstatisticas,    cEstatisticas],
       ['Gênero',              regGenero,          cGenero],
       ['Meu Perfil',          regMeuPerfil,       cMeuPerfil],
+       ['Inventário', regInventario, cInventario],
     ];
 
     let ok = 0;
