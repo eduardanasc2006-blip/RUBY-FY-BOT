@@ -1,6 +1,5 @@
 import { AttachmentBuilder } from "discord.js";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
-import { Op } from "sequelize";
 
 import { embedErro } from "../utils/embeds.mjs";
 import { isDBConnected } from "../utils/dbGuard.mjs";
@@ -51,6 +50,7 @@ async function pegarGenero(userId, guildId) {
   if (!isDBConnected()) return null;
 
   try {
+    // Compatível com seu modelo (funciona tanto com better-sqlite3 quanto com Sequelize-style)
     const u = await Usuario.findOne({
       where: { userId, guildId },
       attributes: ["genero"]
@@ -62,20 +62,19 @@ async function pegarGenero(userId, guildId) {
   }
 }
 
+// ✅ CORRIGIDO: Removido Sequelize/Op, consulta compatível com better-sqlite3
 async function verificarCasal(u1, u2, guildId) {
   try {
-    const casal = await Casamento.findOne({
-      where: {
-        guildId,
-        ativo: true,
-        [Op.or]: [
-          { userId1: u1.id, userId2: u2.id },
-          { userId1: u2.id, userId2: u1.id }
-        ]
-      }
+    // Verifica as duas possíveis ordens dos IDs
+    const condicao1 = await Casamento.findOne({
+      where: { guildId, ativo: true, userId1: u1.id, userId2: u2.id }
     });
 
-    return !!casal;
+    const condicao2 = await Casamento.findOne({
+      where: { guildId, ativo: true, userId1: u2.id, userId2: u1.id }
+    });
+
+    return !!(condicao1 || condicao2);
   } catch {
     return false;
   }
@@ -125,7 +124,7 @@ async function gerarImagemShip(u1, u2, pct, casados, cor1, cor2) {
     roundRect(ctx, 80, 60, 660, 400, 20);
     ctx.fill();
 
-    // AVATARES (COM FALLBACK CORRIGIDO)
+    // AVATARES (COM FALLBACK SEGURO, sem erros de tipo)
     const avatar1 = u1.displayAvatarURL({ extension: "png", size: 256, forceStatic: true });
     const avatar2 = u2.displayAvatarURL({ extension: "png", size: 256, forceStatic: true });
 
@@ -134,12 +133,12 @@ async function gerarImagemShip(u1, u2, pct, casados, cor1, cor2) {
     try {
       [img1, img2] = await Promise.all([loadImage(avatar1), loadImage(avatar2)]);
     } catch {
-      // ✅ Fallback seguro: usa avatar padrão válido ou cria cor sólida
+      // ✅ Fallback 1: avatar padrão do Discord
       try {
-        const fallback = "https://cdn.discordapp.com/embed/avatars/1.png";
+        const fallback = "https://cdn.discordapp.com/embed/avatars/2.png";
         img1 = img2 = await loadImage(fallback);
       } catch {
-        // Último recurso: cria um quadrado cinza sólido
+        // ✅ Fallback 2: cor sólida (não depende de URL externa)
         const fallbackCanvas = createCanvas(AVATAR_SIZE, AVATAR_SIZE);
         const fCtx = fallbackCanvas.getContext("2d");
         fCtx.fillStyle = "#2f3136";
@@ -245,7 +244,7 @@ async function gerarImagemShip(u1, u2, pct, casados, cor1, cor2) {
   }
 }
 
-// ✅ ADICIONADO: Lista de comandos para o loader
+// ✅ LISTA DE COMANDOS PARA O LOADER
 export const comandos = [
   {
     cmd: '!ship',
@@ -253,7 +252,7 @@ export const comandos = [
   }
 ];
 
-// ✅ REGISTER ORIGINAL
+// ✅ REGISTER
 export function register(client, configs) {
   if (client.__ship) return;
   client.__ship = true;
