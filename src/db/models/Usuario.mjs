@@ -2,10 +2,7 @@ import { makeModel } from '../sqlite.mjs';
 
 export default makeModel('usuarios', {
   jsonFields: [
-    'titulos',
     'inventario',
-    'badges',
-    'efeitos',
     'quiz'
   ],
 
@@ -25,17 +22,13 @@ export default makeModel('usuarios', {
 
     // Perfil
     fundo: 'padrao',
-    tema: 'claro',
     moldura: 'padrao',
 
     tituloEquipado: null,
     badgeEquipado: null,
     efeitoEquipado: null,
 
-    // Títulos
-    titulos: [],
-
-    // Inventário
+    // Inventário de cosméticos
     inventario: {
       fundos: ['padrao'],
       molduras: ['padrao'],
@@ -44,9 +37,9 @@ export default makeModel('usuarios', {
       badges: []
     },
 
-    // Coleções
-    badges: [],
-    efeitos: [],
+    // Social
+    reputacoes: 0,
+    casadoCom: null,
 
     // Quiz
     quiz: {
