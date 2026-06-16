@@ -293,7 +293,7 @@ export async function lojaCommand(message) {
         });
       }
 
-      // ✅ GARANTE INVENTÁRIO SEMPRE
+      // ✅ GARANTE INVENTÁRIO SEMPRE (compatível com o inventário que ajustamos)
       user.inventario = user.inventario || {};
       const tipo = aba;
       user.inventario[tipo] = user.inventario[tipo] || [];
@@ -328,10 +328,40 @@ export async function lojaCommand(message) {
     }
   });
 
-  // ⏳ FIM DO TEMPO
-  collector.on('end', async () => {
-    try {
-      await msg.edit({ components: [] });
-    } catch {}
+  // ⏳ FIM DO TEMPO (tratamento de erro seguro)
+  collector.on('end', () => {
+    msg.edit({ components: [] }).catch(() => {});
+  });
+}
+
+// ✅ Comandos e registro adicionados
+export const comandos = [
+  {
+    cmd: '!loja',
+    desc: 'Abre a loja de itens visuais'
+  }
+];
+
+export function register(client, configs) {
+  if (client.__lojaRegistrada) return;
+  client.__lojaRegistrada = true;
+
+  client.on('messageCreate', async (message) => {
+    if (!message.guild || message.author.bot) return;
+
+    const cfg = configs.get(message.guild.id);
+    const prefixo = cfg?.prefixo || '!';
+
+    if (!message.content.startsWith(prefixo)) return;
+
+    const cmd = message.content
+      .slice(prefixo.length)
+      .trim()
+      .split(/\s+/)[0]
+      .toLowerCase();
+
+    if (cmd === 'loja') {
+      return lojaCommand(message);
+    }
   });
 }
