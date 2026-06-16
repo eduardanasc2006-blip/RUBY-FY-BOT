@@ -13,17 +13,32 @@ export async function meuperfil(message) {
     return message.reply('❌ Usuário não encontrado.');
   }
 
-  // 🔹 2. Garante valores padrão (evita crash no canvas)
+  // 🔹 2. Monta objeto completo para o canvas
   const safeUser = {
-    ...user,
+    // dados brutos do banco
+    ...user.toObject?.() || user,
+
+    // 🎯 identidade visual
+    avatar: message.author.displayAvatarURL({ extension: 'png', size: 256 }),
+
+    // 🎮 economia / level
+    nivel: user.nivel ?? 1,
+    xpDisponivel: user.xpDisponivel ?? 0,
+    xpTotal: user.xpTotal ?? 0,
+    reputacoes: user.reputacoes ?? 0,
+
+    // 🎨 cosméticos
     moldura: user.moldura ?? 'padrao',
     fundo: user.fundo ?? 'padrao',
     efeitoEquipado: user.efeitoEquipado ?? null,
     badgeEquipado: user.badgeEquipado ?? null,
-    nivel: user.nivel ?? 1,
-    xpDisponivel: user.xpDisponivel ?? 0,
-    xpTotal: user.xpTotal ?? 0,
-    reputacoes: user.reputacoes ?? 0
+    titulo: user.tituloEquipado ?? 'Sem título',
+
+    // 💞 social
+    casadoCom: user.casadoCom ?? 'Nenhum',
+
+    // 🏅 conquistas
+    badges: user.inventario?.badges || []
   };
 
   // 🔹 3. Gera imagem do perfil
