@@ -1,429 +1,268 @@
-import { createCanvas } from '@napi-rs/canvas';
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import Usuario from '../db/models/Usuario.mjs';
-import { fundos, molduras, efeitos, badges } from '../systems/perfilConfig.mjs';
 
-// ==================================================
-// 🔧 FUNÇÕES BASE DO SISTEMA
-// ==================================================
+// 🗺️ MAPAS FIXOS
+const mapaInventario = {
+  moldura: 'molduras',
+  fundo: 'fundos',
+  efeito: 'efeitos',
+  badge: 'badges',
+  titulo: 'titulos'
+};
 
-/**
- * 🔹 Busca usuário seguro (funciona com mensagem OU interação)
- */
+const mapaCampoEquipado = {
+  moldura: 'moldura',
+  fundo: 'fundo',
+  efeito: 'efeitoEquipado',
+  badge: 'badgeEquipado',
+  titulo: 'tituloEquipado'
+};
+
+const categoriasValidas = Object.keys(mapaInventario);
+const itensPorPagina = 6;
+const TEMPO_DEBOUNCE = 800;
+
+// 💾 CACHE
+const cacheUsuario = new Map();
+const ultimoClique = new Map();
+
+// =========================
+// GET USER (SEQUELIZE SQLITE)
+// =========================
 export async function getUser(origem) {
-  return await Usuario.findOne({
-    userId: origem.user?.id || origem.author.id,
-    guildId: origem.guild.id
+  if (!origem) return null;
+
+  const userId = origem.user?.id || origem.author?.id;
+  const guildId = origem.guild?.id;
+  const key = `${userId}:${guildId}`;
+
+  if (cacheUsuario.has(key)) return cacheUsuario.get(key);
+
+  const user = await Usuario.findOne({
+    where: { userId, guildId }
   });
+
+  if (user) cacheUsuario.set(key, user);
+
+  return user;
 }
 
-/**
- * 🔹 Garante estrutura completa do inventário
- * ✅ Agora com validação forte e consistência
- */
+// =========================
+// LIMPAR CACHE
+// =========================
+export function limparCache(userId, guildId) {
+  cacheUsuario.delete(`${userId}:${guildId}`);
+}
+
+// =========================
+// INVENTÁRIO SEGURO
+// =========================
 export function garantirInventario(user) {
-  user.inventario = user.inventario || {
-    fundos: [],
-    molduras: [],
-    efeitos: [],
-    badges: [],
-    titulos: []
-  };
+  if (!user) return null;
 
-  // Garante que nenhum campo seja undefined
-  user.inventario.fundos = Array.isArray(user.inventario.fundos) ? user.inventario.fundos : [];
-  user.inventario.molduras = Array.isArray(user.inventario.molduras) ? user.inventario.molduras : [];
-  user.inventario.efeitos = Array.isArray(user.inventario.efeitos) ? user.inventario.efeitos : [];
-  user.inventario.badges = Array.isArray(user.inventario.badges) ? user.inventario.badges : [];
-  user.inventario.titulos = Array.isArray(user.inventario.titulos) ? user.inventario.titulos : [];
+  let inv = user.inventario;
 
-  return user.inventario;
+  if (typeof inv === 'string') {
+    try {
+      inv = JSON.parse(inv);
+    } catch {
+      inv = {};
+    }
+  }
+
+  inv = inv || {};
+
+  for (const campo of Object.values(mapaInventario)) {
+    if (!Array.isArray(inv[campo])) inv[campo] = [];
+  }
+
+  // salva de volta no model
+  user.inventario = JSON.stringify(inv);
+
+  return inv;
 }
 
-/**
- * 🔥 SISTEMA EQUIPAR / DESEQUIPAR (TOGGLE)
- * ✅ 1 por vez → substitui antigo
- * ✅ Clicar novamente → desequipa
- * ✅ Validação de tipo FORTE
- */
+// =========================
+// EQUIPAR / DESEQUIPAR
+// =========================
 export async function equiparItem(user, tipo, itemId) {
-  // ✅ FIX 3: VALIDAÇÃO DE TIPO FORTE
-  const tiposPermitidos = ['moldura', 'fundo', 'efeito', 'badge', 'titulo'];
-  if (!tiposPermitidos.includes(tipo)) {
-    return { ok: false, msg: '❌ Tipo inválido! Use: moldura, fundo, efeito, badge, titulo' };
+  if (!categoriasValidas.includes(tipo)) {
+    return { ok: false, msg: '❌ Tipo inválido.' };
   }
+
+  if (!user || !itemId) {
+    return { ok: false, msg: '❌ Dados inválidos.' };
+  }
+
+  itemId = String(itemId).toLowerCase().trim();
 
   const inv = garantirInventario(user);
+  if (!inv) return { ok: false, msg: '❌ Inventário inválido.' };
 
-  const slots = {
-    moldura: 'moldura',
-    fundo: 'fundo',
-    efeito: 'efeitoEquipado',
-    badge: 'badgeEquipado',
-    titulo: 'tituloEquipado'
-  };
+  const lista = inv[mapaInventario[tipo]] || [];
 
-  const inventarioMap = {
-    moldura: inv.molduras,
-    fundo: inv.fundos,
-    efeito: inv.efeitos,
-    badge: inv.badges,
-    titulo: inv.titulos
-  };
-
-  const campoUser = slots[tipo];
-  const listaItens = inventarioMap[tipo];
-
-  if (!listaItens || !listaItens.includes(itemId)) {
-    return { ok: false, msg: '❌ Você não possui esse item' };
+  if (!lista.includes(itemId)) {
+    return { ok: false, msg: '❌ Você não possui esse item.' };
   }
 
-  // LÓGICA PRINCIPAL
-  if (user[campoUser] === itemId) {
-    user[campoUser] = null;
-    await user.save();
-    return { ok: true, msg: `❎ Desequipado: ${tipo} → ${itemId}` };
-  }
+  const campo = mapaCampoEquipado[tipo];
+  const jaEquipado = user[campo] === itemId;
 
-  user[campoUser] = itemId;
+  user[campo] = jaEquipado ? null : itemId;
+
   await user.save();
-  return { ok: true, msg: `✅ Equipado: ${tipo} → ${itemId}` };
-}
+  limparCache(user.userId, user.guildId);
 
-/**
- * ⚡ NOVO: COMANDO DESEQUIPAR GLOBAL
- */
-export async function desequiparTodos(user, tipo) {
-  const tiposPermitidos = ['moldura', 'fundo', 'efeito', 'badge', 'titulo'];
-  if (!tiposPermitidos.includes(tipo)) {
-    return { ok: false, msg: '❌ Tipo inválido!' };
-  }
-
-  const slots = {
-    moldura: 'moldura',
-    fundo: 'fundo',
-    efeito: 'efeitoEquipado',
-    badge: 'badgeEquipado',
-    titulo: 'tituloEquipado'
+  return {
+    ok: true,
+    msg: jaEquipado
+      ? `❎ Desequipado: **${itemId}**`
+      : `✅ Equipado: **${itemId}**`
   };
-
-  const campo = slots[tipo];
-  if (!user[campo]) {
-    return { ok: true, msg: `ℹ️ Nenhum(a) ${tipo} estava equipado(a).` };
-  }
-
-  user[campo] = null;
-  await user.save();
-  return { ok: true, msg: `✅ Todos os itens do tipo ${tipo} foram desequipados.` };
 }
 
-// ==================================================
-// 🎨 PERFIL CANVAS (VERSÃO FINAL + NOVAS FUNÇÕES)
-// ==================================================
-
-export async function gerarPerfil(user, avatarURL = null) {
-  // NORMALIZAÇÃO SEGURA
-  const molduraId = user.moldura ?? 'padrao';
-  const fundoId = user.fundo ?? 'padrao';
-  const efeitoId = user.efeitoEquipado ?? null;
-  const badgeId = user.badgeEquipado ?? null;
-  const tituloId = user.tituloEquipado ?? null; // ✅ Adicionado título
-
-  const canvas = createCanvas(900, 300);
-  const ctx = canvas.getContext('2d');
-
-  // ACESSO SEGURO AOS ITENS
-  const fundo = fundos[fundoId] || fundos.padrao;
-  const badge = badges[badgeId] || null;
-  const efeitoValido = efeitos[efeitoId] ? efeitoId : null;
-
-  // 1. FUNDO
-  if (fundo.tipo === 'cor') {
-    ctx.fillStyle = fundo.valor;
-    ctx.fillRect(0, 0, 900, 300);
-  }
-  if (fundo.tipo === 'gradiente') {
-    const grad = ctx.createLinearGradient(0, 0, 900, 300);
-    grad.addColorStop(0, fundo.cores[0]);
-    grad.addColorStop(1, fundo.cores[1]);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 900, 300);
-  }
-
-  // 2. EFEITO (ORDEM VISUAL CORRETA + SÓ SE EXISTIR)
-  if (efeitoValido === 'aurora') {
-    ctx.fillStyle = 'rgba(138, 43, 226, 0.15)';
-    ctx.fillRect(0, 0, 900, 300);
-  }
-  if (efeitoValido === 'neve') {
-    ctx.fillStyle = 'rgba(173, 216, 230, 0.12)';
-    ctx.fillRect(0, 0, 900, 300);
-  }
-  if (efeitoValido === 'raios') {
-    ctx.fillStyle = 'rgba(255,255,255,0.08)';
-    ctx.fillRect(0, 0, 900, 300);
-  }
-
-  // 3. OVERLAY ESCURO
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  ctx.fillRect(30, 30, 840, 240);
-
-  // 4. AVATAR REAL DO DISCORD (✅ ADICIONADO)
-  const avatarX = 60;
-  const avatarY = 70;
-  const avatarSize = 160;
-
-  if (avatarURL) {
-    try {
-      const img = await loadImage(avatarURL);
-      ctx.drawImage(img, avatarX, avatarY, avatarSize, avatarSize);
-    } catch {
-      ctx.fillStyle = '#2b2d31';
-      ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 20px Sans-serif';
-      ctx.fillText('ERRO', avatarX + 45, avatarY + 85);
-    }
-  } else {
-    ctx.fillStyle = '#2b2d31';
-    ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 20px Sans-serif';
-    ctx.fillText('AVATAR', avatarX + 45, avatarY + 85);
-  }
-
-  // 5. MOLDURA
-  ctx.shadowColor = 'transparent';
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = '#ffffff';
-
-  if (molduraId === 'ouro') { ctx.strokeStyle = '#ffd700'; ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 20; }
-  if (molduraId === 'neon') { ctx.strokeStyle = '#00d4ff'; ctx.shadowColor = '#00d4ff'; ctx.shadowBlur = 25; }
-  if (molduraId === 'gelo') { ctx.strokeStyle = '#66ccff'; ctx.shadowColor = '#66ccff'; ctx.shadowBlur = 15; }
-  if (molduraId === 'sombria') { ctx.strokeStyle = '#8b5cf6'; ctx.shadowColor = '#8b5cf6'; ctx.shadowBlur = 25; }
-  if (molduraId === 'galaxia') { ctx.strokeStyle = '#ffffff'; ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 30; }
-
-  ctx.lineWidth = 6;
-  ctx.strokeRect(avatarX, avatarY, avatarSize, avatarSize);
-  ctx.shadowBlur = 0;
-
-  // 6. TÍTULO (✅ ADICIONADO NO PERFIL)
-  if (tituloId) {
-    ctx.fillStyle = '#ffd700';
-    ctx.font = 'bold 22px Sans-serif';
-    ctx.fillText(`📛 ${tituloId.toUpperCase()}`, 260, 70);
-  }
-
-  // 7. TEXTO
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 28px Sans-serif';
-  ctx.fillText(`Nível ${user.nivel || 1}`, 260, 100);
-  ctx.font = '20px Sans-serif';
-  ctx.fillText(`XP: ${user.xpDisponivel || 0}`, 260, 140);
-  ctx.fillText(`Total XP: ${user.xpTotal || 0}`, 260, 170);
-  ctx.fillText(`Reputação: ${user.reputacoes || 0}`, 260, 200);
-
-  // 8. BADGE (SEM REDUNDÂNCIA + FALLBACK SEGURO)
-  if (badge) {
-    ctx.font = '28px Sans-serif';
-    const icones = { estrela: '⭐', fogo: '🔥', coroa: '👑', rico: '💎', veterano: '🎖️', quiz: '🧠', lendario: '🏆', casal: '💞' };
-    const icone = icones[badgeId] || '🏅';
-    ctx.fillText(icone, 780, 70);
-  }
-
-  return canvas.toBuffer('image/png');
-}
-
-// ==================================================
-// ⚙️ COMANDOS
-// ==================================================
-
-/**
- * 📌 COMANDO !MEUPERFIL
- */
-export async function meuperfil(message) {
-  const user = await getUser(message);
-  if (!user) return message.reply('❌ Usuário não cadastrado.');
-
-  // DEFAULTS SEGUROS
-  user.moldura = user.moldura ?? 'padrao';
-  user.fundo = user.fundo ?? 'padrao';
-  user.efeitoEquipado = user.efeitoEquipado ?? null;
-  user.badgeEquipado = user.badgeEquipado ?? null;
-  user.tituloEquipado = user.tituloEquipado ?? null;
-
-  // ✅ Avatar real do Discord
-  const avatarURL = message.author.displayAvatarURL({ format: 'png', size: 256 });
-  const img = await gerarPerfil(user, avatarURL);
-
-  return message.channel.send({ files: [{ attachment: img, name: 'perfil.png' }] });
-}
-
-/**
- * 📌 COMANDO !EQUIPAR (TEXTO)
- */
-export async function equipar(message, args) {
-  const tipo = args[0]?.toLowerCase();
-  const itemId = args[1]?.toLowerCase();
-
-  if (!tipo || !itemId) {
-    return message.reply('❌ Uso: `!equipar <tipo> <item>`\nEx: `!equipar moldura ouro`');
-  }
-
-  const user = await getUser(message);
-  if (!user) return message.reply('❌ Usuário não encontrado.');
-
-  const res = await equiparItem(user, tipo, itemId);
-  return message.reply(res.msg);
-}
-
-/**
- * 📌 NOVO COMANDO !DESEQUIPAR
- */
-export async function desequipar(message, args) {
-  const tipo = args[0]?.toLowerCase();
-
-  if (!tipo) {
-    return message.reply('❌ Uso: `!desequipar <tipo>`\nEx: `!desequipar moldura`');
-  }
-
-  const user = await getUser(message);
-  if (!user) return message.reply('❌ Usuário não encontrado.');
-
-  const res = await desequiparTodos(user, tipo);
-  return message.reply(res.msg);
-}
-
-/**
- * 📦 COMANDO !INVENTARIO (COM BOTÕES + CORREÇÕES GRAVES)
- */
+// =========================
+// INVENTÁRIO PAGINADO
+// =========================
 export async function inventario(message) {
-  // ✅ FIX 4: SEMPRE BUSCA USUÁRIO ATUALIZADO
-  let user = await Usuario.findOne({
-    userId: message.author.id,
-    guildId: message.guild.id
-  });
+  const user = await getUser(message);
   if (!user) return message.reply('❌ Usuário não cadastrado.');
 
-  let inv = garantirInventario(user);
+  const estado = {
+    tipo: 'moldura',
+    pagina: 0
+  };
 
-  const embed = new EmbedBuilder()
-    .setTitle('🎒 SEU INVENTÁRIO')
-    .setDescription('Clique nas categorias para ver e equipar')
-    .setColor('#00d4ff');
+  const renderInv = () => garantirInventario(user);
 
-  const botoes = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('inv_moldura').setLabel('🪟 Molduras').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('inv_fundo').setLabel('🎨 Fundos').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId('inv_efeito').setLabel('✨ Efeitos').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('inv_badge').setLabel('🏅 Badges').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId('inv_titulo').setLabel('📛 Títulos').setStyle(ButtonStyle.Primary)
-  );
+  function getLista() {
+    const inv = renderInv();
+    return inv[mapaInventario[estado.tipo]] || [];
+  }
 
-  const msg = await message.channel.send({ embeds: [embed], components: [botoes] });
-  const coletor = msg.createMessageComponentCollector({ time: 600000 });
+  function maxPagina() {
+    return Math.max(0, Math.ceil(getLista().length / itensPorPagina) - 1);
+  }
 
-  coletor.on('collect', async (interacao) => {
-    if (interacao.user.id !== message.author.id) return;
+  function estaEquipado(item) {
+    return user[mapaCampoEquipado[estado.tipo]] === item;
+  }
 
-    const tipo = interacao.customId.replace('inv_', '');
+  function gerarEmbed() {
+    const lista = getLista();
+    const inicio = estado.pagina * itensPorPagina;
+    const itens = lista.slice(inicio, inicio + itensPorPagina);
 
-    // ✅ FIX 1: MAPEAMENTO SEGURO (sem erro de plural)
-    const mapaTipos = {
-      moldura: 'molduras',
-      fundo: 'fundos',
-      efeito: 'efeitos',
-      badge: 'badges',
-      titulo: 'titulos'
-    };
-    const lista = inv[mapaTipos[tipo]] || [];
+    return new EmbedBuilder()
+      .setTitle(`🎒 Inventário - ${estado.tipo.toUpperCase()}`)
+      .setDescription(
+        itens.length
+          ? itens.map(i => `${estaEquipado(i) ? '✅' : '⬜'} \`${i}\``).join('\n')
+          : '❌ Sem itens'
+      )
+      .setFooter({ text: `Página ${estado.pagina + 1}/${maxPagina() + 1}` })
+      .setColor('#00d4ff');
+  }
 
-    if (!lista.length) {
-      return interacao.reply({ content: '❌ Você não tem itens dessa categoria', ephemeral: true });
-    }
+  function gerarBotoes() {
+    const lista = getLista().slice(
+      estado.pagina * itensPorPagina,
+      (estado.pagina + 1) * itensPorPagina
+    );
 
-    const row = new ActionRowBuilder();
-    lista.forEach(id => {
-      const equipado = (tipo === 'moldura' && user.moldura === id) ||
-                       (tipo === 'fundo' && user.fundo === id) ||
-                       (tipo === 'efeito' && user.efeitoEquipado === id) ||
-                       (tipo === 'badge' && user.badgeEquipado === id) ||
-                       (tipo === 'titulo' && user.tituloEquipado === id);
+    const rows = [];
+    let row = new ActionRowBuilder();
+
+    for (const item of lista) {
+      if (row.components.length === 5) {
+        rows.push(row);
+        row = new ActionRowBuilder();
+      }
+
+      const equipado = estaEquipado(item);
 
       row.addComponents(
         new ButtonBuilder()
-          .setCustomId(`equip_${tipo}_${id}`)
-          .setLabel(`${equipado ? '✅' : ''} ${id}`)
-          .setStyle(equipado ? ButtonStyle.Success : ButtonStyle.Secondary)
+          .setCustomId(`inv_${estado.tipo}_${item}`)
+          .setLabel(equipado ? `❌ ${item}` : `✅ ${item}`)
+          .setStyle(equipado ? ButtonStyle.Danger : ButtonStyle.Success)
       );
-    });
+    }
 
-    await interacao.reply({ content: `📦 ${tipo.toUpperCase()}`, components: [row], ephemeral: true });
-  });
-
-  coletor.on('end', () => {
-    msg.edit({ components: [] }).catch(() => {});
-  });
-}
-
-/**
- * 🎯 HANDLER DE BOTÕES (EQUIPAR REAL + MELHORIAS UX)
- */
-export async function handleBotoes(interacao) {
-  if (!interacao.customId.startsWith('equip_')) return;
-
-  const [_, tipo, itemId] = interacao.customId.split('_');
-
-  // ✅ FIX 2: RECARREGA USUÁRIO DO BANCO (dados sempre atualizados)
-  const user = await Usuario.findOne({
-    userId: interacao.user.id,
-    guildId: interacao.guild.id
-  });
-
-  if (!user) return interacao.reply({ content: '❌ Usuário não encontrado', ephemeral: true });
-
-  const res = await equiparItem(user, tipo, itemId);
-
-  if (res.ok) {
-    const avatarURL = interacao.user.displayAvatarURL({ format: 'png', size: 256 });
-    const img = await gerarPerfil(user, avatarURL);
-
-    return interacao.update({
-      content: `${res.msg}\n\n📌 Perfil atualizado:`,
-      files: [{ attachment: img, name: 'perfil.png' }],
-      components: interacao.message.components
-    });
+    if (row.components.length) rows.push(row);
+    return rows;
   }
 
-  return interacao.reply({ content: res.msg, ephemeral: true });
-}
+  function gerarNav() {
+    return new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('prev')
+        .setLabel('⬅️')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(estado.pagina === 0),
 
-// ==================================================
-// 🛒 SISTEMA DE LOJA (INÍCIO) - PRONTO PARA EXPANDIR
-// ==================================================
+      new ButtonBuilder()
+        .setLabel(`${estado.pagina + 1}/${maxPagina() + 1}`)
+        .setStyle(ButtonStyle.Primary)
+        .setDisabled(true),
 
-/**
- * 🛒 EXEMPLO DE FUNÇÃO PARA ADICIONAR ITEM AO INVENTÁRIO
- * (Usado pela loja, recompensas, etc.)
- */
-export async function adicionarAoInventario(user, tipo, itemId) {
-  const mapaTipos = {
-    moldura: 'molduras',
-    fundo: 'fundos',
-    efeito: 'efeitos',
-    badge: 'badges',
-    titulo: 'titulos'
-  };
-
-  const chave = mapaTipos[tipo];
-  if (!chave) return { ok: false, msg: 'Tipo inválido' };
-
-  const inv = garantirInventario(user);
-  if (!inv[chave].includes(itemId)) {
-    inv[chave].push(itemId);
-    await user.save();
-    return { ok: true, msg: `📦 Item adicionado: ${itemId}` };
+      new ButtonBuilder()
+        .setCustomId('next')
+        .setLabel('➡️')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(estado.pagina >= maxPagina())
+    );
   }
 
-  return { ok: false, msg: 'ℹ️ Você já possui esse item.' };
+  function gerarCats() {
+    return new ActionRowBuilder().addComponents(
+      ...categoriasValidas.map(c =>
+        new ButtonBuilder()
+          .setCustomId(`cat_${c}`)
+          .setLabel(c.toUpperCase())
+          .setStyle(c === estado.tipo ? ButtonStyle.Success : ButtonStyle.Secondary)
+      )
+    );
+  }
+
+  const msg = await message.channel.send({
+    embeds: [gerarEmbed()],
+    components: [...gerarBotoes(), gerarNav(), gerarCats()]
+  });
+
+  const collector = msg.createMessageComponentCollector({ time: 600000 });
+
+  collector.on('collect', async (i) => {
+    if (i.user.id !== message.author.id) return;
+
+    const agora = Date.now();
+    const last = ultimoClique.get(i.user.id) || 0;
+    if (agora - last < TEMPO_DEBOUNCE) {
+      return i.reply({ content: '⏳ Aguarde...', ephemeral: true });
+    }
+    ultimoClique.set(i.user.id, agora);
+
+    if (i.customId === 'prev' && estado.pagina > 0) estado.pagina--;
+    if (i.customId === 'next' && estado.pagina < maxPagina()) estado.pagina++;
+
+    if (i.customId.startsWith('cat_')) {
+      estado.tipo = i.customId.replace('cat_', '');
+      estado.pagina = 0;
+    }
+
+    if (i.customId.startsWith('inv_')) {
+      const [, tipo, ...rest] = i.customId.split('_');
+      const item = rest.join('_');
+
+      const res = await equiparItem(user, tipo, item);
+      await i.reply({ content: res.msg, ephemeral: true });
+    }
+
+    return i.update({
+      embeds: [gerarEmbed()],
+      components: [...gerarBotoes(), gerarNav(), gerarCats()]
+    });
+  });
+
+  collector.on('end', () => msg.edit({ components: [] }).catch(() => {}));
 }
