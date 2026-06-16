@@ -5,6 +5,7 @@ import {
   EmbedBuilder
 } from 'discord.js';
 
+import Usuario from '../db/models/Usuario.mjs';
 import {
   molduras,
   efeitos,
@@ -19,49 +20,50 @@ const abas = {
   badges: '🏅 Badges'
 };
 
-function gerarLoja(aba) {
-  let lista = [];
-
+function getCatalogo(aba) {
   switch (aba) {
-    case 'molduras':
-      lista = Object.entries(molduras);
-      break;
-
-    case 'efeitos':
-      lista = Object.entries(efeitos);
-      break;
-
-    case 'fundos':
-      lista = Object.entries(fundos);
-      break;
-
-    case 'badges':
-      lista = Object.entries(badges);
-      break;
-
-    default:
-      lista = Object.entries(molduras);
+    case 'molduras': return molduras;
+    case 'efeitos': return efeitos;
+    case 'fundos': return fundos;
+    case 'badges': return badges;
+    default: return molduras;
   }
+}
 
-  const embed = new EmbedBuilder()
+function gerarLoja(aba) {
+  const catalogo = Object.entries(getCatalogo(aba)).slice(0, 5); // 🔥 limite 5 itens
+
+  return new EmbedBuilder()
     .setTitle(`🏪 Loja - ${abas[aba]}`)
     .setColor('#00d4ff')
     .setDescription(
-      lista
-        .map(([id, item]) => {
-          const preco = item.preco ?? '—';
-          const raridade = item.raridade ? ` | ${item.raridade}` : '';
+      catalogo.map(([id, item]) => {
+        const preco = item.preco ?? '—';
+        const raridade = item.raridade ? ` | ${item.raridade}` : '';
 
-          return `**${item.nome}** (\`${id}\`)${raridade}\n💰 Preço: ${preco}`;
-        })
-        .join('\n\n')
-    )
-    .setFooter({ text: 'Use os botões abaixo para navegar pela loja' });
-
-  return embed;
+        return `**${item.nome}** (\`${id}\`)${raridade}\n💰 ${preco} XP`;
+      }).join('\n\n')
+    );
 }
 
-function gerarBotoes() {
+function gerarBotoesItens(aba) {
+  const catalogo = Object.entries(getCatalogo(aba)).slice(0, 5);
+
+  const row = new ActionRowBuilder();
+
+  catalogo.forEach(([id, item]) => {
+    row.addComponents(
+      new ButtonBuilder()
+        .setCustomId(`buy_${aba}_${id}`)
+        .setLabel(item.nome)
+        .setStyle(ButtonStyle.Primary)
+    );
+  });
+
+  return row;
+}
+
+function gerarBotoesAbas() {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('loja_molduras')
@@ -83,38 +85,4 @@ function gerarBotoes() {
       .setLabel('Badges')
       .setStyle(ButtonStyle.Danger)
   );
-}
-
-export async function lojaCommand(message) {
-  let abaAtual = 'molduras';
-
-  const msg = await message.channel.send({
-    embeds: [gerarLoja(abaAtual)],
-    components: [gerarBotoes()]
-  });
-
-  const collector = msg.createMessageComponentCollector({
-    time: 10 * 60 * 1000
-  });
-
-  collector.on('collect', async (interaction) => {
-    if (!interaction.customId.startsWith('loja_')) return;
-    if (interaction.user.id !== message.author.id) return;
-
-    const aba = interaction.customId.replace('loja_', '');
-    abaAtual = aba;
-
-    await interaction.update({
-      embeds: [gerarLoja(abaAtual)],
-      components: [gerarBotoes()]
-    });
-  });
-
-  collector.on('end', async () => {
-    try {
-      await msg.edit({
-        components: []
-      });
-    } catch (err) {}
-  });
 }
