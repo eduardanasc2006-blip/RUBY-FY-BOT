@@ -100,11 +100,13 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
   ctx.lineTo(x + r, y + h);
   ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
   ctx.closePath();
 }
 
 /* =========================
-   IMAGE
+   IMAGEM SHIP
 ========================= */
 async function gerarImagemShip(u1, u2, pct, casados, cor1, cor2) {
   const canvas = createCanvas(W, H);
@@ -123,22 +125,47 @@ async function gerarImagemShip(u1, u2, pct, casados, cor1, cor2) {
     roundRect(ctx, 80, 60, 660, 400, 20);
     ctx.fill();
 
-    // AVATARES (SAFE)
+    // AVATARES (COM FALLBACK CORRIGIDO)
     const avatar1 = u1.displayAvatarURL({ extension: "png", size: 256, forceStatic: true });
     const avatar2 = u2.displayAvatarURL({ extension: "png", size: 256, forceStatic: true });
 
     let img1, img2;
 
     try {
-      [img1, img2] = await Promise.all([
-        loadImage(avatar1),
-        loadImage(avatar2)
-      ]);
+      [img1, img2] = await Promise.all([loadImage(avatar1), loadImage(avatar2)]);
     } catch {
-      const fallback = "https://cdn.discordapp.com/embed/avatars/0.png";
-      img1 = img2 = await loadImage(fallback);
+      // ✅ Fallback seguro: usa avatar padrão válido ou cria cor sólida
+      try {
+        const fallback = "https://cdn.discordapp.com/embed/avatars/1.png";
+        img1 = img2 = await loadImage(fallback);
+      } catch {
+        // Último recurso: cria um quadrado cinza sólido
+        const fallbackCanvas = createCanvas(AVATAR_SIZE, AVATAR_SIZE);
+        const fCtx = fallbackCanvas.getContext("2d");
+        fCtx.fillStyle = "#2f3136";
+        fCtx.fillRect(0, 0, AVATAR_SIZE, AVATAR_SIZE);
+        img1 = img2 = fallbackCanvas;
+      }
     }
 
+    // BRILHOS DINÂMICOS
+    ctx.beginPath();
+    ctx.arc(LEFT_X, Y, AVATAR_SIZE / 2 + 12, 0, Math.PI * 2);
+    const glow1 = ctx.createRadialGradient(LEFT_X, Y, 0, LEFT_X, Y, AVATAR_SIZE / 2 + 12);
+    glow1.addColorStop(0, cor1 + "60");
+    glow1.addColorStop(1, "transparent");
+    ctx.fillStyle = glow1;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(RIGHT_X, Y, AVATAR_SIZE / 2 + 12, 0, Math.PI * 2);
+    const glow2 = ctx.createRadialGradient(RIGHT_X, Y, 0, RIGHT_X, Y, AVATAR_SIZE / 2 + 12);
+    glow2.addColorStop(0, cor2 + "60");
+    glow2.addColorStop(1, "transparent");
+    ctx.fillStyle = glow2;
+    ctx.fill();
+
+    // DESENHAR AVATAR
     function avatar(img, x) {
       ctx.save();
       ctx.beginPath();
@@ -151,28 +178,64 @@ async function gerarImagemShip(u1, u2, pct, casados, cor1, cor2) {
     avatar(img1, LEFT_X);
     avatar(img2, RIGHT_X);
 
-    // TEXTOS
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 28px Arial";
+    // CORAÇÃO CENTRAL
+    ctx.font = "32px Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.6)";
     ctx.textAlign = "center";
+    ctx.fillText("💞", W / 2, 202);
+
+    // TÍTULO
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 28px Arial";
     ctx.fillText("S H I P M E T R O", W / 2, 95);
 
+    // NOMES
     const nome1 = u1.globalName || u1.username;
     const nome2 = u2.globalName || u2.username;
 
-    ctx.font = "18px Arial";
+    ctx.font = "bold 18px Arial";
+    ctx.fillStyle = "#ffffff";
     ctx.fillText(nome1, LEFT_X, 330);
     ctx.fillText(nome2, RIGHT_X, 330);
 
-    ctx.font = "62px Arial";
-    ctx.fillStyle = cor1;
+    ctx.font = "14px Arial";
+    ctx.fillStyle = "#aab2cc";
+    ctx.fillText(`@${u1.username}`, LEFT_X, 352);
+    ctx.fillText(`@${u2.username}`, RIGHT_X, 352);
+
+    // PORCENTAGEM COM GRADIENTE
+    const gradPct = ctx.createLinearGradient(0, 0, W, 0);
+    gradPct.addColorStop(0, cor1);
+    gradPct.addColorStop(1, cor2);
+    ctx.fillStyle = gradPct;
+    ctx.font = "bold 62px Arial";
     ctx.fillText(`${pct}%`, W / 2, 220);
 
     if (casados) {
       ctx.fillStyle = "#ffd700";
-      ctx.font = "14px Arial";
-      ctx.fillText("💍 CASAL OFICIAL", W / 2, 170);
+      ctx.strokeStyle = "#aa8c00";
+      ctx.lineWidth = 2;
+      ctx.font = "bold 15px Arial";
+      ctx.strokeText("💍 CASAL OFICIAL", W / 2, 172);
+      ctx.fillText("💍 CASAL OFICIAL", W / 2, 172);
     }
+
+    // BARRA DE PROGRESSO
+    const barX = 160, barY = 360, barW = 500, barH = 18;
+    ctx.fillStyle = "rgba(255,255,255,0.1)";
+    roundRect(ctx, barX, barY, barW, barH, 10);
+    ctx.fill();
+
+    const gradBar = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+    gradBar.addColorStop(0, cor1);
+    gradBar.addColorStop(1, cor2);
+    ctx.fillStyle = gradBar;
+    roundRect(ctx, barX, barY, (barW * pct) / 100, barH, 10);
+    ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 14px Arial";
+    ctx.fillText(`${pct}% de compatibilidade`, barX + barW / 2, barY - 12);
 
     return canvas.toBuffer("image/png");
 
@@ -182,9 +245,15 @@ async function gerarImagemShip(u1, u2, pct, casados, cor1, cor2) {
   }
 }
 
-/* =========================
-   COMMAND
-========================= */
+// ✅ ADICIONADO: Lista de comandos para o loader
+export const comandos = [
+  {
+    cmd: '!ship',
+    desc: 'Calcula a compatibilidade entre duas pessoas'
+  }
+];
+
+// ✅ REGISTER ORIGINAL
 export function register(client, configs) {
   if (client.__ship) return;
   client.__ship = true;
@@ -207,28 +276,36 @@ export function register(client, configs) {
     }
 
     if (!u1 || !u2)
-      return msg.reply({ embeds: [embedErro("Use: !ship @user")] });
+      return msg.reply({ embeds: [embedErro("Use: `!ship @usuário`")] });
+
+    if (u1.id === u2.id)
+      return msg.reply({ embeds: [embedErro("❌ Você não pode fazer ship com você mesmo!")] });
 
     const pct = gerarPct(u1.id, u2.id);
     const tema = getTema(pct);
-
     const casados = await verificarCasal(u1, u2, msg.guild.id);
 
     const g1 = await pegarGenero(u1.id, msg.guild.id);
     const g2 = await pegarGenero(u2.id, msg.guild.id);
 
-    const cor1 = COR_GENERO[g1] || COR_GENERO.padrao;
-    const cor2 = COR_GENERO[g2] || COR_GENERO.padrao;
+    const cor1 = COR_GENERO[g1] ?? COR_GENERO.padrao;
+    const cor2 = COR_GENERO[g2] ?? COR_GENERO.padrao;
 
     const buffer = await gerarImagemShip(u1, u2, pct, casados, cor1, cor2);
 
     if (!buffer) {
-      return msg.reply("❌ Erro ao gerar imagem do ship.");
+      return msg.reply("❌ Não foi possível gerar a imagem do ship.");
     }
+
+    await registrarLog(client, msg.guild.id, "ship", msg.author.id, {
+      usuarios: [u1.id, u2.id],
+      porcentagem: pct,
+      casados
+    }, configs);
 
     return msg.reply({
       content: `**${tema.nome}**\n> ${tema.final}`,
-      files: [new AttachmentBuilder(buffer, { name: "ship.png" })]
+      files: [new AttachmentBuilder(buffer, { name: `ship_${u1.id}_${u2.id}.png` })]
     });
   });
-     }
+}
