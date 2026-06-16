@@ -54,3 +54,35 @@ export async function meuperfil(message) {
     ]
   });
 }
+
+// ✅ Comandos e registro adicionados
+export const comandos = [
+  {
+    cmd: '!meuperfil',
+    desc: 'Mostra seu perfil visual'
+  }
+];
+
+export function register(client, configs) {
+  if (client.__meuPerfilRegistrado) return;
+  client.__meuPerfilRegistrado = true;
+
+  client.on('messageCreate', async (message) => {
+    if (!message.guild || message.author.bot) return;
+
+    const cfg = configs.get(message.guild.id);
+    const prefixo = cfg?.prefixo || '!';
+
+    if (!message.content.startsWith(prefixo)) return;
+
+    const cmd = message.content
+      .slice(prefixo.length)
+      .trim()
+      .split(/\s+/)[0]
+      .toLowerCase();
+
+    if (cmd === 'meuperfil') {
+      return meuperfil(message);
+    }
+  });
+}
