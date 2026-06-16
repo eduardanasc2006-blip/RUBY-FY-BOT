@@ -1,17 +1,18 @@
-import { createCanvas } from '@napi-rs/canvas';
+import { createCanvas, loadImage } from '@napi-rs/canvas';
 import {
   fundos,
   molduras,
   efeitos,
   badges
 } from '../systems/perfilConfig.mjs';
-import Usuario from '../db/models/Usuario.mjs';
 
 /**
  * 🔥 PERFIL PRINCIPAL (CANVAS RPG)
  */
 export async function gerarPerfil(user) {
-  // ✅ NORMALIZAÇÃO SEGURA DOS IDS
+  // =========================
+  // 🔹 1. IDS NORMALIZADOS
+  // =========================
   const molduraId = user.moldura ?? 'padrao';
   const fundoId = user.fundo ?? 'padrao';
   const efeitoId = user.efeitoEquipado ?? null;
@@ -20,14 +21,19 @@ export async function gerarPerfil(user) {
   const canvas = createCanvas(900, 300);
   const ctx = canvas.getContext('2d');
 
-  // ✅ ACESSO SEGURO AOS ITENS
-  const fundo = fundos[fundoId] || fundos.padrao;
-  const badge = badges[badgeId] || null;
-  const efeito = efeitoId;
+  // =========================
+  // 🔹 2. DADOS NOVOS DO USUÁRIO
+  // =========================
+  const avatarUrl = user.avatar;
+  const titulo = user.titulo ?? 'Sem título';
+  const parceiro = user.casadoCom ?? 'Nenhum';
+  const listaBadges = user.badges || [];
 
-  // ==============================================
-  // 🔹 1. FUNDO
-  // ==============================================
+  // =========================
+  // 🔹 3. FUNDO
+  // =========================
+  const fundo = fundos[fundoId] || fundos.padrao;
+
   if (fundo.tipo === 'cor') {
     ctx.fillStyle = fundo.valor;
     ctx.fillRect(0, 0, 900, 300);
@@ -41,46 +47,60 @@ export async function gerarPerfil(user) {
     ctx.fillRect(0, 0, 900, 300);
   }
 
-  // ==============================================
-  // 🔹 2. EFEITO (AGORA LOGO APÓS FUNDO — ORDEM CORRETA)
-  // ==============================================
-  if (efeito === 'aurora') {
+  // =========================
+  // 🔹 4. EFEITO
+  // =========================
+  if (efeitoId === 'aurora') {
     ctx.fillStyle = 'rgba(138, 43, 226, 0.15)';
     ctx.fillRect(0, 0, 900, 300);
   }
-  if (efeito === 'neve') {
+  if (efeitoId === 'neve') {
     ctx.fillStyle = 'rgba(173, 216, 230, 0.12)';
     ctx.fillRect(0, 0, 900, 300);
   }
-  if (efeito === 'raios') {
+  if (efeitoId === 'raios') {
     ctx.fillStyle = 'rgba(255,255,255,0.08)';
     ctx.fillRect(0, 0, 900, 300);
   }
 
-  // ==============================================
-  // 🔹 3. OVERLAY ESCURO (DEPOIS DO EFEITO)
-  // ==============================================
+  // =========================
+  // 🔹 5. OVERLAY
+  // =========================
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
   ctx.fillRect(30, 30, 840, 240);
 
-  // ==============================================
-  // 🔹 4. AVATAR
-  // ==============================================
+  // =========================
+  // 🔹 6. AVATAR REAL
+  // =========================
   const avatarX = 60;
   const avatarY = 70;
   const avatarSize = 160;
 
-  ctx.fillStyle = '#2b2d31';
-  ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
+  try {
+    const avatar = await loadImage(avatarUrl);
 
-  // placeholder do avatar
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 20px Sans-serif';
-  ctx.fillText('AVATAR', avatarX + 45, avatarY + 85);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(
+      avatarX + avatarSize / 2,
+      avatarY + avatarSize / 2,
+      avatarSize / 2,
+      0,
+      Math.PI * 2
+    );
+    ctx.closePath();
+    ctx.clip();
 
-  // ==============================================
-  // 🔹 5. MOLDURA
-  // ==============================================
+    ctx.drawImage(avatar, avatarX, avatarY, avatarSize, avatarSize);
+    ctx.restore();
+  } catch {
+    ctx.fillStyle = '#2b2d31';
+    ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
+  }
+
+  // =========================
+  // 🔹 7. MOLDURA
+  // =========================
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
   ctx.strokeStyle = '#ffffff';
@@ -115,9 +135,9 @@ export async function gerarPerfil(user) {
   ctx.strokeRect(avatarX, avatarY, avatarSize, avatarSize);
   ctx.shadowBlur = 0;
 
-  // ==============================================
-  // 🔹 6. TEXTO
-  // ==============================================
+  // =========================
+  // 🔹 8. TEXTO
+  // =========================
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 28px Sans-serif';
   ctx.fillText(`Nível ${user.nivel || 1}`, 260, 100);
@@ -127,54 +147,35 @@ export async function gerarPerfil(user) {
   ctx.fillText(`Total XP: ${user.xpTotal || 0}`, 260, 170);
   ctx.fillText(`Reputação: ${user.reputacoes || 0}`, 260, 200);
 
-  // ==============================================
-  // 🔹 7. BADGE (SEM REDUNDÂNCIA)
-  // ==============================================
-  if (badge) {
-    ctx.font = '28px Sans-serif';
-    const icones = {
-      estrela: '⭐',
-      fogo: '🔥',
-      coroa: '👑',
-      rico: '💎',
-      veterano: '🎖️',
-      quiz: '🧠',
-      lendario: '🏆',
-      casal: '💞'
-    };
-    // ✅ Como já tem "if (badge)", não precisa de fallback extra
-    const icone = icones[badgeId];
-    ctx.fillText(icone, 780, 70);
-  }
+  // =========================
+  // 🔹 9. TÍTULO + PARCEIRO
+  // =========================
+  ctx.fillText(`Título: ${titulo}`, 260, 230);
+  ctx.fillText(`Parceiro: ${parceiro}`, 260, 260);
+
+  // =========================
+  // 🔹 10. BADGES (GRID SIMPLES)
+  // =========================
+  const icones = {
+    estrela: '⭐',
+    fogo: '🔥',
+    coroa: '👑',
+    rico: '💎',
+    veterano: '🎖️',
+    quiz: '🧠',
+    lendario: '🏆',
+    casal: '💞'
+  };
+
+  let x = 700;
+  let y = 80;
+
+  listaBadges.slice(0, 6).forEach((b) => {
+    const icon = icones[b] || '🏅';
+    ctx.font = '24px Sans-serif';
+    ctx.fillText(icon, x, y);
+    y += 30;
+  });
 
   return canvas.toBuffer('image/png');
-}
-
-/**
- * ⚙️ COMANDO !MEUPERFIL
- */
-export async function meuperfil(message) {
-  const user = await Usuario.findOne({
-    userId: message.author.id,
-    guildId: message.guild.id
-  });
-
-  if (!user) {
-    return message.reply('❌ Usuário não encontrado.');
-  }
-
-  // ✅ DEFAULTS SEGUROS
-  user.moldura = user.moldura ?? 'padrao';
-  user.fundo = user.fundo ?? 'padrao';
-  user.efeitoEquipado = user.efeitoEquipado ?? null;
-  user.badgeEquipado = user.badgeEquipado ?? null;
-
-  const img = await gerarPerfil(user);
-
-  return message.channel.send({
-    files: [{
-      attachment: img,
-      name: 'perfil.png'
-    }]
-  });
 }
