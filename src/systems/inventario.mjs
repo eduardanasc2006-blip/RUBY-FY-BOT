@@ -1,5 +1,7 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import Usuario from '../db/models/Usuario.mjs';
+// ✅ Importação da função para limpar o cache
+import { limparCache } from './inventario.mjs';
 
 // 🗺️ MAPAS FIXOS
 const mapaInventario = {
@@ -72,11 +74,11 @@ export function garantirInventario(user) {
 
   inv = inv || {};
 
+  // ✅ Usa exatamente os mesmos nomes que a loja salva
   for (const campo of Object.values(mapaInventario)) {
     if (!Array.isArray(inv[campo])) inv[campo] = [];
   }
 
-  // salva de volta no model
   user.inventario = JSON.stringify(inv);
 
   return inv;
@@ -111,6 +113,7 @@ export async function equiparItem(user, tipo, itemId) {
   user[campo] = jaEquipado ? null : itemId;
 
   await user.save();
+  // ✅ Limpa cache imediatamente após salvar
   limparCache(user.userId, user.guildId);
 
   return {
