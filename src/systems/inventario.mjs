@@ -1,7 +1,5 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import Usuario from '../db/models/Usuario.mjs';
-// ✅ Importação da função para limpar o cache
-import { limparCache } from './inventario.mjs';
 
 // 🗺️ MAPAS FIXOS
 const mapaInventario = {
@@ -57,13 +55,14 @@ export function limparCache(userId, guildId) {
 }
 
 // =========================
-// INVENTÁRIO SEGURO
+// INVENTÁRIO SEGURO (AGORA ASSÍNCRONO)
 // =========================
-export function garantirInventario(user) {
+export async function garantirInventario(user) {
   if (!user) return null;
 
   let inv = user.inventario;
 
+  // Se vier como string, converte para objeto
   if (typeof inv === 'string') {
     try {
       inv = JSON.parse(inv);
@@ -74,12 +73,16 @@ export function garantirInventario(user) {
 
   inv = inv || {};
 
-  // ✅ Usa exatamente os mesmos nomes que a loja salva
+  // Garante que todas as categorias existam como array
   for (const campo of Object.values(mapaInventario)) {
     if (!Array.isArray(inv[campo])) inv[campo] = [];
   }
 
-  user.inventario = JSON.stringify(inv);
+  // ✅ Salva apenas se houve alteração, normalizando e salvando no banco
+  if (JSON.stringify(user.inventario) !== JSON.stringify(inv)) {
+    user.inventario = inv;
+    await user.save(); // 🔄 Salva definitivamente no Sequelize
+  }
 
   return inv;
 }
@@ -98,7 +101,7 @@ export async function equiparItem(user, tipo, itemId) {
 
   itemId = String(itemId).toLowerCase().trim();
 
-  const inv = garantirInventario(user);
+  const inv = await garantirInventario(user); // ⚠️ Agora usa await
   if (!inv) return { ok: false, msg: '❌ Inventário inválido.' };
 
   const lista = inv[mapaInventario[tipo]] || [];
@@ -113,7 +116,6 @@ export async function equiparItem(user, tipo, itemId) {
   user[campo] = jaEquipado ? null : itemId;
 
   await user.save();
-  // ✅ Limpa cache imediatamente após salvar
   limparCache(user.userId, user.guildId);
 
   return {
@@ -136,23 +138,25 @@ export async function inventario(message) {
     pagina: 0
   };
 
-  const renderInv = () => garantirInventario(user);
+  // ⚠️ Agora usa await pois a função é assíncrona
+  const renderInv = async () => await garantirInventario(user);
 
-  function getLista() {
-    const inv = renderInv();
+  async function getLista() {
+    const inv = await renderInv();
     return inv[mapaInventario[estado.tipo]] || [];
   }
 
-  function maxPagina() {
-    return Math.max(0, Math.ceil(getLista().length / itensPorPagina) - 1);
+  async function maxPagina() {
+    const lista = await getLista();
+    return Math.max(0, Math.ceil(lista.length / itensPorPagina) - 1);
   }
 
   function estaEquipado(item) {
     return user[mapaCampoEquipado[estado.tipo]] === item;
   }
 
-  function gerarEmbed() {
-    const lista = getLista();
+  async function gerarEmbed() {
+    const lista = await getLista();
     const inicio = estado.pagina * itensPorPagina;
     const itens = lista.slice(inicio, inicio + itensPorPagina);
 
@@ -163,12 +167,13 @@ export async function inventario(message) {
           ? itens.map(i => `${estaEquipado(i) ? '✅' : '⬜'} \`${i}\``).join('\n')
           : '❌ Sem itens'
       )
-      .setFooter({ text: `Página ${estado.pagina + 1}/${maxPagina() + 1}` })
+      .setFooter({ text: `Página ${estado.pagina + 1}/${await maxPagina() + 1}` })
       .setColor('#00d4ff');
   }
 
-  function gerarBotoes() {
-    const lista = getLista().slice(
+  async function gerarBotoes() {
+    const lista = await getLista();
+    const paginado = lista.slice(
       estado.pagina * itensPorPagina,
       (estado.pagina + 1) * itensPorPagina
     );
@@ -176,7 +181,7 @@ export async function inventario(message) {
     const rows = [];
     let row = new ActionRowBuilder();
 
-    for (const item of lista) {
+    for (const item of paginado) {
       if (row.components.length === 5) {
         rows.push(row);
         row = new ActionRowBuilder();
@@ -196,7 +201,7 @@ export async function inventario(message) {
     return rows;
   }
 
-  function gerarNav() {
+  async function gerarNav() {
     return new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('prev')
@@ -205,7 +210,7 @@ export async function inventario(message) {
         .setDisabled(estado.pagina === 0),
 
       new ButtonBuilder()
-        .setLabel(`${estado.pagina + 1}/${maxPagina() + 1}`)
+        .setLabel(`${estado.pagina + 1}/${await maxPagina() + 1}`)
         .setStyle(ButtonStyle.Primary)
         .setDisabled(true),
 
@@ -213,7 +218,7 @@ export async function inventario(message) {
         .setCustomId('next')
         .setLabel('➡️')
         .setStyle(ButtonStyle.Secondary)
-        .setDisabled(estado.pagina >= maxPagina())
+        .setDisabled(estado.pagina >= await maxPagina())
     );
   }
 
@@ -229,14 +234,20 @@ export async function inventario(message) {
   }
 
   const msg = await message.channel.send({
-    embeds: [gerarEmbed()],
-    components: [...gerarBotoes(), gerarNav(), gerarCats()]
+    embeds: [await gerarEmbed()],
+    components: [...await gerarBotoes(), await gerarNav(), gerarCats()]
   });
 
   const collector = msg.createMessageComponentCollector({ time: 600000 });
 
   collector.on('collect', async (i) => {
-    if (i.user.id !== message.author.id) return;
+    // ✅ Aviso para quem não é o dono
+    if (i.user.id !== message.author.id) {
+      return i.reply({
+        content: '❌ Apenas quem abriu o inventário pode usar.',
+        ephemeral: true
+      });
+    }
 
     const agora = Date.now();
     const last = ultimoClique.get(i.user.id) || 0;
@@ -245,8 +256,10 @@ export async function inventario(message) {
     }
     ultimoClique.set(i.user.id, agora);
 
+    await i.deferUpdate();
+
     if (i.customId === 'prev' && estado.pagina > 0) estado.pagina--;
-    if (i.customId === 'next' && estado.pagina < maxPagina()) estado.pagina++;
+    if (i.customId === 'next' && estado.pagina < await maxPagina()) estado.pagina++;
 
     if (i.customId.startsWith('cat_')) {
       estado.tipo = i.customId.replace('cat_', '');
@@ -258,19 +271,31 @@ export async function inventario(message) {
       const item = rest.join('_');
 
       const res = await equiparItem(user, tipo, item);
-      await i.reply({ content: res.msg, ephemeral: true });
+      await i.followUp({
+        content: res.msg,
+        ephemeral: true
+      });
     }
 
-    return i.update({
-      embeds: [gerarEmbed()],
-      components: [...gerarBotoes(), gerarNav(), gerarCats()]
-    });
+    // ✅ Edição com tratamento de erro se mensagem for apagada
+    try {
+      await msg.edit({
+        embeds: [await gerarEmbed()],
+        components: [...await gerarBotoes(), await gerarNav(), gerarCats()]
+      });
+    } catch {
+      // Ignora erro caso a mensagem tenha sido removida
+    }
   });
 
-  collector.on('end', () => msg.edit({ components: [] }).catch(() => {}));
+  collector.on('end', () => {
+    try {
+      msg.edit({ components: [] });
+    } catch {}
+  });
 }
 
-// ✅ Comandos e registro adicionados
+// ✅ Comandos e registro
 export const comandos = [
   {
     cmd: '!inventario',
