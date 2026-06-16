@@ -269,3 +269,40 @@ export async function inventario(message) {
 
   collector.on('end', () => msg.edit({ components: [] }).catch(() => {}));
 }
+
+// ✅ Comandos e registro adicionados
+export const comandos = [
+  {
+    cmd: '!inventario',
+    desc: 'Visualiza e equipa itens do inventário'
+  },
+  {
+    cmd: '!inv',
+    desc: 'Atalho para o inventário'
+  }
+];
+
+export function register(client, configs) {
+  if (client.__inventarioRegistrado) return;
+  client.__inventarioRegistrado = true;
+
+  client.on('messageCreate', async (message) => {
+    if (!message.guild || message.author.bot) return;
+
+    const cfg = configs.get(message.guild.id);
+    const prefixo = cfg?.prefixo || '!';
+
+    if (!message.content.startsWith(prefixo)) return;
+
+    const args = message.content
+      .slice(prefixo.length)
+      .trim()
+      .split(/\s+/);
+
+    const cmd = args.shift()?.toLowerCase();
+
+    if (cmd === 'inventario' || cmd === 'inv') {
+      return inventario(message);
+    }
+  });
+}
