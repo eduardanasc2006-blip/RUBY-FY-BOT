@@ -55,7 +55,7 @@ export function limparCache(userId, guildId) {
 }
 
 // =========================
-// INVENTÁRIO SEGURO (AGORA ASSÍNCRONO)
+// INVENTÁRIO SEGURO (CORRIGIDO)
 // =========================
 export async function garantirInventario(user) {
   if (!user) return null;
@@ -78,10 +78,15 @@ export async function garantirInventario(user) {
     if (!Array.isArray(inv[campo])) inv[campo] = [];
   }
 
-  // ✅ Salva apenas se houve alteração, normalizando e salvando no banco
-  if (JSON.stringify(user.inventario) !== JSON.stringify(inv)) {
+  // ✅ Comparação CORRIGIDA: trata string ou objeto antes de comparar
+  const inventarioOriginal =
+    typeof user.inventario === 'string'
+      ? JSON.parse(user.inventario || '{}')
+      : user.inventario || {};
+
+  if (JSON.stringify(inventarioOriginal) !== JSON.stringify(inv)) {
     user.inventario = inv;
-    await user.save(); // 🔄 Salva definitivamente no Sequelize
+    await user.save(); // Salva normalizado no banco
   }
 
   return inv;
@@ -101,7 +106,7 @@ export async function equiparItem(user, tipo, itemId) {
 
   itemId = String(itemId).toLowerCase().trim();
 
-  const inv = await garantirInventario(user); // ⚠️ Agora usa await
+  const inv = await garantirInventario(user);
   if (!inv) return { ok: false, msg: '❌ Inventário inválido.' };
 
   const lista = inv[mapaInventario[tipo]] || [];
@@ -138,7 +143,6 @@ export async function inventario(message) {
     pagina: 0
   };
 
-  // ⚠️ Agora usa await pois a função é assíncrona
   const renderInv = async () => await garantirInventario(user);
 
   async function getLista() {
@@ -241,7 +245,6 @@ export async function inventario(message) {
   const collector = msg.createMessageComponentCollector({ time: 600000 });
 
   collector.on('collect', async (i) => {
-    // ✅ Aviso para quem não é o dono
     if (i.user.id !== message.author.id) {
       return i.reply({
         content: '❌ Apenas quem abriu o inventário pode usar.',
@@ -277,21 +280,17 @@ export async function inventario(message) {
       });
     }
 
-    // ✅ Edição com tratamento de erro se mensagem for apagada
     try {
       await msg.edit({
         embeds: [await gerarEmbed()],
         components: [...await gerarBotoes(), await gerarNav(), gerarCats()]
       });
-    } catch {
-      // Ignora erro caso a mensagem tenha sido removida
-    }
+    } catch {}
   });
 
+  // ✅ CORRIGIDO: tratamento correto de Promise
   collector.on('end', () => {
-    try {
-      msg.edit({ components: [] });
-    } catch {}
+    msg.edit({ components: [] }).catch(() => {});
   });
 }
 
