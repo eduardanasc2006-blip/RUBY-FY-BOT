@@ -37,7 +37,7 @@ export function register(client, configs) {
         ).get(guildId).total;
 
         const afinidades = db.prepare(
-          'SELECT pontos FROM afinidade WHERE guildId = ?'
+          'SELECT pontos FROM afinidades WHERE guildId = ?'
         ).all(guildId);
 
         const todosUsers = db.prepare(

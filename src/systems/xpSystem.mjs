@@ -14,24 +14,20 @@ import { calcularNivel } from '../utils/nivelCalc.mjs';
 
 // ─────────────────────────────────────────────────────────────
 //  1. CONSTANTES — valores base por origem
-//     Use sempre XP_EVENTS para definir recompensas, nunca
-//     números mágicos espalhados pelo código.
 // ─────────────────────────────────────────────────────────────
 export const XP_EVENTS = Object.freeze({
-  CHAT:      { base: 15, max: 30 },  // range aleatório; aplicado em xpniveis.mjs
+  CHAT:      { base: 15, max: 30 },
   QUIZ:      30,
   FORCA:     120,
-  MISSAO_D:  100,   // missão diária genérica
-  MISSAO_S:  350,   // missão semanal genérica
-  CONQUISTA: null,  // valor vem do próprio objeto de conquista
-  REP:       20,    // receber reputação
-  CASAMENTO: 50,    // bônus ao casar
+  MISSAO_D:  100,
+  MISSAO_S:  350,
+  CONQUISTA: null,
+  REP:       20,
+  CASAMENTO: 50,
 });
 
 // ─────────────────────────────────────────────────────────────
 //  2. MULTIPLICADORES
-//     Passe o multiplicador em ganharXP() quando necessário.
-//     Ex.: evento double-XP → ganharXP(id, g, 30, 'quiz', 2.0)
 // ─────────────────────────────────────────────────────────────
 export const MULTIPLICADORES = Object.freeze({
   NORMAL:  1.0,
@@ -47,13 +43,6 @@ export const MULTIPLICADORES = Object.freeze({
 /**
  * Concede XP ao usuário.
  * Incrementa AMBOS xpTotal (permanente) e xpDisponivel (moeda).
- *
- * @param {string} userId
- * @param {string} guildId
- * @param {number} valor         — XP base a conceder (> 0)
- * @param {string} origem        — 'chat' | 'quiz' | 'forca' | 'missao' | 'conquista' | …
- * @param {number} multiplicador — ex. 1.5 para VIP, 2.0 para evento (padrão 1.0)
- * @returns {Promise<{usuario: object|null, levelUp: boolean, nivelNovo: number}>}
  */
 export async function ganharXP(userId, guildId, valor, origem = 'sistema', multiplicador = 1.0) {
   if (!userId || !guildId || typeof valor !== 'number' || valor <= 0) {
@@ -62,7 +51,6 @@ export async function ganharXP(userId, guildId, valor, origem = 'sistema', multi
 
   const valorFinal = Math.round(valor * Math.max(0.1, multiplicador));
 
-  // ── Atomicidade: $inc garante operação atômica no SQLite ──
   const u = await Usuario.findOneAndUpdate(
     { userId, guildId },
     {
@@ -70,12 +58,9 @@ export async function ganharXP(userId, guildId, valor, origem = 'sistema', multi
         xpTotal:      valorFinal,
         xpDisponivel: valorFinal,
       },
-      $setOnInsert: { 
-        userId, 
+      $setOnInsert: {
+        userId,
         guildId,
-        moldura: null,
-        badges: JSON.stringify([]),
-        efeitos: JSON.stringify([])
       },
     },
     { upsert: true, new: true }
@@ -83,7 +68,7 @@ export async function ganharXP(userId, guildId, valor, origem = 'sistema', multi
 
   if (!u) return { usuario: null, levelUp: false, nivelNovo: 1 };
 
-  // ── Level cache: calcula nível e persiste se mudou ────────
+  // ── Level cache ──────────────────────────────────────────
   const xpAntes    = Math.max(0, (u.xpTotal || 0) - valorFinal);
   const nivelAntes = calcularNivel(xpAntes).nivel;
   const nivelNovo  = calcularNivel(u.xpTotal || 0).nivel;
@@ -97,7 +82,7 @@ export async function ganharXP(userId, guildId, valor, origem = 'sistema', multi
     u.nivel = nivelNovo;
   }
 
-  // ── Log persistente ───────────────────────────────────────
+  // ── Log persistente ──────────────────────────────────────
   await _registrarLog({
     userId,
     guildId,
@@ -117,31 +102,20 @@ export async function ganharXP(userId, guildId, valor, origem = 'sistema', multi
 /**
  * Gasta XP disponível (moeda) do usuário.
  * NUNCA reduz xpTotal.
- * Valida saldo antes de qualquer operação.
- *
- * @param {string} userId
- * @param {string} guildId
- * @param {number} valor   — quantidade a gastar (> 0)
- * @param {string} motivo  — 'loja' | 'casamento' | 'efeito' | …
- * @returns {Promise<boolean>} true = sucesso | false = saldo insuficiente
  */
 export async function gastarXP(userId, guildId, valor, motivo = 'compra') {
-  // ── Validação de entrada ───────────────────────────────────
   if (!userId || !guildId || typeof valor !== 'number' || valor <= 0) return false;
 
   const user = await Usuario.findOne({ userId, guildId });
   const saldo = user?.xpDisponivel ?? 0;
 
-  // ── Impede saldo negativo ou gasto maior que saldo ────────
   if (!user || saldo < valor) return false;
 
-  // ── Atualização atômica: $inc com valor negativo ──────────
   await Usuario.updateOne(
     { userId, guildId },
     { $inc: { xpDisponivel: -valor } }
   );
 
-  // ── Log persistente ───────────────────────────────────────
   await _registrarLog({
     userId,
     guildId,
@@ -158,18 +132,12 @@ export async function gastarXP(userId, guildId, valor, motivo = 'compra') {
 //  5. Funções utilitárias
 // ─────────────────────────────────────────────────────────────
 
-/**
- * Verifica saldo sem gastar (leitura pura).
- */
 export async function temXP(userId, guildId, valor) {
   if (typeof valor !== 'number' || valor <= 0) return false;
   const user = await Usuario.findOne({ userId, guildId });
   return (user?.xpDisponivel ?? 0) >= valor;
 }
 
-/**
- * Retorna o saldo atual do usuário.
- */
 export async function getXP(userId, guildId) {
   const user = await Usuario.findOne({ userId, guildId });
   return {
@@ -179,21 +147,15 @@ export async function getXP(userId, guildId) {
   };
 }
 
-/**
- * Busca o histórico de XP do usuário (últimas N entradas).
- * @param {string} userId
- * @param {string} guildId
- * @param {number} limite — padrão 10
- */
 export async function historicoXP(userId, guildId, limite = 10) {
-  return XpLog.find({ userId, guildId })
-    .sort({ createdAt: -1 })
-    .limit(limite)
-    .lean();
+  const todos = await XpLog.find({ userId, guildId });
+  return todos
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, limite);
 }
 
 // ─────────────────────────────────────────────────────────────
-//  6. LOG INTERNO — não exportado, só usado por este módulo
+//  6. LOG INTERNO
 // ─────────────────────────────────────────────────────────────
 
 async function _registrarLog({ userId, guildId, tipo, valor, origem, saldoApos }) {
@@ -212,77 +174,59 @@ async function _registrarLog({ userId, guildId, tipo, valor, origem, saldoApos }
   }
 }
 
-  // ─────────────────────────────────────────────────────────────
-  //  7. transferirXP  — aposta / duelo (sem criar XP novo)
-  //
-  //  Remove xpDisponivel do perdedor e entrega ao vencedor.
-  //  NÃO altera xpTotal de ninguém — não é recompensa, é transferência.
-  //  Operação protegida: gasta primeiro, só credita se o gasto ok.
-  // ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+//  7. transferirXP  — aposta / duelo (sem criar XP novo)
+// ─────────────────────────────────────────────────────────────
 
-  /**
-   * Transfere XP disponível de um usuário para outro.
-   * Não cria nem destrói XP — apenas redistribui.
-   *
-   * @param {string} deUserId   — quem perde XP (perdedor)
-   * @param {string} paraUserId — quem recebe XP (vencedor)
-   * @param {string} guildId
-   * @param {number} valor      — quantidade a transferir (> 0)
-   * @param {string} motivo     — 'ppt' | 'duelo' | …
-   * @returns {Promise<boolean>} true = sucesso | false = saldo insuficiente
-   */
-  export async function transferirXP(deUserId, paraUserId, guildId, valor, motivo = 'transferencia') {
-    if (!deUserId || !paraUserId || !guildId || typeof valor !== 'number' || valor <= 0) return false;
+/**
+ * Transfere XP disponível de um usuário para outro.
+ * Não cria nem destrói XP — apenas redistribui.
+ */
+export async function transferirXP(deUserId, paraUserId, guildId, valor, motivo = 'transferencia') {
+  if (!deUserId || !paraUserId || !guildId || typeof valor !== 'number' || valor <= 0) return false;
 
-    // Valida saldo do perdedor
-    const perdedor = await Usuario.findOne({ userId: deUserId, guildId });
-    if (!perdedor || (perdedor.xpDisponivel ?? 0) < valor) return false;
+  const perdedor = await Usuario.findOne({ userId: deUserId, guildId });
+  if (!perdedor || (perdedor.xpDisponivel ?? 0) < valor) return false;
 
-    // Deduz do perdedor
-    await Usuario.updateOne(
-      { userId: deUserId, guildId },
-      { $inc: { xpDisponivel: -valor } }
-    );
+  await Usuario.updateOne(
+    { userId: deUserId, guildId },
+    { $inc: { xpDisponivel: -valor } }
+  );
 
-    // Credita ao vencedor (apenas xpDisponivel — xpTotal não muda)
-    await Usuario.findOneAndUpdate(
-      { userId: paraUserId, guildId },
-      {
-        $inc: { xpDisponivel: valor },
-        $setOnInsert: { 
-          userId: paraUserId, 
-          guildId,
-          moldura: null,
-          badges: JSON.stringify([]),
-          efeitos: JSON.stringify([])
-        },
+  await Usuario.findOneAndUpdate(
+    { userId: paraUserId, guildId },
+    {
+      $inc: { xpDisponivel: valor },
+      $setOnInsert: {
+        userId: paraUserId,
+        guildId,
       },
-      { upsert: true }
-    );
+    },
+    { upsert: true }
+  );
 
-    // Logs de transferência
-    const saldoPerdedorApos = (perdedor.xpDisponivel ?? 0) - valor;
-    const vencedor = await Usuario.findOne({ userId: paraUserId, guildId });
-    const saldoVencedorApos = (vencedor?.xpDisponivel ?? 0) + valor;
+  const saldoPerdedorApos = (perdedor.xpDisponivel ?? 0) - valor;
+  const vencedor = await Usuario.findOne({ userId: paraUserId, guildId });
+  const saldoVencedorApos = (vencedor?.xpDisponivel ?? 0);
 
-    await Promise.all([
-      _registrarLog({
-        userId:    deUserId,
-        guildId,
-        tipo:      'transferencia',
-        valor:     -valor,
-        origem:    motivo,
-        saldoApos: saldoPerdedorApos,
-      }),
-      _registrarLog({
-        userId:    paraUserId,
-        guildId,
-        tipo:      'transferencia',
-        valor:     +valor,
-        origem:    motivo,
-        saldoApos: saldoVencedorApos,
-      }),
-    ]);
+  await Promise.all([
+    _registrarLog({
+      userId:    deUserId,
+      guildId,
+      tipo:      'transferencia',
+      valor:     -valor,
+      origem:    motivo,
+      saldoApos: saldoPerdedorApos,
+    }),
+    _registrarLog({
+      userId:    paraUserId,
+      guildId,
+      tipo:      'transferencia',
+      valor:     +valor,
+      origem:    motivo,
+      saldoApos: saldoVencedorApos,
+    }),
+  ]);
 
-    return true;
-  }
+  return true;
+}

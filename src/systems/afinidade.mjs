@@ -90,16 +90,16 @@ export function register(client, configs) {
           { name: '🤝 Interações', value: `**${doc?.interacoes || 0}**`, inline: true },
           { name: '📈 Progresso', value: `${barra} ${pct}%`, inline: false },
           { name: '📅 Última interação', value: doc?.ultimaInteracao
-            ? `<t:${Math.floor(doc.ultimaInteracao.getTime() / 1000)}:R>`
+            ? `<t:${Math.floor(new Date(doc.ultimaInteracao).getTime() / 1000)}:R>`
             : 'Nunca', inline: true },
         )
-        .setFooter({ text: `Nível: ${nivel.emoji} ${nivel.nome}` })
+        .setFooter({ text: `Nível: ${nivel?.emoji ?? ''} ${nivel?.nome ?? ''}` })
         .setTimestamp();
       return msg.reply({ embeds: [embed] });
     }
 
     if (cmd === 'topafinidade') {
-      const casamentos = await Casamento.find({ guildId, ativo: true }).lean();
+      const casamentos = await Casamento.find({ guildId, ativo: true });
       const dados = await Promise.all(casamentos.map(async (c) => {
         const [u1, u2] = chaveAfin(c.userId1, c.userId2);
         const afin = await Afinidade.findOne({ guildId, userId1: u1, userId2: u2 });

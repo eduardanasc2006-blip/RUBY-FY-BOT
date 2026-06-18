@@ -11,7 +11,7 @@ export function register(client, configs) {
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
 
-    const cfg = await configs.findOne({ guildId: msg.guild.id });
+    const cfg = configs.get(msg.guild.id);
     const prefixo = cfg?.prefixo || '!';
     if (!msg.content.startsWith(prefixo)) return;
 
@@ -151,7 +151,7 @@ export function register(client, configs) {
     }
 
     // =========================
-    // SETTAXA (CORRIGIDO)
+    // SETTAXA
     // =========================
     if (cmd === 'settaxa') {
       if (!isAdmin(msg.member, cfg)) {
@@ -166,28 +166,27 @@ export function register(client, configs) {
       }
 
       await Config.findOneAndUpdate(
-  { guildId: msg.guild.id },
-  {
-    $set: {
-      guildId: msg.guild.id,
-      robuxBase: robux,
-      valorBase: valor,
-      taxa: robux,
-      updatedAt: new Date().toISOString()
-    },
-    $push: {
-      taxaHistorico: {
-        robux,
-        valor,
-        adminId: msg.author.id,
-        data: new Date().toISOString()
-      }
-    }
-  },
-  { upsert: true }
-);
+        { guildId: msg.guild.id },
+        {
+          $set: {
+            guildId: msg.guild.id,
+            robuxBase: robux,
+            valorBase: valor,
+            taxa: robux,
+            updatedAt: new Date().toISOString()
+          },
+          $push: {
+            taxaHistorico: {
+              robux,
+              valor,
+              adminId: msg.author.id,
+              data: new Date().toISOString()
+            }
+          }
+        },
+        { upsert: true }
+      );
 
-      // atualiza cache local (sem duplicar push)
       if (cfg) {
         cfg.robuxBase = robux;
         cfg.valorBase = valor;

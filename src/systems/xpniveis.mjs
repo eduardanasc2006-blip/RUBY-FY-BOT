@@ -1,7 +1,7 @@
 import { EmbedBuilder } from 'discord.js';
 import Missao from '../db/models/Missao.mjs';
 import { ganharXP } from './xpSystem.mjs';
-  import { isSpam, isFarm } from './antiabuso.mjs';
+import { isSpam, isFarm } from './antiabuso.mjs';
 import { embedErro } from '../utils/embeds.mjs';
 
 // =========================
@@ -44,7 +44,7 @@ function getSemana() {
 }
 
 // =========================
-// RANDOM MISSIONS (4 FIXAS)
+// RANDOM MISSIONS
 // =========================
 
 function sortear(lista, qtd = 4) {
@@ -70,34 +70,34 @@ async function garantirMissoes(userId, guildId) {
   const semana = getSemana();
 
   if (!doc) {
-    doc = new Missao({
+    doc = await Missao.create({
       userId,
       guildId,
       diarias: [],
       semanais: [],
-      resetDia: hoje,
-      resetSemana: semana,
+      ultimaDiaMissao: hoje,
+      ultimaSemanaMissao: semana,
     });
   }
 
-  // 🔥 RESET DIÁRIO (NOVAS MISSÕES)
-  if (doc.resetDia !== hoje) {
+  // 🔥 RESET DIÁRIO
+  if (doc.ultimaDiaMissao !== hoje) {
     doc.diarias = sortear(POOL_DIARIO, 4).map(m => ({
       ...m,
       atual: 0,
       concluida: false,
     }));
-    doc.resetDia = hoje;
+    doc.ultimaDiaMissao = hoje;
   }
 
-  // 🔥 RESET SEMANAL (NOVAS MISSÕES)
-  if (doc.resetSemana !== semana) {
+  // 🔥 RESET SEMANAL
+  if (doc.ultimaSemanaMissao !== semana) {
     doc.semanais = sortear(POOL_SEMANAL, 4).map(m => ({
       ...m,
       atual: 0,
       concluida: false,
     }));
-    doc.resetSemana = semana;
+    doc.ultimaSemanaMissao = semana;
   }
 
   await doc.save();
@@ -120,10 +120,6 @@ function formatar(m) {
   return `${status} **${m.descricao}**\n${barra(m.atual, m.meta)} \`${m.atual}/${m.meta}\` +${m.xp} XP`;
 }
 
-// =========================
-// COMANDO !missoes
-
-// O comando !missoes é gerenciado exclusivamente por missoes.mjs
 // xpniveis.mjs é um módulo utilitário — não registra comandos próprios
 export const comandos = [];
 export function register(_client, _configs) {}

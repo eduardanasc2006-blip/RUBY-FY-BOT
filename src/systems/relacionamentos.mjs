@@ -37,8 +37,9 @@ export const comandos = [
 ];
 
 export function register(client, configs) {
-    if (client.__relacionamentosRegistrado) return;
-    client.__relacionamentosRegistrado = true;
+  if (client.__relacionamentosRegistrado) return;
+  client.__relacionamentosRegistrado = true;
+
   client.on('messageCreate', async (msg) => {
     if (!msg.guild || msg.author.bot) return;
 
@@ -128,7 +129,7 @@ export function register(client, configs) {
           : casamento.userId1;
 
       const dias = Math.floor(
-        (Date.now() - casamento.dataCasamento) / 86400000
+        (Date.now() - new Date(casamento.dataCasamento).getTime()) / 86400000
       );
 
       const afin = await Afinidade.findOne({
@@ -147,7 +148,7 @@ export function register(client, configs) {
               { name: '📅 Dias juntos', value: `${dias}`, inline: true },
               {
                 name: '💘 Afinidade',
-                value: `${afin?.pontos || 0} (${nivelAfinidade(afin?.pontos || 0)})`,
+                value: `${afin?.pontos || 0} pts`,
                 inline: true
               },
               {
@@ -166,63 +167,54 @@ export function register(client, configs) {
     }
 
     /* =========================
-   TOP CASAIS
-========================= */
-if (cmd === 'topcasais') {
-  const casais = await Casamento.find({
-    guildId,
-    ativo: true
-  });
+       TOP CASAIS
+    ========================= */
+    if (cmd === 'topcasais') {
+      const casais = await Casamento.find({ guildId, ativo: true });
 
-  if (!casais.length) {
-    return msg.reply({
-      embeds: [
-        new EmbedBuilder()
-          .setColor(0xff69b4)
-          .setTitle('💍 Top Casais do Servidor')
-          .setDescription(
-            '💔 Ainda não existem casais oficialmente casados neste servidor.\n\n' +
-            '💡 Use `!casar @usuário` para iniciar uma linda história de amor!'
-          )
-          .setFooter({
-            text: 'Quem será o primeiro casal? ❤️'
-          })
-          .setTimestamp()
-      ]
-    });
-  }
+      if (!casais.length) {
+        return msg.reply({
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xff69b4)
+              .setTitle('💍 Top Casais do Servidor')
+              .setDescription(
+                '💔 Ainda não existem casais oficialmente casados neste servidor.\n\n' +
+                '💡 Use `!casar @usuário` para iniciar uma linda história de amor!'
+              )
+              .setFooter({ text: 'Quem será o primeiro casal? ❤️' })
+              .setTimestamp()
+          ]
+        });
+      }
 
-  const lista = casais
-    .sort((a, b) => (b.xpCasal || 0) - (a.xpCasal || 0))
-    .slice(0, 10)
-    .map((c, i) => {
-      const nivel = calcularNivelCasal(c.xpCasal || 0);
+      const lista = casais
+        .sort((a, b) => (b.xpCasal || 0) - (a.xpCasal || 0))
+        .slice(0, 10)
+        .map((c, i) => {
+          const nivel = calcularNivelCasal(c.xpCasal || 0);
+          const medalha =
+            i === 0 ? '🥇' :
+            i === 1 ? '🥈' :
+            i === 2 ? '🥉' : '💖';
+          return (
+            `${medalha} **#${i + 1}** • <@${c.userId1}> ❤️ <@${c.userId2}>\n` +
+            `💎 **${c.xpCasal || 0} XP** • ⭐ **Nível ${nivel}**`
+          );
+        });
 
-      const medalha =
-        i === 0 ? '🥇' :
-        i === 1 ? '🥈' :
-        i === 2 ? '🥉' :
-        '💖';
+      return msg.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xff69b4)
+            .setTitle('🏆 Top Casais do Servidor')
+            .setDescription(lista.join('\n\n'))
+            .setFooter({ text: `${casais.length} casal(is) registrado(s)` })
+            .setTimestamp()
+        ]
+      });
+    }
 
-      return (
-        `${medalha} **#${i + 1}** • <@${c.userId1}> ❤️ <@${c.userId2}>\n` +
-        `💎 **${c.xpCasal || 0} XP** • ⭐ **Nível ${nivel}**`
-      );
-    });
-
-  return msg.reply({
-    embeds: [
-      new EmbedBuilder()
-        .setColor(0xff69b4)
-        .setTitle('🏆 Top Casais do Servidor')
-        .setDescription(lista.join('\n\n'))
-        .setFooter({
-          text: `${casais.length} casal(is) registrado(s)`
-        })
-        .setTimestamp()
-    ]
-  });
-}
     /* =========================
        DIVÓRCIO
     ========================= */
@@ -244,7 +236,7 @@ if (cmd === 'topcasais') {
       const chave = `${guildId}:${userId}`;
 
       pedidosDivorcio.set(chave, {
-        casamentoId: casamento._id,
+        casamentoId: casamento.id,
         parceiro
       });
 
@@ -340,10 +332,10 @@ if (cmd === 'topcasais') {
         return interaction.reply({ content: 'Não é para você.', flags: 64 });
 
       if (acao === 'aceitar') {
-        await Casamento.findByIdAndUpdate(pedido.casamentoId, {
-          ativo: false,
-          dataFim: new Date()
-        });
+        await Casamento.updateOne(
+          { id: pedido.casamentoId },
+          { $set: { ativo: false, dataFim: new Date() } }
+        );
 
         pedidosDivorcio.delete(chave);
 

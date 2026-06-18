@@ -14,8 +14,8 @@ import {
   badges
 } from './perfilConfig.mjs';
 
-// 🔹 Limite de itens por página
-const ITEMS_POR_PAGINA = 5;
+// 🔹 Máximo 3 itens por página: 1 aba row + 3 item rows + 1 nav row = 5 ActionRows (limite do Discord)
+const ITEMS_POR_PAGINA = 3;
 
 const abas = {
   molduras: '🪟 Molduras',
@@ -43,7 +43,7 @@ function getItensPaginados(aba, pagina) {
   return entradas.slice(start, end);
 }
 
-// 🔹 Embed da loja (sem imagem)
+// 🔹 Embed da loja
 function gerarLoja(aba, pagina = 0) {
   const catalogo = getCatalogo(aba);
   const entradas = Object.entries(catalogo);
@@ -61,7 +61,7 @@ function gerarLoja(aba, pagina = 0) {
     );
 }
 
-// 🔹 Botões dos itens: múltiplas linhas (respeita limite do Discord)
+// 🔹 Botões dos itens: 1 row por item (preview + comprar)
 function gerarBotoesItens(aba, pagina = 0) {
   const itens = getItensPaginados(aba, pagina);
   const linhas = [];
@@ -128,30 +128,24 @@ function gerarBotoesNav(aba, pagina) {
 }
 
 // 🖼️ GERAR IMAGEM DE PRÉVIA COM CANVAS
-// ✅ Fonte alterada para Sans-serif → funciona em qualquer servidor
 async function gerarPreviewItem(item) {
   const canvas = createCanvas(600, 200);
   const ctx = canvas.getContext('2d');
 
-  // Fundo escuro
   ctx.fillStyle = '#1e1f22';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Borda azul
   ctx.strokeStyle = '#00d4ff';
   ctx.lineWidth = 4;
   ctx.strokeRect(0, 0, canvas.width, canvas.height);
 
-  // Nome do item (limitado a 25 caracteres) + fonte segura
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold 28px Sans-serif';
   ctx.fillText(item.nome.slice(0, 25), 30, 60);
 
-  // Preço
   ctx.font = '20px Sans-serif';
   ctx.fillText(`Preço: ${item.preco ?? '—'} XP`, 30, 110);
 
-  // Raridade
   ctx.fillText(`Raridade: ${item.raridade ?? 'Comum'}`, 30, 150);
 
   return canvas.toBuffer('image/png');
@@ -176,10 +170,9 @@ export async function lojaCommand(message) {
   });
 
   collector.on('collect', async (interaction) => {
-    // ✅ PROTEÇÃO TOTAL: só o dono pode interagir → evita spam, bots e cliques duplicados
     if (interaction.user.id !== ownerId) return;
 
-    // 🔁 TROCAR ABA — ✅ SEGURO
+    // 🔁 TROCAR ABA
     if (
       interaction.customId === 'loja_molduras' ||
       interaction.customId === 'loja_efeitos' ||
@@ -238,7 +231,7 @@ export async function lojaCommand(message) {
       });
     }
 
-    // 👁️ PRÉVIA DO ITEM (CANVAS)
+    // 👁️ PRÉVIA DO ITEM
     if (interaction.customId.startsWith('preview_')) {
       const parts = interaction.customId.split('_');
       const aba = parts[1];
@@ -293,7 +286,6 @@ export async function lojaCommand(message) {
         });
       }
 
-      // ✅ GARANTE INVENTÁRIO SEMPRE (compatível com o inventário que ajustamos)
       user.inventario = user.inventario || {};
       const tipo = aba;
       user.inventario[tipo] = user.inventario[tipo] || [];
@@ -328,13 +320,12 @@ export async function lojaCommand(message) {
     }
   });
 
-  // ⏳ FIM DO TEMPO (tratamento de erro seguro)
   collector.on('end', () => {
     msg.edit({ components: [] }).catch(() => {});
   });
 }
 
-// ✅ Comandos e registro adicionados
+// ✅ Comandos e registro
 export const comandos = [
   {
     cmd: '!loja',

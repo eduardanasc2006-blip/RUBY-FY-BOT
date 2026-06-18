@@ -7,7 +7,7 @@ import { checkCooldown, formatarTempo } from '../utils/cooldown.mjs';
 import { embedErro } from '../utils/embeds.mjs';
 import { registrarLog } from '../utils/logger.mjs';
 import { calcularNivel, getFaixa } from '../utils/nivelCalc.mjs';
-  import { ganharXP } from './xpSystem.mjs';
+import { ganharXP } from './xpSystem.mjs';
 import { semBanco } from '../utils/dbGuard.mjs';
 
 function nome(user) {
@@ -30,8 +30,9 @@ export const comandos = [
 ];
 
 export function register(client, configs) {
-    if (client.__reputacaoRegistrado) return;
-    client.__reputacaoRegistrado = true;
+  if (client.__reputacaoRegistrado) return;
+  client.__reputacaoRegistrado = true;
+
   client.on('messageCreate', async (msg) => {
     if (msg.author.bot || !msg.guild) return;
     const cfg = configs.get(msg.guild.id);
@@ -69,11 +70,13 @@ export function register(client, configs) {
 
     if (cmd === 'ranking') {
       if (semBanco(msg)) return;
-      const top = await Usuario.find({ guildId }).sort({ reputacao: -1 }).limit(10).lean();
+      const todos = await Usuario.find({ guildId });
+      const top = todos
+        .sort((a, b) => (b.reputacao || 0) - (a.reputacao || 0))
+        .slice(0, 10);
       const medals = ['🥇', '🥈', '🥉'];
       const linhas = top.map((u, i) => `${medals[i] || `**#${i + 1}**`} <@${u.userId}> — ⭐ ${u.reputacao || 0}`);
       return msg.reply({ embeds: [new EmbedBuilder().setColor(0xffd700).setTitle('⭐ Top Reputação').setDescription(linhas.join('\n') || 'Nenhum dado.').setTimestamp()] });
     }
-
   });
 }

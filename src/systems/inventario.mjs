@@ -27,7 +27,7 @@ const cacheUsuario = new Map();
 const ultimoClique = new Map();
 
 // =========================
-// GET USER (SEQUELIZE SQLITE)
+// GET USER
 // =========================
 export async function getUser(origem) {
   if (!origem) return null;
@@ -38,9 +38,7 @@ export async function getUser(origem) {
 
   if (cacheUsuario.has(key)) return cacheUsuario.get(key);
 
-  const user = await Usuario.findOne({
-    where: { userId, guildId }
-  });
+  const user = await Usuario.findOne({ userId, guildId });
 
   if (user) cacheUsuario.set(key, user);
 
@@ -55,14 +53,13 @@ export function limparCache(userId, guildId) {
 }
 
 // =========================
-// INVENTÁRIO SEGURO (CORRIGIDO)
+// INVENTÁRIO SEGURO
 // =========================
 export async function garantirInventario(user) {
   if (!user) return null;
 
   let inv = user.inventario;
 
-  // Se vier como string, converte para objeto
   if (typeof inv === 'string') {
     try {
       inv = JSON.parse(inv);
@@ -73,12 +70,10 @@ export async function garantirInventario(user) {
 
   inv = inv || {};
 
-  // Garante que todas as categorias existam como array
   for (const campo of Object.values(mapaInventario)) {
     if (!Array.isArray(inv[campo])) inv[campo] = [];
   }
 
-  // ✅ Comparação CORRIGIDA: trata string ou objeto antes de comparar
   const inventarioOriginal =
     typeof user.inventario === 'string'
       ? JSON.parse(user.inventario || '{}')
@@ -86,7 +81,7 @@ export async function garantirInventario(user) {
 
   if (JSON.stringify(inventarioOriginal) !== JSON.stringify(inv)) {
     user.inventario = inv;
-    await user.save(); // Salva normalizado no banco
+    await user.save();
   }
 
   return inv;
@@ -208,18 +203,19 @@ export async function inventario(message) {
   async function gerarNav() {
     return new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId('prev')
+        .setCustomId('inv_prev')
         .setLabel('⬅️')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(estado.pagina === 0),
 
       new ButtonBuilder()
+        .setCustomId('inv_pagina_info')
         .setLabel(`${estado.pagina + 1}/${await maxPagina() + 1}`)
         .setStyle(ButtonStyle.Primary)
         .setDisabled(true),
 
       new ButtonBuilder()
-        .setCustomId('next')
+        .setCustomId('inv_next')
         .setLabel('➡️')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(estado.pagina >= await maxPagina())
@@ -261,15 +257,15 @@ export async function inventario(message) {
 
     await i.deferUpdate();
 
-    if (i.customId === 'prev' && estado.pagina > 0) estado.pagina--;
-    if (i.customId === 'next' && estado.pagina < await maxPagina()) estado.pagina++;
+    if (i.customId === 'inv_prev' && estado.pagina > 0) estado.pagina--;
+    if (i.customId === 'inv_next' && estado.pagina < await maxPagina()) estado.pagina++;
 
     if (i.customId.startsWith('cat_')) {
       estado.tipo = i.customId.replace('cat_', '');
       estado.pagina = 0;
     }
 
-    if (i.customId.startsWith('inv_')) {
+    if (i.customId.startsWith('inv_') && !['inv_prev', 'inv_next', 'inv_pagina_info'].includes(i.customId)) {
       const [, tipo, ...rest] = i.customId.split('_');
       const item = rest.join('_');
 
@@ -288,7 +284,6 @@ export async function inventario(message) {
     } catch {}
   });
 
-  // ✅ CORRIGIDO: tratamento correto de Promise
   collector.on('end', () => {
     msg.edit({ components: [] }).catch(() => {});
   });
