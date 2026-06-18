@@ -3,7 +3,10 @@ import { makeModel } from '../sqlite.mjs';
 export default makeModel('usuarios', {
   jsonFields: [
     'inventario',
-    'quiz'
+    'quiz',
+    'badges',
+    'efeitos',
+    'titulos'
   ],
 
   dateFields: [
@@ -37,8 +40,13 @@ export default makeModel('usuarios', {
       badges: []
     },
 
+    // Coleções separadas (parse automático)
+    badges: [],
+    efeitos: [],
+    titulos: [],
+
     // Social
-    reputacoes: 0,
+    reputacao: 0,
     casadoCom: null,
 
     // Quiz
