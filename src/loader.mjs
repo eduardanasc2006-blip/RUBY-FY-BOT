@@ -1,31 +1,64 @@
 import { initDB, isDBConnected } from './db/sqlite.mjs';
 import Config from './db/models/Config.mjs';
 import { patchClientRouter } from './router/commandRouter.mjs';
+import { setupButtons }      from './router/buttons.mjs';
+import { setupModals }       from './router/modals.mjs';
+import { setupSelects }      from './router/selects.mjs';
+import { setupAutocomplete } from './router/autocomplete.mjs';
+import { setupEvents }       from './router/events.mjs';
 
-// ── Imports — register + comandos ─────────────────────────────
-import { register as regAjuda,           comandos as cAjuda           } from './systems/ajuda.mjs';
-import { register as regDiversao,        comandos as cDiversao        } from './systems/diversao.mjs';
-import { register as regConversao,       comandos as cConversao       } from './systems/conversao.mjs';
-import { register as regRoblox,          comandos as cRoblox          } from './systems/roblox.mjs';
-import { register as regRelacionamentos, comandos as cRelacionamentos } from './systems/relacionamentos.mjs';
-import { register as regAfinidade,       comandos as cAfinidade       } from './systems/afinidade.mjs';
-import { register as regInteracoes,      comandos as cInteracoes      } from './systems/interacoes.mjs';
-import { register as regReputacao,       comandos as cReputacao       } from './systems/reputacao.mjs';
-import { register as regQuiz,            comandos as cQuiz            } from './systems/quiz.mjs';
-import { register as regForca,           comandos as cForca           } from './systems/forca.mjs';
-import { register as regConquistas,      comandos as cConquistas      } from './systems/conquistas.mjs';
-import { register as regMissoes,         comandos as cMissoes         } from './systems/missoes.mjs';
-import { register as regTitulos,         comandos as cTitulos         } from './systems/titulos.mjs';
-import { register as regLoja,            comandos as cLoja            } from './systems/loja.mjs';
-import { register as regPerfilVisual,    comandos as cPerfilVisual    } from './systems/perfilvisual.mjs';
-import { register as regShip,            comandos as cShip            } from './systems/ship.mjs';
-import { register as regAdministracao,   comandos as cAdministracao   } from './systems/administracao.mjs';
-import { register as regLogs,            comandos as cLogs            } from './systems/logs.mjs';
-import { register as regAntiAbuso,       comandos as cAntiAbuso       } from './systems/antiabuso.mjs';
-import { register as regEstatisticas,    comandos as cEstatisticas    } from './systems/estatisticas.mjs';
-import { register as regGenero,          comandos as cGenero          } from './systems/genero.mjs';
-import { register as regMeuPerfil,       comandos as cMeuPerfil       } from './systems/meuperfil.mjs';
-import { register as regInventario, comandos as cInventario } from './systems/inventario.mjs';
+// ── Administração ──────────────────────────────────────────────
+import { register as regAdministracao,   comandos as cAdministracao   } from './systems/administracao/administracao.mjs';
+import { register as regLogs,            comandos as cLogs            } from './systems/administracao/logs.mjs';
+import { register as regAntiAbuso,       comandos as cAntiAbuso       } from './systems/administracao/antiabuso.mjs';
+import { register as regConfiguracoes,   comandos as cConfiguracoes   } from './systems/administracao/configuracoes.mjs';
+import { register as regAjuda,           comandos as cAjuda           } from './systems/administracao/ajuda.mjs';
+
+// ── Economia ───────────────────────────────────────────────────
+import { register as regLoja,            comandos as cLoja            } from './systems/economia/loja.mjs';
+import { register as regInventario,      comandos as cInventario      } from './systems/economia/inventario.mjs';
+import { register as regEquipar,         comandos as cEquipar         } from './systems/economia/equipar.mjs';
+import { register as regEconomia,        comandos as cEconomia        } from './systems/economia/economia.mjs';
+import { register as regConversao,       comandos as cConversao       } from './systems/economia/conversao.mjs';
+import { register as regRoblox,          comandos as cRoblox          } from './systems/economia/roblox.mjs';
+import { register as regGamepass,        comandos as cGamepass        } from './systems/economia/gamepass.mjs';
+import { register as regTaxa,            comandos as cTaxa            } from './systems/economia/taxa.mjs';
+
+// ── Perfil ────────────────────────────────────────────────────
+import { register as regMeuPerfil,       comandos as cMeuPerfil       } from './systems/perfil/meuperfil.mjs';
+import { register as regPerfilVisual,    comandos as cPerfilVisual    } from './systems/perfil/perfilvisual.mjs';
+import { register as regGenero,          comandos as cGenero          } from './systems/perfil/genero.mjs';
+import { register as regTitulos,         comandos as cTitulos         } from './systems/perfil/titulos.mjs';
+import { register as regConquistas,      comandos as cConquistas      } from './systems/perfil/conquistas.mjs';
+
+// ── Social ────────────────────────────────────────────────────
+import { register as regRelacionamentos, comandos as cRelacionamentos } from './systems/social/relacionamentos.mjs';
+import { register as regCasamento,       comandos as cCasamento       } from './systems/social/casamento.mjs';
+import { register as regShip,            comandos as cShip            } from './systems/social/ship.mjs';
+import { register as regAfinidade,       comandos as cAfinidade       } from './systems/social/afinidade.mjs';
+import { register as regReputacao,       comandos as cReputacao       } from './systems/social/reputacao.mjs';
+import { register as regInteracoes,      comandos as cInteracoes      } from './systems/social/interacoes.mjs';
+import { register as regAbracar,         comandos as cAbracar         } from './systems/social/abracar.mjs';
+import { register as regBeijar,          comandos as cBeijar          } from './systems/social/beijar.mjs';
+import { register as regCafune,          comandos as cCafune          } from './systems/social/cafune.mjs';
+import { register as regTapa,            comandos as cTapa            } from './systems/social/tapa.mjs';
+
+// ── Progresso ─────────────────────────────────────────────────
+import { register as regXpSystem,        comandos as cXpSystem        } from './systems/progresso/xpSystem.mjs';
+import { register as regXpNiveis,        comandos as cXpNiveis        } from './systems/progresso/xpniveis.mjs';
+import { register as regRanking,         comandos as cRanking         } from './systems/progresso/ranking.mjs';
+import { register as regEstatisticas,    comandos as cEstatisticas    } from './systems/progresso/estatisticas.mjs';
+import { register as regMissoes,         comandos as cMissoes         } from './systems/progresso/missoes.mjs';
+import { register as regQuiz,            comandos as cQuiz            } from './systems/progresso/quiz.mjs';
+import { register as regDiario,          comandos as cDiario          } from './systems/progresso/diario.mjs';
+
+// ── Diversão ─────────────────────────────────────────────────
+import { register as regDiversao,        comandos as cDiversao        } from './systems/diversao/diversao.mjs';
+import { register as regForca,           comandos as cForca           } from './systems/diversao/forca.mjs';
+import { register as regDado,            comandos as cDado            } from './systems/diversao/dado.mjs';
+import { register as regMoeda,           comandos as cMoeda           } from './systems/diversao/moeda.mjs';
+import { register as regTrivia,          comandos as cTrivia          } from './systems/diversao/trivia.mjs';
+import { register as regSorteio,         comandos as cSorteio         } from './systems/diversao/sorteio.mjs';
 
 const configs = new Map();
 
@@ -105,30 +138,61 @@ export async function loadSystems(client) {
       client.systems = new Map();
     }
 
+    // Registrar routers de interações
+    setupButtons(client);
+    setupModals(client);
+    setupSelects(client);
+    setupAutocomplete(client);
+    setupEvents(client);
+
     const sistemas = [
-      ['Ajuda',               regAjuda,           cAjuda],
-      ['Diversão',            regDiversao,        cDiversao],
-      ['Robux & Conversão',   regConversao,       cConversao],
-      ['Roblox',              regRoblox,          cRoblox],
-      ['Relacionamentos',     regRelacionamentos, cRelacionamentos],
-      ['Afinidade',           regAfinidade,       cAfinidade],
-      ['Interações',          regInteracoes,      cInteracoes],
-      ['Reputação',           regReputacao,       cReputacao],
-      ['Quiz',                regQuiz,            cQuiz],
-      ['Forca',               regForca,           cForca],
-      ['Conquistas',          regConquistas,      cConquistas],
-      ['Missões',             regMissoes,         cMissoes],
-      ['Títulos',             regTitulos,         cTitulos],
-      ['Loja',                regLoja,            cLoja],
-      ['Perfil Visual',       regPerfilVisual,    cPerfilVisual],
-      ['Ship',                regShip,            cShip],
+      // Administração
       ['Administração',       regAdministracao,   cAdministracao],
       ['Logs',                regLogs,            cLogs],
       ['Anti-Abuso',          regAntiAbuso,       cAntiAbuso],
-      ['Estatísticas',        regEstatisticas,    cEstatisticas],
-      ['Gênero',              regGenero,          cGenero],
+      ['Configurações',       regConfiguracoes,   cConfiguracoes],
+      ['Ajuda',               regAjuda,           cAjuda],
+      // Economia
+      ['Loja',                regLoja,            cLoja],
+      ['Inventário',          regInventario,      cInventario],
+      ['Equipar',             regEquipar,         cEquipar],
+      ['Economia',            regEconomia,        cEconomia],
+      ['Robux & Conversão',   regConversao,       cConversao],
+      ['Roblox',              regRoblox,          cRoblox],
+      ['Gamepass',            regGamepass,        cGamepass],
+      ['Taxa',                regTaxa,            cTaxa],
+      // Perfil
       ['Meu Perfil',          regMeuPerfil,       cMeuPerfil],
-       ['Inventário', regInventario, cInventario],
+      ['Perfil Visual',       regPerfilVisual,    cPerfilVisual],
+      ['Gênero',              regGenero,          cGenero],
+      ['Títulos',             regTitulos,         cTitulos],
+      ['Conquistas',          regConquistas,      cConquistas],
+      // Social
+      ['Relacionamentos',     regRelacionamentos, cRelacionamentos],
+      ['Casamento',           regCasamento,       cCasamento],
+      ['Ship',                regShip,            cShip],
+      ['Afinidade',           regAfinidade,       cAfinidade],
+      ['Reputação',           regReputacao,       cReputacao],
+      ['Interações',          regInteracoes,      cInteracoes],
+      ['Abraçar',             regAbracar,         cAbracar],
+      ['Beijar',              regBeijar,          cBeijar],
+      ['Cafuné',              regCafune,          cCafune],
+      ['Tapa',                regTapa,            cTapa],
+      // Progresso
+      ['XP System',           regXpSystem,        cXpSystem],
+      ['XP Níveis',           regXpNiveis,        cXpNiveis],
+      ['Ranking',             regRanking,         cRanking],
+      ['Estatísticas',        regEstatisticas,    cEstatisticas],
+      ['Missões',             regMissoes,         cMissoes],
+      ['Quiz',                regQuiz,            cQuiz],
+      ['Diário',              regDiario,          cDiario],
+      // Diversão
+      ['Diversão',            regDiversao,        cDiversao],
+      ['Forca',               regForca,           cForca],
+      ['Dado',                regDado,            cDado],
+      ['Moeda',               regMoeda,           cMoeda],
+      ['Trivia',              regTrivia,          cTrivia],
+      ['Sorteio',             regSorteio,         cSorteio],
     ];
 
     let ok = 0;
