@@ -1,5 +1,5 @@
 import Usuario from '../db/models/Usuario.mjs';
-import { gerarPerfil } from '../systems/perfilCanvas.mjs';
+import { gerarPerfil } from '../canvas/perfilCanvas.mjs';
 
 export async function meuperfil(message) {
   // 🔹 1. Busca usuário no banco
