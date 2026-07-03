@@ -1,65 +1,327 @@
-import { EmbedBuilder, Colors } from 'discord.js';
-import { fundos, molduras, efeitos, badges } from './perfilConfig.mjs';
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 import Usuario from '../db/models/Usuario.mjs';
 
-const CONFIGS = { fundos, molduras, efeitos, badges };
-const CAT_LABEL = { fundos: '🖼 Fundos', molduras: '🔲 Molduras', efeitos: '✨ Efeitos', badges: '🏅 Badges' };
+// 🗺️ MAPAS FIXOS
+const mapaInventario = {
+  moldura: 'molduras',
+  fundo: 'fundos',
+  efeito: 'efeitos',
+  badge: 'badges',
+  titulo: 'titulos'
+};
 
-export async function inventario(message) {
-  const userId = message.author.id, guildId = message.guild?.id;
-  if (!guildId) return message.reply('❌ Comando apenas em servidores.');
+const mapaCampoEquipado = {
+  moldura: 'moldura',
+  fundo: 'fundo',
+  efeito: 'efeitoEquipado',
+  badge: 'badgeEquipado',
+  titulo: 'tituloEquipado'
+};
+
+const categoriasValidas = Object.keys(mapaInventario);
+const itensPorPagina = 6;
+const TEMPO_DEBOUNCE = 800;
+
+// 💾 CACHE
+const cacheUsuario = new Map();
+const ultimoClique = new Map();
+
+// =========================
+// GET USER
+// =========================
+export async function getUser(origem) {
+  if (!origem) return null;
+
+  const userId = origem.user?.id || origem.author?.id;
+  const guildId = origem.guild?.id;
+  const key = `${userId}:${guildId}`;
+
+  if (cacheUsuario.has(key)) return cacheUsuario.get(key);
 
   const user = await Usuario.findOne({ userId, guildId });
-  if (!user) return message.reply('❌ Você ainda não tem perfil. Mande uma mensagem primeiro!');
 
-  const inv = user.inventario ?? {};
+  if (user) cacheUsuario.set(key, user);
 
-  const equipado = {
-    fundos:   user.fundo,
-    molduras: user.moldura,
-    efeitos:  user.efeitoEquipado,
-    badges:   user.badgeEquipado,
-  };
+  return user;
+}
 
-  const embed = new EmbedBuilder()
-    .setColor(Colors.Blurple)
-    .setTitle(`🎒 Inventário de ${message.author.username}`)
-    .setThumbnail(message.author.displayAvatarURL({ size: 128 }));
+// =========================
+// LIMPAR CACHE
+// =========================
+export function limparCache(userId, guildId) {
+  cacheUsuario.delete(`${userId}:${guildId}`);
+}
 
-  for (const [cat, label] of Object.entries(CAT_LABEL)) {
-    const owned = inv[cat] ?? (cat === 'fundos' ? ['escuro'] : cat === 'molduras' ? ['padrao'] : []);
-    if (!owned.length) { embed.addFields({ name: label, value: '_Nenhum_', inline: true }); continue; }
+// =========================
+// INVENTÁRIO SEGURO
+// =========================
+export async function garantirInventario(user) {
+  if (!user) return null;
 
-    const eq = equipado[cat];
-    const lines = owned.map(id => {
-      const cfg = CONFIGS[cat][id];
-      const nome = cfg?.nome ?? id;
-      const isEq = id === eq;
-      return `${isEq ? '✅ ' : ''}**${nome}** \`${id}\``;
-    });
-    embed.addFields({ name: label, value: lines.join('\n').slice(0, 1000), inline: true });
+  let inv = user.inventario;
+
+  if (typeof inv === 'string') {
+    try {
+      inv = JSON.parse(inv);
+    } catch {
+      inv = {};
+    }
   }
 
-  embed.addFields({
-    name: '📋 Como equipar',
-    value: '`!equiparfundo <id>` | `!equiparmoldura <id>` | `!equiparefeito <id>` | `!equiparbadge <id>`',
+  inv = inv || {};
+
+  for (const campo of Object.values(mapaInventario)) {
+    if (!Array.isArray(inv[campo])) inv[campo] = [];
+  }
+
+  const inventarioOriginal =
+    typeof user.inventario === 'string'
+      ? JSON.parse(user.inventario || '{}')
+      : user.inventario || {};
+
+  if (JSON.stringify(inventarioOriginal) !== JSON.stringify(inv)) {
+    user.inventario = inv;
+    await user.save();
+  }
+
+  return inv;
+}
+
+// =========================
+// EQUIPAR / DESEQUIPAR
+// =========================
+export async function equiparItem(user, tipo, itemId) {
+  if (!categoriasValidas.includes(tipo)) {
+    return { ok: false, msg: '❌ Tipo inválido.' };
+  }
+
+  if (!user || !itemId) {
+    return { ok: false, msg: '❌ Dados inválidos.' };
+  }
+
+  itemId = String(itemId).toLowerCase().trim();
+
+  const inv = await garantirInventario(user);
+  if (!inv) return { ok: false, msg: '❌ Inventário inválido.' };
+
+  const lista = inv[mapaInventario[tipo]] || [];
+
+  if (!lista.includes(itemId)) {
+    return { ok: false, msg: '❌ Você não possui esse item.' };
+  }
+
+  const campo = mapaCampoEquipado[tipo];
+  const jaEquipado = user[campo] === itemId;
+
+  user[campo] = jaEquipado ? null : itemId;
+
+  await user.save();
+  limparCache(user.userId, user.guildId);
+
+  return {
+    ok: true,
+    msg: jaEquipado
+      ? `❎ Desequipado: **${itemId}**`
+      : `✅ Equipado: **${itemId}**`
+  };
+}
+
+// =========================
+// INVENTÁRIO PAGINADO
+// =========================
+export async function inventario(message) {
+  const user = await getUser(message);
+  if (!user) return message.reply('❌ Usuário não cadastrado.');
+
+  const estado = {
+    tipo: 'moldura',
+    pagina: 0
+  };
+
+  const renderInv = async () => await garantirInventario(user);
+
+  async function getLista() {
+    const inv = await renderInv();
+    return inv[mapaInventario[estado.tipo]] || [];
+  }
+
+  async function maxPagina() {
+    const lista = await getLista();
+    return Math.max(0, Math.ceil(lista.length / itensPorPagina) - 1);
+  }
+
+  function estaEquipado(item) {
+    return user[mapaCampoEquipado[estado.tipo]] === item;
+  }
+
+  async function gerarEmbed() {
+    const lista = await getLista();
+    const inicio = estado.pagina * itensPorPagina;
+    const itens = lista.slice(inicio, inicio + itensPorPagina);
+
+    return new EmbedBuilder()
+      .setTitle(`🎒 Inventário - ${estado.tipo.toUpperCase()}`)
+      .setDescription(
+        itens.length
+          ? itens.map(i => `${estaEquipado(i) ? '✅' : '⬜'} \`${i}\``).join('\n')
+          : '❌ Sem itens'
+      )
+      .setFooter({ text: `Página ${estado.pagina + 1}/${await maxPagina() + 1}` })
+      .setColor('#00d4ff');
+  }
+
+  async function gerarBotoes() {
+    const lista = await getLista();
+    const paginado = lista.slice(
+      estado.pagina * itensPorPagina,
+      (estado.pagina + 1) * itensPorPagina
+    );
+
+    const rows = [];
+    let row = new ActionRowBuilder();
+
+    for (const item of paginado) {
+      if (row.components.length === 5) {
+        rows.push(row);
+        row = new ActionRowBuilder();
+      }
+
+      const equipado = estaEquipado(item);
+
+      row.addComponents(
+        new ButtonBuilder()
+          .setCustomId(`inv_${estado.tipo}_${item}`)
+          .setLabel(equipado ? `❌ ${item}` : `✅ ${item}`)
+          .setStyle(equipado ? ButtonStyle.Danger : ButtonStyle.Success)
+      );
+    }
+
+    if (row.components.length) rows.push(row);
+    return rows;
+  }
+
+  async function gerarNav() {
+    return new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('inv_prev')
+        .setLabel('⬅️')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(estado.pagina === 0),
+
+      new ButtonBuilder()
+        .setCustomId('inv_pagina_info')
+        .setLabel(`${estado.pagina + 1}/${await maxPagina() + 1}`)
+        .setStyle(ButtonStyle.Primary)
+        .setDisabled(true),
+
+      new ButtonBuilder()
+        .setCustomId('inv_next')
+        .setLabel('➡️')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(estado.pagina >= await maxPagina())
+    );
+  }
+
+  function gerarCats() {
+    return new ActionRowBuilder().addComponents(
+      ...categoriasValidas.map(c =>
+        new ButtonBuilder()
+          .setCustomId(`cat_${c}`)
+          .setLabel(c.toUpperCase())
+          .setStyle(c === estado.tipo ? ButtonStyle.Success : ButtonStyle.Secondary)
+      )
+    );
+  }
+
+  const msg = await message.channel.send({
+    embeds: [await gerarEmbed()],
+    components: [...await gerarBotoes(), await gerarNav(), gerarCats()]
   });
 
-  return message.reply({ embeds: [embed] });
+  const collector = msg.createMessageComponentCollector({ time: 600000 });
+
+  collector.on('collect', async (i) => {
+    if (i.user.id !== message.author.id) {
+      return i.reply({
+        content: '❌ Apenas quem abriu o inventário pode usar.',
+        ephemeral: true
+      });
+    }
+
+    const agora = Date.now();
+    const last = ultimoClique.get(i.user.id) || 0;
+    if (agora - last < TEMPO_DEBOUNCE) {
+      return i.reply({ content: '⏳ Aguarde...', ephemeral: true });
+    }
+    ultimoClique.set(i.user.id, agora);
+
+    await i.deferUpdate();
+
+    if (i.customId === 'inv_prev' && estado.pagina > 0) estado.pagina--;
+    if (i.customId === 'inv_next' && estado.pagina < await maxPagina()) estado.pagina++;
+
+    if (i.customId.startsWith('cat_')) {
+      estado.tipo = i.customId.replace('cat_', '');
+      estado.pagina = 0;
+    }
+
+    if (i.customId.startsWith('inv_') && !['inv_prev', 'inv_next', 'inv_pagina_info'].includes(i.customId)) {
+      const [, tipo, ...rest] = i.customId.split('_');
+      const item = rest.join('_');
+
+      const res = await equiparItem(user, tipo, item);
+      await i.followUp({
+        content: res.msg,
+        ephemeral: true
+      });
+    }
+
+    try {
+      await msg.edit({
+        embeds: [await gerarEmbed()],
+        components: [...await gerarBotoes(), await gerarNav(), gerarCats()]
+      });
+    } catch {}
+  });
+
+  collector.on('end', () => {
+    msg.edit({ components: [] }).catch(() => {});
+  });
 }
+
+// ✅ Comandos e registro
+export const comandos = [
+  {
+    cmd: '!inventario',
+    desc: 'Visualiza e equipa itens do inventário'
+  },
+  {
+    cmd: '!inv',
+    desc: 'Atalho para o inventário'
+  }
+];
 
 export function register(client, configs) {
   if (client.__inventarioRegistrado) return;
   client.__inventarioRegistrado = true;
 
-  client.on('messageCreate', async (msg) => {
-    if (!msg.guild || msg.author.bot) return;
-    const cfg = configs.get(msg.guild.id);
-    const p = cfg?.prefixo ?? '!';
-    if (!msg.content.startsWith(p)) return;
-    const cmd = msg.content.slice(p.length).trim().split(/\s+/)[0].toLowerCase();
+  client.on('messageCreate', async (message) => {
+    if (!message.guild || message.author.bot) return;
+
+    const cfg = configs.get(message.guild.id);
+    const prefixo = cfg?.prefixo || '!';
+
+    if (!message.content.startsWith(prefixo)) return;
+
+    const args = message.content
+      .slice(prefixo.length)
+      .trim()
+      .split(/\s+/);
+
+    const cmd = args.shift()?.toLowerCase();
+
     if (cmd === 'inventario' || cmd === 'inv') {
-      try { await inventario(msg); } catch (e) { console.error('[inventario]', e); }
+      return inventario(message);
     }
   });
 }
