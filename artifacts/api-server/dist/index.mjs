@@ -44265,15 +44265,15 @@ var require_message = __commonJS({
       ComponentType2[ComponentType2["Checkbox"] = 23] = "Checkbox";
       ComponentType2[ComponentType2["SelectMenu"] = 3] = "SelectMenu";
     })(ComponentType || (exports2.ComponentType = ComponentType = {}));
-    var ButtonStyle;
-    (function(ButtonStyle2) {
-      ButtonStyle2[ButtonStyle2["Primary"] = 1] = "Primary";
-      ButtonStyle2[ButtonStyle2["Secondary"] = 2] = "Secondary";
-      ButtonStyle2[ButtonStyle2["Success"] = 3] = "Success";
-      ButtonStyle2[ButtonStyle2["Danger"] = 4] = "Danger";
-      ButtonStyle2[ButtonStyle2["Link"] = 5] = "Link";
-      ButtonStyle2[ButtonStyle2["Premium"] = 6] = "Premium";
-    })(ButtonStyle || (exports2.ButtonStyle = ButtonStyle = {}));
+    var ButtonStyle2;
+    (function(ButtonStyle3) {
+      ButtonStyle3[ButtonStyle3["Primary"] = 1] = "Primary";
+      ButtonStyle3[ButtonStyle3["Secondary"] = 2] = "Secondary";
+      ButtonStyle3[ButtonStyle3["Success"] = 3] = "Success";
+      ButtonStyle3[ButtonStyle3["Danger"] = 4] = "Danger";
+      ButtonStyle3[ButtonStyle3["Link"] = 5] = "Link";
+      ButtonStyle3[ButtonStyle3["Premium"] = 6] = "Premium";
+    })(ButtonStyle2 || (exports2.ButtonStyle = ButtonStyle2 = {}));
     var TextInputStyle;
     (function(TextInputStyle2) {
       TextInputStyle2[TextInputStyle2["Short"] = 1] = "Short";
@@ -51477,10 +51477,10 @@ var require_dist5 = __commonJS({
     exports2.filetypemime = filetypemime;
     var filetypeextension = (bytes) => exports2.filetypeinfo(bytes).map((e) => e.extension ? e.extension : null).filter((x) => x !== null);
     exports2.filetypeextension = filetypeextension;
-    var register = (typename, signature, additionalInfo, offset) => {
+    var register7 = (typename, signature, additionalInfo, offset) => {
       pattern_tree_1.add(typename, signature, additionalInfo, offset);
     };
-    exports2.register = register;
+    exports2.register = register7;
   }
 });
 
@@ -56800,7 +56800,7 @@ var require_Util = __commonJS({
     var { Collection: Collection2 } = require_dist7();
     var { ChannelType, RouteBases, Routes: Routes2 } = require_v106();
     var { fetch: fetch2 } = require_undici();
-    var Colors2 = require_Colors();
+    var Colors6 = require_Colors();
     var { DiscordjsError: DiscordjsError2, DiscordjsRangeError: DiscordjsRangeError2, DiscordjsTypeError: DiscordjsTypeError2, ErrorCodes: ErrorCodes2 } = require_errors2();
     var isObject = (d) => typeof d === "object" && d !== null;
     var deprecationEmittedForUserFetchFlags = false;
@@ -56910,7 +56910,7 @@ var require_Util = __commonJS({
         if (color === "Random") return Math.floor(Math.random() * (16777215 + 1));
         if (color === "Default") return 0;
         if (/^#?[\da-f]{6}$/i.test(color)) return parseInt(color.replace("#", ""), 16);
-        resolvedColor = Colors2[color];
+        resolvedColor = Colors6[color];
       } else if (Array.isArray(color)) {
         resolvedColor = (color[0] << 16) + (color[1] << 8) + color[2];
       } else {
@@ -66462,14 +66462,14 @@ var require_dist9 = __commonJS({
     };
     var index_exports = {};
     __export2(index_exports, {
-      ActionRowBuilder: () => ActionRowBuilder,
+      ActionRowBuilder: () => ActionRowBuilder2,
       ApplicationCommandNumericOptionMinMaxValueMixin: () => ApplicationCommandNumericOptionMinMaxValueMixin,
       ApplicationCommandOptionBase: () => ApplicationCommandOptionBase,
       ApplicationCommandOptionChannelTypesMixin: () => ApplicationCommandOptionChannelTypesMixin,
       ApplicationCommandOptionWithAutocompleteMixin: () => ApplicationCommandOptionWithAutocompleteMixin,
       ApplicationCommandOptionWithChoicesMixin: () => ApplicationCommandOptionWithChoicesMixin,
       BaseSelectMenuBuilder: () => BaseSelectMenuBuilder,
-      ButtonBuilder: () => ButtonBuilder,
+      ButtonBuilder: () => ButtonBuilder2,
       ChannelSelectMenuBuilder: () => ChannelSelectMenuBuilder,
       CheckboxAssertions: () => Assertions_exports3,
       CheckboxBuilder: () => CheckboxBuilder,
@@ -66482,7 +66482,7 @@ var require_dist9 = __commonJS({
       ContextMenuCommandAssertions: () => Assertions_exports11,
       ContextMenuCommandBuilder: () => ContextMenuCommandBuilder,
       EmbedAssertions: () => Assertions_exports,
-      EmbedBuilder: () => EmbedBuilder2,
+      EmbedBuilder: () => EmbedBuilder6,
       FileBuilder: () => FileBuilder,
       FileUploadAssertions: () => Assertions_exports4,
       FileUploadBuilder: () => FileUploadBuilder,
@@ -66611,7 +66611,7 @@ var require_dist9 = __commonJS({
       return arr;
     }
     __name(normalizeArray, "normalizeArray");
-    var EmbedBuilder2 = class {
+    var EmbedBuilder6 = class {
       static {
         __name(this, "EmbedBuilder");
       }
@@ -67035,7 +67035,7 @@ var require_dist9 = __commonJS({
     };
     var import_v1027 = require_v106();
     var import_v102 = require_v106();
-    var ButtonBuilder = class extends ComponentBuilder {
+    var ButtonBuilder2 = class extends ComponentBuilder {
       static {
         __name(this, "ButtonBuilder");
       }
@@ -68817,7 +68817,7 @@ var require_dist9 = __commonJS({
     var dividerPredicate = import_shapeshift8.s.boolean();
     var spacingPredicate = import_shapeshift8.s.nativeEnum(import_v1020.SeparatorSpacingSize);
     var textDisplayContentPredicate = import_shapeshift8.s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(4e3).setValidationEnabled(isValidationEnabled);
-    var accessoryPredicate = import_shapeshift8.s.instance(ButtonBuilder).or(import_shapeshift8.s.instance(ThumbnailBuilder)).setValidationEnabled(isValidationEnabled);
+    var accessoryPredicate = import_shapeshift8.s.instance(ButtonBuilder2).or(import_shapeshift8.s.instance(ThumbnailBuilder)).setValidationEnabled(isValidationEnabled);
     var containerColorPredicate = colorPredicate.nullish();
     function assertReturnOfBuilder(input, ExpectedInstanceOf) {
       import_shapeshift8.s.instance(ExpectedInstanceOf).setValidationEnabled(isValidationEnabled).parse(input);
@@ -69070,7 +69070,7 @@ var require_dist9 = __commonJS({
        */
       addActionRowComponents(...components) {
         this.components.push(
-          ...normalizeArray(components).map((component) => resolveBuilder(component, ActionRowBuilder))
+          ...normalizeArray(components).map((component) => resolveBuilder(component, ActionRowBuilder2))
         );
         return this;
       }
@@ -69392,7 +69392,7 @@ var require_dist9 = __commonJS({
        * @param accessory - The accessory to use
        */
       setButtonAccessory(accessory) {
-        Reflect.set(this, "accessory", accessoryPredicate.parse(resolveBuilder(accessory, ButtonBuilder)));
+        Reflect.set(this, "accessory", accessoryPredicate.parse(resolveBuilder(accessory, ButtonBuilder2)));
         return this;
       }
       /**
@@ -69456,9 +69456,9 @@ var require_dist9 = __commonJS({
       }
       switch (data.type) {
         case import_v1027.ComponentType.ActionRow:
-          return new ActionRowBuilder(data);
+          return new ActionRowBuilder2(data);
         case import_v1027.ComponentType.Button:
-          return new ButtonBuilder(data);
+          return new ButtonBuilder2(data);
         case import_v1027.ComponentType.StringSelect:
           return new StringSelectMenuBuilder(data);
         case import_v1027.ComponentType.TextInput:
@@ -69514,7 +69514,7 @@ var require_dist9 = __commonJS({
       return new Constructor(builder);
     }
     __name(resolveBuilder, "resolveBuilder");
-    var ActionRowBuilder = class extends ComponentBuilder {
+    var ActionRowBuilder2 = class extends ComponentBuilder {
       static {
         __name(this, "ActionRowBuilder");
       }
@@ -69597,7 +69597,7 @@ var require_dist9 = __commonJS({
     });
     var import_shapeshift9 = require_cjs4();
     var titleValidator = import_shapeshift9.s.string().lengthGreaterThanOrEqual(1).lengthLessThanOrEqual(45).setValidationEnabled(isValidationEnabled);
-    var componentsValidator = import_shapeshift9.s.union([import_shapeshift9.s.instance(ActionRowBuilder), import_shapeshift9.s.instance(LabelBuilder), import_shapeshift9.s.instance(TextDisplayBuilder)]).array().lengthGreaterThanOrEqual(1).setValidationEnabled(isValidationEnabled);
+    var componentsValidator = import_shapeshift9.s.union([import_shapeshift9.s.instance(ActionRowBuilder2), import_shapeshift9.s.instance(LabelBuilder), import_shapeshift9.s.instance(TextDisplayBuilder)]).array().lengthGreaterThanOrEqual(1).setValidationEnabled(isValidationEnabled);
     function validateRequiredParameters2(customId, title, components) {
       customIdValidator.parse(customId);
       titleValidator.parse(title);
@@ -69652,15 +69652,15 @@ var require_dist9 = __commonJS({
       addComponents(...components) {
         this.components.push(
           ...normalizeArray(components).map((component, idx) => {
-            if (component instanceof ActionRowBuilder || component instanceof LabelBuilder || component instanceof TextDisplayBuilder) {
+            if (component instanceof ActionRowBuilder2 || component instanceof LabelBuilder || component instanceof TextDisplayBuilder) {
               return component;
             }
             if (component instanceof TextInputBuilder) {
-              return new ActionRowBuilder().addComponents(component);
+              return new ActionRowBuilder2().addComponents(component);
             }
             if ("type" in component) {
               if (component.type === import_v1029.ComponentType.ActionRow) {
-                return new ActionRowBuilder(component);
+                return new ActionRowBuilder2(component);
               }
               if (component.type === import_v1029.ComponentType.Label) {
                 return new LabelBuilder(component);
@@ -69669,7 +69669,7 @@ var require_dist9 = __commonJS({
                 return new TextDisplayBuilder(component);
               }
               if (component.type === import_v1029.ComponentType.TextInput) {
-                return new ActionRowBuilder().addComponents(
+                return new ActionRowBuilder2().addComponents(
                   new TextInputBuilder(component)
                 );
               }
@@ -69709,7 +69709,7 @@ var require_dist9 = __commonJS({
        */
       addActionRowComponents(...components) {
         const normalized = normalizeArray(components);
-        const resolved = normalized.map((row) => resolveBuilder(row, ActionRowBuilder));
+        const resolved = normalized.map((row) => resolveBuilder(row, ActionRowBuilder2));
         this.components.push(...resolved);
         return this;
       }
@@ -72367,7 +72367,7 @@ var require_ActionRowBuilder = __commonJS({
     var { isJSONEncodable } = require_dist2();
     var { createComponentBuilder } = require_Components();
     var { toSnakeCase } = require_Transformers();
-    var ActionRowBuilder = class extends BuildersActionRow {
+    var ActionRowBuilder2 = class extends BuildersActionRow {
       constructor({ components, ...data } = {}) {
         super({
           ...toSnakeCase(data),
@@ -72383,7 +72383,7 @@ var require_ActionRowBuilder = __commonJS({
         return new this(isJSONEncodable(other) ? other.toJSON() : other);
       }
     };
-    module2.exports = ActionRowBuilder;
+    module2.exports = ActionRowBuilder2;
   }
 });
 
@@ -72395,7 +72395,7 @@ var require_ButtonBuilder = __commonJS({
     var { isJSONEncodable } = require_dist2();
     var { toSnakeCase } = require_Transformers();
     var { resolvePartialEmoji } = require_Util();
-    var ButtonBuilder = class extends BuildersButton {
+    var ButtonBuilder2 = class extends BuildersButton {
       constructor({ emoji, ...data } = {}) {
         super(toSnakeCase({ ...data, emoji: emoji && typeof emoji === "string" ? resolvePartialEmoji(emoji) : emoji }));
       }
@@ -72419,7 +72419,7 @@ var require_ButtonBuilder = __commonJS({
         return new this(isJSONEncodable(other) ? other.toJSON() : other);
       }
     };
-    module2.exports = ButtonBuilder;
+    module2.exports = ButtonBuilder2;
   }
 });
 
@@ -73172,8 +73172,8 @@ var require_Components = __commonJS({
     }
     module2.exports = { createComponent, createComponentBuilder, findComponentByCustomId };
     var ActionRow = require_ActionRow();
-    var ActionRowBuilder = require_ActionRowBuilder();
-    var ButtonBuilder = require_ButtonBuilder();
+    var ActionRowBuilder2 = require_ActionRowBuilder();
+    var ButtonBuilder2 = require_ButtonBuilder();
     var ButtonComponent = require_ButtonComponent();
     var ChannelSelectMenuBuilder = require_ChannelSelectMenuBuilder();
     var ChannelSelectMenuComponent = require_ChannelSelectMenuComponent();
@@ -73215,8 +73215,8 @@ var require_Components = __commonJS({
       [ComponentType.Label]: LabelComponent
     };
     var ComponentTypeToBuilder = {
-      [ComponentType.ActionRow]: ActionRowBuilder,
-      [ComponentType.Button]: ButtonBuilder,
+      [ComponentType.ActionRow]: ActionRowBuilder2,
+      [ComponentType.Button]: ButtonBuilder2,
       [ComponentType.StringSelect]: StringSelectMenuBuilder,
       [ComponentType.TextInput]: TextInputBuilder,
       [ComponentType.UserSelect]: UserSelectMenuBuilder,
@@ -98389,7 +98389,7 @@ var require_EmbedBuilder = __commonJS({
     var { isJSONEncodable } = require_dist2();
     var { toSnakeCase } = require_Transformers();
     var { resolveColor } = require_Util();
-    var EmbedBuilder2 = class extends BuildersEmbed {
+    var EmbedBuilder6 = class extends BuildersEmbed {
       constructor(data) {
         super(toSnakeCase(data));
       }
@@ -98418,7 +98418,7 @@ var require_EmbedBuilder = __commonJS({
         return embedLength(this.data);
       }
     };
-    module2.exports = EmbedBuilder2;
+    module2.exports = EmbedBuilder6;
   }
 });
 
@@ -98911,666 +98911,6 @@ var require_src2 = __commonJS({
     __exportStar2(require_dist6(), exports2);
     __exportStar2(require_dist2(), exports2);
     __exportStar2(require_dist10(), exports2);
-  }
-});
-
-// src/db/sqlite.mjs
-var sqlite_exports = {};
-__export(sqlite_exports, {
-  getDB: () => getDB,
-  initDB: () => initDB,
-  isDBConnected: () => isDBConnected,
-  makeModel: () => makeModel
-});
-import Database from "better-sqlite3";
-import path2 from "path";
-function isDBConnected() {
-  return _db !== null;
-}
-function getDB() {
-  return _db;
-}
-function _createTables() {
-  _db.exec(`
-    CREATE TABLE IF NOT EXISTS usuarios (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      userId TEXT NOT NULL,
-      guildId TEXT NOT NULL,
-      xpTotal INTEGER NOT NULL DEFAULT 0,
-      xpDisponivel INTEGER NOT NULL DEFAULT 0,
-      nivel INTEGER NOT NULL DEFAULT 1,
-      reputacao INTEGER NOT NULL DEFAULT 0,
-      ultimaRep TEXT,
-      tituloEquipado TEXT,
-      titulos TEXT NOT NULL DEFAULT '[]',
-      mensagens INTEGER NOT NULL DEFAULT 0,
-      ultimaMensagem TEXT,
-      ultimoXP TEXT,
-      streak INTEGER NOT NULL DEFAULT 0,
-      ultimoDiaAtivo TEXT,
-      genero TEXT,
-      moldura TEXT NOT NULL DEFAULT 'padrao',
-      fundo TEXT NOT NULL DEFAULT 'escuro',
-      badges TEXT NOT NULL DEFAULT '[]',
-      efeitos TEXT NOT NULL DEFAULT '[]',
-      inventario TEXT NOT NULL DEFAULT '{}',
-      createdAt TEXT NOT NULL DEFAULT (datetime('now')),
-      updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
-      UNIQUE(userId, guildId)
-    );
-
-    CREATE TABLE IF NOT EXISTS configs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guildId TEXT NOT NULL UNIQUE,
-      prefixo TEXT NOT NULL DEFAULT '!',
-      canalLogs TEXT,
-      canalSuporte TEXT,
-      canalDenuncias TEXT,
-      canalSugestoes TEXT,
-      cargoEquipe TEXT,
-      cargoSuporte TEXT,
-      cargoVendedor TEXT,
-      cargoAdmin TEXT,
-      cargoServicos TEXT,
-      canalBemVindo TEXT,
-      mensagemBemVindo TEXT,
-      autoRole TEXT,
-      taxa REAL NOT NULL DEFAULT 38,
-      taxaHistorico TEXT NOT NULL DEFAULT '[]',
-      levelRoles TEXT NOT NULL DEFAULT '[]',
-      createdAt TEXT NOT NULL DEFAULT (datetime('now')),
-      updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS casamentos (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guildId TEXT NOT NULL,
-      userId1 TEXT NOT NULL,
-      userId2 TEXT NOT NULL,
-      ativo INTEGER NOT NULL DEFAULT 1,
-      dataCasamento TEXT NOT NULL DEFAULT (datetime('now')),
-      dataFim TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS afinidades (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guildId TEXT NOT NULL,
-      userId1 TEXT NOT NULL,
-      userId2 TEXT NOT NULL,
-      pontos INTEGER NOT NULL DEFAULT 0,
-      interacoes INTEGER NOT NULL DEFAULT 0,
-      ultimaInteracao TEXT,
-      UNIQUE(guildId, userId1, userId2)
-    );
-
-    CREATE TABLE IF NOT EXISTS tickets (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      ticketId TEXT NOT NULL,
-      guildId TEXT NOT NULL,
-      userId TEXT NOT NULL,
-      categoria TEXT NOT NULL,
-      channelId TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'aberto',
-      responsavel TEXT,
-      transcript TEXT NOT NULL DEFAULT '[]',
-      createdAt TEXT NOT NULL DEFAULT (datetime('now')),
-      UNIQUE(guildId, ticketId)
-    );
-
-    CREATE TABLE IF NOT EXISTS conquistas (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      userId TEXT NOT NULL,
-      guildId TEXT NOT NULL,
-      conquistas TEXT NOT NULL DEFAULT '[]',
-      badges TEXT NOT NULL DEFAULT '[]',
-      UNIQUE(userId, guildId)
-    );
-
-    CREATE TABLE IF NOT EXISTS missoes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      userId TEXT NOT NULL,
-      guildId TEXT NOT NULL,
-      diarias TEXT NOT NULL DEFAULT '[]',
-      semanais TEXT NOT NULL DEFAULT '[]',
-      ultimaRenovacaoDiaria TEXT,
-      ultimaRenovacaoSemanal TEXT,
-      ultimaDiaMissao TEXT,
-      ultimaSemanaMissao TEXT,
-      UNIQUE(userId, guildId)
-    );
-
-    CREATE TABLE IF NOT EXISTS produtos (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guildId TEXT NOT NULL,
-      nome TEXT NOT NULL,
-      categoria TEXT NOT NULL,
-      descricao TEXT NOT NULL DEFAULT '',
-      imagem TEXT,
-      tabela TEXT NOT NULL DEFAULT '[]',
-      status TEXT NOT NULL DEFAULT 'disponivel'
-    );
-
-    CREATE TABLE IF NOT EXISTS quiz_stats (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      userId TEXT NOT NULL,
-      guildId TEXT NOT NULL,
-      total INTEGER NOT NULL DEFAULT 0,
-      acertos INTEGER NOT NULL DEFAULT 0,
-      erros INTEGER NOT NULL DEFAULT 0,
-      categoriaFavorita TEXT,
-      categoriasContagem TEXT NOT NULL DEFAULT '{}',
-      UNIQUE(userId, guildId)
-    );
-
-    CREATE TABLE IF NOT EXISTS denuncias (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guildId TEXT NOT NULL,
-      denuncianteId TEXT NOT NULL,
-      denunciadoId TEXT NOT NULL,
-      motivo TEXT NOT NULL,
-      descricao TEXT NOT NULL DEFAULT '',
-      provas TEXT NOT NULL DEFAULT '',
-      status TEXT NOT NULL DEFAULT 'pendente',
-      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS avaliacoes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guildId TEXT NOT NULL,
-      userId TEXT NOT NULL,
-      nota INTEGER NOT NULL,
-      comentario TEXT NOT NULL DEFAULT '',
-      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guildId TEXT NOT NULL,
-      tipo TEXT NOT NULL,
-      userId TEXT,
-      dados TEXT NOT NULL DEFAULT '{}',
-      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS forca (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      userId TEXT NOT NULL,
-      guildId TEXT NOT NULL,
-      vitorias INTEGER NOT NULL DEFAULT 0,
-      derrotas INTEGER NOT NULL DEFAULT 0,
-      UNIQUE(userId, guildId)
-    );
-
-    CREATE TABLE IF NOT EXISTS xp_logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      userId TEXT NOT NULL,
-      guildId TEXT NOT NULL,
-      tipo TEXT NOT NULL DEFAULT 'ganho',
-      valor INTEGER NOT NULL DEFAULT 0,
-      saldoAntes INTEGER NOT NULL DEFAULT 0,
-      saldoApos INTEGER NOT NULL DEFAULT 0,
-      xpTotalAntes INTEGER NOT NULL DEFAULT 0,
-      xpTotalApos INTEGER NOT NULL DEFAULT 0,
-      origem TEXT NOT NULL DEFAULT 'sistema',
-      descricao TEXT NOT NULL DEFAULT '',
-      referenciaId TEXT,
-      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS historico (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      guildId TEXT NOT NULL,
-      userId TEXT NOT NULL,
-      sistema TEXT NOT NULL,
-      acao TEXT NOT NULL,
-      dados TEXT NOT NULL DEFAULT '{}',
-      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-
-      -- \u2500\u2500\u2500 \xCDNDICES DE PERFORMANCE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-      CREATE INDEX IF NOT EXISTS idx_usuarios_user_guild
-        ON usuarios(userId, guildId);
-
-      CREATE INDEX IF NOT EXISTS idx_usuarios_xp_ranking
-        ON usuarios(guildId, xpTotal DESC);
-
-      CREATE INDEX IF NOT EXISTS idx_usuarios_nivel
-        ON usuarios(guildId, nivel DESC);
-
-      CREATE INDEX IF NOT EXISTS idx_afinidades_par
-        ON afinidades(guildId, userId1, userId2);
-
-      CREATE INDEX IF NOT EXISTS idx_casamentos_guild
-        ON casamentos(guildId, ativo);
-
-      CREATE INDEX IF NOT EXISTS idx_tickets_guild_user
-        ON tickets(guildId, userId, status);
-    `);
-  try {
-    _db.exec(`
-      CREATE INDEX IF NOT EXISTS idx_usuario ON usuarios(userId, guildId);
-      CREATE INDEX IF NOT EXISTS idx_xplogs_usuario ON xp_logs(userId, guildId);
-      CREATE INDEX IF NOT EXISTS idx_historico_usuario ON historico(userId, guildId);
-      CREATE INDEX IF NOT EXISTS idx_logs_guild ON logs(guildId);
-    `);
-  } catch (e) {
-    console.error("[SQLite] erro ao criar \xEDndices:", e.message);
-  }
-  const migrations = [
-    // usuarios
-    `ALTER TABLE usuarios ADD COLUMN xpTotal INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE usuarios ADD COLUMN xpDisponivel INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE usuarios ADD COLUMN streak INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE usuarios ADD COLUMN ultimoDiaAtivo TEXT`,
-    `ALTER TABLE usuarios ADD COLUMN genero TEXT`,
-    `ALTER TABLE usuarios ADD COLUMN moldura TEXT NOT NULL DEFAULT 'padrao'`,
-    `ALTER TABLE usuarios ADD COLUMN fundo TEXT NOT NULL DEFAULT 'escuro'`,
-    `ALTER TABLE usuarios ADD COLUMN badges TEXT NOT NULL DEFAULT '[]'`,
-    `ALTER TABLE usuarios ADD COLUMN efeitos TEXT NOT NULL DEFAULT '[]'`,
-    `ALTER TABLE usuarios ADD COLUMN inventario TEXT NOT NULL DEFAULT '{}'`,
-    // missoes
-    `ALTER TABLE missoes ADD COLUMN ultimaDiaMissao TEXT`,
-    `ALTER TABLE missoes ADD COLUMN ultimaSemanaMissao TEXT`,
-    // xp_logs
-    `ALTER TABLE xp_logs ADD COLUMN saldoAntes INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE xp_logs ADD COLUMN xpTotalAntes INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE xp_logs ADD COLUMN xpTotalApos INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE xp_logs ADD COLUMN descricao TEXT NOT NULL DEFAULT ''`,
-    `ALTER TABLE xp_logs ADD COLUMN referenciaId TEXT`,
-    // usuarios — colunas adicionais
-    `ALTER TABLE usuarios ADD COLUMN casadoCom TEXT`,
-    `ALTER TABLE usuarios ADD COLUMN efeitoEquipado TEXT`,
-    `ALTER TABLE usuarios ADD COLUMN badgeEquipado TEXT`,
-    // usuarios — perfil expandido
-    `ALTER TABLE usuarios ADD COLUMN totalMensagens INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE usuarios ADD COLUMN afinidade INTEGER NOT NULL DEFAULT 0`,
-    `ALTER TABLE usuarios ADD COLUMN tituloEquipado TEXT`,
-    // missoes
-    `ALTER TABLE missoes ADD COLUMN updatedAt TEXT`
-  ];
-  for (const sql of migrations) {
-    try {
-      _db.prepare(sql).run();
-    } catch (e) {
-      if (!e.message.includes("duplicate column")) {
-        console.warn("[Migration error]", sql, "->", e.message);
-      }
-    }
-  }
-}
-function initDB() {
-  try {
-    _db = new Database(DB_PATH);
-    _db.pragma("journal_mode = WAL");
-    _db.pragma("synchronous = NORMAL");
-    _createTables();
-    console.log("[SQLite] Banco de dados iniciado:", DB_PATH);
-    return true;
-  } catch (e) {
-    console.error("[SQLite] Erro ao iniciar:", e.message);
-    _db = null;
-    return false;
-  }
-}
-function buildWhere(filter) {
-  const parts = [];
-  const params = [];
-  const dotted = {};
-  for (const [key, val] of Object.entries(filter || {})) {
-    if (key === "$or") {
-      const orParts = [];
-      for (const sub of val) {
-        const sub2 = {};
-        for (const [k2, v2] of Object.entries(sub)) {
-          if (!k2.includes(".")) sub2[k2] = v2;
-        }
-        const { where: w, params: p } = buildWhere(sub2);
-        if (w && w !== "1=1") {
-          orParts.push(`(${w})`);
-          params.push(...p);
-        }
-      }
-      if (orParts.length) parts.push(`(${orParts.join(" OR ")})`);
-    } else if (key.includes(".")) {
-      dotted[key] = val;
-    } else if (val === null || val === void 0) {
-      parts.push(`${key} IS NULL`);
-    } else if (typeof val === "boolean") {
-      parts.push(`${key} = ?`);
-      params.push(val ? 1 : 0);
-    } else if (typeof val === "object" && !(val instanceof Date) && !Array.isArray(val)) {
-      for (const [op, ov] of Object.entries(val)) {
-        if (op === "$gt") {
-          parts.push(`${key} > ?`);
-          params.push(ov);
-        } else if (op === "$gte") {
-          parts.push(`${key} >= ?`);
-          params.push(ov);
-        } else if (op === "$lt") {
-          parts.push(`${key} < ?`);
-          params.push(ov);
-        } else if (op === "$lte") {
-          parts.push(`${key} <= ?`);
-          params.push(ov);
-        } else if (op === "$ne") {
-          parts.push(`${key} != ?`);
-          params.push(ov);
-        } else if (op === "$in") {
-          parts.push(`${key} IN (${ov.map(() => "?").join(",")})`);
-          params.push(...ov);
-        }
-      }
-    } else {
-      parts.push(`${key} = ?`);
-      params.push(val instanceof Date ? val.toISOString() : val);
-    }
-  }
-  return { where: parts.length ? parts.join(" AND ") : "1=1", params, dotted };
-}
-function parseDoc(row, jsonFields, dateFields) {
-  if (!row) return null;
-  const doc = { ...row, _id: row.id };
-  for (const f of jsonFields) {
-    if (doc[f] != null) {
-      try {
-        doc[f] = JSON.parse(doc[f]);
-      } catch {
-        doc[f] = [];
-      }
-    }
-  }
-  for (const f of dateFields) {
-    if (doc[f]) doc[f] = new Date(doc[f]);
-  }
-  if ("ativo" in doc) doc.ativo = doc.ativo === 1 || doc.ativo === true;
-  return doc;
-}
-function serializeValue(v, isJson, isDate) {
-  if (isJson && v != null) return typeof v === "string" ? v : JSON.stringify(v);
-  if (isDate && v instanceof Date) return v.toISOString();
-  if (typeof v === "boolean") return v ? 1 : 0;
-  return v;
-}
-function serializeDoc(data, jsonFields, dateFields) {
-  const row = {};
-  for (const [k, v] of Object.entries(data)) {
-    if (k === "id" || k === "_id" || k === "save") continue;
-    row[k] = serializeValue(v, jsonFields.includes(k), dateFields.includes(k));
-  }
-  return row;
-}
-function applyUpdate(row, update, jsonFields, dateFields, isInsert) {
-  const r = { ...row };
-  const hasOps = Object.keys(update).some((k) => k.startsWith("$"));
-  if (!hasOps) {
-    for (const [k, v] of Object.entries(update)) {
-      r[k] = serializeValue(v, jsonFields.includes(k), dateFields.includes(k));
-    }
-    r.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-    return r;
-  }
-  for (const [op, fields] of Object.entries(update)) {
-    if (op === "$set" || op === "$setOnInsert" && isInsert) {
-      for (const [k, v] of Object.entries(fields)) {
-        if (!k.includes("."))
-          r[k] = serializeValue(v, jsonFields.includes(k), dateFields.includes(k));
-      }
-    } else if (op === "$inc") {
-      for (const [k, n] of Object.entries(fields)) {
-        if (!k.includes(".")) r[k] = (Number(r[k]) || 0) + n;
-      }
-    } else if (op === "$push") {
-      for (const [k, v] of Object.entries(fields)) {
-        if (!k.includes(".") && jsonFields.includes(k)) {
-          let arr = [];
-          try {
-            arr = JSON.parse(r[k] || "[]");
-          } catch {
-          }
-          arr.push(v);
-          r[k] = JSON.stringify(arr);
-        }
-      }
-    } else if (op === "$pull") {
-      for (const [k, matcher] of Object.entries(fields)) {
-        if (!k.includes(".") && jsonFields.includes(k)) {
-          let arr = [];
-          try {
-            arr = JSON.parse(r[k] || "[]");
-          } catch {
-          }
-          if (matcher && typeof matcher === "object") {
-            arr = arr.filter((item) => {
-              for (const [mk, mv] of Object.entries(matcher)) {
-                if (String(item[mk]) !== String(mv)) return true;
-              }
-              return false;
-            });
-          } else {
-            arr = arr.filter((i) => i !== matcher);
-          }
-          r[k] = JSON.stringify(arr);
-        }
-      }
-    } else if (op === "$unset") {
-      for (const k of Object.keys(fields)) {
-        if (!k.includes(".")) r[k] = null;
-      }
-    }
-  }
-  r.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-  return r;
-}
-function applyPositionalInc(row, update, filter, jsonFields) {
-  if (!update.$inc) return row;
-  const r = { ...row };
-  for (const [k, n] of Object.entries(update.$inc)) {
-    if (!k.includes(".$")) continue;
-    const [field, , subField] = k.split(".");
-    if (!jsonFields.includes(field)) continue;
-    let arr = [];
-    try {
-      arr = JSON.parse(r[field] || "[]");
-    } catch {
-    }
-    const dottedFilters = Object.entries(filter).filter(([fk]) => fk.startsWith(field + "."));
-    arr = arr.map((item) => {
-      let matches = true;
-      for (const [fk, fv] of dottedFilters) {
-        const sub = fk.split(".")[1];
-        const iv = item[sub];
-        if (typeof fv === "boolean") {
-          if (fv !== (iv === true || iv === 1)) matches = false;
-        } else if (String(iv) !== String(fv)) matches = false;
-      }
-      return matches ? { ...item, [subField]: (item[subField] || 0) + n } : item;
-    });
-    r[field] = JSON.stringify(arr);
-  }
-  return r;
-}
-function makeModel(table, { jsonFields = [], dateFields = [] } = {}) {
-  function _parse(row) {
-    const doc = parseDoc(row, jsonFields, dateFields);
-    if (!doc) return null;
-    doc.save = async function() {
-      if (!_db) return this;
-      const { id, _id, save: _s, ...data } = this;
-      const ser = serializeDoc(data, jsonFields, dateFields);
-      ser.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-      const keys = Object.keys(ser);
-      _db.prepare(`UPDATE ${table} SET ${keys.map((k) => `${k} = ?`).join(",")} WHERE id = ?`).run(...keys.map((k) => ser[k]), id);
-      return this;
-    };
-    return doc;
-  }
-  function _rows(filter) {
-    if (!_db) return [];
-    const { where, params, dotted } = buildWhere(filter);
-    const rows = _db.prepare(`SELECT * FROM ${table} WHERE ${where}`).all(...params);
-    if (!Object.keys(dotted).length) return rows;
-    return rows.filter((row) => {
-      for (const [dk, dv] of Object.entries(dotted)) {
-        const [field, ...rest] = dk.split(".");
-        if (!jsonFields.includes(field)) continue;
-        let arr = [];
-        try {
-          arr = JSON.parse(row[field] || "[]");
-        } catch {
-        }
-        const sub = rest.join(".");
-        const ok = arr.some((item) => {
-          const iv = sub.split(".").reduce((o, k) => o?.[k], item);
-          if (typeof dv === "boolean") return dv ? iv === true || iv === 1 : iv === false || iv === 0;
-          return String(iv) === String(dv);
-        });
-        if (!ok) return false;
-      }
-      return true;
-    });
-  }
-  return {
-    async findOne(filter) {
-      const rows = _rows(filter);
-      return rows.length ? _parse(rows[0]) : null;
-    },
-    find(filter) {
-      return new QueryResult(_rows(filter), _parse);
-    },
-    async create(data) {
-      if (!_db) return null;
-      const ser = serializeDoc(data, jsonFields, dateFields);
-      const keys = Object.keys(ser);
-      const r = _db.prepare(
-        `INSERT OR IGNORE INTO ${table} (${keys.join(",")}) VALUES (${keys.map(() => "?").join(",")})`
-      ).run(...keys.map((k) => ser[k]));
-      const inserted = _db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(r.lastInsertRowid);
-      return inserted ? _parse(inserted) : null;
-    },
-    async updateOne(filter, update) {
-      if (!_db) return { matchedCount: 0 };
-      const rows = _rows(filter);
-      if (!rows.length) return { matchedCount: 0, modifiedCount: 0 };
-      let row = rows[0];
-      row = applyUpdate(row, update, jsonFields, dateFields, false);
-      row = applyPositionalInc(row, update, filter, jsonFields);
-      const { id, _id, save: _s, ...data } = row;
-      const ser = serializeDoc(data, jsonFields, dateFields);
-      const keys = Object.keys(ser);
-      _db.prepare(`UPDATE ${table} SET ${keys.map((k) => `${k} = ?`).join(",")} WHERE id = ?`).run(...keys.map((k) => ser[k]), rows[0].id);
-      return { matchedCount: 1, modifiedCount: 1 };
-    },
-    async findOneAndUpdate(filter, update, opts = {}) {
-      if (!_db) return null;
-      let rows = _rows(filter);
-      let row = rows[0];
-      let isInsert = false;
-      if (!row) {
-        if (!opts.upsert) return null;
-        isInsert = true;
-        const seed = {};
-        for (const [k, v] of Object.entries(filter)) {
-          if (!k.startsWith("$") && !k.includes("."))
-            seed[k] = typeof v === "boolean" ? v ? 1 : 0 : v;
-        }
-        const keys2 = Object.keys(seed);
-        if (keys2.length) {
-          const r = _db.prepare(
-            `INSERT OR IGNORE INTO ${table} (${keys2.join(",")}) VALUES (${keys2.map(() => "?").join(",")})`
-          ).run(...keys2.map((k) => seed[k]));
-          row = _db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(r.lastInsertRowid);
-        }
-        if (!row) {
-          rows = _rows(filter);
-          row = rows[0];
-        }
-        if (!row) return null;
-      }
-      let updated = applyUpdate(row, update, jsonFields, dateFields, isInsert);
-      updated = applyPositionalInc(updated, update, filter, jsonFields);
-      const { id, _id, save: _s, ...data } = updated;
-      const ser = serializeDoc(data, jsonFields, dateFields);
-      const keys = Object.keys(ser);
-      _db.prepare(`UPDATE ${table} SET ${keys.map((k) => `${k} = ?`).join(",")} WHERE id = ?`).run(...keys.map((k) => ser[k]), row.id);
-      if (opts.new === false) return _parse(row);
-      const fresh = _db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(row.id);
-      return fresh ? _parse(fresh) : null;
-    },
-    async findByIdAndUpdate(id, update) {
-      if (!_db) return null;
-      const row = _db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id);
-      if (!row) return null;
-      const updated = applyUpdate(row, update, jsonFields, dateFields, false);
-      const { id: _i, _id, save: _s, ...data } = updated;
-      const ser = serializeDoc(data, jsonFields, dateFields);
-      const keys = Object.keys(ser);
-      _db.prepare(`UPDATE ${table} SET ${keys.map((k) => `${k} = ?`).join(",")} WHERE id = ?`).run(...keys.map((k) => ser[k]), id);
-      return _parse(_db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id));
-    },
-    async countDocuments(filter) {
-      if (!_db) return 0;
-      const { where, params, dotted } = buildWhere(filter);
-      if (!Object.keys(dotted).length) {
-        return _db.prepare(`SELECT COUNT(*) as cnt FROM ${table} WHERE ${where}`).get(...params).cnt;
-      }
-      return _rows(filter).length;
-    },
-    async deleteOne(filter) {
-      if (!_db) return { deletedCount: 0 };
-      const rows = _rows(filter);
-      if (!rows.length) return { deletedCount: 0 };
-      _db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(rows[0].id);
-      return { deletedCount: 1 };
-    },
-    async deleteMany(filter) {
-      if (!_db) return { deletedCount: 0 };
-      const { where, params } = buildWhere(filter);
-      const r = _db.prepare(`DELETE FROM ${table} WHERE ${where}`).run(...params);
-      return { deletedCount: r.changes };
-    }
-  };
-}
-var DB_PATH, _db, QueryResult;
-var init_sqlite = __esm({
-  "src/db/sqlite.mjs"() {
-    "use strict";
-    DB_PATH = path2.join(process.cwd(), "data", "fiskbot.db");
-    _db = null;
-    QueryResult = class {
-      constructor(rows, parseFn) {
-        this._rows = rows;
-        this._p = parseFn;
-      }
-      sort(spec) {
-        const entries = Object.entries(spec);
-        this._rows = [...this._rows].sort((a, b) => {
-          for (const [f, d] of entries) {
-            const av = a[f] ?? 0, bv = b[f] ?? 0;
-            if (av < bv) return d < 0 ? 1 : -1;
-            if (av > bv) return d < 0 ? -1 : 1;
-          }
-          return 0;
-        });
-        return this;
-      }
-      limit(n) {
-        this._rows = this._rows.slice(0, n);
-        return this;
-      }
-      lean() {
-        return Promise.resolve(this._rows.map((r) => this._p(r)));
-      }
-      then(res, rej) {
-        try {
-          res(this._rows.map((r) => this._p(r)));
-        } catch (e) {
-          rej(e);
-        }
-      }
-      catch(fn) {
-        return Promise.resolve(this).catch(fn);
-      }
-    };
   }
 });
 
@@ -103508,7 +102848,7 @@ app.use("/api", routes_default);
 var app_default = app;
 
 // src/bot/robux.ts
-var import_discord = __toESM(require_src2(), 1);
+var import_discord5 = __toESM(require_src2(), 1);
 
 // src/bot/store.ts
 import fs from "node:fs";
@@ -103563,14 +102903,1613 @@ function updateRate(after, changedBy) {
   save(_data);
 }
 
+// src/db/sqlite.mjs
+import Database from "better-sqlite3";
+import path2 from "path";
+var DB_PATH = path2.join(process.cwd(), "data", "fiskbot.db");
+var _db = null;
+function getDB() {
+  return _db;
+}
+function _createTables() {
+  _db.exec(`
+    CREATE TABLE IF NOT EXISTS usuarios (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId TEXT NOT NULL,
+      guildId TEXT NOT NULL,
+      xpTotal INTEGER NOT NULL DEFAULT 0,
+      xpDisponivel INTEGER NOT NULL DEFAULT 0,
+      nivel INTEGER NOT NULL DEFAULT 1,
+      reputacao INTEGER NOT NULL DEFAULT 0,
+      ultimaRep TEXT,
+      tituloEquipado TEXT,
+      titulos TEXT NOT NULL DEFAULT '[]',
+      mensagens INTEGER NOT NULL DEFAULT 0,
+      ultimaMensagem TEXT,
+      ultimoXP TEXT,
+      streak INTEGER NOT NULL DEFAULT 0,
+      ultimoDiaAtivo TEXT,
+      genero TEXT,
+      moldura TEXT NOT NULL DEFAULT 'padrao',
+      fundo TEXT NOT NULL DEFAULT 'escuro',
+      badges TEXT NOT NULL DEFAULT '[]',
+      efeitos TEXT NOT NULL DEFAULT '[]',
+      inventario TEXT NOT NULL DEFAULT '{}',
+      createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(userId, guildId)
+    );
+
+    CREATE TABLE IF NOT EXISTS configs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guildId TEXT NOT NULL UNIQUE,
+      prefixo TEXT NOT NULL DEFAULT '!',
+      canalLogs TEXT,
+      canalSuporte TEXT,
+      canalDenuncias TEXT,
+      canalSugestoes TEXT,
+      cargoEquipe TEXT,
+      cargoSuporte TEXT,
+      cargoVendedor TEXT,
+      cargoAdmin TEXT,
+      cargoServicos TEXT,
+      canalBemVindo TEXT,
+      mensagemBemVindo TEXT,
+      autoRole TEXT,
+      taxa REAL NOT NULL DEFAULT 38,
+      taxaHistorico TEXT NOT NULL DEFAULT '[]',
+      levelRoles TEXT NOT NULL DEFAULT '[]',
+      createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS casamentos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guildId TEXT NOT NULL,
+      userId1 TEXT NOT NULL,
+      userId2 TEXT NOT NULL,
+      ativo INTEGER NOT NULL DEFAULT 1,
+      dataCasamento TEXT NOT NULL DEFAULT (datetime('now')),
+      dataFim TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS afinidades (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guildId TEXT NOT NULL,
+      userId1 TEXT NOT NULL,
+      userId2 TEXT NOT NULL,
+      pontos INTEGER NOT NULL DEFAULT 0,
+      interacoes INTEGER NOT NULL DEFAULT 0,
+      ultimaInteracao TEXT,
+      UNIQUE(guildId, userId1, userId2)
+    );
+
+    CREATE TABLE IF NOT EXISTS tickets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ticketId TEXT NOT NULL,
+      guildId TEXT NOT NULL,
+      userId TEXT NOT NULL,
+      categoria TEXT NOT NULL,
+      channelId TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'aberto',
+      responsavel TEXT,
+      transcript TEXT NOT NULL DEFAULT '[]',
+      createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(guildId, ticketId)
+    );
+
+    CREATE TABLE IF NOT EXISTS conquistas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId TEXT NOT NULL,
+      guildId TEXT NOT NULL,
+      conquistas TEXT NOT NULL DEFAULT '[]',
+      badges TEXT NOT NULL DEFAULT '[]',
+      UNIQUE(userId, guildId)
+    );
+
+    CREATE TABLE IF NOT EXISTS missoes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId TEXT NOT NULL,
+      guildId TEXT NOT NULL,
+      diarias TEXT NOT NULL DEFAULT '[]',
+      semanais TEXT NOT NULL DEFAULT '[]',
+      ultimaRenovacaoDiaria TEXT,
+      ultimaRenovacaoSemanal TEXT,
+      ultimaDiaMissao TEXT,
+      ultimaSemanaMissao TEXT,
+      UNIQUE(userId, guildId)
+    );
+
+    CREATE TABLE IF NOT EXISTS produtos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guildId TEXT NOT NULL,
+      nome TEXT NOT NULL,
+      categoria TEXT NOT NULL,
+      descricao TEXT NOT NULL DEFAULT '',
+      imagem TEXT,
+      tabela TEXT NOT NULL DEFAULT '[]',
+      status TEXT NOT NULL DEFAULT 'disponivel'
+    );
+
+    CREATE TABLE IF NOT EXISTS quiz_stats (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId TEXT NOT NULL,
+      guildId TEXT NOT NULL,
+      total INTEGER NOT NULL DEFAULT 0,
+      acertos INTEGER NOT NULL DEFAULT 0,
+      erros INTEGER NOT NULL DEFAULT 0,
+      categoriaFavorita TEXT,
+      categoriasContagem TEXT NOT NULL DEFAULT '{}',
+      UNIQUE(userId, guildId)
+    );
+
+    CREATE TABLE IF NOT EXISTS denuncias (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guildId TEXT NOT NULL,
+      denuncianteId TEXT NOT NULL,
+      denunciadoId TEXT NOT NULL,
+      motivo TEXT NOT NULL,
+      descricao TEXT NOT NULL DEFAULT '',
+      provas TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'pendente',
+      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS avaliacoes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guildId TEXT NOT NULL,
+      userId TEXT NOT NULL,
+      nota INTEGER NOT NULL,
+      comentario TEXT NOT NULL DEFAULT '',
+      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guildId TEXT NOT NULL,
+      tipo TEXT NOT NULL,
+      userId TEXT,
+      dados TEXT NOT NULL DEFAULT '{}',
+      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS forca (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId TEXT NOT NULL,
+      guildId TEXT NOT NULL,
+      vitorias INTEGER NOT NULL DEFAULT 0,
+      derrotas INTEGER NOT NULL DEFAULT 0,
+      UNIQUE(userId, guildId)
+    );
+
+    CREATE TABLE IF NOT EXISTS xp_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId TEXT NOT NULL,
+      guildId TEXT NOT NULL,
+      tipo TEXT NOT NULL DEFAULT 'ganho',
+      valor INTEGER NOT NULL DEFAULT 0,
+      saldoAntes INTEGER NOT NULL DEFAULT 0,
+      saldoApos INTEGER NOT NULL DEFAULT 0,
+      xpTotalAntes INTEGER NOT NULL DEFAULT 0,
+      xpTotalApos INTEGER NOT NULL DEFAULT 0,
+      origem TEXT NOT NULL DEFAULT 'sistema',
+      descricao TEXT NOT NULL DEFAULT '',
+      referenciaId TEXT,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS historico (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guildId TEXT NOT NULL,
+      userId TEXT NOT NULL,
+      sistema TEXT NOT NULL,
+      acao TEXT NOT NULL,
+      dados TEXT NOT NULL DEFAULT '{}',
+      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+      -- \u2500\u2500\u2500 \xCDNDICES DE PERFORMANCE \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+      CREATE INDEX IF NOT EXISTS idx_usuarios_user_guild
+        ON usuarios(userId, guildId);
+
+      CREATE INDEX IF NOT EXISTS idx_usuarios_xp_ranking
+        ON usuarios(guildId, xpTotal DESC);
+
+      CREATE INDEX IF NOT EXISTS idx_usuarios_nivel
+        ON usuarios(guildId, nivel DESC);
+
+      CREATE INDEX IF NOT EXISTS idx_afinidades_par
+        ON afinidades(guildId, userId1, userId2);
+
+      CREATE INDEX IF NOT EXISTS idx_casamentos_guild
+        ON casamentos(guildId, ativo);
+
+      CREATE INDEX IF NOT EXISTS idx_tickets_guild_user
+        ON tickets(guildId, userId, status);
+    `);
+  try {
+    _db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_usuario ON usuarios(userId, guildId);
+      CREATE INDEX IF NOT EXISTS idx_xplogs_usuario ON xp_logs(userId, guildId);
+      CREATE INDEX IF NOT EXISTS idx_historico_usuario ON historico(userId, guildId);
+      CREATE INDEX IF NOT EXISTS idx_logs_guild ON logs(guildId);
+    `);
+  } catch (e) {
+    console.error("[SQLite] erro ao criar \xEDndices:", e.message);
+  }
+  const migrations = [
+    // usuarios
+    `ALTER TABLE usuarios ADD COLUMN xpTotal INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE usuarios ADD COLUMN xpDisponivel INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE usuarios ADD COLUMN streak INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE usuarios ADD COLUMN ultimoDiaAtivo TEXT`,
+    `ALTER TABLE usuarios ADD COLUMN genero TEXT`,
+    `ALTER TABLE usuarios ADD COLUMN moldura TEXT NOT NULL DEFAULT 'padrao'`,
+    `ALTER TABLE usuarios ADD COLUMN fundo TEXT NOT NULL DEFAULT 'escuro'`,
+    `ALTER TABLE usuarios ADD COLUMN badges TEXT NOT NULL DEFAULT '[]'`,
+    `ALTER TABLE usuarios ADD COLUMN efeitos TEXT NOT NULL DEFAULT '[]'`,
+    `ALTER TABLE usuarios ADD COLUMN inventario TEXT NOT NULL DEFAULT '{}'`,
+    // missoes
+    `ALTER TABLE missoes ADD COLUMN ultimaDiaMissao TEXT`,
+    `ALTER TABLE missoes ADD COLUMN ultimaSemanaMissao TEXT`,
+    // xp_logs
+    `ALTER TABLE xp_logs ADD COLUMN saldoAntes INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE xp_logs ADD COLUMN xpTotalAntes INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE xp_logs ADD COLUMN xpTotalApos INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE xp_logs ADD COLUMN descricao TEXT NOT NULL DEFAULT ''`,
+    `ALTER TABLE xp_logs ADD COLUMN referenciaId TEXT`,
+    // usuarios — colunas adicionais
+    `ALTER TABLE usuarios ADD COLUMN casadoCom TEXT`,
+    `ALTER TABLE usuarios ADD COLUMN efeitoEquipado TEXT`,
+    `ALTER TABLE usuarios ADD COLUMN badgeEquipado TEXT`,
+    // usuarios — perfil expandido
+    `ALTER TABLE usuarios ADD COLUMN totalMensagens INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE usuarios ADD COLUMN afinidade INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE usuarios ADD COLUMN tituloEquipado TEXT`,
+    // missoes
+    `ALTER TABLE missoes ADD COLUMN updatedAt TEXT`
+  ];
+  for (const sql of migrations) {
+    try {
+      _db.prepare(sql).run();
+    } catch (e) {
+      if (!e.message.includes("duplicate column")) {
+        console.warn("[Migration error]", sql, "->", e.message);
+      }
+    }
+  }
+}
+function initDB() {
+  try {
+    _db = new Database(DB_PATH);
+    _db.pragma("journal_mode = WAL");
+    _db.pragma("synchronous = NORMAL");
+    _createTables();
+    console.log("[SQLite] Banco de dados iniciado:", DB_PATH);
+    return true;
+  } catch (e) {
+    console.error("[SQLite] Erro ao iniciar:", e.message);
+    _db = null;
+    return false;
+  }
+}
+function buildWhere(filter) {
+  const parts = [];
+  const params = [];
+  const dotted = {};
+  for (const [key, val] of Object.entries(filter || {})) {
+    if (key === "$or") {
+      const orParts = [];
+      for (const sub of val) {
+        const sub2 = {};
+        for (const [k2, v2] of Object.entries(sub)) {
+          if (!k2.includes(".")) sub2[k2] = v2;
+        }
+        const { where: w, params: p } = buildWhere(sub2);
+        if (w && w !== "1=1") {
+          orParts.push(`(${w})`);
+          params.push(...p);
+        }
+      }
+      if (orParts.length) parts.push(`(${orParts.join(" OR ")})`);
+    } else if (key.includes(".")) {
+      dotted[key] = val;
+    } else if (val === null || val === void 0) {
+      parts.push(`${key} IS NULL`);
+    } else if (typeof val === "boolean") {
+      parts.push(`${key} = ?`);
+      params.push(val ? 1 : 0);
+    } else if (typeof val === "object" && !(val instanceof Date) && !Array.isArray(val)) {
+      for (const [op, ov] of Object.entries(val)) {
+        if (op === "$gt") {
+          parts.push(`${key} > ?`);
+          params.push(ov);
+        } else if (op === "$gte") {
+          parts.push(`${key} >= ?`);
+          params.push(ov);
+        } else if (op === "$lt") {
+          parts.push(`${key} < ?`);
+          params.push(ov);
+        } else if (op === "$lte") {
+          parts.push(`${key} <= ?`);
+          params.push(ov);
+        } else if (op === "$ne") {
+          parts.push(`${key} != ?`);
+          params.push(ov);
+        } else if (op === "$in") {
+          parts.push(`${key} IN (${ov.map(() => "?").join(",")})`);
+          params.push(...ov);
+        }
+      }
+    } else {
+      parts.push(`${key} = ?`);
+      params.push(val instanceof Date ? val.toISOString() : val);
+    }
+  }
+  return { where: parts.length ? parts.join(" AND ") : "1=1", params, dotted };
+}
+function parseDoc(row, jsonFields, dateFields) {
+  if (!row) return null;
+  const doc = { ...row, _id: row.id };
+  for (const f of jsonFields) {
+    if (doc[f] != null) {
+      try {
+        doc[f] = JSON.parse(doc[f]);
+      } catch {
+        doc[f] = [];
+      }
+    }
+  }
+  for (const f of dateFields) {
+    if (doc[f]) doc[f] = new Date(doc[f]);
+  }
+  if ("ativo" in doc) doc.ativo = doc.ativo === 1 || doc.ativo === true;
+  return doc;
+}
+function serializeValue(v, isJson, isDate) {
+  if (isJson && v != null) return typeof v === "string" ? v : JSON.stringify(v);
+  if (isDate && v instanceof Date) return v.toISOString();
+  if (typeof v === "boolean") return v ? 1 : 0;
+  return v;
+}
+function serializeDoc(data, jsonFields, dateFields) {
+  const row = {};
+  for (const [k, v] of Object.entries(data)) {
+    if (k === "id" || k === "_id" || k === "save") continue;
+    row[k] = serializeValue(v, jsonFields.includes(k), dateFields.includes(k));
+  }
+  return row;
+}
+function applyUpdate(row, update, jsonFields, dateFields, isInsert) {
+  const r = { ...row };
+  const hasOps = Object.keys(update).some((k) => k.startsWith("$"));
+  if (!hasOps) {
+    for (const [k, v] of Object.entries(update)) {
+      r[k] = serializeValue(v, jsonFields.includes(k), dateFields.includes(k));
+    }
+    r.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    return r;
+  }
+  for (const [op, fields] of Object.entries(update)) {
+    if (op === "$set" || op === "$setOnInsert" && isInsert) {
+      for (const [k, v] of Object.entries(fields)) {
+        if (!k.includes("."))
+          r[k] = serializeValue(v, jsonFields.includes(k), dateFields.includes(k));
+      }
+    } else if (op === "$inc") {
+      for (const [k, n] of Object.entries(fields)) {
+        if (!k.includes(".")) r[k] = (Number(r[k]) || 0) + n;
+      }
+    } else if (op === "$push") {
+      for (const [k, v] of Object.entries(fields)) {
+        if (!k.includes(".") && jsonFields.includes(k)) {
+          let arr = [];
+          try {
+            arr = JSON.parse(r[k] || "[]");
+          } catch {
+          }
+          arr.push(v);
+          r[k] = JSON.stringify(arr);
+        }
+      }
+    } else if (op === "$pull") {
+      for (const [k, matcher] of Object.entries(fields)) {
+        if (!k.includes(".") && jsonFields.includes(k)) {
+          let arr = [];
+          try {
+            arr = JSON.parse(r[k] || "[]");
+          } catch {
+          }
+          if (matcher && typeof matcher === "object") {
+            arr = arr.filter((item) => {
+              for (const [mk, mv] of Object.entries(matcher)) {
+                if (String(item[mk]) !== String(mv)) return true;
+              }
+              return false;
+            });
+          } else {
+            arr = arr.filter((i) => i !== matcher);
+          }
+          r[k] = JSON.stringify(arr);
+        }
+      }
+    } else if (op === "$unset") {
+      for (const k of Object.keys(fields)) {
+        if (!k.includes(".")) r[k] = null;
+      }
+    }
+  }
+  r.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  return r;
+}
+function applyPositionalInc(row, update, filter, jsonFields) {
+  if (!update.$inc) return row;
+  const r = { ...row };
+  for (const [k, n] of Object.entries(update.$inc)) {
+    if (!k.includes(".$")) continue;
+    const [field, , subField] = k.split(".");
+    if (!jsonFields.includes(field)) continue;
+    let arr = [];
+    try {
+      arr = JSON.parse(r[field] || "[]");
+    } catch {
+    }
+    const dottedFilters = Object.entries(filter).filter(([fk]) => fk.startsWith(field + "."));
+    arr = arr.map((item) => {
+      let matches = true;
+      for (const [fk, fv] of dottedFilters) {
+        const sub = fk.split(".")[1];
+        const iv = item[sub];
+        if (typeof fv === "boolean") {
+          if (fv !== (iv === true || iv === 1)) matches = false;
+        } else if (String(iv) !== String(fv)) matches = false;
+      }
+      return matches ? { ...item, [subField]: (item[subField] || 0) + n } : item;
+    });
+    r[field] = JSON.stringify(arr);
+  }
+  return r;
+}
+var QueryResult = class {
+  constructor(rows, parseFn) {
+    this._rows = rows;
+    this._p = parseFn;
+  }
+  sort(spec) {
+    const entries = Object.entries(spec);
+    this._rows = [...this._rows].sort((a, b) => {
+      for (const [f, d] of entries) {
+        const av = a[f] ?? 0, bv = b[f] ?? 0;
+        if (av < bv) return d < 0 ? 1 : -1;
+        if (av > bv) return d < 0 ? -1 : 1;
+      }
+      return 0;
+    });
+    return this;
+  }
+  limit(n) {
+    this._rows = this._rows.slice(0, n);
+    return this;
+  }
+  lean() {
+    return Promise.resolve(this._rows.map((r) => this._p(r)));
+  }
+  then(res, rej) {
+    try {
+      res(this._rows.map((r) => this._p(r)));
+    } catch (e) {
+      rej(e);
+    }
+  }
+  catch(fn) {
+    return Promise.resolve(this).catch(fn);
+  }
+};
+function makeModel(table, { jsonFields = [], dateFields = [] } = {}) {
+  function _parse(row) {
+    const doc = parseDoc(row, jsonFields, dateFields);
+    if (!doc) return null;
+    doc.save = async function() {
+      if (!_db) return this;
+      const { id, _id, save: _s, ...data } = this;
+      const ser = serializeDoc(data, jsonFields, dateFields);
+      ser.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+      const keys = Object.keys(ser);
+      _db.prepare(`UPDATE ${table} SET ${keys.map((k) => `${k} = ?`).join(",")} WHERE id = ?`).run(...keys.map((k) => ser[k]), id);
+      return this;
+    };
+    return doc;
+  }
+  function _rows(filter) {
+    if (!_db) return [];
+    const { where, params, dotted } = buildWhere(filter);
+    const rows = _db.prepare(`SELECT * FROM ${table} WHERE ${where}`).all(...params);
+    if (!Object.keys(dotted).length) return rows;
+    return rows.filter((row) => {
+      for (const [dk, dv] of Object.entries(dotted)) {
+        const [field, ...rest] = dk.split(".");
+        if (!jsonFields.includes(field)) continue;
+        let arr = [];
+        try {
+          arr = JSON.parse(row[field] || "[]");
+        } catch {
+        }
+        const sub = rest.join(".");
+        const ok = arr.some((item) => {
+          const iv = sub.split(".").reduce((o, k) => o?.[k], item);
+          if (typeof dv === "boolean") return dv ? iv === true || iv === 1 : iv === false || iv === 0;
+          return String(iv) === String(dv);
+        });
+        if (!ok) return false;
+      }
+      return true;
+    });
+  }
+  return {
+    async findOne(filter) {
+      const rows = _rows(filter);
+      return rows.length ? _parse(rows[0]) : null;
+    },
+    find(filter) {
+      return new QueryResult(_rows(filter), _parse);
+    },
+    async create(data) {
+      if (!_db) return null;
+      const ser = serializeDoc(data, jsonFields, dateFields);
+      const keys = Object.keys(ser);
+      const r = _db.prepare(
+        `INSERT OR IGNORE INTO ${table} (${keys.join(",")}) VALUES (${keys.map(() => "?").join(",")})`
+      ).run(...keys.map((k) => ser[k]));
+      const inserted = _db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(r.lastInsertRowid);
+      return inserted ? _parse(inserted) : null;
+    },
+    async updateOne(filter, update) {
+      if (!_db) return { matchedCount: 0 };
+      const rows = _rows(filter);
+      if (!rows.length) return { matchedCount: 0, modifiedCount: 0 };
+      let row = rows[0];
+      row = applyUpdate(row, update, jsonFields, dateFields, false);
+      row = applyPositionalInc(row, update, filter, jsonFields);
+      const { id, _id, save: _s, ...data } = row;
+      const ser = serializeDoc(data, jsonFields, dateFields);
+      const keys = Object.keys(ser);
+      _db.prepare(`UPDATE ${table} SET ${keys.map((k) => `${k} = ?`).join(",")} WHERE id = ?`).run(...keys.map((k) => ser[k]), rows[0].id);
+      return { matchedCount: 1, modifiedCount: 1 };
+    },
+    async findOneAndUpdate(filter, update, opts = {}) {
+      if (!_db) return null;
+      let rows = _rows(filter);
+      let row = rows[0];
+      let isInsert = false;
+      if (!row) {
+        if (!opts.upsert) return null;
+        isInsert = true;
+        const seed = {};
+        for (const [k, v] of Object.entries(filter)) {
+          if (!k.startsWith("$") && !k.includes("."))
+            seed[k] = typeof v === "boolean" ? v ? 1 : 0 : v;
+        }
+        const keys2 = Object.keys(seed);
+        if (keys2.length) {
+          const r = _db.prepare(
+            `INSERT OR IGNORE INTO ${table} (${keys2.join(",")}) VALUES (${keys2.map(() => "?").join(",")})`
+          ).run(...keys2.map((k) => seed[k]));
+          row = _db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(r.lastInsertRowid);
+        }
+        if (!row) {
+          rows = _rows(filter);
+          row = rows[0];
+        }
+        if (!row) return null;
+      }
+      let updated = applyUpdate(row, update, jsonFields, dateFields, isInsert);
+      updated = applyPositionalInc(updated, update, filter, jsonFields);
+      const { id, _id, save: _s, ...data } = updated;
+      const ser = serializeDoc(data, jsonFields, dateFields);
+      const keys = Object.keys(ser);
+      _db.prepare(`UPDATE ${table} SET ${keys.map((k) => `${k} = ?`).join(",")} WHERE id = ?`).run(...keys.map((k) => ser[k]), row.id);
+      if (opts.new === false) return _parse(row);
+      const fresh = _db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(row.id);
+      return fresh ? _parse(fresh) : null;
+    },
+    async findByIdAndUpdate(id, update) {
+      if (!_db) return null;
+      const row = _db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id);
+      if (!row) return null;
+      const updated = applyUpdate(row, update, jsonFields, dateFields, false);
+      const { id: _i, _id, save: _s, ...data } = updated;
+      const ser = serializeDoc(data, jsonFields, dateFields);
+      const keys = Object.keys(ser);
+      _db.prepare(`UPDATE ${table} SET ${keys.map((k) => `${k} = ?`).join(",")} WHERE id = ?`).run(...keys.map((k) => ser[k]), id);
+      return _parse(_db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id));
+    },
+    async countDocuments(filter) {
+      if (!_db) return 0;
+      const { where, params, dotted } = buildWhere(filter);
+      if (!Object.keys(dotted).length) {
+        return _db.prepare(`SELECT COUNT(*) as cnt FROM ${table} WHERE ${where}`).get(...params).cnt;
+      }
+      return _rows(filter).length;
+    },
+    async deleteOne(filter) {
+      if (!_db) return { deletedCount: 0 };
+      const rows = _rows(filter);
+      if (!rows.length) return { deletedCount: 0 };
+      _db.prepare(`DELETE FROM ${table} WHERE id = ?`).run(rows[0].id);
+      return { deletedCount: 1 };
+    },
+    async deleteMany(filter) {
+      if (!_db) return { deletedCount: 0 };
+      const { where, params } = buildWhere(filter);
+      const r = _db.prepare(`DELETE FROM ${table} WHERE ${where}`).run(...params);
+      return { deletedCount: r.changes };
+    }
+  };
+}
+
+// src/db/models/Usuario.mjs
+var Usuario_default = makeModel("usuarios", {
+  jsonFields: [
+    "inventario",
+    "quiz",
+    "badges",
+    "efeitos",
+    "titulos"
+  ],
+  dateFields: [
+    "ultimaRep",
+    "ultimaMensagem",
+    "ultimoXP",
+    "createdAt",
+    "updatedAt"
+  ],
+  defaults: {
+    // Economia
+    xpTotal: 0,
+    xpDisponivel: 0,
+    nivel: 1,
+    // Perfil
+    fundo: "escuro",
+    moldura: "padrao",
+    tituloEquipado: null,
+    badgeEquipado: null,
+    efeitoEquipado: null,
+    // Inventário de cosméticos
+    inventario: {
+      fundos: ["padrao"],
+      molduras: ["padrao"],
+      efeitos: [],
+      titulos: [],
+      badges: []
+    },
+    // Coleções separadas (parse automático)
+    badges: [],
+    efeitos: [],
+    titulos: [],
+    // Social
+    reputacao: 0,
+    casadoCom: null,
+    // Quiz
+    quiz: {
+      vidas: 3,
+      maxVidas: 3,
+      pulos: 0,
+      acertos: 0,
+      erros: 0
+    },
+    // Controle
+    ultimaRep: null,
+    ultimaMensagem: null,
+    ultimoXP: null,
+    // Datas
+    createdAt: /* @__PURE__ */ new Date(),
+    updatedAt: /* @__PURE__ */ new Date()
+  }
+});
+
+// src/systems/perfilCanvas.mjs
+import { createCanvas, loadImage } from "@napi-rs/canvas";
+
+// src/systems/perfilConfig.mjs
+var molduras = {
+  padrao: {
+    nome: "Padr\xE3o",
+    preco: 0,
+    raridade: "Comum",
+    descricao: "Moldura padr\xE3o dispon\xEDvel para todos."
+  },
+  neon_roxo: {
+    nome: "Neon Roxo",
+    preco: 8e3,
+    raridade: "\xC9pico",
+    descricao: "Borda com brilho neon em roxo intenso."
+  },
+  neon_azul: {
+    nome: "Neon Azul",
+    preco: 8e3,
+    raridade: "\xC9pico",
+    descricao: "Borda com brilho neon em azul cibern\xE9tico."
+  },
+  sakura: {
+    nome: "Sakura",
+    preco: 9e3,
+    raridade: "\xC9pico",
+    descricao: "Delicada moldura cor-de-rosa com toque japon\xEAs."
+  },
+  real: {
+    nome: "Real",
+    preco: 1e4,
+    raridade: "Lend\xE1rio",
+    descricao: "Moldura dourada luxuosa para verdadeiros reis."
+  },
+  sombria: {
+    nome: "Sombria",
+    preco: 7e3,
+    raridade: "Raro",
+    descricao: "Energia roxa escura com aura misteriosa."
+  },
+  angelical: {
+    nome: "Angelical",
+    preco: 11e3,
+    raridade: "Lend\xE1rio",
+    descricao: "Brilho divino e puro, digno dos celestiais."
+  },
+  demoniaca: {
+    nome: "Demon\xEDaca",
+    preco: 12e3,
+    raridade: "Lend\xE1rio",
+    descricao: "Chamas vermelhas das profundezas \u2014 poder obscuro."
+  },
+  futurista: {
+    nome: "Futurista",
+    preco: 9e3,
+    raridade: "\xC9pico",
+    descricao: "Tecnologia verde de \xFAltima gera\xE7\xE3o."
+  },
+  galaxia: {
+    nome: "Gal\xE1xia",
+    preco: 13e3,
+    raridade: "Lend\xE1rio",
+    descricao: "Borda c\xF3smica com nebulosa e poeira estelar."
+  }
+};
+var fundos = {
+  escuro: {
+    nome: "Escuro",
+    preco: 0,
+    raridade: "Comum",
+    tipo: "cor",
+    valor: "#1e1f22"
+  },
+  roxo: {
+    nome: "Roxo",
+    preco: 3e3,
+    raridade: "Incomum",
+    tipo: "gradiente",
+    cores: ["#1a003d", "#6a0dad"]
+  },
+  azul: {
+    nome: "Azul",
+    preco: 3e3,
+    raridade: "Incomum",
+    tipo: "gradiente",
+    cores: ["#0f2027", "#2c5364"]
+  },
+  vermelho: {
+    nome: "Vermelho",
+    preco: 3e3,
+    raridade: "Incomum",
+    tipo: "gradiente",
+    cores: ["#4d0000", "#cc0000"]
+  },
+  sakura: {
+    nome: "Sakura",
+    preco: 5e3,
+    raridade: "Raro",
+    tipo: "gradiente",
+    cores: ["#ff9a9e", "#fad0c4"]
+  },
+  noturno: {
+    nome: "Noturno",
+    preco: 5e3,
+    raridade: "Raro",
+    tipo: "cor",
+    valor: "#0a0a1a"
+  },
+  galaxia: {
+    nome: "Gal\xE1xia",
+    preco: 7e3,
+    raridade: "\xC9pico",
+    tipo: "gradiente",
+    cores: ["#0b0c2a", "#8e2de2"]
+  },
+  cyberpunk: {
+    nome: "Cyberpunk",
+    preco: 8e3,
+    raridade: "\xC9pico",
+    tipo: "gradiente",
+    cores: ["#0f0f1a", "#00d4ff"]
+  },
+  floresta: {
+    nome: "Floresta",
+    preco: 6e3,
+    raridade: "Raro",
+    tipo: "gradiente",
+    cores: ["#0f2010", "#1a5c1a"]
+  },
+  oceano: {
+    nome: "Oceano",
+    preco: 6e3,
+    raridade: "Raro",
+    tipo: "gradiente",
+    cores: ["#000428", "#004e92"]
+  }
+};
+var efeitos = {
+  aurora: {
+    nome: "Aurora",
+    preco: 4e3,
+    raridade: "Incomum",
+    descricao: "Luzes coloridas que flutuam"
+  },
+  estrelas: {
+    nome: "Estrelas",
+    preco: 4e3,
+    raridade: "Incomum",
+    descricao: "Pequenas estrelas brilhantes ao redor"
+  },
+  neve: {
+    nome: "Neve",
+    preco: 4500,
+    raridade: "Raro",
+    descricao: "Flocos de neve caindo suavemente"
+  },
+  energia: {
+    nome: "Energia",
+    preco: 5e3,
+    raridade: "Raro",
+    descricao: "Campo de energia el\xE9trica"
+  },
+  fumaca: {
+    nome: "Fuma\xE7a",
+    preco: 5e3,
+    raridade: "Raro",
+    descricao: "N\xE9voa leve e escura"
+  },
+  petalas: {
+    nome: "P\xE9talas",
+    preco: 5500,
+    raridade: "\xC9pico",
+    descricao: "Flores caindo continuamente"
+  },
+  raios: {
+    nome: "Raios",
+    preco: 7e3,
+    raridade: "Lend\xE1rio",
+    descricao: "Raios de energia brilhante"
+  }
+};
+var badges = {
+  estrela: {
+    nome: "Estrela",
+    preco: 3e3,
+    raridade: "Incomum",
+    descricao: "Brilho dourado intenso"
+  },
+  fogo: {
+    nome: "Fogo",
+    preco: 3e3,
+    raridade: "Incomum",
+    descricao: "Chamas vibrantes e intensas"
+  },
+  coroa: {
+    nome: "Coroa",
+    preco: 8e3,
+    raridade: "\xC9pico",
+    descricao: "Realeza e poder absoluto"
+  },
+  rico: {
+    nome: "Rico",
+    preco: 5e3,
+    raridade: "Raro",
+    descricao: "Grande riqueza acumulada"
+  },
+  veterano: {
+    nome: "Veterano",
+    preco: 5e3,
+    raridade: "Raro",
+    descricao: "Experi\xEAncia e honra"
+  },
+  quiz: {
+    nome: "Quiz",
+    preco: 4e3,
+    raridade: "Incomum",
+    descricao: "Mente afiada e conhecimento"
+  },
+  lendario: {
+    nome: "Lend\xE1rio",
+    preco: 12e3,
+    raridade: "Lend\xE1rio",
+    descricao: "Status lend\xE1rio raro"
+  },
+  casal: {
+    nome: "Casal",
+    preco: 3e3,
+    raridade: "Incomum",
+    descricao: "Dois cora\xE7\xF5es unidos"
+  }
+};
+
+// src/systems/perfilCanvas.mjs
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+function xpForLevel(lvl) {
+  return lvl * 500;
+}
+function rarityColor(r) {
+  return { Comum: "#9e9e9e", Incomum: "#4caf50", Raro: "#2196f3", \u00C9pico: "#9c27b0", Lend\u00E1rio: "#ff9800" }[r] ?? "#ffffff";
+}
+function molduraColor(id) {
+  return {
+    padrao: "#ffffff",
+    neon_roxo: "#bf00ff",
+    neon_azul: "#00d4ff",
+    sakura: "#ffb7c5",
+    real: "#ffd700",
+    sombria: "#8b5cf6",
+    angelical: "#ffffff",
+    demoniaca: "#ff2200",
+    futurista: "#00ff99",
+    galaxia: "#a78bfa"
+  }[id] ?? "#ffffff";
+}
+function molduraGlow(id) {
+  return { padrao: 0, neon_roxo: 30, neon_azul: 30, sakura: 18, real: 22, sombria: 28, angelical: 35, demoniaca: 28, futurista: 22, galaxia: 35 }[id] ?? 0;
+}
+var BADGE_ICONS = { estrela: "\u2605", fogo: "\u2666", coroa: "\u25C6", rico: "\u25C8", veterano: "\u2B21", quiz: "\u2726", lendario: "\u2B1F", casal: "\u2665" };
+async function gerarPerfil(user) {
+  const W = 1e3, H = 600;
+  const canvas = createCanvas(W, H);
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  const fundoId = user.fundo ?? "escuro";
+  const molduraId = user.moldura ?? "padrao";
+  const efeitoId = user.efeitoEquipado ?? null;
+  const fundo = fundos[fundoId] || fundos.escuro;
+  if (fundo.tipo === "cor") {
+    ctx.fillStyle = fundo.valor;
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, fundo.cores[0]);
+    g.addColorStop(1, fundo.cores[1]);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+  const overlays = { aurora: "rgba(138,43,226,0.14)", neve: "rgba(173,216,230,0.12)", raios: "rgba(255,255,255,0.07)", energia: "rgba(0,212,255,0.10)", petalas: "rgba(255,183,197,0.12)", fumaca: "rgba(20,20,20,0.22)", estrelas: "rgba(255,255,200,0.06)" };
+  if (efeitoId && overlays[efeitoId]) {
+    ctx.fillStyle = overlays[efeitoId];
+    ctx.fillRect(0, 0, W, H);
+  }
+  ctx.fillStyle = "rgba(0,0,0,0.50)";
+  roundRect(ctx, 20, 20, W - 40, H - 40, 20);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.08)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(320, 40);
+  ctx.lineTo(320, H - 40);
+  ctx.stroke();
+  const AX = 65, AY = 65, AS = 185;
+  const ACX = AX + AS / 2, ACY = AY + AS / 2, AR = AS / 2;
+  try {
+    const av = await loadImage(user.avatar);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(ACX, ACY, AR, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(av, AX, AY, AS, AS);
+    ctx.restore();
+  } catch {
+    ctx.fillStyle = "#36393f";
+    ctx.beginPath();
+    ctx.arc(ACX, ACY, AR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const mCor = molduraColor(molduraId), mGlow = molduraGlow(molduraId);
+  ctx.save();
+  if (mGlow > 0) {
+    ctx.shadowColor = mCor;
+    ctx.shadowBlur = mGlow;
+  }
+  ctx.strokeStyle = mCor;
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.arc(ACX, ACY, AR + 4, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+  const nivel = user.nivel ?? 1;
+  const xpAtual = user.xpDisponivel ?? 0;
+  const xpNeeded = xpForLevel(nivel);
+  const xpPct = Math.min(xpAtual / xpNeeded, 1);
+  const barX = AX, barY = AY + AS + 18, barW = AS, barH = 14;
+  ctx.fillStyle = "rgba(255,255,255,0.12)";
+  roundRect(ctx, barX, barY, barW, barH, 7);
+  ctx.fill();
+  const xpG = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+  xpG.addColorStop(0, "#7c3aed");
+  xpG.addColorStop(1, "#00d4ff");
+  ctx.fillStyle = xpG;
+  roundRect(ctx, barX, barY, Math.max(barW * xpPct, 10), barH, 7);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.65)";
+  ctx.font = "11px Sans";
+  ctx.textAlign = "center";
+  ctx.fillText(`${xpAtual.toLocaleString()} / ${xpNeeded.toLocaleString()} XP`, barX + barW / 2, barY + barH + 14);
+  ctx.textAlign = "left";
+  const badgeId = user.badgeEquipado;
+  if (badgeId && BADGE_ICONS[badgeId]) {
+    const bCfg = badges[badgeId];
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    roundRect(ctx, AX + 20, barY + 34, AS - 40, 26, 8);
+    ctx.fill();
+    ctx.fillStyle = bCfg ? rarityColor(bCfg.raridade) : "#ffd700";
+    ctx.font = "bold 13px Sans";
+    ctx.textAlign = "center";
+    ctx.fillText(`${BADGE_ICONS[badgeId]} ${bCfg?.nome ?? badgeId}`, ACX, barY + 52);
+    ctx.textAlign = "left";
+  }
+  const listaBadges = (user.badges ?? []).slice(0, 6);
+  if (listaBadges.length) {
+    ctx.fillStyle = "rgba(255,255,255,0.30)";
+    ctx.font = "10px Sans";
+    ctx.textAlign = "center";
+    ctx.fillText("Badges", ACX, H - 78);
+    listaBadges.forEach((b, i) => {
+      const bCfg2 = badges[b];
+      ctx.fillStyle = bCfg2 ? rarityColor(bCfg2.raridade) : "#ffd700";
+      ctx.font = "22px Sans";
+      ctx.textAlign = "left";
+      ctx.fillText(BADGE_ICONS[b] ?? "\u2726", AX + i * 36, H - 52);
+    });
+    ctx.textAlign = "left";
+  }
+  const TX = 338, TW = W - TX - 30;
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 28px Sans";
+  ctx.fillText((user.displayName ?? user.username ?? "Usu\xE1rio").slice(0, 22), TX, 76);
+  ctx.fillStyle = "rgba(255,255,255,0.42)";
+  ctx.font = "15px Sans";
+  ctx.fillText(`@${(user.username ?? "usuario").slice(0, 24)}`, TX, 98);
+  ctx.fillStyle = "#ffd700";
+  ctx.font = "italic 14px Sans";
+  ctx.fillText(`\u2726  ${(user.titulo ?? "Sem t\xEDtulo").slice(0, 30)}`, TX, 120);
+  const stats2 = [
+    { label: "N\xEDvel", value: `${nivel}` },
+    { label: "XP Total", value: (user.xpTotal ?? 0).toLocaleString() },
+    { label: "Reputa\xE7\xE3o", value: `${user.reputacao ?? 0}` },
+    { label: "Mensagens", value: (user.totalMensagens ?? 0).toLocaleString() },
+    { label: "Streak", value: `${user.streak ?? 0} dias` },
+    { label: "Parceiro", value: (user.casadoCom ?? "Nenhum").slice(0, 14) },
+    { label: "Afinidade", value: `${user.afinidade ?? 0}` },
+    { label: "Membro desde", value: user.membroDesde ?? "\u2014" }
+  ];
+  const GY = 140, GCW = Math.floor(TW / 2) - 6, GH = 50;
+  stats2.forEach((s, i) => {
+    const col = i % 2, row = Math.floor(i / 2);
+    const x = TX + col * (GCW + 8), y = GY + row * (GH + 6);
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    roundRect(ctx, x, y, GCW, GH, 10);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.38)";
+    ctx.font = "11px Sans";
+    ctx.fillText(s.label, x + 10, y + 17);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 15px Sans";
+    ctx.fillText(String(s.value).slice(0, Math.floor(GCW / 9)), x + 10, y + 38);
+  });
+  const cosY = H - 85;
+  ctx.fillStyle = "rgba(255,255,255,0.05)";
+  roundRect(ctx, TX, cosY, TW, 52, 12);
+  ctx.fill();
+  [
+    { label: "Fundo", value: fundos[fundoId]?.nome ?? fundoId },
+    { label: "Moldura", value: molduras[molduraId]?.nome ?? molduraId },
+    { label: "Efeito", value: efeitoId ? efeitos[efeitoId]?.nome ?? efeitoId : "Nenhum" }
+  ].forEach((c, i) => {
+    const cx = TX + i * Math.floor(TW / 3) + 10;
+    ctx.fillStyle = "rgba(255,255,255,0.32)";
+    ctx.font = "10px Sans";
+    ctx.fillText(c.label, cx, cosY + 17);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 13px Sans";
+    ctx.fillText(c.value.slice(0, 14), cx, cosY + 38);
+  });
+  ctx.fillStyle = "rgba(255,255,255,0.10)";
+  ctx.font = "11px Sans";
+  ctx.textAlign = "right";
+  ctx.fillText("FiskBot", W - 32, H - 28);
+  ctx.textAlign = "left";
+  return canvas.toBuffer("image/png");
+}
+
+// src/systems/meuperfil.mjs
+async function meuperfil(message) {
+  const userId = message.author.id, guildId = message.guild.id;
+  let user = await Usuario_default.findOne({ userId, guildId });
+  if (!user) {
+    user = await Usuario_default.findOneAndUpdate(
+      { userId, guildId },
+      { $set: { userId, guildId } },
+      { upsert: true, new: true }
+    );
+    if (!user) return message.reply("\u274C N\xE3o foi poss\xEDvel criar seu perfil. Tente novamente.");
+  }
+  let casadoCom = "Nenhum";
+  try {
+    const db = getDB();
+    if (db) {
+      const row = db.prepare(
+        `SELECT userId1, userId2 FROM casamentos WHERE guildId=? AND ativo=1 AND (userId1=? OR userId2=?) LIMIT 1`
+      ).get(guildId, userId, userId);
+      if (row) {
+        const parcId = row.userId1 === userId ? row.userId2 : row.userId1;
+        const member = await message.guild.members.fetch(parcId).catch(() => null);
+        casadoCom = member?.user.username ?? `<@${parcId}>`;
+      }
+    }
+  } catch {
+  }
+  let membroDesde = "\u2014";
+  try {
+    const member = await message.guild.members.fetch(userId).catch(() => null);
+    if (member?.joinedAt) {
+      membroDesde = member.joinedAt.toLocaleDateString("pt-BR");
+    }
+  } catch {
+  }
+  const safeUser = {
+    ...user,
+    avatar: message.author.displayAvatarURL({ extension: "png", size: 512 }),
+    displayName: message.member?.displayName ?? message.author.username,
+    username: message.author.username,
+    nivel: user.nivel ?? 1,
+    xpDisponivel: user.xpDisponivel ?? 0,
+    xpTotal: user.xpTotal ?? 0,
+    reputacao: user.reputacao ?? 0,
+    totalMensagens: user.totalMensagens ?? 0,
+    streak: user.streak ?? 0,
+    afinidade: user.afinidade ?? 0,
+    moldura: user.moldura ?? "padrao",
+    fundo: user.fundo ?? "escuro",
+    efeitoEquipado: user.efeitoEquipado ?? null,
+    badgeEquipado: user.badgeEquipado ?? null,
+    titulo: user.tituloEquipado ?? "Sem t\xEDtulo",
+    casadoCom,
+    membroDesde,
+    badges: user.inventario?.badges ?? []
+  };
+  const img = await gerarPerfil(safeUser);
+  return message.channel.send({ files: [{ attachment: img, name: "perfil.png" }] });
+}
+function register(client, configs) {
+  if (client.__meuPerfilRegistrado) return;
+  client.__meuPerfilRegistrado = true;
+  client.on("messageCreate", async (message) => {
+    if (!message.guild || message.author.bot) return;
+    const cfg = configs.get(message.guild.id);
+    const prefixo = cfg?.prefixo || "!";
+    if (!message.content.startsWith(prefixo)) return;
+    const cmd = message.content.slice(prefixo.length).trim().split(/\s+/)[0].toLowerCase();
+    if (cmd === "meuperfil") {
+      try {
+        await meuperfil(message);
+      } catch (e) {
+        console.error("[meuperfil]", e);
+        message.reply("\u274C Erro ao gerar perfil.").catch(() => null);
+      }
+    }
+  });
+}
+
+// src/systems/xp.mjs
+var XP_MIN = 10;
+var XP_MAX = 25;
+var XP_COOLDOWN_MS = 6e4;
+var cooldowns = /* @__PURE__ */ new Map();
+function xpForLevel2(lvl) {
+  return lvl * 500;
+}
+function randomXp() {
+  return Math.floor(Math.random() * (XP_MAX - XP_MIN + 1)) + XP_MIN;
+}
+async function processarXP(message) {
+  if (!message.guild || message.author.bot) return;
+  const userId = message.author.id, guildId = message.guild.id;
+  const key = `${guildId}:${userId}`;
+  const agora = Date.now();
+  if (cooldowns.has(key) && agora - cooldowns.get(key) < XP_COOLDOWN_MS) return;
+  cooldowns.set(key, agora);
+  const xp = randomXp();
+  const user = await Usuario_default.findOneAndUpdate(
+    { userId, guildId },
+    {
+      $inc: { xpDisponivel: xp, xpTotal: xp, totalMensagens: 1 },
+      $set: { ultimaMensagem: (/* @__PURE__ */ new Date()).toISOString() }
+    },
+    { upsert: true, new: true }
+  );
+  if (!user) return;
+  const xpNeeded = xpForLevel2(user.nivel ?? 1);
+  if ((user.xpDisponivel ?? 0) >= xpNeeded) {
+    const novoNivel = (user.nivel ?? 1) + 1;
+    await Usuario_default.updateOne({ userId, guildId }, {
+      $set: { nivel: novoNivel, xpDisponivel: (user.xpDisponivel ?? 0) - xpNeeded }
+    });
+    message.channel.send(`\u{1F389} **${message.author.username}** subiu para o **N\xEDvel ${novoNivel}**!`).catch(() => null);
+  }
+}
+function register2(client) {
+  if (client.__xpRegistrado) return;
+  client.__xpRegistrado = true;
+  client.on("messageCreate", async (msg) => {
+    try {
+      await processarXP(msg);
+    } catch {
+    }
+  });
+}
+
+// src/systems/loja.mjs
+var import_discord = __toESM(require_src2(), 1);
+var CATEGORIAS = { fundos, molduras, efeitos, badges };
+var CAT_NOMES = { fundos: "Fundos", molduras: "Molduras", efeitos: "Efeitos", badges: "Badges" };
+var PAGE_SIZE = 5;
+function rarityColor2(r) {
+  return { Comum: 10395294, Incomum: 5025616, Raro: 2201331, \u00C9pico: 10233776, Lend\u00E1rio: 16750592 }[r] ?? 16777215;
+}
+function buildLojaEmbed(cat, page, user) {
+  const items = Object.entries(CATEGORIAS[cat] ?? {});
+  const total = Math.ceil(items.length / PAGE_SIZE);
+  const slice = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const inv = user?.inventario ?? {};
+  const owned = inv[cat] ?? [];
+  const embed = new import_discord.EmbedBuilder().setColor(import_discord.Colors.Blurple).setTitle(`\u{1F3EA} Loja \u2014 ${CAT_NOMES[cat]}`).setFooter({ text: `P\xE1gina ${page + 1}/${total} \u2022 Use !comprar <id> para comprar` });
+  slice.forEach(([id, item]) => {
+    const comprado = owned.includes(id);
+    const preco = item.preco ?? 0;
+    const tag = comprado ? "\u2705 Comprado" : `\u{1F4B0} ${preco.toLocaleString()} XP`;
+    const extra = item.cores ? `\`${item.cores.join(" \u2192 ")}\`` : "";
+    embed.addFields({
+      name: `**${item.nome}** \`${id}\` \u2014 ${item.raridade}`,
+      value: `${item.descricao ?? extra ?? "\u2014"}
+${tag}`
+    });
+  });
+  return { embed, total };
+}
+async function loja(message, args) {
+  const cat = (args[0] ?? "fundos").toLowerCase();
+  const page = Math.max(0, (parseInt(args[1]) || 1) - 1);
+  const userId = message.author.id, guildId = message.guild?.id;
+  if (!CATEGORIAS[cat]) {
+    return message.reply(`\u274C Categoria inv\xE1lida. Use: \`fundos\`, \`molduras\`, \`efeitos\`, \`badges\``);
+  }
+  const user = userId && guildId ? await Usuario_default.findOne({ userId, guildId }) : null;
+  const { embed, total } = buildLojaEmbed(cat, page, user);
+  const row = new import_discord.ActionRowBuilder().addComponents(
+    new import_discord.ButtonBuilder().setCustomId(`loja_${cat}_${page - 1}`).setLabel("\u25C0").setStyle(import_discord.ButtonStyle.Secondary).setDisabled(page === 0),
+    new import_discord.ButtonBuilder().setCustomId(`loja_${cat}_${page + 1}`).setLabel("\u25B6").setStyle(import_discord.ButtonStyle.Secondary).setDisabled(page >= total - 1)
+  );
+  return message.reply({ embeds: [embed], components: [row] });
+}
+async function comprar(message, args) {
+  const itemId = args[0]?.toLowerCase();
+  if (!itemId) return message.reply("\u274C Informe o ID do item. Ex: `!comprar neon_roxo`");
+  let cat = null, item = null;
+  for (const [c, items] of Object.entries(CATEGORIAS)) {
+    if (items[itemId]) {
+      cat = c;
+      item = items[itemId];
+      break;
+    }
+  }
+  if (!cat) return message.reply(`\u274C Item \`${itemId}\` n\xE3o encontrado. Veja \`!loja\` para os itens dispon\xEDveis.`);
+  const userId = message.author.id, guildId = message.guild?.id;
+  if (!guildId) return message.reply("\u274C Comando apenas em servidores.");
+  let user = await Usuario_default.findOne({ userId, guildId });
+  if (!user) return message.reply("\u274C Voc\xEA ainda n\xE3o tem perfil. Mande uma mensagem para ganhar XP primeiro.");
+  const inv = user.inventario ?? {};
+  const owned = inv[cat] ?? [];
+  if (owned.includes(itemId)) return message.reply(`\u2705 Voc\xEA j\xE1 possui **${item.nome}**.`);
+  const preco = item.preco ?? 0;
+  if ((user.xpTotal ?? 0) < preco)
+    return message.reply(`\u274C XP insuficiente. Voc\xEA tem **${(user.xpTotal ?? 0).toLocaleString()} XP** e precisa de **${preco.toLocaleString()} XP**.`);
+  const newInv = { ...inv, [cat]: [...owned, itemId] };
+  await Usuario_default.updateOne({ userId, guildId }, {
+    $inc: { xpTotal: -preco },
+    $set: { inventario: newInv }
+  });
+  return message.reply({
+    embeds: [
+      new import_discord.EmbedBuilder().setColor(rarityColor2(item.raridade)).setTitle(`\u2705 Compra realizada!`).setDescription(`Voc\xEA comprou **${item.nome}** (${item.raridade}) por **${preco.toLocaleString()} XP**.
+Use \`!equipar${cat.slice(0, -1)} ${itemId}\` para equipar.`)
+    ]
+  });
+}
+function register3(client, configs) {
+  if (client.__lojaRegistrado) return;
+  client.__lojaRegistrado = true;
+  client.on("messageCreate", async (msg) => {
+    if (!msg.guild || msg.author.bot) return;
+    const cfg = configs.get(msg.guild.id);
+    const prefixo = cfg?.prefixo ?? "!";
+    if (!msg.content.startsWith(prefixo)) return;
+    const parts = msg.content.slice(prefixo.length).trim().split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const args = parts.slice(1);
+    try {
+      if (cmd === "loja") await loja(msg, args);
+      if (cmd === "comprar") await comprar(msg, args);
+    } catch (e) {
+      console.error("[loja]", e);
+    }
+  });
+  client.on("interactionCreate", async (interaction) => {
+    if (!interaction.isButton()) return;
+    const [prefix, cat, pageStr] = interaction.customId.split("_");
+    if (prefix !== "loja") return;
+    const page = parseInt(pageStr);
+    if (isNaN(page) || page < 0) return;
+    const user = await Usuario_default.findOne({ userId: interaction.user.id, guildId: interaction.guildId }).catch(() => null);
+    const { embed, total } = buildLojaEmbed(cat, page, user);
+    const row = new import_discord.ActionRowBuilder().addComponents(
+      new import_discord.ButtonBuilder().setCustomId(`loja_${cat}_${page - 1}`).setLabel("\u25C0").setStyle(import_discord.ButtonStyle.Secondary).setDisabled(page === 0),
+      new import_discord.ButtonBuilder().setCustomId(`loja_${cat}_${page + 1}`).setLabel("\u25B6").setStyle(import_discord.ButtonStyle.Secondary).setDisabled(page >= total - 1)
+    );
+    await interaction.update({ embeds: [embed], components: [row] }).catch(() => null);
+  });
+}
+
+// src/systems/inventario.mjs
+var import_discord2 = __toESM(require_src2(), 1);
+var CONFIGS = { fundos, molduras, efeitos, badges };
+var CAT_LABEL = { fundos: "\u{1F5BC} Fundos", molduras: "\u{1F532} Molduras", efeitos: "\u2728 Efeitos", badges: "\u{1F3C5} Badges" };
+async function inventario(message) {
+  const userId = message.author.id, guildId = message.guild?.id;
+  if (!guildId) return message.reply("\u274C Comando apenas em servidores.");
+  const user = await Usuario_default.findOne({ userId, guildId });
+  if (!user) return message.reply("\u274C Voc\xEA ainda n\xE3o tem perfil. Mande uma mensagem primeiro!");
+  const inv = user.inventario ?? {};
+  const equipado = {
+    fundos: user.fundo,
+    molduras: user.moldura,
+    efeitos: user.efeitoEquipado,
+    badges: user.badgeEquipado
+  };
+  const embed = new import_discord2.EmbedBuilder().setColor(import_discord2.Colors.Blurple).setTitle(`\u{1F392} Invent\xE1rio de ${message.author.username}`).setThumbnail(message.author.displayAvatarURL({ size: 128 }));
+  for (const [cat, label] of Object.entries(CAT_LABEL)) {
+    const owned = inv[cat] ?? (cat === "fundos" ? ["escuro"] : cat === "molduras" ? ["padrao"] : []);
+    if (!owned.length) {
+      embed.addFields({ name: label, value: "_Nenhum_", inline: true });
+      continue;
+    }
+    const eq = equipado[cat];
+    const lines = owned.map((id) => {
+      const cfg = CONFIGS[cat][id];
+      const nome = cfg?.nome ?? id;
+      const isEq = id === eq;
+      return `${isEq ? "\u2705 " : ""}**${nome}** \`${id}\``;
+    });
+    embed.addFields({ name: label, value: lines.join("\n").slice(0, 1e3), inline: true });
+  }
+  embed.addFields({
+    name: "\u{1F4CB} Como equipar",
+    value: "`!equiparfundo <id>` | `!equiparmoldura <id>` | `!equiparefeito <id>` | `!equiparbadge <id>`"
+  });
+  return message.reply({ embeds: [embed] });
+}
+function register4(client, configs) {
+  if (client.__inventarioRegistrado) return;
+  client.__inventarioRegistrado = true;
+  client.on("messageCreate", async (msg) => {
+    if (!msg.guild || msg.author.bot) return;
+    const cfg = configs.get(msg.guild.id);
+    const p = cfg?.prefixo ?? "!";
+    if (!msg.content.startsWith(p)) return;
+    const cmd = msg.content.slice(p.length).trim().split(/\s+/)[0].toLowerCase();
+    if (cmd === "inventario" || cmd === "inv") {
+      try {
+        await inventario(msg);
+      } catch (e) {
+        console.error("[inventario]", e);
+      }
+    }
+  });
+}
+
+// src/systems/equipar.mjs
+var import_discord3 = __toESM(require_src2(), 1);
+var CONFIGS2 = { fundo: fundos, moldura: molduras, efeito: efeitos, badge: badges };
+var INV_KEY = { fundo: "fundos", moldura: "molduras", efeito: "efeitos", badge: "badges" };
+var DB_FIELD = { fundo: "fundo", moldura: "moldura", efeito: "efeitoEquipado", badge: "badgeEquipado" };
+async function equipar(message, tipo, itemId) {
+  const userId = message.author.id, guildId = message.guild?.id;
+  if (!guildId) return message.reply("\u274C Comando apenas em servidores.");
+  if (!itemId) return message.reply(`\u274C Informe o ID do item. Ex: \`!equipar${tipo} neon_roxo\``);
+  const cfg = CONFIGS2[tipo];
+  if (!cfg?.[itemId]) return message.reply(`\u274C Item \`${itemId}\` n\xE3o existe. Veja \`!loja ${INV_KEY[tipo]}\`.`);
+  const user = await Usuario_default.findOne({ userId, guildId });
+  if (!user) return message.reply("\u274C Voc\xEA ainda n\xE3o tem perfil. Mande uma mensagem primeiro!");
+  const inv = user.inventario ?? {};
+  const owned = inv[INV_KEY[tipo]] ?? (tipo === "fundo" ? ["escuro"] : tipo === "moldura" ? ["padrao"] : []);
+  if (!owned.includes(itemId))
+    return message.reply(`\u274C Voc\xEA n\xE3o possui **${cfg[itemId].nome}**. Use \`!comprar ${itemId}\`.`);
+  await Usuario_default.updateOne({ userId, guildId }, { $set: { [DB_FIELD[tipo]]: itemId } });
+  return message.reply({
+    embeds: [
+      new import_discord3.EmbedBuilder().setColor(import_discord3.Colors.Green).setDescription(`\u2705 **${cfg[itemId].nome}** equipado! Veja seu perfil com \`!meuperfil\`.`)
+    ]
+  });
+}
+function register5(client, configs) {
+  if (client.__equiparRegistrado) return;
+  client.__equiparRegistrado = true;
+  client.on("messageCreate", async (msg) => {
+    if (!msg.guild || msg.author.bot) return;
+    const cfg = configs.get(msg.guild.id);
+    const p = cfg?.prefixo ?? "!";
+    if (!msg.content.startsWith(p)) return;
+    const parts = msg.content.slice(p.length).trim().split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const arg = parts[1]?.toLowerCase();
+    const map = {
+      equiparfundo: "fundo",
+      equiparmoldura: "moldura",
+      equiparefeito: "efeito",
+      equiparbadge: "badge"
+    };
+    if (map[cmd]) {
+      try {
+        await equipar(msg, map[cmd], arg);
+      } catch (e) {
+        console.error("[equipar]", e);
+      }
+    }
+  });
+}
+
+// src/systems/ranking.mjs
+var import_discord4 = __toESM(require_src2(), 1);
+import { createCanvas as createCanvas2, loadImage as loadImage2 } from "@napi-rs/canvas";
+function roundRect2(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+var MEDALS = ["\u{1F947}", "\u{1F948}", "\u{1F949}"];
+async function gerarRankingCanvas(users, guild) {
+  const W = 900, H = 80 + users.length * 70 + 30;
+  const canvas = createCanvas2(W, H);
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, "#0b0c2a");
+  bg.addColorStop(1, "#1a0040");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 26px Sans";
+  ctx.textAlign = "center";
+  ctx.fillText(`\u{1F3C6}  Top ${users.length} \u2014 ${guild?.name ?? "Servidor"}`, W / 2, 44);
+  ctx.textAlign = "left";
+  for (let i = 0; i < users.length; i++) {
+    const u = users[i];
+    const y = 70 + i * 70;
+    const alpha = i < 3 ? 0.2 : 0.1;
+    const accent = i === 0 ? "#ffd700" : i === 1 ? "#c0c0c0" : i === 2 ? "#cd7f32" : "#7c3aed";
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    roundRect2(ctx, 20, y, W - 40, 58, 12);
+    ctx.fill();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 2;
+    roundRect2(ctx, 20, y, W - 40, 58, 12);
+    ctx.stroke();
+    ctx.fillStyle = accent;
+    ctx.font = "bold 20px Sans";
+    ctx.fillText(MEDALS[i] ?? `#${i + 1}`, 36, y + 36);
+    try {
+      const av = await loadImage2(u.avatarUrl ?? "");
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(95, y + 29, 22, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(av, 73, y + 7, 44, 44);
+      ctx.restore();
+    } catch {
+      ctx.fillStyle = "#36393f";
+      ctx.beginPath();
+      ctx.arc(95, y + 29, 22, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 17px Sans";
+    ctx.fillText((u.username ?? "Usu\xE1rio").slice(0, 22), 128, y + 26);
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.font = "13px Sans";
+    ctx.fillText(`N\xEDvel ${u.nivel ?? 1}  \u2022  ${(u.xpTotal ?? 0).toLocaleString()} XP`, 128, y + 46);
+    ctx.fillStyle = accent;
+    ctx.font = "bold 16px Sans";
+    ctx.textAlign = "right";
+    ctx.fillText(`${(u.xpTotal ?? 0).toLocaleString()} XP`, W - 36, y + 36);
+    ctx.textAlign = "left";
+  }
+  return canvas.toBuffer("image/png");
+}
+async function ranking(message) {
+  const guildId = message.guild?.id;
+  if (!guildId) return message.reply("\u274C Comando apenas em servidores.");
+  const users = await Usuario_default.find({ guildId }).sort({ xpTotal: -1 }).limit(10).lean();
+  if (!users.length) return message.reply("\u274C Nenhum usu\xE1rio no ranking ainda.");
+  const enriched = await Promise.all(users.map(async (u) => {
+    try {
+      const member = await message.guild.members.fetch(u.userId).catch(() => null);
+      return { ...u, username: member?.user.username ?? u.userId, avatarUrl: member?.user.displayAvatarURL({ extension: "png", size: 128 }) };
+    } catch {
+      return { ...u, username: u.userId };
+    }
+  }));
+  const img = await gerarRankingCanvas(enriched, message.guild);
+  return message.channel.send({ files: [{ attachment: img, name: "ranking.png" }] });
+}
+function register6(client, configs) {
+  if (client.__rankingRegistrado) return;
+  client.__rankingRegistrado = true;
+  client.on("messageCreate", async (msg) => {
+    if (!msg.guild || msg.author.bot) return;
+    const cfg = configs.get(msg.guild.id);
+    const p = cfg?.prefixo ?? "!";
+    if (!msg.content.startsWith(p)) return;
+    const cmd = msg.content.slice(p.length).trim().split(/\s+/)[0].toLowerCase();
+    if (cmd === "rank" || cmd === "top" || cmd === "ranking") {
+      try {
+        await ranking(msg);
+      } catch (e) {
+        console.error("[ranking]", e);
+      }
+    }
+  });
+}
+
 // src/bot/robux.ts
 var COOLDOWN_MS = 3e3;
-var cooldowns = /* @__PURE__ */ new Map();
+var cooldowns2 = /* @__PURE__ */ new Map();
 function isOnCooldown(userId) {
-  return Date.now() - (cooldowns.get(userId) ?? 0) < COOLDOWN_MS;
+  return Date.now() - (cooldowns2.get(userId) ?? 0) < COOLDOWN_MS;
 }
 function setCooldown(userId) {
-  cooldowns.set(userId, Date.now());
+  cooldowns2.set(userId, Date.now());
 }
 var stats = {
   startedAt: /* @__PURE__ */ new Date(),
@@ -103680,7 +104619,7 @@ async function fetchGamepass(id) {
 }
 function isAdmin(message) {
   if (!message.member) return false;
-  return message.member.permissions.has(import_discord.PermissionFlagsBits.Administrator) || message.member.permissions.has(import_discord.PermissionFlagsBits.ManageGuild);
+  return message.member.permissions.has(import_discord5.PermissionFlagsBits.Administrator) || message.member.permissions.has(import_discord5.PermissionFlagsBits.ManageGuild);
 }
 function startBot() {
   const token = process.env["DISCORD_BOT_TOKEN"];
@@ -103688,34 +104627,39 @@ function startBot() {
     logger.warn("DISCORD_BOT_TOKEN not set \u2014 Discord bot will not start");
     return;
   }
-  const client = new import_discord.Client({
+  const client = new import_discord5.Client({
     intents: [
-      import_discord.GatewayIntentBits.Guilds,
-      import_discord.GatewayIntentBits.GuildMessages,
-      import_discord.GatewayIntentBits.MessageContent,
-      import_discord.GatewayIntentBits.DirectMessages
+      import_discord5.GatewayIntentBits.Guilds,
+      import_discord5.GatewayIntentBits.GuildMessages,
+      import_discord5.GatewayIntentBits.MessageContent,
+      import_discord5.GatewayIntentBits.DirectMessages
     ]
   });
   const guildConfigs = /* @__PURE__ */ new Map();
-  Promise.resolve().then(() => (init_sqlite(), sqlite_exports)).then((mod) => {
-    mod.initDB();
+  try {
+    initDB();
     logger.info("SQLite database initialized");
-  }).catch((err) => logger.error({ err }, "Failed to init SQLite"));
-  const systems = [
-    "../systems/meuperfil.mjs",
-    "../systems/xp.mjs",
-    "../systems/loja.mjs",
-    "../systems/inventario.mjs",
-    "../systems/equipar.mjs",
-    "../systems/ranking.mjs"
-  ];
-  for (const sys of systems) {
-    import(sys).then((mod) => {
-      mod.register(client, guildConfigs);
-      logger.info({ sys }, "Sistema registrado");
-    }).catch((err) => logger.error({ err, sys }, "Failed to register system"));
+  } catch (err) {
+    logger.error({ err }, "Failed to init SQLite");
   }
-  client.once(import_discord.Events.ClientReady, (c) => {
+  const cfg = guildConfigs;
+  const systems = [
+    { name: "meuperfil", fn: register },
+    { name: "xp", fn: register2 },
+    { name: "loja", fn: register3 },
+    { name: "inventario", fn: register4 },
+    { name: "equipar", fn: register5 },
+    { name: "ranking", fn: register6 }
+  ];
+  for (const { name, fn } of systems) {
+    try {
+      fn(client, cfg);
+      logger.info({ name }, "Sistema registrado");
+    } catch (err) {
+      logger.error({ err, name }, "Failed to register system");
+    }
+  }
+  client.once(import_discord5.Events.ClientReady, (c) => {
     logger.info({ tag: c.user.tag }, "Discord bot online");
     const getActivities = () => {
       const { ActivityType } = require_src2();
@@ -103739,7 +104683,7 @@ function startBot() {
     rotate();
     setInterval(rotate, 3e4);
   });
-  client.on(import_discord.Events.MessageCreate, async (message) => {
+  client.on(import_discord5.Events.MessageCreate, async (message) => {
     if (message.author.bot) return;
     const content = message.content.trim();
     const lower = content.toLowerCase();
@@ -103753,11 +104697,11 @@ function startBot() {
       if (lower === "!ping") {
         setCooldown(message.author.id);
         const sent = await message.reply({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Blurple).setTitle("\u{1F3D3} Pong!").setDescription("Calculando...")
+          new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Blurple).setTitle("\u{1F3D3} Pong!").setDescription("Calculando...")
         ] });
         const latency = sent.createdTimestamp - message.createdTimestamp;
         await sent.edit({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Blurple).setTitle("\u{1F3D3} Pong!").addFields(
+          new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Blurple).setTitle("\u{1F3D3} Pong!").addFields(
             { name: "Lat\xEAncia", value: `${latency}ms`, inline: true },
             { name: "API", value: `${Math.round(client.ws.ping)}ms`, inline: true }
           )
@@ -103767,7 +104711,7 @@ function startBot() {
       if (lower === "!status") {
         setCooldown(message.author.id);
         await message.reply({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Green).setTitle("\u{1F4C8} Status do Bot").addFields(
+          new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Green).setTitle("\u{1F4C8} Status do Bot").addFields(
             { name: "\u23F1\uFE0F Online h\xE1", value: formatUptime(), inline: true },
             { name: "\u{1F504} Convers\xF5es feitas", value: totalConversions().toLocaleString("pt-BR"), inline: true },
             { name: "\u200B", value: "\u200B", inline: true },
@@ -103783,18 +104727,18 @@ function startBot() {
         setCooldown(message.author.id);
         const parts = content.split(/\s+/);
         if (parts.length < 2) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Use: `!robux <valor em R$>` \u2014 Ex: `!robux 100`")] });
+          await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Red).setDescription("\u274C Use: `!robux <valor em R$>` \u2014 Ex: `!robux 100`")] });
           return;
         }
         const brl = parseNumber(parts[1]);
         if (isNaN(brl) || brl <= 0) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Valor inv\xE1lido. Ex: `!robux 100`")] });
+          await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Red).setDescription("\u274C Valor inv\xE1lido. Ex: `!robux 100`")] });
           return;
         }
         stats.robux++;
         const robux = brlToRobux(brl, rate);
         await message.reply({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Green).setTitle("\u{1F4B8} BRL \u2192 Robux").addFields(
+          new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Green).setTitle("\u{1F4B8} BRL \u2192 Robux").addFields(
             { name: "Voc\xEA paga", value: formatBrl(brl), inline: true },
             { name: "Voc\xEA recebe", value: `${formatRobux(robux)} Robux`, inline: true }
           ).setFooter({ text: footerText(rate) })
@@ -103805,18 +104749,18 @@ function startBot() {
         setCooldown(message.author.id);
         const parts = content.split(/\s+/);
         if (parts.length < 2) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Use: `!brl <quantidade de Robux>` \u2014 Ex: `!brl 1000`")] });
+          await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Red).setDescription("\u274C Use: `!brl <quantidade de Robux>` \u2014 Ex: `!brl 1000`")] });
           return;
         }
         const robux = parseNumber(parts[1]);
         if (isNaN(robux) || robux <= 0) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Valor inv\xE1lido. Ex: `!brl 1000`")] });
+          await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Red).setDescription("\u274C Valor inv\xE1lido. Ex: `!brl 1000`")] });
           return;
         }
         stats.brl++;
         const brl = robuxToBrl(robux, rate);
         await message.reply({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Gold).setTitle("\u{1F4B0} Robux \u2192 BRL").addFields(
+          new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Gold).setTitle("\u{1F4B0} Robux \u2192 BRL").addFields(
             { name: "Quantidade", value: `${formatRobux(Math.round(robux))} Robux`, inline: true },
             { name: "Valor", value: formatBrl(brl), inline: true }
           ).setFooter({ text: footerText(rate) })
@@ -103827,7 +104771,7 @@ function startBot() {
         setCooldown(message.author.id);
         const perBrl = robuxPerBrl(rate);
         await message.reply({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Blue).setTitle("\u{1F4CA} Taxa atual de Robux").addFields(
+          new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Blue).setTitle("\u{1F4CA} Taxa atual de Robux").addFields(
             { name: `${formatRobux(rate.robux)} Robux`, value: formatBrl(rate.brl), inline: true },
             { name: "1 Robux", value: formatBrl(rate.brl / rate.robux), inline: true },
             { name: "R$ 1,00", value: `~${formatRobux(Math.round(perBrl))} Robux`, inline: true }
@@ -103839,7 +104783,7 @@ function startBot() {
         setCooldown(message.author.id);
         const history = getHistory();
         if (history.length === 0) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Grey).setTitle("\u{1F4CB} Hist\xF3rico de taxas").setDescription("Nenhuma altera\xE7\xE3o registrada ainda.")] });
+          await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Grey).setTitle("\u{1F4CB} Hist\xF3rico de taxas").setDescription("Nenhuma altera\xE7\xE3o registrada ainda.")] });
           return;
         }
         const lines = history.slice().reverse().map(
@@ -103847,7 +104791,7 @@ function startBot() {
 \u21B3 ${rateLabel(entry.before)} \u2192 **${rateLabel(entry.after)}**`
         ).join("\n\n");
         await message.reply({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Purple).setTitle(`\u{1F4CB} Hist\xF3rico de taxas (\xFAltimas ${history.length})`).setDescription(lines)
+          new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Purple).setTitle(`\u{1F4CB} Hist\xF3rico de taxas (\xFAltimas ${history.length})`).setDescription(lines)
         ] });
         return;
       }
@@ -103855,13 +104799,13 @@ function startBot() {
         setCooldown(message.author.id);
         const parts = content.split(/\s+/).slice(1);
         if (parts.length === 0) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Use: `!simular <val1> <val2> ...` \u2014 Ex: `!simular 50 100 200 500`")] });
+          await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Red).setDescription("\u274C Use: `!simular <val1> <val2> ...` \u2014 Ex: `!simular 50 100 200 500`")] });
           return;
         }
         const MAX_VALUES = 8;
         const values = parts.slice(0, MAX_VALUES).map(parseNumber).filter((n) => !isNaN(n) && n > 0);
         if (values.length === 0) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Nenhum valor v\xE1lido. Use n\xFAmeros positivos.")] });
+          await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Red).setDescription("\u274C Nenhum valor v\xE1lido. Use n\xFAmeros positivos.")] });
           return;
         }
         stats.simular++;
@@ -103875,7 +104819,7 @@ function startBot() {
         const truncNote = parts.length > MAX_VALUES ? `
 *Mostrando primeiros ${MAX_VALUES} de ${parts.length} valores.*` : "";
         await message.reply({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Green).setTitle("\u{1F4CA} Simula\xE7\xE3o BRL \u2192 Robux").setDescription(`\`\`\`
+          new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Green).setTitle("\u{1F4CA} Simula\xE7\xE3o BRL \u2192 Robux").setDescription(`\`\`\`
 ${rows}
 \`\`\`${truncNote}`).setFooter({ text: footerText(rate) })
         ] });
@@ -103885,22 +104829,22 @@ ${rows}
         setCooldown(message.author.id);
         const parts = content.split(/\s+/);
         if (parts.length < 2) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Use: `!gamepass <ID ou link>` \u2014 Ex: `!gamepass 12345678`")] });
+          await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Red).setDescription("\u274C Use: `!gamepass <ID ou link>` \u2014 Ex: `!gamepass 12345678`")] });
           return;
         }
         const gpId = extractGamepassId(parts[1]);
         if (!gpId) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C ID ou link inv\xE1lido. Ex: `!gamepass 12345678` ou cole o link do gamepass.")] });
+          await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Red).setDescription("\u274C ID ou link inv\xE1lido. Ex: `!gamepass 12345678` ou cole o link do gamepass.")] });
           return;
         }
-        const loading = await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Grey).setDescription("\u{1F50D} Buscando gamepass no Roblox...")] });
+        const loading = await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Grey).setDescription("\u{1F50D} Buscando gamepass no Roblox...")] });
         const gp = await fetchGamepass(gpId);
         if (!gp) {
-          await loading.edit({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Gamepass n\xE3o encontrado ou a API do Roblox est\xE1 fora do ar. Verifique o ID/link.")] });
+          await loading.edit({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Red).setDescription("\u274C Gamepass n\xE3o encontrado ou a API do Roblox est\xE1 fora do ar. Verifique o ID/link.")] });
           return;
         }
         stats.gamepass++;
-        const embed = new import_discord.EmbedBuilder().setColor(import_discord.Colors.Orange).setTitle(`\u{1F3AE} ${gp.name}`).setURL(`https://www.roblox.com/game-pass/${gpId}`).addFields(
+        const embed = new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Orange).setTitle(`\u{1F3AE} ${gp.name}`).setURL(`https://www.roblox.com/game-pass/${gpId}`).addFields(
           { name: "Criador", value: gp.creator, inline: true },
           { name: "Vendas", value: gp.sales.toLocaleString("pt-BR"), inline: true },
           { name: "\xC0 venda", value: gp.isForSale ? "\u2705 Sim" : "\u274C N\xE3o", inline: true }
@@ -103921,18 +104865,18 @@ ${rows}
       }
       if (lower.startsWith("!setraxa")) {
         if (!isAdmin(message)) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u{1F512} Apenas administradores podem alterar a taxa.")] });
+          await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Red).setDescription("\u{1F512} Apenas administradores podem alterar a taxa.")] });
           return;
         }
         const parts = content.split(/\s+/);
         if (parts.length < 3) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Use: `!setraxa <robux> <R$>` \u2014 Ex: `!setraxa 1000 40`")] });
+          await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Red).setDescription("\u274C Use: `!setraxa <robux> <R$>` \u2014 Ex: `!setraxa 1000 40`")] });
           return;
         }
         const newRobux = parseNumber(parts[1]);
         const newBrl = parseNumber(parts[2]);
         if (isNaN(newRobux) || newRobux <= 0 || isNaN(newBrl) || newBrl <= 0) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Valores inv\xE1lidos. Ex: `!setraxa 1000 40`")] });
+          await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Red).setDescription("\u274C Valores inv\xE1lidos. Ex: `!setraxa 1000 40`")] });
           return;
         }
         const before = getCurrentRate();
@@ -103940,7 +104884,7 @@ ${rows}
         updateRate(after, message.author.displayName);
         logger.info({ newRobux, newBrl, updatedBy: message.author.tag }, "Robux rate updated");
         await message.reply({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Green).setTitle("\u2705 Taxa atualizada!").setDescription(`Alterado por **${message.author.displayName}**`).addFields(
+          new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Green).setTitle("\u2705 Taxa atualizada!").setDescription(`Alterado por **${message.author.displayName}**`).addFields(
             { name: "Antes", value: rateLabel(before), inline: true },
             { name: "Agora", value: rateLabel(after), inline: true }
           ).setTimestamp()
@@ -103949,45 +104893,45 @@ ${rows}
       }
       if (lower.startsWith("!limpar")) {
         if (!message.member?.permissions.has("ManageMessages")) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Voc\xEA n\xE3o tem permiss\xE3o para limpar mensagens.")] });
+          await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Red).setDescription("\u274C Voc\xEA n\xE3o tem permiss\xE3o para limpar mensagens.")] });
           return;
         }
         if (!message.channel.isTextBased() || message.channel.isDMBased()) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Este comando s\xF3 funciona em canais de texto.")] });
+          await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Red).setDescription("\u274C Este comando s\xF3 funciona em canais de texto.")] });
           return;
         }
         const parts = content.split(/\s+/);
         if (parts.length < 2) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Informe a quantidade. Ex: `!limpar 10`")] });
+          await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Red).setDescription("\u274C Informe a quantidade. Ex: `!limpar 10`")] });
           return;
         }
         let amount = parseInt(parts[1], 10);
         if (isNaN(amount) || amount < 1) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Quantidade inv\xE1lida. Use um n\xFAmero entre 1 e 100. Ex: `!limpar 10`")] });
+          await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Red).setDescription("\u274C Quantidade inv\xE1lida. Use um n\xFAmero entre 1 e 100. Ex: `!limpar 10`")] });
           return;
         }
         if (amount > 100) amount = 100;
         const deleted = await message.channel.bulkDelete(amount, true).catch(() => null);
         const count = deleted?.size ?? 0;
         const confirm = await message.channel.send({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Green).setDescription(`\u{1F5D1}\uFE0F **${count}** mensagen${count !== 1 ? "s" : ""} apagada${count !== 1 ? "s" : ""} com sucesso.`)
+          new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Green).setDescription(`\u{1F5D1}\uFE0F **${count}** mensagen${count !== 1 ? "s" : ""} apagada${count !== 1 ? "s" : ""} com sucesso.`)
         ] });
         setTimeout(() => confirm.delete().catch(() => null), 5e3);
         return;
       }
       if (lower.startsWith("!anuncio")) {
         if (!message.member?.permissions.has("ManageMessages")) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Voc\xEA n\xE3o tem permiss\xE3o para fazer an\xFAncios.")] });
+          await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Red).setDescription("\u274C Voc\xEA n\xE3o tem permiss\xE3o para fazer an\xFAncios.")] });
           return;
         }
         const text = content.slice("!anuncio".length).trim();
         if (!text) {
-          await message.reply({ embeds: [new import_discord.EmbedBuilder().setColor(import_discord.Colors.Red).setDescription("\u274C Informe o texto do an\xFAncio. Ex: `!anuncio Evento de Robux hoje \xE0s 20h!`")] });
+          await message.reply({ embeds: [new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Red).setDescription("\u274C Informe o texto do an\xFAncio. Ex: `!anuncio Evento de Robux hoje \xE0s 20h!`")] });
           return;
         }
         await message.delete().catch(() => null);
         const announcement = await message.channel.send({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Gold).setTitle("\u{1F4E3} An\xFAncio").setDescription(text).setFooter({ text: `Anunciado por ${message.author.username}` }).setTimestamp()
+          new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Gold).setTitle("\u{1F4E3} An\xFAncio").setDescription(text).setFooter({ text: `Anunciado por ${message.author.username}` }).setTimestamp()
         ] });
         await announcement.pin().catch(() => null);
         return;
@@ -103995,7 +104939,7 @@ ${rows}
       if (lower === "!ajuda" || lower === "!help") {
         setCooldown(message.author.id);
         await message.reply({ embeds: [
-          new import_discord.EmbedBuilder().setColor(import_discord.Colors.Blurple).setTitle("\u{1F3AE} Bot de Convers\xE3o Robux / BRL").addFields(
+          new import_discord5.EmbedBuilder().setColor(import_discord5.Colors.Blurple).setTitle("\u{1F3AE} Bot de Convers\xE3o Robux / BRL").addFields(
             { name: "`!robux <R$>`", value: "Converte BRL \u2192 Robux" },
             { name: "`!brl <robux>`", value: "Converte Robux \u2192 BRL" },
             { name: "`!taxa`", value: "Mostra a taxa de c\xE2mbio atual" },

@@ -10,6 +10,22 @@ import {
 import { logger } from "../lib/logger";
 import { getCurrentRate, getHistory, updateRate, type RateEntry } from "./store";
 
+// ── Sistemas (.mjs) — importados estaticamente para o esbuild incluir no bundle
+// @ts-ignore
+import { initDB } from "../db/sqlite.mjs";
+// @ts-ignore
+import { register as regMeuperfil } from "../systems/meuperfil.mjs";
+// @ts-ignore
+import { register as regXP } from "../systems/xp.mjs";
+// @ts-ignore
+import { register as regLoja } from "../systems/loja.mjs";
+// @ts-ignore
+import { register as regInventario } from "../systems/inventario.mjs";
+// @ts-ignore
+import { register as regEquipar } from "../systems/equipar.mjs";
+// @ts-ignore
+import { register as regRanking } from "../systems/ranking.mjs";
+
 // ── Cooldown ─────────────────────────────────────────────────────────────────
 
 const COOLDOWN_MS = 3000;
@@ -203,37 +219,24 @@ export function startBot(): void {
     ],
   });
 
-  // ── Sistema de perfil ─────────────────────────────────────────────────────
-  // configs: Map<guildId, { prefixo }> — sem configuração por guild, usa '!'
+  // ── Sistemas ──────────────────────────────────────────────────────────────
   const guildConfigs = new Map<string, { prefixo: string }>();
 
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore — .mjs systems bundled by esbuild, no TS declarations needed
-  import("../db/sqlite.mjs")
-    .then((mod: { initDB: () => void }) => {
-      mod.initDB();
-      logger.info("SQLite database initialized");
-    })
-    .catch((err: unknown) => logger.error({ err }, "Failed to init SQLite"));
+  try { initDB(); logger.info("SQLite database initialized"); }
+  catch (err) { logger.error({ err }, "Failed to init SQLite"); }
 
-  type SysModule = { register: (c: Client, cfg: Map<string, unknown>) => void };
-  const systems = [
-    "../systems/meuperfil.mjs",
-    "../systems/xp.mjs",
-    "../systems/loja.mjs",
-    "../systems/inventario.mjs",
-    "../systems/equipar.mjs",
-    "../systems/ranking.mjs",
+  const cfg = guildConfigs as unknown as Map<string, unknown>;
+  const systems: Array<{ name: string; fn: (c: Client, cfg: Map<string, unknown>) => void }> = [
+    { name: "meuperfil", fn: regMeuperfil },
+    { name: "xp",        fn: regXP        },
+    { name: "loja",      fn: regLoja      },
+    { name: "inventario",fn: regInventario},
+    { name: "equipar",   fn: regEquipar   },
+    { name: "ranking",   fn: regRanking   },
   ];
-  for (const sys of systems) {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore — .mjs systems bundled by esbuild
-    import(sys)
-      .then((mod: SysModule) => {
-        mod.register(client, guildConfigs as Map<string, unknown>);
-        logger.info({ sys }, "Sistema registrado");
-      })
-      .catch((err: unknown) => logger.error({ err, sys }, "Failed to register system"));
+  for (const { name, fn } of systems) {
+    try { fn(client, cfg); logger.info({ name }, "Sistema registrado"); }
+    catch (err) { logger.error({ err, name }, "Failed to register system"); }
   }
   // ─────────────────────────────────────────────────────────────────────────
 
