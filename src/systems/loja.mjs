@@ -1,358 +1,133 @@
-import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  EmbedBuilder
-} from 'discord.js';
-import { createCanvas } from '@napi-rs/canvas';
-
+import { EmbedBuilder, Colors, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { fundos, molduras, efeitos, badges } from './perfilConfig.mjs';
 import Usuario from '../db/models/Usuario.mjs';
-import {
-  molduras,
-  efeitos,
-  fundos,
-  badges
-} from './perfilConfig.mjs';
 
-// 🔹 Máximo 3 itens por página: 1 aba row + 3 item rows + 1 nav row = 5 ActionRows (limite do Discord)
-const ITEMS_POR_PAGINA = 3;
+const CATEGORIAS = { fundos, molduras, efeitos, badges };
+const CAT_NOMES  = { fundos: 'Fundos', molduras: 'Molduras', efeitos: 'Efeitos', badges: 'Badges' };
+const PAGE_SIZE  = 5;
 
-const abas = {
-  molduras: '🪟 Molduras',
-  efeitos: '✨ Efeitos',
-  fundos: '🎨 Fundos',
-  badges: '🏅 Badges'
-};
-
-function getCatalogo(aba) {
-  switch (aba) {
-    case 'molduras': return molduras;
-    case 'efeitos': return efeitos;
-    case 'fundos': return fundos;
-    case 'badges': return badges;
-    default: return molduras;
-  }
+function rarityColor(r) {
+  return { Comum: 0x9e9e9e, Incomum: 0x4caf50, Raro: 0x2196f3, Épico: 0x9c27b0, Lendário: 0xff9800 }[r] ?? 0xffffff;
 }
 
-// 🔹 Paginação
-function getItensPaginados(aba, pagina) {
-  const catalogo = getCatalogo(aba);
-  const entradas = Object.entries(catalogo);
-  const start = pagina * ITEMS_POR_PAGINA;
-  const end = start + ITEMS_POR_PAGINA;
-  return entradas.slice(start, end);
-}
+function buildLojaEmbed(cat, page, user) {
+  const items = Object.entries(CATEGORIAS[cat] ?? {});
+  const total = Math.ceil(items.length / PAGE_SIZE);
+  const slice = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const inv   = user?.inventario ?? {};
+  const owned = inv[cat] ?? [];
 
-// 🔹 Embed da loja
-function gerarLoja(aba, pagina = 0) {
-  const catalogo = getCatalogo(aba);
-  const entradas = Object.entries(catalogo);
-  const totalPaginas = Math.ceil(entradas.length / ITEMS_POR_PAGINA);
+  const embed = new EmbedBuilder()
+    .setColor(Colors.Blurple)
+    .setTitle(`🏪 Loja — ${CAT_NOMES[cat]}`)
+    .setFooter({ text: `Página ${page + 1}/${total} • Use !comprar <id> para comprar` });
 
-  return new EmbedBuilder()
-    .setTitle(`🏪 Loja - ${abas[aba]} (Página ${pagina + 1}/${totalPaginas})`)
-    .setColor('#00d4ff')
-    .setDescription(
-      getItensPaginados(aba, pagina).map(([id, item]) => {
-        const preco = item.preco ?? '—';
-        const raridade = item.raridade ? ` | ${item.raridade}` : '';
-        return `**${item.nome}** (\`${id}\`)${raridade}\n💰 ${preco} XP`;
-      }).join('\n\n')
-    );
-}
-
-// 🔹 Botões dos itens: 1 row por item (preview + comprar)
-function gerarBotoesItens(aba, pagina = 0) {
-  const itens = getItensPaginados(aba, pagina);
-  const linhas = [];
-
-  itens.forEach(([id, item]) => {
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`preview_${aba}_${id}`)
-        .setLabel('👁️ Ver item')
-        .setStyle(ButtonStyle.Secondary),
-
-      new ButtonBuilder()
-        .setCustomId(`buy_${aba}_${id}`)
-        .setLabel('🛒 Comprar')
-        .setStyle(ButtonStyle.Primary)
-    );
-    linhas.push(row);
+  slice.forEach(([id, item]) => {
+    const comprado = owned.includes(id);
+    const preco    = item.preco ?? 0;
+    const tag      = comprado ? '✅ Comprado' : `💰 ${preco.toLocaleString()} XP`;
+    const extra    = item.cores ? `\`${item.cores.join(' → ')}\`` : '';
+    embed.addFields({
+      name: `**${item.nome}** \`${id}\` — ${item.raridade}`,
+      value: `${item.descricao ?? extra ?? '—'}\n${tag}`,
+    });
   });
 
-  return linhas;
+  return { embed, total };
 }
 
-// 🔹 Botões das abas
-function gerarBotoesAbas() {
-  return new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('loja_molduras')
-      .setLabel('Molduras')
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId('loja_efeitos')
-      .setLabel('Efeitos')
-      .setStyle(ButtonStyle.Success),
-    new ButtonBuilder()
-      .setCustomId('loja_fundos')
-      .setLabel('Fundos')
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId('loja_badges')
-      .setLabel('Badges')
-      .setStyle(ButtonStyle.Danger)
-  );
-}
+export async function loja(message, args) {
+  const cat   = (args[0] ?? 'fundos').toLowerCase();
+  const page  = Math.max(0, (parseInt(args[1]) || 1) - 1);
+  const userId = message.author.id, guildId = message.guild?.id;
 
-// 🔹 Botões de navegação
-function gerarBotoesNav(aba, pagina) {
-  const catalogo = getCatalogo(aba);
-  const entradas = Object.entries(catalogo);
-  const maxPaginas = Math.ceil(entradas.length / ITEMS_POR_PAGINA);
+  if (!CATEGORIAS[cat]) {
+    return message.reply(`❌ Categoria inválida. Use: \`fundos\`, \`molduras\`, \`efeitos\`, \`badges\``);
+  }
+
+  const user = userId && guildId
+    ? await Usuario.findOne({ userId, guildId })
+    : null;
+
+  const { embed, total } = buildLojaEmbed(cat, page, user);
 
   const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`loja_prev_${aba}_${pagina}`)
-      .setLabel('⬅️ Voltar')
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(pagina === 0),
-    new ButtonBuilder()
-      .setCustomId(`loja_next_${aba}_${pagina}`)
-      .setLabel('➡️ Próximo')
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(pagina >= maxPaginas - 1)
+    new ButtonBuilder().setCustomId(`loja_${cat}_${page - 1}`).setLabel('◀').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
+    new ButtonBuilder().setCustomId(`loja_${cat}_${page + 1}`).setLabel('▶').setStyle(ButtonStyle.Secondary).setDisabled(page >= total - 1),
   );
-  return row;
+
+  return message.reply({ embeds: [embed], components: [row] });
 }
 
-// 🖼️ GERAR IMAGEM DE PRÉVIA COM CANVAS
-async function gerarPreviewItem(item) {
-  const canvas = createCanvas(600, 200);
-  const ctx = canvas.getContext('2d');
+export async function comprar(message, args) {
+  const itemId = args[0]?.toLowerCase();
+  if (!itemId) return message.reply('❌ Informe o ID do item. Ex: `!comprar neon_roxo`');
 
-  ctx.fillStyle = '#1e1f22';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  let cat = null, item = null;
+  for (const [c, items] of Object.entries(CATEGORIAS)) {
+    if (items[itemId]) { cat = c; item = items[itemId]; break; }
+  }
+  if (!cat) return message.reply(`❌ Item \`${itemId}\` não encontrado. Veja \`!loja\` para os itens disponíveis.`);
 
-  ctx.strokeStyle = '#00d4ff';
-  ctx.lineWidth = 4;
-  ctx.strokeRect(0, 0, canvas.width, canvas.height);
+  const userId = message.author.id, guildId = message.guild?.id;
+  if (!guildId) return message.reply('❌ Comando apenas em servidores.');
 
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 28px Sans-serif';
-  ctx.fillText(item.nome.slice(0, 25), 30, 60);
+  let user = await Usuario.findOne({ userId, guildId });
+  if (!user) return message.reply('❌ Você ainda não tem perfil. Mande uma mensagem para ganhar XP primeiro.');
 
-  ctx.font = '20px Sans-serif';
-  ctx.fillText(`Preço: ${item.preco ?? '—'} XP`, 30, 110);
+  const inv   = user.inventario ?? {};
+  const owned = inv[cat] ?? [];
+  if (owned.includes(itemId)) return message.reply(`✅ Você já possui **${item.nome}**.`);
 
-  ctx.fillText(`Raridade: ${item.raridade ?? 'Comum'}`, 30, 150);
+  const preco = item.preco ?? 0;
+  if ((user.xpTotal ?? 0) < preco)
+    return message.reply(`❌ XP insuficiente. Você tem **${(user.xpTotal ?? 0).toLocaleString()} XP** e precisa de **${preco.toLocaleString()} XP**.`);
 
-  return canvas.toBuffer('image/png');
-}
+  const newInv = { ...inv, [cat]: [...owned, itemId] };
+  await Usuario.updateOne({ userId, guildId }, {
+    $inc:  { xpTotal: -preco },
+    $set:  { inventario: newInv },
+  });
 
-export async function lojaCommand(message) {
-  const ownerId = message.author.id;
-  let abaAtual = 'molduras';
-  let paginaAtual = 0;
-
-  const msg = await message.channel.send({
-    embeds: [gerarLoja(abaAtual, paginaAtual)],
-    components: [
-      gerarBotoesAbas(),
-      ...gerarBotoesItens(abaAtual, paginaAtual),
-      gerarBotoesNav(abaAtual, paginaAtual)
+  return message.reply({
+    embeds: [new EmbedBuilder()
+      .setColor(rarityColor(item.raridade))
+      .setTitle(`✅ Compra realizada!`)
+      .setDescription(`Você comprou **${item.nome}** (${item.raridade}) por **${preco.toLocaleString()} XP**.\nUse \`!equipar${cat.slice(0, -1)} ${itemId}\` para equipar.`)
     ]
   });
-
-  const collector = msg.createMessageComponentCollector({
-    time: 10 * 60 * 1000
-  });
-
-  collector.on('collect', async (interaction) => {
-    if (interaction.user.id !== ownerId) return;
-
-    // 🔁 TROCAR ABA
-    if (
-      interaction.customId === 'loja_molduras' ||
-      interaction.customId === 'loja_efeitos' ||
-      interaction.customId === 'loja_fundos' ||
-      interaction.customId === 'loja_badges'
-    ) {
-      const aba = interaction.customId.split('_')[1];
-      abaAtual = aba;
-      paginaAtual = 0;
-
-      return interaction.update({
-        embeds: [gerarLoja(abaAtual, paginaAtual)],
-        components: [
-          gerarBotoesAbas(),
-          ...gerarBotoesItens(abaAtual, paginaAtual),
-          gerarBotoesNav(abaAtual, paginaAtual)
-        ]
-      });
-    }
-
-    // ⏭️ PRÓXIMA PÁGINA
-    if (interaction.customId.startsWith('loja_next_')) {
-      const parts = interaction.customId.split('_');
-      const aba = parts[2];
-      const pagina = parts[3];
-
-      abaAtual = aba;
-      paginaAtual = Number(pagina) + 1;
-
-      return interaction.update({
-        embeds: [gerarLoja(abaAtual, paginaAtual)],
-        components: [
-          gerarBotoesAbas(),
-          ...gerarBotoesItens(abaAtual, paginaAtual),
-          gerarBotoesNav(abaAtual, paginaAtual)
-        ]
-      });
-    }
-
-    // ⏮️ PÁGINA ANTERIOR
-    if (interaction.customId.startsWith('loja_prev_')) {
-      const parts = interaction.customId.split('_');
-      const aba = parts[2];
-      const pagina = parts[3];
-
-      abaAtual = aba;
-      paginaAtual = Math.max(0, Number(pagina) - 1);
-
-      return interaction.update({
-        embeds: [gerarLoja(abaAtual, paginaAtual)],
-        components: [
-          gerarBotoesAbas(),
-          ...gerarBotoesItens(abaAtual, paginaAtual),
-          gerarBotoesNav(abaAtual, paginaAtual)
-        ]
-      });
-    }
-
-    // 👁️ PRÉVIA DO ITEM
-    if (interaction.customId.startsWith('preview_')) {
-      const parts = interaction.customId.split('_');
-      const aba = parts[1];
-      const itemId = parts.slice(2).join('_');
-
-      const catalogo = getCatalogo(aba);
-      const item = catalogo[itemId];
-
-      if (!item) {
-        return interaction.reply({
-          content: '❌ Item inválido.',
-          ephemeral: true
-        });
-      }
-
-      const imagem = await gerarPreviewItem(item);
-
-      return interaction.reply({
-        files: [{
-          attachment: imagem,
-          name: 'preview.png'
-        }],
-        ephemeral: true
-      });
-    }
-
-    // 🛒 COMPRAR ITEM
-    if (interaction.customId.startsWith('buy_')) {
-      const parts = interaction.customId.split('_');
-      const aba = parts[1];
-      const itemId = parts.slice(2).join('_');
-
-      const catalogo = getCatalogo(aba);
-      const item = catalogo[itemId];
-
-      if (!item) {
-        return interaction.reply({
-          content: '❌ Item inválido.',
-          ephemeral: true
-        });
-      }
-
-      const user = await Usuario.findOne({
-        userId: message.author.id,
-        guildId: message.guild.id
-      });
-
-      if (!user) {
-        return interaction.reply({
-          content: '❌ Usuário não encontrado na base de dados.',
-          ephemeral: true
-        });
-      }
-
-      user.inventario = user.inventario || {};
-      const tipo = aba;
-      user.inventario[tipo] = user.inventario[tipo] || [];
-
-      const lista = user.inventario[tipo];
-
-      if (lista.includes(itemId)) {
-        return interaction.reply({
-          content: '❌ Você já possui este item.',
-          ephemeral: true
-        });
-      }
-
-      const preco = item.preco || 0;
-      const saldo = user.xpDisponivel || 0;
-
-      if (saldo < preco) {
-        return interaction.reply({
-          content: `❌ XP insuficiente (necessário: ${preco} XP)`,
-          ephemeral: true
-        });
-      }
-
-      lista.push(itemId);
-      user.xpDisponivel -= preco;
-      await user.save();
-
-      return interaction.reply({
-        content: `✔ Comprou **${item.nome}** por ${preco} XP!`,
-        ephemeral: true
-      });
-    }
-  });
-
-  collector.on('end', () => {
-    msg.edit({ components: [] }).catch(() => {});
-  });
 }
 
-// ✅ Comandos e registro
-export const comandos = [
-  {
-    cmd: '!loja',
-    desc: 'Abre a loja de itens visuais'
-  }
-];
-
 export function register(client, configs) {
-  if (client.__lojaRegistrada) return;
-  client.__lojaRegistrada = true;
+  if (client.__lojaRegistrado) return;
+  client.__lojaRegistrado = true;
 
-  client.on('messageCreate', async (message) => {
-    if (!message.guild || message.author.bot) return;
+  client.on('messageCreate', async (msg) => {
+    if (!msg.guild || msg.author.bot) return;
+    const cfg = configs.get(msg.guild.id);
+    const prefixo = cfg?.prefixo ?? '!';
+    if (!msg.content.startsWith(prefixo)) return;
+    const parts = msg.content.slice(prefixo.length).trim().split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const args = parts.slice(1);
+    try {
+      if (cmd === 'loja')   await loja(msg, args);
+      if (cmd === 'comprar') await comprar(msg, args);
+    } catch (e) { console.error('[loja]', e); }
+  });
 
-    const cfg = configs.get(message.guild.id);
-    const prefixo = cfg?.prefixo || '!';
-
-    if (!message.content.startsWith(prefixo)) return;
-
-    const cmd = message.content
-      .slice(prefixo.length)
-      .trim()
-      .split(/\s+/)[0]
-      .toLowerCase();
-
-    if (cmd === 'loja') {
-      return lojaCommand(message);
-    }
+  client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isButton()) return;
+    const [prefix, cat, pageStr] = interaction.customId.split('_');
+    if (prefix !== 'loja') return;
+    const page = parseInt(pageStr);
+    if (isNaN(page) || page < 0) return;
+    const user = await Usuario.findOne({ userId: interaction.user.id, guildId: interaction.guildId }).catch(() => null);
+    const { embed, total } = buildLojaEmbed(cat, page, user);
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`loja_${cat}_${page - 1}`).setLabel('◀').setStyle(ButtonStyle.Secondary).setDisabled(page === 0),
+      new ButtonBuilder().setCustomId(`loja_${cat}_${page + 1}`).setLabel('▶').setStyle(ButtonStyle.Secondary).setDisabled(page >= total - 1),
+    );
+    await interaction.update({ embeds: [embed], components: [row] }).catch(() => null);
   });
 }

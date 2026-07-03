@@ -2,8 +2,8 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.join(__dirname, '../../fiskbot.db');
+// Use process.cwd() so the DB lands at the app root regardless of bundling
+const DB_PATH = path.join(process.cwd(), 'data', 'fiskbot.db');
 
 let _db = null;
 
@@ -274,7 +274,20 @@ const migrations = [
   `ALTER TABLE xp_logs ADD COLUMN xpTotalAntes INTEGER NOT NULL DEFAULT 0`,
   `ALTER TABLE xp_logs ADD COLUMN xpTotalApos INTEGER NOT NULL DEFAULT 0`,
   `ALTER TABLE xp_logs ADD COLUMN descricao TEXT NOT NULL DEFAULT ''`,
-  `ALTER TABLE xp_logs ADD COLUMN referenciaId TEXT`
+  `ALTER TABLE xp_logs ADD COLUMN referenciaId TEXT`,
+
+  // usuarios — colunas adicionais
+  `ALTER TABLE usuarios ADD COLUMN casadoCom TEXT`,
+  `ALTER TABLE usuarios ADD COLUMN efeitoEquipado TEXT`,
+  `ALTER TABLE usuarios ADD COLUMN badgeEquipado TEXT`,
+
+  // usuarios — perfil expandido
+  `ALTER TABLE usuarios ADD COLUMN totalMensagens INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE usuarios ADD COLUMN afinidade INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE usuarios ADD COLUMN tituloEquipado TEXT`,
+
+  // missoes
+  `ALTER TABLE missoes ADD COLUMN updatedAt TEXT`
 ];
 
 // execução segura
