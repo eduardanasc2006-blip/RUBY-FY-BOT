@@ -3,6 +3,12 @@ import { loadSystems } from "./src/loader.mjs";
 
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
 
+console.log("[FiskBot][DIAG] DISCORD_BOT_TOKEN presente:", !!TOKEN, "| tamanho:", TOKEN ? TOKEN.length : 0);
+console.log(
+  "[FiskBot][DIAG] Variáveis de ambiente parecidas encontradas:",
+  Object.keys(process.env).filter((k) => /TOKEN|DISCORD/i.test(k)).join(", ") || "(nenhuma)"
+);
+
 process.on('unhandledRejection', (reason) => {
   console.error('[FiskBot] Rejeição não tratada:', reason?.message || reason);
 });
