@@ -13,6 +13,7 @@ import { register as regLogs,            comandos as cLogs            } from './
 import { register as regAntiAbuso,       comandos as cAntiAbuso       } from './systems/antiabuso.mjs';
 import { register as regConfiguracoes,   comandos as cConfiguracoes   } from './systems/configuracoes.mjs';
 import { register as regAjuda,           comandos as cAjuda           } from './systems/ajuda.mjs';
+import { register as regStatus,          comandos as cStatus          } from './systems/status.mjs';
 
 // ── Economia ───────────────────────────────────────────────────
 import { register as regLoja,            comandos as cLoja            } from './systems/loja.mjs';
@@ -68,6 +69,7 @@ const configs = new Map();
 
 const visual = {
   Ajuda:               { emoji: '❓', cor: 0x5865f2 },
+  Status:              { emoji: '📡', cor: 0x2ecc71 },
   Diversão:            { emoji: '🎮', cor: 0xff66cc },
   'Robux & Conversão': { emoji: '💸', cor: 0x00ff99 },
   Roblox:              { emoji: '🟥', cor: 0xe74c3c },
@@ -152,6 +154,7 @@ export async function loadSystems(client) {
       ['Anti-Abuso',          regAntiAbuso,       cAntiAbuso],
       ['Configurações',       regConfiguracoes,   cConfiguracoes],
       ['Ajuda',               regAjuda,           cAjuda],
+      ['Status',              regStatus,          cStatus],
       // Economia
       ['Loja',                regLoja,            cLoja],
       ['Inventário',          regInventario,      cInventario],
