@@ -2,6 +2,8 @@ import { EmbedBuilder, Colors } from 'discord.js';
 import { fundos, molduras, efeitos, badges } from './perfilConfig.mjs';
 import Usuario from '../db/models/Usuario.mjs';
 
+export const comandos = ['equiparfundo', 'equiparmoldura', 'equiparefeito', 'equiparbadge'];
+
 const CONFIGS = { fundo: fundos, moldura: molduras, efeito: efeitos, badge: badges };
 const INV_KEY  = { fundo: 'fundos', moldura: 'molduras', efeito: 'efeitos', badge: 'badges' };
 const DB_FIELD = { fundo: 'fundo', moldura: 'moldura', efeito: 'efeitoEquipado', badge: 'badgeEquipado' };

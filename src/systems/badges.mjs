@@ -3,7 +3,7 @@
 export const comandos = [];
 export function register() {}
 
-export function getBadgeInfo(id) {
+export async function getBadgeInfo(id) {
   const { badges } = await import('./perfilConfig.mjs');
   return badges[id] ?? null;
 }

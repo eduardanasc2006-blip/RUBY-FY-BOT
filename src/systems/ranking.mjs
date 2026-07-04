@@ -10,6 +10,8 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
 }
 
+export const comandos = ['rank', 'top', 'ranking'];
+
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 async function gerarRankingCanvas(users, guild) {

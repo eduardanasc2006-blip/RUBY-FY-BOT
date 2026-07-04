@@ -2,6 +2,12 @@ import Usuario from '../db/models/Usuario.mjs';
 import XpLog from '../db/models/XpLog.mjs';
 import { calcularNivel } from '../utils/nivelCalc.mjs';
 
+// xpSystem é um módulo utilitário puro (sem comandos de chat próprios) —
+// outros sistemas importam suas funções diretamente. Exporta comandos/register
+// vazios apenas para satisfazer o contrato padrão do loader.mjs.
+export const comandos = [];
+export function register() {}
+
 // ════════════════════════════════════════════════════════════
 //  SISTEMA CENTRAL DE XP — xpSystem.mjs
 //
