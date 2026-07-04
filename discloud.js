@@ -44,6 +44,11 @@ try {
 
 if (!TOKEN) {
   console.error("[FiskBot] ❌ DISCORD_BOT_TOKEN não configurado!");
+  console.error("[FiskBot] ➜ Configure a variável de ambiente DISCORD_BOT_TOKEN no painel do Discloud:");
+  console.error("[FiskBot]   1. Acesse o painel do seu bot no Discloud");
+  console.error("[FiskBot]   2. Vá em Variáveis de Ambiente (ou edite o discloud.config)");
+  console.error("[FiskBot]   3. Adicione DISCORD_BOT_TOKEN com o token do Discord Developer Portal");
+  console.error("[FiskBot]   4. Reinicie o bot");
   process.exit(1);
 }
 
