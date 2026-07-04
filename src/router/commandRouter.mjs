@@ -46,7 +46,8 @@
         } catch (e) {
           if (!e.message?.includes('Unknown Message') &&
               !e.message?.includes('Missing Permissions')) {
-            console.error('[Router:msg]', e.message);
+            console.error('[Router:msg]', e);
+            console.error(e.stack);
           }
         }
       }
