@@ -1,7 +1,7 @@
 import { Client, GatewayIntentBits, Partials } from "discord.js";
 import { loadSystems } from "./src/loader.mjs";
 
-const TOKEN = process.env.DISCORD_BOT_TOKEN;
+const TOKEN = "MTUwOTE0NjkzMjQ3ODQ3NjM4OQ.GC6dvW.H_fPGAwIuL1xFCfQgFGgzHlxA8o_T_xmhxtfUI"; 
 
 console.log("[FiskBot][DIAG] DISCORD_BOT_TOKEN presente:", !!TOKEN, "| tamanho:", TOKEN ? TOKEN.length : 0);
 console.log(
