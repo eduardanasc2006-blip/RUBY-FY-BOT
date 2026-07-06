@@ -82,7 +82,8 @@ function menuPrincipal(client, userId) {
     .map(c => ({
       label: String(c.label).slice(0, 100),
       value: String(c.id).slice(0, 100),
-    }));
+    }))
+    .slice(0, 25); // Discord permite no máximo 25 opções por menu de seleção
 
   if (!opcoes.length) {
     opcoes = [{ label: 'Sem categorias', value: 'sem_categorias' }];
