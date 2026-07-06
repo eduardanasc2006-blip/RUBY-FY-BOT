@@ -16,9 +16,6 @@ import { register as regAjuda,           comandos as cAjuda           } from './
 import { register as regStatus,          comandos as cStatus          } from './systems/status.mjs';
 
 // ── Economia ───────────────────────────────────────────────────
-import { register as regLoja,            comandos as cLoja            } from './systems/loja.mjs';
-import { register as regInventario,      comandos as cInventario      } from './systems/inventario.mjs';
-import { register as regEquipar,         comandos as cEquipar         } from './systems/equipar.mjs';
 import { register as regEconomia,        comandos as cEconomia        } from './systems/economia.mjs';
 import { register as regConversao,       comandos as cConversao       } from './systems/conversao.mjs';
 import { register as regRoblox,          comandos as cRoblox          } from './systems/roblox.mjs';
@@ -82,7 +79,6 @@ const visual = {
   Conquistas:          { emoji: '🏅', cor: 0xf1c40f },
   Missões:             { emoji: '📜', cor: 0x2ecc71 },
   Títulos:             { emoji: '👑', cor: 0xf39c12 },
-  Loja:                { emoji: '🛍️', cor: 0x00b894 },
   'Perfil Visual':     { emoji: '🖼️', cor: 0x6c5ce7 },
   Ship:                { emoji: '❤️', cor: 0xff4d6d },
   Administração:       { emoji: '🛠️', cor: 0xe74c3c },
@@ -91,7 +87,6 @@ const visual = {
   Estatísticas:        { emoji: '📊', cor: 0x2980b9 },
   Gênero:              { emoji: '⚧️', cor: 0xe056fd },
   'Meu Perfil':        { emoji: '👤', cor: 0x5865f2 },
-   Inventário: { emoji: '🎒', cor: 0x00d4ff },
 };
 
 /* =========================
@@ -156,9 +151,6 @@ export async function loadSystems(client) {
       ['Ajuda',               regAjuda,           cAjuda],
       ['Status',              regStatus,          cStatus],
       // Economia
-      ['Loja',                regLoja,            cLoja],
-      ['Inventário',          regInventario,      cInventario],
-      ['Equipar',             regEquipar,         cEquipar],
       ['Economia',            regEconomia,        cEconomia],
       ['Robux & Conversão',   regConversao,       cConversao],
       ['Roblox',              regRoblox,          cRoblox],

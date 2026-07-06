@@ -1,83 +1,40 @@
 import { createCanvas, loadImage } from '@napi-rs/canvas';
-import {
-  fundos,
-  molduras,
-  efeitos,
-  badges
-} from '../systems/perfilConfig.mjs';
+
+function formatarData(data) {
+  if (!data) return 'Desconhecida';
+  const d = new Date(data);
+  if (isNaN(d.getTime())) return 'Desconhecida';
+  return d.toLocaleDateString('pt-BR');
+}
 
 /**
- * 🔥 PERFIL PRINCIPAL (CANVAS RPG)
+ * 🔥 PERFIL ÚNICO (imagem composta simples)
  */
 export async function gerarPerfil(user) {
-  // =========================
-  // 🔹 1. IDS NORMALIZADOS
-  // =========================
-  const molduraId = user.moldura ?? 'padrao';
-  const fundoId = user.fundo ?? 'padrao';
-  const efeitoId = user.efeitoEquipado ?? null;
-  const badgeId = user.badgeEquipado ?? null;
-
-  const canvas = createCanvas(900, 300);
+  const canvas = createCanvas(900, 340);
   const ctx = canvas.getContext('2d');
 
   // =========================
-  // 🔹 2. DADOS NOVOS DO USUÁRIO
+  // 🔹 1. FUNDO
   // =========================
-  const avatarUrl = user.avatar;
-  const titulo = user.titulo ?? 'Sem título';
-  const parceiro = user.casadoCom ?? 'Nenhum';
-  const listaBadges = user.badges || [];
+  const grad = ctx.createLinearGradient(0, 0, 900, 340);
+  grad.addColorStop(0, '#1a1b1e');
+  grad.addColorStop(1, '#2b2d31');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 900, 340);
 
-  // =========================
-  // 🔹 3. FUNDO
-  // =========================
-  const fundo = fundos[fundoId] || fundos.padrao;
-
-  if (fundo.tipo === 'cor') {
-    ctx.fillStyle = fundo.valor;
-    ctx.fillRect(0, 0, 900, 300);
-  }
-
-  if (fundo.tipo === 'gradiente') {
-    const grad = ctx.createLinearGradient(0, 0, 900, 300);
-    grad.addColorStop(0, fundo.cores[0]);
-    grad.addColorStop(1, fundo.cores[1]);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 900, 300);
-  }
-
-  // =========================
-  // 🔹 4. EFEITO
-  // =========================
-  if (efeitoId === 'aurora') {
-    ctx.fillStyle = 'rgba(138, 43, 226, 0.15)';
-    ctx.fillRect(0, 0, 900, 300);
-  }
-  if (efeitoId === 'neve') {
-    ctx.fillStyle = 'rgba(173, 216, 230, 0.12)';
-    ctx.fillRect(0, 0, 900, 300);
-  }
-  if (efeitoId === 'raios') {
-    ctx.fillStyle = 'rgba(255,255,255,0.08)';
-    ctx.fillRect(0, 0, 900, 300);
-  }
-
-  // =========================
-  // 🔹 5. OVERLAY
-  // =========================
   ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  ctx.fillRect(30, 30, 840, 240);
+  ctx.fillRect(30, 30, 840, 280);
 
   // =========================
-  // 🔹 6. AVATAR REAL
+  // 🔹 2. AVATAR
   // =========================
   const avatarX = 60;
   const avatarY = 70;
-  const avatarSize = 160;
+  const avatarSize = 180;
 
   try {
-    const avatar = await loadImage(avatarUrl);
+    const avatar = await loadImage(user.avatar);
 
     ctx.save();
     ctx.beginPath();
@@ -98,84 +55,43 @@ export async function gerarPerfil(user) {
     ctx.fillRect(avatarX, avatarY, avatarSize, avatarSize);
   }
 
-  // =========================
-  // 🔹 7. MOLDURA
-  // =========================
-  ctx.shadowColor = 'transparent';
-  ctx.shadowBlur = 0;
-  ctx.strokeStyle = '#ffffff';
-
-  if (molduraId === 'ouro') {
-    ctx.strokeStyle = '#ffd700';
-    ctx.shadowColor = '#ffd700';
-    ctx.shadowBlur = 20;
-  }
-  if (molduraId === 'neon') {
-    ctx.strokeStyle = '#00d4ff';
-    ctx.shadowColor = '#00d4ff';
-    ctx.shadowBlur = 25;
-  }
-  if (molduraId === 'gelo') {
-    ctx.strokeStyle = '#66ccff';
-    ctx.shadowColor = '#66ccff';
-    ctx.shadowBlur = 15;
-  }
-  if (molduraId === 'sombria') {
-    ctx.strokeStyle = '#8b5cf6';
-    ctx.shadowColor = '#8b5cf6';
-    ctx.shadowBlur = 25;
-  }
-  if (molduraId === 'galaxia') {
-    ctx.strokeStyle = '#ffffff';
-    ctx.shadowColor = '#ffffff';
-    ctx.shadowBlur = 30;
-  }
-
   ctx.lineWidth = 6;
+  ctx.strokeStyle = '#5865f2';
   ctx.strokeRect(avatarX, avatarY, avatarSize, avatarSize);
-  ctx.shadowBlur = 0;
 
   // =========================
-  // 🔹 8. TEXTO
+  // 🔹 3. NOME + TAG
   // =========================
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 28px Sans-serif';
-  ctx.fillText(`Nível ${user.nivel || 1}`, 260, 100);
+  ctx.font = 'bold 30px Sans-serif';
+  ctx.fillText(user.nome || 'Usuário', 280, 90);
 
+  ctx.fillStyle = '#b5bac1';
+  ctx.font = '18px Sans-serif';
+  ctx.fillText(user.tag || '', 280, 118);
+
+  // =========================
+  // 🔹 4. INFORMAÇÕES
+  // =========================
+  ctx.fillStyle = '#ffffff';
   ctx.font = '20px Sans-serif';
-  ctx.fillText(`XP: ${user.xpDisponivel || 0}`, 260, 140);
-  ctx.fillText(`Total XP: ${user.xpTotal || 0}`, 260, 170);
-  ctx.fillText(`Reputação: ${user.reputacoes || 0}`, 260, 200);
 
-  // =========================
-  // 🔹 9. TÍTULO + PARCEIRO
-  // =========================
-  ctx.fillText(`Título: ${titulo}`, 260, 230);
-  ctx.fillText(`Parceiro: ${parceiro}`, 260, 260);
+  const linhas = [
+    `Nível: ${user.nivel ?? 1}`,
+    `XP: ${user.xpDisponivel ?? 0} (Total: ${user.xpTotal ?? 0})`,
+    `Reputação: ${user.reputacao ?? 0}`,
+    `Casado(a) com: ${user.casadoCom ?? 'Ninguém'}`,
+    `Título: ${user.titulo ?? 'Sem título'}`,
+    `Gênero: ${user.genero ?? 'Não informado'}`,
+    `Entrou em: ${formatarData(user.dataEntrada)}`,
+    `Conquistas: ${user.conquistasTotal ?? 0}/${user.conquistasMax ?? 0}`
+  ];
 
-  // =========================
-  // 🔹 10. BADGES (GRID SIMPLES)
-  // =========================
-  const icones = {
-    estrela: '⭐',
-    fogo: '🔥',
-    coroa: '👑',
-    rico: '💎',
-    veterano: '🎖️',
-    quiz: '🧠',
-    lendario: '🏆',
-    casal: '💞'
-  };
-
-  let x = 700;
-  let y = 80;
-
-  listaBadges.slice(0, 6).forEach((b) => {
-    const icon = icones[b] || '🏅';
-    ctx.font = '24px Sans-serif';
-    ctx.fillText(icon, x, y);
-    y += 30;
-  });
+  let y = 155;
+  for (const linha of linhas) {
+    ctx.fillText(linha, 280, y);
+    y += 28;
+  }
 
   return canvas.toBuffer('image/png');
 }
