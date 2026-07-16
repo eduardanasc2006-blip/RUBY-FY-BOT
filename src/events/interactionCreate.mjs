@@ -1,11 +1,12 @@
 import { Events } from 'discord.js';
+import { route } from '../handlers/componentHandler.mjs';
 
 export default {
   name: Events.InteractionCreate,
   once: false,
 
   async execute(interaction) {
-    // Slash commands
+    // ── Slash commands ──────────────────────────────────────────────────────
     if (interaction.isChatInputCommand()) {
       const command = interaction.client.commands.get(interaction.commandName);
 
@@ -29,7 +30,7 @@ export default {
       return;
     }
 
-    // Autocomplete
+    // ── Autocomplete ────────────────────────────────────────────────────────
     if (interaction.isAutocomplete()) {
       const command = interaction.client.commands.get(interaction.commandName);
       if (!command?.autocomplete) return;
@@ -39,6 +40,17 @@ export default {
       } catch (error) {
         console.error(`[InteractionCreate] Erro no autocomplete de /${interaction.commandName}:`, error);
       }
+      return;
+    }
+
+    // ── Componentes interativos → roteador central ──────────────────────────
+    if (
+      interaction.isButton() ||
+      interaction.isAnySelectMenu() ||
+      interaction.isModalSubmit()
+    ) {
+      await route(interaction);
+      return;
     }
   },
 };
