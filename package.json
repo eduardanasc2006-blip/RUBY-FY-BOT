@@ -1,0 +1,18 @@
+{
+  "name": "ruby-fy-bot",
+  "version": "1.0.0",
+  "description": "Bot Discord Ruby-FY",
+  "type": "module",
+  "main": "src/index.mjs",
+  "scripts": {
+    "start": "node src/index.mjs",
+    "dev": "node --watch src/index.mjs"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.7"
+  }
+}
