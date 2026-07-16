@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { Client, GatewayIntentBits, Collection } from 'discord.js';
 import { initDatabase } from './database/client.mjs';
 import { startSessionCleanup } from './core/sessionManager.mjs';
+import { registerEditorHandler } from './modules/editor/index.mjs';
 import { loadCommands } from './handlers/commandHandler.mjs';
 import { loadEvents } from './handlers/eventHandler.mjs';
 import { logger } from './utils/logger.mjs';
@@ -31,6 +32,9 @@ initDatabase();
 
 // ── Sessões temporárias ─────────────────────────────────────────────────────
 startSessionCleanup();
+
+// ── Editor Visual ───────────────────────────────────────────────────────────
+registerEditorHandler();
 
 // ── Carregamento de handlers ────────────────────────────────────────────────
 logger.info('Iniciando carregamento de comandos e eventos...');
