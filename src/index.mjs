@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { Client, GatewayIntentBits, Collection } from 'discord.js';
 import { initDatabase } from './database/client.mjs';
+import { startSessionCleanup } from './core/sessionManager.mjs';
 import { loadCommands } from './handlers/commandHandler.mjs';
 import { loadEvents } from './handlers/eventHandler.mjs';
 import { logger } from './utils/logger.mjs';
@@ -27,6 +28,9 @@ client.prefixCommands = new Collection(); // prefix commands (! )
 
 // ── Banco de dados ──────────────────────────────────────────────────────────
 initDatabase();
+
+// ── Sessões temporárias ─────────────────────────────────────────────────────
+startSessionCleanup();
 
 // ── Carregamento de handlers ────────────────────────────────────────────────
 logger.info('Iniciando carregamento de comandos e eventos...');
