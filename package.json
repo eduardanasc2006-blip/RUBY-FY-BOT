@@ -5,8 +5,8 @@
   "type": "module",
   "main": "src/index.mjs",
   "scripts": {
-    "start": "node src/index.mjs",
-    "dev": "node --watch src/index.mjs"
+    "start": "node --disable-warning=ExperimentalWarning src/index.mjs",
+    "dev": "node --disable-warning=ExperimentalWarning --watch src/index.mjs"
   },
   "engines": {
     "node": ">=18.0.0"

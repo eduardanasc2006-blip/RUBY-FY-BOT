@@ -52,10 +52,10 @@ export const config = {
    */
   ownerIds: (process.env.OWNER_IDS || '').split(',').filter(Boolean),
 
-  // ── Banco de dados (preparado para o futuro) ───────────────────────────────
+  // ── Banco de dados ─────────────────────────────────────────────────────────
   /**
-   * URL de conexão com o banco — lida do .env.
-   * Deixe vazio enquanto o banco não for configurado.
+   * Caminho do arquivo SQLite — lido do .env.
+   * O arquivo e a pasta são criados automaticamente na primeira inicialização.
    */
-  databaseUrl: process.env.DATABASE_URL || null,
+  databasePath: process.env.DATABASE_PATH || './data/ruby-fy.db',
 };
