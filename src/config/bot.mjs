@@ -1,10 +1,9 @@
 /**
  * Configurações centrais do bot.
- * Adicione aqui configurações globais conforme o projeto crescer.
  */
 export const config = {
-  // Prefixo reservado para uso futuro (bot usa slash commands)
-  prefix: '/',
+  // Prefixo para comandos de texto
+  prefix: '!',
 
   // Cor padrão dos embeds
   embedColor: 0x5865F2,

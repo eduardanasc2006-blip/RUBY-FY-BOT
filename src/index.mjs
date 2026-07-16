@@ -20,8 +20,9 @@ const client = new Client({
   ],
 });
 
-// Collection para armazenar comandos
-client.commands = new Collection();
+// Collections de comandos
+client.commands       = new Collection(); // slash commands
+client.prefixCommands = new Collection(); // prefix commands (! )
 
 // ── Carregamento de handlers ────────────────────────────────────────────────
 logger.info('Iniciando carregamento de comandos e eventos...');
