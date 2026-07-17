@@ -15,6 +15,10 @@ function buildEmbed(client) {
         name: '❓ Ajuda',
         value: '`!ajuda` `!help` · `/ajuda` `/help`\nExibe esta mensagem com todos os comandos disponíveis.',
       },
+      {
+        name: '📋 Embed',
+        value: '`/embed`\nConfigura e publica uma embed personalizada neste servidor.',
+      },
     )
     .setFooter({ text: `${config.botName} • Use ${config.prefix}ajuda para ver os comandos`, iconURL: client.user.displayAvatarURL() })
     .setTimestamp();
