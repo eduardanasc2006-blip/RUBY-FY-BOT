@@ -24,7 +24,7 @@ export function removeDefinition(sessionId) {
   definitions.delete(sessionId);
 }
 
-function getDefinition(sessionId) {
+export function getDefinition(sessionId) {
   return definitions.get(sessionId) ?? null;
 }
 

@@ -12,12 +12,14 @@
  *   Etapa 6 Fase A — campos expandidos: url_embed, cor_hex, autor_*, imagem_url,
  *                    thumbnail_url, rodape_*, timestamp
  *   Etapa 6 Fase B — canal_id migrado de 'text' para 'channel' (seletor nativo)
+ *   Etapa 6 Fase C — suporte a embed fields (gerenciados via painel separado)
  */
 
-import { EmbedBuilder } from 'discord.js';
+import { EmbedBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { setSetting } from '../../database/repositories/GuildConfig.mjs';
 import { config } from '../../config/bot.mjs';
 import { logger } from '../../utils/logger.mjs';
+import { build } from '../../utils/customId.mjs';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -65,10 +67,10 @@ function isValidHex(value) {
 
 /**
  * Calcula o total de caracteres que a embed teria,
- * considerando apenas os campos de texto relevantes para o limite do Discord.
+ * considerando todos os campos de texto relevantes para o limite do Discord.
  */
 function calcEmbedLength(data) {
-  return [
+  let len = [
     data.titulo,
     data.descricao,
     data.autor_nome,
@@ -76,6 +78,15 @@ function calcEmbedLength(data) {
   ]
     .filter(Boolean)
     .reduce((acc, v) => acc + String(v).length, 0);
+
+  // Inclui embed fields no cálculo do limite
+  if (Array.isArray(data.fields)) {
+    for (const f of data.fields) {
+      len += (f.name?.length ?? 0) + (f.value?.length ?? 0);
+    }
+  }
+
+  return len;
 }
 
 // ── Fábrica da definição ──────────────────────────────────────────────────────
@@ -226,20 +237,44 @@ export function createDefinition() {
       },
     ],
 
+    // ── Botões extras na linha de ações (Fase C) ─────────────────────────────
+    /**
+     * Retorna botões adicionais para a linha de ações do editor.
+     * Genérico: o renderer chama extraActions(sessionId) se existir.
+     *
+     * @param {string} sessionId
+     * @returns {ButtonBuilder[]}
+     */
+    extraActions(sessionId) {
+      return [
+        new ButtonBuilder()
+          .setCustomId(build('embed', 'fields_open', sessionId))
+          .setLabel('Gerenciar Fields')
+          .setEmoji('📋')
+          .setStyle(ButtonStyle.Secondary),
+      ];
+    },
+
     // ── Prévia ───────────────────────────────────────────────────────────────
     /**
      * Constrói uma prévia da embed com os dados atuais da sessão.
-     * Chamado pelo editor quando o admin clica em "Prévia".
      *
      * @param {object} data - Dados atuais da sessão
      * @returns {{ embeds: EmbedBuilder[] }}
      */
     renderPreview(data) {
       const embed = buildEmbed(data, {
-        footerText:  '👁️ Esta é uma prévia — nada foi publicado ainda',
-        footerIcon:  undefined,
+        footerText:     '👁️ Esta é uma prévia — nada foi publicado ainda',
+        footerIcon:     undefined,
         forceTimestamp: false,
       });
+
+      // Embed fields configurados
+      if (Array.isArray(data.fields) && data.fields.length > 0) {
+        for (const f of data.fields) {
+          embed.addFields({ name: f.name, value: f.value, inline: f.inline ?? false });
+        }
+      }
 
       // Informa canal de destino na prévia, se selecionado
       if (data.canal_id) {
@@ -327,6 +362,18 @@ export function createDefinition() {
         return { ok: false, reason: 'O **Rodapé — Ícone** deve ser uma URL HTTPS válida.' };
       }
 
+      // Validação de embed fields
+      if (Array.isArray(data.fields) && data.fields.length > 0) {
+        if (data.fields.length > 25) {
+          return { ok: false, reason: 'A embed pode ter no máximo **25 fields**.' };
+        }
+        for (let i = 0; i < data.fields.length; i++) {
+          const f = data.fields[i];
+          if (!f.name?.trim())  return { ok: false, reason: `O **Field ${i + 1}** tem nome vazio.` };
+          if (!f.value?.trim()) return { ok: false, reason: `O **Field ${i + 1}** tem valor vazio.` };
+        }
+      }
+
       // Limite total de 6000 caracteres
       const totalChars = calcEmbedLength(data);
       if (totalChars > EMBED_CHAR_LIMIT) {
@@ -374,6 +421,13 @@ export function createDefinition() {
         forceTimestamp: data.timestamp === true,
       });
 
+      // Adiciona embed fields, se houver
+      if (Array.isArray(data.fields) && data.fields.length > 0) {
+        for (const f of data.fields) {
+          embed.addFields({ name: f.name, value: f.value, inline: f.inline ?? false });
+        }
+      }
+
       try {
         await channel.send({ embeds: [embed] });
       } catch (err) {
@@ -393,10 +447,12 @@ export function createDefinition() {
         'rodape_texto', 'rodape_icone',
         'timestamp', 'canal_id',
       ];
-
       for (const campo of campos) {
         setSetting(guildId, 'embed', campo, data[campo] ?? null);
       }
+
+      // Persiste fields (array JSON)
+      setSetting(guildId, 'embed', 'fields', data.fields ?? []);
 
       logger.info(`[Embed] Embed publicada e configuração salva — guild: ${guildId} | canal: ${canalId}`);
     },
@@ -406,7 +462,8 @@ export function createDefinition() {
 // ── Construtor interno da embed ───────────────────────────────────────────────
 
 /**
- * Constrói um EmbedBuilder com todos os campos da Fase A + Fase B.
+ * Constrói um EmbedBuilder com todos os campos da Fase A + B.
+ * Os embed fields (Fase C) são adicionados pelo chamador para maior clareza.
  *
  * @param {object} data
  * @param {{ footerText?: string, footerIcon?: string, forceTimestamp?: boolean }} opts
@@ -424,7 +481,7 @@ function buildEmbed(data, { footerText, footerIcon, forceTimestamp } = {}) {
   const embed = new EmbedBuilder().setColor(corFinal);
 
   // Título e URL
-  if (data.titulo?.trim()) embed.setTitle(data.titulo.trim());
+  if (data.titulo?.trim())    embed.setTitle(data.titulo.trim());
   if (data.url_embed?.trim()) embed.setURL(data.url_embed.trim());
 
   // Descrição
@@ -434,8 +491,8 @@ function buildEmbed(data, { footerText, footerIcon, forceTimestamp } = {}) {
   if (data.autor_nome?.trim()) {
     embed.setAuthor({
       name:    data.autor_nome.trim(),
-      url:     data.autor_url?.trim()    || undefined,
-      iconURL: data.autor_icone?.trim()  || undefined,
+      url:     data.autor_url?.trim()   || undefined,
+      iconURL: data.autor_icone?.trim() || undefined,
     });
   }
 

@@ -120,25 +120,35 @@ export function renderPanel(session, definition) {
   }
 
   // ── Linha de ações (sempre presente) ────────────────────────────────────────
-  components.push(
-    new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(build('editor', 'preview', session.sessionId))
-        .setLabel('Prévia')
-        .setEmoji('👁️')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId(build('editor', 'confirm', session.sessionId))
-        .setLabel('Confirmar')
-        .setEmoji('✅')
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId(build('editor', 'cancel', session.sessionId))
-        .setLabel('Cancelar')
-        .setEmoji('❌')
-        .setStyle(ButtonStyle.Danger),
-    ),
-  );
+  // Botões principais do editor
+  const actionButtons = [
+    new ButtonBuilder()
+      .setCustomId(build('editor', 'preview', session.sessionId))
+      .setLabel('Prévia')
+      .setEmoji('👁️')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(build('editor', 'confirm', session.sessionId))
+      .setLabel('Confirmar')
+      .setEmoji('✅')
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(build('editor', 'cancel', session.sessionId))
+      .setLabel('Cancelar')
+      .setEmoji('❌')
+      .setStyle(ButtonStyle.Danger),
+  ];
+
+  // Botões extras opcionais fornecidos pela definição do módulo.
+  // Genérico: qualquer módulo pode adicionar botões à linha de ações
+  // sem alterar o Editor Visual Universal.
+  // Assinatura: definition.extraActions(sessionId) => ButtonBuilder[]
+  if (typeof definition.extraActions === 'function') {
+    const extras = definition.extraActions(session.sessionId);
+    if (Array.isArray(extras)) actionButtons.push(...extras);
+  }
+
+  components.push(new ActionRowBuilder().addComponents(...actionButtons));
 
   return { embeds: [embed], components };
 }
