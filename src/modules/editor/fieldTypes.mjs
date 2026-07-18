@@ -5,8 +5,8 @@
  * Novos tipos podem ser adicionados via registerFieldType() sem alterar
  * o restante do editor.
  *
- * Tipos implementados: text, paragraph, select, color, toggle
- * Tipos futuros previstos: channel, role, user, url, number, image, emoji, multi_select
+ * Tipos implementados: text, paragraph, select, color, toggle, channel
+ * Tipos futuros previstos: role, user, url, number, image, emoji, multi_select
  */
 
 import {
@@ -15,6 +15,8 @@ import {
   TextInputStyle,
   ActionRowBuilder,
   StringSelectMenuBuilder,
+  ChannelSelectMenuBuilder,
+  ChannelType,
 } from 'discord.js';
 import { build } from '../../utils/customId.mjs';
 
@@ -23,10 +25,11 @@ import { build } from '../../utils/customId.mjs';
 /**
  * Map<type, handler>
  * handler: {
- *   isModal:    boolean   — true se editar abre um Modal
- *   isDirect:   boolean   — true se editar altera a sessão sem janela extra (toggle)
- *   build:      (field, sessionId, currentValue) => ModalBuilder | ActionRowBuilder | null
- *   getValue:   (interaction) => any | null
+ *   isModal:      boolean   — true se editar abre um Modal
+ *   isDirect:     boolean   — true se editar altera a sessão sem janela extra (toggle)
+ *   build:        (field, sessionId, currentValue) => ModalBuilder | ActionRowBuilder | null
+ *   getValue:     (interaction) => any | null
+ *   renderValue?: (value) => string  — opcional: exibição personalizada no painel
  * }
  */
 const registry = new Map();
@@ -36,7 +39,7 @@ const registry = new Map();
  * Pode ser chamado por qualquer módulo para estender os tipos disponíveis.
  *
  * @param {string} type    - Identificador único do tipo (ex: 'channel', 'role')
- * @param {object} handler - Objeto com isModal, isDirect, build, getValue
+ * @param {object} handler - Objeto com isModal, isDirect, build, getValue, renderValue?
  */
 export function registerFieldType(type, handler) {
   registry.set(type, handler);
@@ -175,4 +178,34 @@ registerFieldType('toggle', {
   isDirect: true,
   build:    null,
   getValue: null,
+});
+
+// channel — seletor nativo de canal do Discord (ChannelSelectMenuBuilder)
+registerFieldType('channel', {
+  isModal:  false,
+  isDirect: false,
+
+  build(field, sessionId) {
+    const menu = new ChannelSelectMenuBuilder()
+      .setCustomId(build('editor', 'select', sessionId, field.key))
+      .setPlaceholder(`Selecione o canal: ${field.label}`)
+      .setChannelTypes(
+        ChannelType.GuildText,
+        ChannelType.GuildAnnouncement,
+        ChannelType.GuildForum,
+      )
+      .setMinValues(1)
+      .setMaxValues(1);
+
+    return new ActionRowBuilder().addComponents(menu);
+  },
+
+  getValue(interaction) {
+    return interaction.values?.[0] ?? null;
+  },
+
+  renderValue(value) {
+    if (!value) return '`não configurado`';
+    return `<#${value}>`;
+  },
 });

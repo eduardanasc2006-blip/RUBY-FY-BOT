@@ -13,6 +13,7 @@ import {
 } from 'discord.js';
 import { config } from '../../config/bot.mjs';
 import { build } from '../../utils/customId.mjs';
+import { getFieldTypeHandler } from './fieldTypes.mjs';
 
 /** Máximo de botões de campo por linha (requisito visual) */
 const BUTTONS_PER_ROW = 4;
@@ -27,6 +28,8 @@ const MAX_FIELDS_AS_BUTTONS = BUTTONS_PER_ROW * MAX_FIELD_ROWS; // 16
 
 /**
  * Converte um valor de campo para string legível no painel.
+ * Se o tipo de campo tiver renderValue(), usa essa função customizada.
+ *
  * @param {object} field
  * @param {*} value
  * @returns {string}
@@ -38,6 +41,13 @@ export function renderFieldValue(field, value) {
   if (typeof value === 'boolean') {
     return value ? '`✅ ativado`' : '`❌ desativado`';
   }
+
+  // Delega para renderValue() customizado do tipo de campo (ex: channel → <#ID>)
+  const handler = getFieldTypeHandler(field.type);
+  if (typeof handler?.renderValue === 'function') {
+    return handler.renderValue(value);
+  }
+
   const str = String(value);
   if (str.length > 60) return `\`${str.slice(0, 57)}...\``;
   return `\`${str}\``;
