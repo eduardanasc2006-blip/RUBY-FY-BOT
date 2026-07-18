@@ -192,7 +192,6 @@ registerFieldType('channel', {
       .setChannelTypes(
         ChannelType.GuildText,
         ChannelType.GuildAnnouncement,
-        ChannelType.GuildForum,
       )
       .setMinValues(1)
       .setMaxValues(1);
