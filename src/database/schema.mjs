@@ -21,5 +21,19 @@ export function runSchema(db) {
       PRIMARY KEY (guild_id, module, key),
       FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
     );
+
+    -- Modelos reutilizáveis de mensagens/embeds por servidor
+    CREATE TABLE IF NOT EXISTS templates (
+      id          TEXT    NOT NULL,
+      guild_id    TEXT    NOT NULL,
+      name        TEXT    NOT NULL,
+      description TEXT,
+      type        TEXT    NOT NULL DEFAULT 'embed',
+      data        TEXT    NOT NULL DEFAULT '{}',
+      created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+      PRIMARY KEY (id, guild_id),
+      FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
+    );
   `);
 }
