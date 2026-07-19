@@ -7,7 +7,8 @@
  *    - enabled, category_id, log_channel_id, support_role_id, intro_message
  *
  * 2. INSTÂNCIAS de tickets abertos (via tabela 'tickets'):
- *    - createTicket / getTicket / listTickets / closeTicket / countOpenTickets
+ *    - createTicket / getTicket / getTicketByChannel / getOpenTicketByUser
+ *    - listTickets / closeTicket / countOpenTickets
  *
  * Todas as funções recebem `guildId` como primeiro argumento para garantir
  * isolamento completo entre servidores.
@@ -15,7 +16,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { getDb } from '../client.mjs';
-import { getOrCreate, getSetting, getAllSettings, setSetting } from './GuildConfig.mjs';
+import { getOrCreate, getAllSettings, setSetting } from './GuildConfig.mjs';
 
 const MODULE = 'tickets';
 
@@ -25,13 +26,6 @@ const MODULE = 'tickets';
 
 /**
  * Retorna a configuração completa do sistema de tickets de um servidor.
- *
- * Campos:
- *   enabled         {boolean}  — se o sistema está ativo
- *   category_id     {string|null} — ID da categoria onde tickets são criados
- *   log_channel_id  {string|null} — ID do canal de logs de tickets
- *   support_role_id {string|null} — ID do cargo de suporte
- *   intro_message   {string|null} — mensagem de boas-vindas no ticket
  *
  * @param {string} guildId
  * @returns {{
@@ -113,6 +107,38 @@ export function getTicket(guildId, id) {
   const row = db
     .prepare('SELECT * FROM tickets WHERE id = ? AND guild_id = ?')
     .get(id, guildId);
+  return row ? normalize(row) : null;
+}
+
+/**
+ * Retorna o ticket de um usuário com status 'open' nessa guild.
+ * Um usuário só pode ter um ticket aberto por servidor.
+ *
+ * @param {string} guildId
+ * @param {string} userId
+ * @returns {object|null}
+ */
+export function getOpenTicketByUser(guildId, userId) {
+  const db  = getDb();
+  const row = db
+    .prepare("SELECT * FROM tickets WHERE guild_id = ? AND user_id = ? AND status = 'open' ORDER BY created_at DESC LIMIT 1")
+    .get(guildId, userId);
+  return row ? normalize(row) : null;
+}
+
+/**
+ * Retorna o ticket associado a um canal de ticket.
+ * Útil para encontrar o ticket quando o usuário clica "Fechar Ticket" no canal.
+ *
+ * @param {string} guildId
+ * @param {string} channelId
+ * @returns {object|null}
+ */
+export function getTicketByChannel(guildId, channelId) {
+  const db  = getDb();
+  const row = db
+    .prepare('SELECT * FROM tickets WHERE guild_id = ? AND channel_id = ?')
+    .get(guildId, channelId);
   return row ? normalize(row) : null;
 }
 

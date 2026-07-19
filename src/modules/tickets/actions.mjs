@@ -9,9 +9,7 @@
  *   - Definir canal de logs
  *   - Definir cargo de suporte
  *   - Definir mensagem de boas-vindas do ticket
- *
- * A configuração é persistida em guild_settings (module='tickets').
- * A tabela tickets (instâncias) é usada pela lógica de abertura/fechamento.
+ *   - Publicar painel de abertura em um canal
  *
  * CustomIds utilizados:
  *   tcfg:open:sid              — painel principal
@@ -20,10 +18,15 @@
  *   tcfg:cat_select:sid        — categoria selecionada
  *   tcfg:set_log:sid           — abre select de canal de log
  *   tcfg:log_select:sid        — canal de log selecionado
+ *   tcfg:set_role:sid          — abre select de cargo de suporte
+ *   tcfg:role_select:sid       — cargo de suporte selecionado
  *   tcfg:set_message:sid       — abre modal de mensagem
  *   tcfg:msg_submit:sid        — modal de mensagem submetido
+ *   tcfg:publish:sid           — abre select de canal para publicar painel
+ *   tcfg:pub_select:sid        — canal selecionado, publica painel
  *   tcfg:clear_category:sid    — limpa categoria configurada
  *   tcfg:clear_log:sid         — limpa canal de log configurado
+ *   tcfg:clear_role:sid        — limpa cargo de suporte configurado
  *   tcfg:cancel:sid            — fecha o painel
  */
 
@@ -33,6 +36,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   ChannelSelectMenuBuilder,
+  RoleSelectMenuBuilder,
   ChannelType,
   ModalBuilder,
   TextInputBuilder,
@@ -41,6 +45,7 @@ import {
 } from 'discord.js';
 import { createSession, getSession, cancelSession } from '../../core/sessionManager.mjs';
 import { getTicketConfig, setTicketConfig, countOpenTickets } from '../../database/repositories/Tickets.mjs';
+import { buildOpenPanelPayload } from './flow.mjs';
 import { build } from '../../utils/customId.mjs';
 import { logger } from '../../utils/logger.mjs';
 
@@ -63,10 +68,15 @@ export async function handleTcfgComponent(interaction, action, partes) {
     case 'cat_select':     return handleCatSelect(interaction, session);
     case 'set_log':        return handleSetLog(interaction, session);
     case 'log_select':     return handleLogSelect(interaction, session);
+    case 'set_role':       return handleSetRole(interaction, session);
+    case 'role_select':    return handleRoleSelect(interaction, session);
     case 'set_message':    return handleSetMessage(interaction, session);
     case 'msg_submit':     return handleMsgSubmit(interaction, session);
+    case 'publish':        return handlePublish(interaction, session);
+    case 'pub_select':     return handlePubSelect(interaction, session);
     case 'clear_category': return handleClearCategory(interaction, session);
     case 'clear_log':      return handleClearLog(interaction, session);
+    case 'clear_role':     return handleClearRole(interaction, session);
     case 'cancel':         return handleCancel(interaction, session);
     default:
       logger.warn(`[Tickets] Ação de config desconhecida: '${action}'`);
@@ -102,7 +112,6 @@ async function handleToggle(interaction, session) {
   const config = getTicketConfig(interaction.guildId);
   setTicketConfig(interaction.guildId, { enabled: !config.enabled });
   logger.info(`[Tickets] Sistema ${!config.enabled ? 'ativado' : 'desativado'} | guild: ${interaction.guildId}`);
-
   const updated = getTicketConfig(interaction.guildId);
   return interaction.update(buildMainPanel(session.sessionId, interaction.guildId, updated, interaction.guild));
 }
@@ -120,13 +129,7 @@ async function handleSetCategory(interaction, session) {
         .setPlaceholder('Selecione uma categoria...')
         .addChannelTypes(ChannelType.GuildCategory),
     ),
-    new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(build('tcfg', 'open', session.sessionId))
-        .setLabel('Voltar')
-        .setEmoji('◀️')
-        .setStyle(ButtonStyle.Secondary),
-    ),
+    new ActionRowBuilder().addComponents(backButton(session.sessionId)),
   ];
 
   return interaction.update({ embeds: [embed], components, content: null });
@@ -135,10 +138,8 @@ async function handleSetCategory(interaction, session) {
 async function handleCatSelect(interaction, session) {
   const categoryId = interaction.values?.[0];
   if (!categoryId) return safeReply(interaction, '⚠️ Nenhuma categoria selecionada.');
-
   setTicketConfig(interaction.guildId, { category_id: categoryId });
   logger.info(`[Tickets] Categoria configurada | guild: ${interaction.guildId} | categoria: ${categoryId}`);
-
   const config = getTicketConfig(interaction.guildId);
   return interaction.update(buildMainPanel(session.sessionId, interaction.guildId, config, interaction.guild));
 }
@@ -156,13 +157,7 @@ async function handleSetLog(interaction, session) {
         .setPlaceholder('Selecione um canal de logs...')
         .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement),
     ),
-    new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(build('tcfg', 'open', session.sessionId))
-        .setLabel('Voltar')
-        .setEmoji('◀️')
-        .setStyle(ButtonStyle.Secondary),
-    ),
+    new ActionRowBuilder().addComponents(backButton(session.sessionId)),
   ];
 
   return interaction.update({ embeds: [embed], components, content: null });
@@ -171,10 +166,35 @@ async function handleSetLog(interaction, session) {
 async function handleLogSelect(interaction, session) {
   const channelId = interaction.values?.[0];
   if (!channelId) return safeReply(interaction, '⚠️ Nenhum canal selecionado.');
-
   setTicketConfig(interaction.guildId, { log_channel_id: channelId });
   logger.info(`[Tickets] Canal de log configurado | guild: ${interaction.guildId} | canal: ${channelId}`);
+  const config = getTicketConfig(interaction.guildId);
+  return interaction.update(buildMainPanel(session.sessionId, interaction.guildId, config, interaction.guild));
+}
 
+async function handleSetRole(interaction, session) {
+  const embed = new EmbedBuilder()
+    .setColor(0xFEE75C)
+    .setTitle('🎫 Tickets — Cargo de Suporte')
+    .setDescription('Selecione o **cargo** que terá acesso a todos os tickets e poderá gerenciá-los:');
+
+  const components = [
+    new ActionRowBuilder().addComponents(
+      new RoleSelectMenuBuilder()
+        .setCustomId(build('tcfg', 'role_select', session.sessionId))
+        .setPlaceholder('Selecione o cargo de suporte...'),
+    ),
+    new ActionRowBuilder().addComponents(backButton(session.sessionId)),
+  ];
+
+  return interaction.update({ embeds: [embed], components, content: null });
+}
+
+async function handleRoleSelect(interaction, session) {
+  const roleId = interaction.values?.[0];
+  if (!roleId) return safeReply(interaction, '⚠️ Nenhum cargo selecionado.');
+  setTicketConfig(interaction.guildId, { support_role_id: roleId });
+  logger.info(`[Tickets] Cargo de suporte configurado | guild: ${interaction.guildId} | cargo: ${roleId}`);
   const config = getTicketConfig(interaction.guildId);
   return interaction.update(buildMainPanel(session.sessionId, interaction.guildId, config, interaction.guild));
 }
@@ -195,9 +215,7 @@ async function handleSetMessage(interaction, session) {
           .setRequired(false)
           .setMaxLength(1000)
           .setValue(current)
-          .setPlaceholder(
-            'Ex: Olá {usuario}! Descreva seu problema e um membro da equipe irá atendê-lo em breve.',
-          ),
+          .setPlaceholder('Ex: Olá {usuario}! Descreva seu problema e um membro da equipe irá atendê-lo.'),
       ),
     );
 
@@ -206,11 +224,9 @@ async function handleSetMessage(interaction, session) {
 
 async function handleMsgSubmit(interaction, session) {
   const message = interaction.fields.getTextInputValue('ticket_message')?.trim() || null;
-
   setTicketConfig(interaction.guildId, { intro_message: message });
   logger.info(`[Tickets] Mensagem de boas-vindas ${message ? 'configurada' : 'removida'} | guild: ${interaction.guildId}`);
 
-  const config = getTicketConfig(interaction.guildId);
   return interaction.reply({
     content: message
       ? '✅ Mensagem de boas-vindas configurada com sucesso!'
@@ -219,16 +235,85 @@ async function handleMsgSubmit(interaction, session) {
   });
 }
 
+async function handlePublish(interaction, session) {
+  const config = getTicketConfig(interaction.guildId);
+
+  if (!config.enabled) {
+    return safeReply(interaction, '⚠️ Ative o sistema de tickets antes de publicar o painel.');
+  }
+  if (!config.category_id) {
+    return safeReply(interaction, '⚠️ Configure uma categoria antes de publicar o painel.');
+  }
+
+  const embed = new EmbedBuilder()
+    .setColor(0xFEE75C)
+    .setTitle('🎫 Tickets — Publicar Painel')
+    .setDescription('Selecione o **canal** onde o painel de abertura de tickets será publicado.\n\nOs usuários clicarão no botão **"Abrir Ticket"** nesse canal.');
+
+  const components = [
+    new ActionRowBuilder().addComponents(
+      new ChannelSelectMenuBuilder()
+        .setCustomId(build('tcfg', 'pub_select', session.sessionId))
+        .setPlaceholder('Selecione o canal para publicar...')
+        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement),
+    ),
+    new ActionRowBuilder().addComponents(backButton(session.sessionId)),
+  ];
+
+  return interaction.update({ embeds: [embed], components, content: null });
+}
+
+async function handlePubSelect(interaction, session) {
+  const channelId = interaction.values?.[0];
+  if (!channelId) return safeReply(interaction, '⚠️ Nenhum canal selecionado.');
+
+  const config  = getTicketConfig(interaction.guildId);
+  const channel = interaction.guild.channels.cache.get(channelId)
+    ?? await interaction.guild.channels.fetch(channelId).catch(() => null);
+
+  if (!channel?.isTextBased()) {
+    return safeReply(interaction, '⚠️ Canal inválido ou sem permissão de envio.');
+  }
+
+  // Verifica se o bot tem permissão de enviar no canal
+  const botMember = interaction.guild.members.me;
+  if (botMember && !channel.permissionsFor(botMember)?.has('SendMessages')) {
+    return safeReply(interaction, `⚠️ Não tenho permissão para enviar mensagens em <#${channelId}>.`);
+  }
+
+  try {
+    const payload = buildOpenPanelPayload(config);
+    await channel.send(payload);
+
+    logger.info(`[Tickets] Painel publicado | canal: ${channelId} | guild: ${interaction.guildId}`);
+
+    return interaction.update(buildMainPanel(
+      session.sessionId,
+      interaction.guildId,
+      getTicketConfig(interaction.guildId),
+      interaction.guild,
+      `✅ Painel publicado em <#${channelId}>!`,
+    ));
+  } catch (err) {
+    logger.error('[Tickets] Erro ao publicar painel:', err?.message);
+    return safeReply(interaction, `❌ Erro ao publicar o painel: ${err.message}`);
+  }
+}
+
 async function handleClearCategory(interaction, session) {
   setTicketConfig(interaction.guildId, { category_id: null });
-  logger.info(`[Tickets] Categoria removida | guild: ${interaction.guildId}`);
   const config = getTicketConfig(interaction.guildId);
   return interaction.update(buildMainPanel(session.sessionId, interaction.guildId, config, interaction.guild));
 }
 
 async function handleClearLog(interaction, session) {
   setTicketConfig(interaction.guildId, { log_channel_id: null });
-  logger.info(`[Tickets] Canal de log removido | guild: ${interaction.guildId}`);
+  const config = getTicketConfig(interaction.guildId);
+  return interaction.update(buildMainPanel(session.sessionId, interaction.guildId, config, interaction.guild));
+}
+
+async function handleClearRole(interaction, session) {
+  setTicketConfig(interaction.guildId, { support_role_id: null });
   const config = getTicketConfig(interaction.guildId);
   return interaction.update(buildMainPanel(session.sessionId, interaction.guildId, config, interaction.guild));
 }
@@ -240,24 +325,23 @@ function handleCancel(interaction, session) {
 
 // ── Construtor do painel principal ────────────────────────────────────────────
 
-function buildMainPanel(sessionId, guildId, config, guild) {
+function buildMainPanel(sessionId, guildId, config, guild, successMsg = null) {
   const openCount = countOpenTickets(guildId);
 
-  const statusLabel  = config.enabled ? '🟢 Ativo' : '🔴 Inativo';
-  const toggleLabel  = config.enabled ? 'Desativar' : 'Ativar';
-  const toggleStyle  = config.enabled ? ButtonStyle.Danger : ButtonStyle.Success;
-  const toggleEmoji  = config.enabled ? '🔴' : '🟢';
+  const statusLabel = config.enabled ? '🟢 Ativo' : '🔴 Inativo';
 
-  // Resolve nomes dos canais/categoria no cache da guild
-  const categoryName  = resolveChannel(guild, config.category_id,  'Não configurada');
-  const logName       = resolveChannel(guild, config.log_channel_id, 'Não configurado');
+  const categoryName    = resolveChannel(guild, config.category_id,   'Não configurada');
+  const logName         = resolveChannel(guild, config.log_channel_id, 'Não configurado');
+  const supportRoleName = resolveRole(guild, config.support_role_id,   'Não configurado');
 
   const fields = [
-    { name: '📊 Status do Sistema',  value: statusLabel,               inline: true },
-    { name: '🎟️ Tickets Abertos',    value: String(openCount),          inline: true },
-    { name: '📁 Categoria',          value: categoryName,               inline: true },
-    { name: '📋 Canal de Logs',      value: logName,                    inline: true },
-    { name: '💬 Mensagem de Boas-vindas',
+    { name: '📊 Status',           value: statusLabel,    inline: true },
+    { name: '🎟️ Tickets Abertos', value: String(openCount), inline: true },
+    { name: '📁 Categoria',        value: categoryName,   inline: true },
+    { name: '📋 Canal de Logs',    value: logName,        inline: true },
+    { name: '🛡️ Cargo de Suporte', value: supportRoleName, inline: true },
+    {
+      name:  '💬 Mensagem de Boas-vindas',
       value: config.intro_message
         ? `\`\`\`${config.intro_message.slice(0, 200)}\`\`\``
         : '*Não configurada*',
@@ -268,16 +352,20 @@ function buildMainPanel(sessionId, guildId, config, guild) {
   const embed = new EmbedBuilder()
     .setColor(config.enabled ? 0xFEE75C : 0x99AAB5)
     .setTitle('🎫 Configuração de Tickets')
-    .setDescription('Configure o sistema de atendimento por tickets do servidor.')
+    .setDescription(
+      successMsg
+        ? `${successMsg}\n\nConfigure o sistema de atendimento por tickets do servidor.`
+        : 'Configure o sistema de atendimento por tickets do servidor.',
+    )
     .addFields(fields);
 
-  // Linha 1 — Ativar/desativar + Categoria + Log
+  // Linha 1 — Toggle + Categoria + Log
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(build('tcfg', 'toggle', sessionId))
-      .setLabel(toggleLabel)
-      .setEmoji(toggleEmoji)
-      .setStyle(toggleStyle),
+      .setLabel(config.enabled ? 'Desativar' : 'Ativar')
+      .setEmoji(config.enabled ? '🔴' : '🟢')
+      .setStyle(config.enabled ? ButtonStyle.Danger : ButtonStyle.Success),
     new ButtonBuilder()
       .setCustomId(build('tcfg', 'set_category', sessionId))
       .setLabel('Categoria')
@@ -289,16 +377,36 @@ function buildMainPanel(sessionId, guildId, config, guild) {
       .setEmoji('📋')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
+      .setCustomId(build('tcfg', 'set_role', sessionId))
+      .setLabel('Cargo de Suporte')
+      .setEmoji('🛡️')
+      .setStyle(ButtonStyle.Primary),
+  );
+
+  // Linha 2 — Mensagem + Publicar
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
       .setCustomId(build('tcfg', 'set_message', sessionId))
       .setLabel('Mensagem')
       .setEmoji('💬')
       .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(build('tcfg', 'publish', sessionId))
+      .setLabel('Publicar Painel')
+      .setEmoji('📢')
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(!config.enabled || !config.category_id),
+    new ButtonBuilder()
+      .setCustomId(build('tcfg', 'cancel', sessionId))
+      .setLabel('Fechar')
+      .setEmoji('❌')
+      .setStyle(ButtonStyle.Secondary),
   );
 
-  // Linha 2 — Limpar configurações + Fechar
-  const row2Buttons = [];
+  // Linha 3 — Limpar configurações (somente se houver algo a limpar)
+  const clearButtons = [];
   if (config.category_id) {
-    row2Buttons.push(
+    clearButtons.push(
       new ButtonBuilder()
         .setCustomId(build('tcfg', 'clear_category', sessionId))
         .setLabel('Limpar Categoria')
@@ -307,27 +415,40 @@ function buildMainPanel(sessionId, guildId, config, guild) {
     );
   }
   if (config.log_channel_id) {
-    row2Buttons.push(
+    clearButtons.push(
       new ButtonBuilder()
         .setCustomId(build('tcfg', 'clear_log', sessionId))
-        .setLabel('Limpar Canal de Log')
+        .setLabel('Limpar Log')
         .setEmoji('🗑️')
         .setStyle(ButtonStyle.Danger),
     );
   }
-  row2Buttons.push(
-    new ButtonBuilder()
-      .setCustomId(build('tcfg', 'cancel', sessionId))
-      .setLabel('Fechar')
-      .setEmoji('❌')
-      .setStyle(ButtonStyle.Secondary),
-  );
+  if (config.support_role_id) {
+    clearButtons.push(
+      new ButtonBuilder()
+        .setCustomId(build('tcfg', 'clear_role', sessionId))
+        .setLabel('Limpar Cargo')
+        .setEmoji('🗑️')
+        .setStyle(ButtonStyle.Danger),
+    );
+  }
 
-  const components = [row1, new ActionRowBuilder().addComponents(row2Buttons)];
+  const components = clearButtons.length > 0
+    ? [row1, row2, new ActionRowBuilder().addComponents(clearButtons)]
+    : [row1, row2];
+
   return { embeds: [embed], components, content: null };
 }
 
 // ── Utilitários ───────────────────────────────────────────────────────────────
+
+function backButton(sessionId) {
+  return new ButtonBuilder()
+    .setCustomId(build('tcfg', 'open', sessionId))
+    .setLabel('Voltar')
+    .setEmoji('◀️')
+    .setStyle(ButtonStyle.Secondary);
+}
 
 function resolveChannel(guild, channelId, fallback) {
   if (!channelId) return fallback;
@@ -336,13 +457,19 @@ function resolveChannel(guild, channelId, fallback) {
   return ch.type === ChannelType.GuildCategory ? ch.name : `<#${ch.id}>`;
 }
 
-async function safeReply(interaction, content) {
-  const payload = { content, flags: MessageFlags.Ephemeral };
+function resolveRole(guild, roleId, fallback) {
+  if (!roleId) return fallback;
+  const role = guild?.roles?.cache?.get(roleId);
+  return role ? `<@&${role.id}>` : `ID: ${roleId}`;
+}
+
+async function safeReply(interaction, content, payload = null) {
+  const data = payload ?? { content, flags: MessageFlags.Ephemeral };
   try {
     if (interaction.replied || interaction.deferred) {
-      await interaction.followUp(payload);
+      await interaction.followUp(data);
     } else {
-      await interaction.reply(payload);
+      await interaction.reply(data);
     }
   } catch { /* expirada ou já respondida */ }
 }
