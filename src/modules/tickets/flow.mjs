@@ -24,6 +24,7 @@ import {
   OverwriteType,
   PermissionFlagsBits,
   MessageFlags,
+  AttachmentBuilder,
 } from 'discord.js';
 import { build } from '../../utils/customId.mjs';
 import { logger } from '../../utils/logger.mjs';
@@ -312,6 +313,106 @@ export async function sendTicketLog(guild, config, ticket, action, actor) {
     await logChannel.send({ embeds: [embed] });
   } catch (err) {
     logger.error(`[Tickets] Erro ao enviar log ao canal ${config.log_channel_id}:`, err?.message);
+  }
+}
+
+// ── Transcrições (15G) ────────────────────────────────────────────────────────
+
+/**
+ * Gera uma transcrição textual do canal do ticket.
+ * Busca as últimas 100 mensagens antes do fechamento.
+ * Retorna null em caso de erro (não bloqueia o fechamento).
+ *
+ * @param {import('discord.js').TextChannel} channel
+ * @param {object} ticket
+ * @returns {Promise<string|null>}
+ */
+export async function generateTranscript(channel, ticket) {
+  if (!channel) return null;
+
+  try {
+    const fetched = await channel.messages.fetch({ limit: 100 });
+    const sorted  = [...fetched.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+
+    const lines = [
+      `╔════════════════════════════════════════╗`,
+      `║     TRANSCRIÇÃO DE TICKET — Ruby FY    ║`,
+      `╚════════════════════════════════════════╝`,
+      ``,
+      `ID do Ticket : ${ticket.id}`,
+      `Servidor     : ${ticket.guildId}`,
+      `Canal        : #${channel.name}`,
+      `Usuário      : ${ticket.userId}`,
+      `Aberto em    : ${ticket.createdAt ? new Date(ticket.createdAt * 1000).toISOString() : 'N/A'}`,
+      `Total de msgs: ${sorted.length}`,
+      ``,
+      `─────────────────────────────────────────`,
+      ``,
+    ];
+
+    for (const msg of sorted) {
+      const ts      = new Date(msg.createdTimestamp).toISOString();
+      const author  = `${msg.author.username}${msg.author.bot ? ' [BOT]' : ''}`;
+      const content = msg.content?.trim() || null;
+
+      if (content) {
+        lines.push(`[${ts}] ${author}: ${content}`);
+      } else if (msg.embeds.length > 0) {
+        const title = msg.embeds[0]?.title ?? 'embed';
+        lines.push(`[${ts}] ${author}: [embed: ${title}]`);
+      } else if (msg.attachments.size > 0) {
+        lines.push(`[${ts}] ${author}: [attachment]`);
+      } else {
+        lines.push(`[${ts}] ${author}: [mensagem vazia]`);
+      }
+
+      // Arquivos anexados
+      for (const att of msg.attachments.values()) {
+        lines.push(`           → ${att.name}: ${att.url}`);
+      }
+    }
+
+    lines.push(``, `─────────────────────────────────────────`);
+    lines.push(`Fim da transcrição — gerado por Ruby FY`);
+
+    return lines.join('\n');
+  } catch (err) {
+    logger.error(`[Tickets] Erro ao gerar transcrição do ticket ${ticket.id}:`, err?.message);
+    return null;
+  }
+}
+
+/**
+ * Envia a transcrição como arquivo .txt ao canal de log configurado.
+ *
+ * @param {import('discord.js').Guild} guild
+ * @param {{ log_channel_id?: string|null }} config
+ * @param {object} ticket
+ * @param {string} transcript
+ * @returns {Promise<void>}
+ */
+export async function sendTranscriptLog(guild, config, ticket, transcript) {
+  if (!config.log_channel_id || !transcript) return;
+
+  const logChannel = guild.channels.cache.get(config.log_channel_id)
+    ?? await guild.channels.fetch(config.log_channel_id).catch(() => null);
+
+  if (!logChannel?.isTextBased()) {
+    logger.warn(`[Tickets] Canal de log ${config.log_channel_id} não encontrado para envio de transcrição.`);
+    return;
+  }
+
+  try {
+    const attachment = new AttachmentBuilder(Buffer.from(transcript, 'utf-8'), {
+      name: `transcript-${ticket.id}.txt`,
+    });
+
+    await logChannel.send({
+      content: `📄 Transcrição do ticket \`${ticket.id}\` — <@${ticket.userId}>`,
+      files:   [attachment],
+    });
+  } catch (err) {
+    logger.error(`[Tickets] Erro ao enviar transcrição ao canal de log:`, err?.message);
   }
 }
 

@@ -1,0 +1,175 @@
+/**
+ * Sistema de Migrações do Banco de Dados.
+ *
+ * Responsável por executar migrações pendentes de forma segura:
+ *   - Cria a tabela schema_migrations se não existir
+ *   - Executa apenas migrações ainda não aplicadas
+ *   - Cada migração é idempotente (usa IF NOT EXISTS / try-catch para ALTER TABLE)
+ *   - Não apaga dados existentes
+ *   - Falha fatal em caso de erro — o bot não inicia com schema inconsistente
+ *
+ * Uso:
+ *   import { runMigrations } from './migrations.mjs';
+ *   runMigrations(); // chamado após initDatabase()
+ */
+
+import { getDb } from './client.mjs';
+import { logger } from '../utils/logger.mjs';
+
+// ── Tabela de controle de migrações ───────────────────────────────────────────
+
+/**
+ * Cria a tabela schema_migrations se ainda não existir.
+ * Sempre chamada antes de verificar migrações.
+ */
+function ensureMigrationsTable(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      name        TEXT    NOT NULL UNIQUE,
+      executed_at INTEGER NOT NULL DEFAULT (unixepoch())
+    )
+  `);
+}
+
+/**
+ * Verifica se uma migração já foi executada.
+ * @param {object} db
+ * @param {string} name
+ * @returns {boolean}
+ */
+function isMigrationExecuted(db, name) {
+  const row = db.prepare('SELECT 1 FROM schema_migrations WHERE name = ?').get(name);
+  return !!row;
+}
+
+/**
+ * Registra uma migração como executada.
+ * @param {object} db
+ * @param {string} name
+ */
+function markMigrationExecuted(db, name) {
+  db.prepare('INSERT OR IGNORE INTO schema_migrations (name) VALUES (?)').run(name);
+}
+
+// ── Lista de migrações ────────────────────────────────────────────────────────
+
+/**
+ * Lista ordenada de migrações.
+ * Cada entrada: { name: string, up(db): void }
+ *
+ * Regras ao adicionar uma nova migração:
+ *   1. Nunca altere migrações já existentes — crie uma nova.
+ *   2. Use IF NOT EXISTS / try-catch em todo DDL para garantir idempotência.
+ *   3. Nunca use DROP TABLE / DELETE sem condição.
+ *   4. O nome deve ser único e seguir o padrão NNN_descricao.
+ */
+const MIGRATIONS = [
+  {
+    name: '000_baseline',
+    up(db) {
+      // Migração zero: registra o schema base existente.
+      // As tabelas já foram criadas por runSchema() com CREATE TABLE IF NOT EXISTS.
+      // Esta migração apenas confirma que o baseline foi processado.
+      logger.info('[Migrations] Baseline registrado — schema existente confirmado.');
+    },
+  },
+  {
+    name: '001_connection_error_tracking',
+    up(db) {
+      // Adiciona rastreamento de erros nas conexões individuais.
+      // Permite que o executor registre a última falha de cada conexão
+      // sem interromper as demais.
+      try { db.exec('ALTER TABLE connections ADD COLUMN last_error TEXT'); }
+      catch { /* coluna já existe — idempotente */ }
+
+      try { db.exec('ALTER TABLE connections ADD COLUMN last_error_at INTEGER'); }
+      catch { /* coluna já existe — idempotente */ }
+
+      logger.info('[Migrations] 001: rastreamento de erros adicionado à tabela connections.');
+    },
+  },
+  {
+    name: '002_ticket_reopen_support',
+    up(db) {
+      // Adiciona suporte a reabertura de tickets.
+      // reopen_count rastreia quantas vezes o ticket foi reaberto.
+      try { db.exec('ALTER TABLE tickets ADD COLUMN reopen_count INTEGER NOT NULL DEFAULT 0'); }
+      catch { /* idempotente */ }
+
+      logger.info('[Migrations] 002: suporte a reabertura adicionado à tabela tickets.');
+    },
+  },
+];
+
+// ── Runner ────────────────────────────────────────────────────────────────────
+
+/**
+ * Executa todas as migrações pendentes, em ordem.
+ *
+ * Estratégia de baseline:
+ *   Se o banco já existia antes do sistema de migrações ser introduzido,
+ *   a migração 000_baseline marca o estado atual como ponto de partida,
+ *   sem alterar nenhuma tabela existente.
+ *
+ * @param {object} [db] - instância do banco (opcional; usa getDb() se omitido)
+ */
+export function runMigrations(db = null) {
+  const database = db ?? getDb();
+
+  ensureMigrationsTable(database);
+
+  let executedCount = 0;
+
+  for (const migration of MIGRATIONS) {
+    if (isMigrationExecuted(database, migration.name)) {
+      continue; // já executada — pula
+    }
+
+    logger.info(`[Migrations] Iniciando: ${migration.name}`);
+
+    try {
+      migration.up(database);
+      markMigrationExecuted(database, migration.name);
+      executedCount++;
+      logger.info(`[Migrations] Concluída: ${migration.name}`);
+    } catch (err) {
+      logger.error(`[Migrations] FALHA na migração '${migration.name}':`, err);
+      // Falha fatal: não continuamos com schema potencialmente inconsistente
+      throw new Error(`[Migrations] Falha ao executar '${migration.name}': ${err.message}`);
+    }
+  }
+
+  if (executedCount === 0) {
+    logger.info('[Migrations] Schema atualizado — nenhuma migração pendente.');
+  } else {
+    logger.info(`[Migrations] ${executedCount} migração(ões) executada(s) com sucesso.`);
+  }
+}
+
+/**
+ * Retorna o histórico de migrações executadas.
+ * Útil para diagnóstico e para o comando /stats.
+ *
+ * @param {object} [db]
+ * @returns {Array<{ id: number, name: string, executedAt: number }>}
+ */
+export function listExecutedMigrations(db = null) {
+  const database = db ?? getDb();
+  try {
+    return database
+      .prepare('SELECT id, name, executed_at FROM schema_migrations ORDER BY id ASC')
+      .all()
+      .map(r => ({ id: r.id, name: r.name, executedAt: r.executed_at }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Retorna os nomes de todas as migrações registradas (aplicadas + pendentes).
+ * @returns {string[]}
+ */
+export function listAllMigrationNames() {
+  return MIGRATIONS.map(m => m.name);
+}

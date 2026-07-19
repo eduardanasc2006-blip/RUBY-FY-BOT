@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { dirname } from 'path';
 import { mkdirSync } from 'fs';
 import { runSchema } from './schema.mjs';
+import { runMigrations } from './migrations.mjs';
 import { logger } from '../utils/logger.mjs';
 import { config } from '../config/bot.mjs';
 
@@ -10,6 +11,7 @@ let db = null;
 /**
  * Inicializa a conexão com o banco de dados SQLite (node:sqlite embutido no Node.js 22+).
  * Cria o arquivo e as tabelas automaticamente na primeira execução.
+ * Executa as migrações pendentes após o schema base.
  * Deve ser chamado uma única vez, antes do login do bot.
  */
 export function initDatabase() {
@@ -28,7 +30,11 @@ export function initDatabase() {
     db.exec('PRAGMA journal_mode = WAL');
     db.exec('PRAGMA foreign_keys = ON');
 
+    // 1. Cria tabelas base (idempotente: CREATE TABLE IF NOT EXISTS)
     runSchema(db);
+
+    // 2. Executa migrações pendentes (seguro: não apaga dados existentes)
+    runMigrations(db);
 
     logger.info(`[Database] Banco inicializado em: ${dbPath}`);
   } catch (err) {

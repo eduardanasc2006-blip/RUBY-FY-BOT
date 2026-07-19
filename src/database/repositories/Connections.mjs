@@ -160,11 +160,47 @@ export function deleteConnection(guildId, id) {
   return result.changes > 0;
 }
 
+// ── Rastreamento de erros (15D) ───────────────────────────────────────────────
+
+/**
+ * Registra o último erro de execução de uma conexão.
+ * Chamado pelo executor de conexões quando uma conexão individual falha.
+ *
+ * @param {string} guildId
+ * @param {string} id
+ * @param {string} errorMessage
+ */
+export function markConnectionError(guildId, id, errorMessage) {
+  const db = getDb();
+  db.prepare(`
+    UPDATE connections
+       SET last_error = ?, last_error_at = unixepoch(), updated_at = unixepoch()
+     WHERE id = ? AND guild_id = ?
+  `).run(String(errorMessage).slice(0, 500), id, guildId);
+}
+
+/**
+ * Limpa o último erro de uma conexão (indica recuperação bem-sucedida).
+ *
+ * @param {string} guildId
+ * @param {string} id
+ */
+export function clearConnectionError(guildId, id) {
+  const db = getDb();
+  db.prepare(`
+    UPDATE connections
+       SET last_error = NULL, last_error_at = NULL, updated_at = unixepoch()
+     WHERE id = ? AND guild_id = ?
+  `).run(id, guildId);
+}
+
 // ── Utilitário interno ────────────────────────────────────────────────────────
 
 /**
  * Normaliza uma linha do banco para o formato público.
  * Converte snake_case → camelCase e enabled de INTEGER para boolean.
+ * Os campos last_error / last_error_at só existem após a migração 001 —
+ * o operador ?? null garante compatibilidade com bancos antigos.
  */
 function normalize(row) {
   return {
@@ -176,5 +212,7 @@ function normalize(row) {
     enabled:         row.enabled === 1,
     createdAt:       row.created_at,
     updatedAt:       row.updated_at,
+    lastError:       row.last_error    ?? null,
+    lastErrorAt:     row.last_error_at ?? null,
   };
 }

@@ -33,6 +33,7 @@ import {
   getOpenTicketByUser,
   getTicketByChannel,
   closeTicket,
+  reopenTicket,
 } from '../../database/repositories/Tickets.mjs';
 import {
   sanitizeChannelName,
@@ -42,6 +43,8 @@ import {
   archiveTicketChannel,
   sendTicketLog,
   isTicketModerator,
+  generateTranscript,
+  sendTranscriptLog,
 } from './flow.mjs';
 
 // ── Handler principal ─────────────────────────────────────────────────────────
@@ -58,6 +61,7 @@ export async function handleTktComponent(interaction, action, partes) {
     case 'user_select_add': return handleUserSelectAdd(interaction, ticketId);
     case 'rem_user':        return handleRemUser(interaction, ticketId);
     case 'user_select_rem': return handleUserSelectRem(interaction, ticketId);
+    case 'reopen':          return handleReopen(interaction, ticketId);
     default:
       logger.warn(`[Tickets/tkt] Ação desconhecida: '${action}'`);
       return safeReply(interaction, '⚠️ Ação não reconhecida.');
@@ -191,6 +195,17 @@ async function handleCloseDo(interaction, ticketId) {
     return interaction.editReply({ content: '❌ Erro ao fechar o ticket no banco de dados.' });
   }
 
+  // 15G: gera transcrição antes de deletar o canal
+  const ticketChannel = interaction.guild.channels.cache.get(closed.channelId)
+    ?? await interaction.guild.channels.fetch(closed.channelId).catch(() => null);
+
+  if (ticketChannel) {
+    const transcript = await generateTranscript(ticketChannel, closed);
+    if (transcript) {
+      await sendTranscriptLog(interaction.guild, config, closed, transcript);
+    }
+  }
+
   // Log antes de deletar o canal (channel ainda existe)
   await sendTicketLog(
     interaction.guild,
@@ -204,6 +219,71 @@ async function handleCloseDo(interaction, ticketId) {
 
   // Remove canal (usa ID do ticket no banco, não da interação — anti-spoofing)
   await archiveTicketChannel(interaction.guild, closed.channelId);
+}
+
+// ── Reabrir ticket (15G) ──────────────────────────────────────────────────────
+
+async function handleReopen(interaction, ticketId) {
+  if (!ticketId) return safeReply(interaction, '⚠️ ID do ticket inválido.');
+
+  const ticket = getTicket(interaction.guildId, ticketId);
+  if (!ticket) return safeReply(interaction, '⚠️ Ticket não encontrado.');
+
+  if (ticket.status !== 'closed') {
+    return safeReply(interaction, '⚠️ Este ticket não está fechado.');
+  }
+
+  const config = getTicketConfig(interaction.guildId);
+
+  // Apenas moderadores podem reabrir
+  if (!isTicketModerator(interaction.member, ticket, config)) {
+    return safeReply(interaction, '⚠️ Você não tem permissão para reabrir este ticket.');
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  try {
+    // Busca o usuário original do ticket
+    const user = await interaction.client.users.fetch(ticket.userId).catch(() => null);
+    if (!user) {
+      return interaction.editReply({ content: '❌ Usuário original do ticket não encontrado.' });
+    }
+
+    // Cria novo canal Discord
+    const member      = await interaction.guild.members.fetch(user.id).catch(() => null);
+    const displayName = member?.displayName ?? user.username;
+    const channelName = sanitizeChannelName(displayName);
+
+    const newChannel = await createTicketChannel(interaction.guild, config, user, channelName);
+
+    // Atualiza o ticket no banco
+    const reopened = reopenTicket(interaction.guildId, ticketId, newChannel.id);
+    if (!reopened) {
+      await newChannel.delete('Erro ao reabrir ticket — rollback').catch(() => {});
+      return interaction.editReply({ content: '❌ Erro ao reabrir o ticket no banco de dados.' });
+    }
+
+    // Mensagem de boas-vindas no novo canal
+    const welcomePayload = buildWelcomePayload(reopened, user, config);
+    await newChannel.send(welcomePayload);
+
+    // Notifica o usuário da reabertura
+    await newChannel.send({
+      content: `<@${user.id}> Seu ticket foi **reaberto** por <@${interaction.user.id}>.`,
+    }).catch(() => {});
+
+    // Log no canal configurado
+    await sendTicketLog(interaction.guild, config, reopened, 'opened', interaction.user);
+
+    logger.info(`[Tickets] Ticket ${ticketId} reaberto | por: ${interaction.user.id} | novo canal: ${newChannel.id} | guild: ${interaction.guildId}`);
+
+    return interaction.editReply({
+      content: `✅ Ticket reaberto com sucesso: ${newChannel}`,
+    });
+  } catch (err) {
+    logger.error('[Tickets] Erro ao reabrir ticket:', err);
+    return interaction.editReply({ content: `❌ Erro ao reabrir o ticket: ${err.message}` });
+  }
 }
 
 // ── Cancelar fechamento ───────────────────────────────────────────────────────

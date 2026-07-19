@@ -177,6 +177,28 @@ export function countOpenTickets(guildId) {
 }
 
 /**
+ * Conta tickets por status (ou todos se status omitido).
+ * Mais eficiente que listTickets(...).length para grandes volumes.
+ *
+ * @param {string} guildId
+ * @param {{ status?: 'open'|'closed' }} opts
+ * @returns {number}
+ */
+export function countTickets(guildId, { status } = {}) {
+  const db = getDb();
+  if (status) {
+    const row = db
+      .prepare('SELECT COUNT(*) as total FROM tickets WHERE guild_id = ? AND status = ?')
+      .get(guildId, status);
+    return row?.total ?? 0;
+  }
+  const row = db
+    .prepare('SELECT COUNT(*) as total FROM tickets WHERE guild_id = ?')
+    .get(guildId);
+  return row?.total ?? 0;
+}
+
+/**
  * Fecha um ticket, registrando quem fechou e quando.
  * Retorna o ticket atualizado, ou null se não encontrado.
  *
@@ -199,17 +221,47 @@ export function closeTicket(guildId, id, closedBy) {
   return getTicket(guildId, id);
 }
 
+/**
+ * Reabre um ticket fechado, criando um novo canal.
+ * Requer que a migração 002 já tenha sido executada (coluna reopen_count).
+ *
+ * @param {string} guildId
+ * @param {string} id
+ * @param {string} newChannelId - ID do novo canal Discord criado para o ticket
+ * @returns {object|null}
+ */
+export function reopenTicket(guildId, id, newChannelId) {
+  const db = getDb();
+  const existing = getTicket(guildId, id);
+  if (!existing) return null;
+
+  // reopen_count pode não existir em bancos antigos (antes da migração 002).
+  // O DEFAULT 0 na migração garante que a coluna existe; a expressão COALESCE é só segurança.
+  db.prepare(`
+    UPDATE tickets
+       SET status     = 'open',
+           channel_id  = ?,
+           closed_at   = NULL,
+           closed_by   = NULL,
+           reopen_count = COALESCE(reopen_count, 0) + 1
+     WHERE id = ? AND guild_id = ?
+  `).run(newChannelId, id, guildId);
+
+  return getTicket(guildId, id);
+}
+
 // ── Utilitário interno ────────────────────────────────────────────────────────
 
 function normalize(row) {
   return {
-    id:        row.id,
-    guildId:   row.guild_id,
-    channelId: row.channel_id,
-    userId:    row.user_id,
-    status:    row.status,
-    createdAt: row.created_at,
-    closedAt:  row.closed_at  ?? null,
-    closedBy:  row.closed_by  ?? null,
+    id:          row.id,
+    guildId:     row.guild_id,
+    channelId:   row.channel_id,
+    userId:      row.user_id,
+    status:      row.status,
+    createdAt:   row.created_at,
+    closedAt:    row.closed_at    ?? null,
+    closedBy:    row.closed_by    ?? null,
+    reopenCount: row.reopen_count ?? 0,
   };
 }

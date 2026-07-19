@@ -31,7 +31,7 @@
  */
 
 import { register }                from '../../handlers/componentHandler.mjs';
-import { listActiveConnections }   from '../../database/repositories/Connections.mjs';
+import { listActiveConnections, markConnectionError, clearConnectionError } from '../../database/repositories/Connections.mjs';
 import { getTemplate }             from '../../database/repositories/Templates.mjs';
 import { applyVariablesToEmbedData } from '../variables/index.mjs';
 import { buildEmbed }              from '../templates/definition.mjs';
@@ -151,6 +151,8 @@ export async function executeConnections(action, context, discordClient) {
       // 7. Envia
       await channel.send({ embeds: [embed] });
       results.sent++;
+      // 15D: limpa erro anterior ao enviar com sucesso
+      try { clearConnectionError(guildId, conn.id); } catch { /* não bloqueia */ }
 
       logger.info(`[Connections] Mensagem enviada | ação: ${action} | conexão: ${conn.id} | canal: ${conn.targetChannelId}`);
 
@@ -171,8 +173,11 @@ export async function executeConnections(action, context, discordClient) {
       }
 
     } catch (err) {
+      const reason = err?.message ?? 'unknown_error';
       logger.error(`[Connections] Erro na conexão ${conn.id} (${action}):`, err);
-      results.errors.push({ connectionId: conn.id, reason: err?.message ?? 'unknown_error' });
+      results.errors.push({ connectionId: conn.id, reason });
+      // 15D: registra o erro na conexão para diagnóstico pelo admin
+      try { markConnectionError(guildId, conn.id, reason); } catch { /* não bloqueia */ }
     }
   }
 
