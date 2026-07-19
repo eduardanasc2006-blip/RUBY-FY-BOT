@@ -51,5 +51,20 @@ export function runSchema(db) {
       PRIMARY KEY (id, guild_id),
       FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
     );
+
+    -- Instâncias de tickets abertos por servidor
+    -- A configuração do sistema de tickets fica em guild_settings (module='tickets').
+    CREATE TABLE IF NOT EXISTS tickets (
+      id          TEXT    NOT NULL,
+      guild_id    TEXT    NOT NULL,
+      channel_id  TEXT    NOT NULL,
+      user_id     TEXT    NOT NULL,
+      status      TEXT    NOT NULL DEFAULT 'open',
+      created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+      closed_at   INTEGER,
+      closed_by   TEXT,
+      PRIMARY KEY (id, guild_id),
+      FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
+    );
   `);
 }

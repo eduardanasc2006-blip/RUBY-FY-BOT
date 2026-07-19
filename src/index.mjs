@@ -2,9 +2,11 @@ import 'dotenv/config';
 import { Client, GatewayIntentBits, Collection } from 'discord.js';
 import { initDatabase } from './database/client.mjs';
 import { startSessionCleanup } from './core/sessionManager.mjs';
-import { registerEditorHandler } from './modules/editor/index.mjs';
-import { registerEmbedHandler }      from './modules/embed/index.mjs';
-import { registerTemplatesHandler }  from './modules/templates/index.mjs';
+import { registerEditorHandler }      from './modules/editor/index.mjs';
+import { registerEmbedHandler }       from './modules/embed/index.mjs';
+import { registerTemplatesHandler }   from './modules/templates/index.mjs';
+import { registerConnectionsHandler } from './modules/connections/index.mjs';
+import { registerTicketsHandler }     from './modules/tickets/index.mjs';
 import { loadCommands } from './handlers/commandHandler.mjs';
 import { loadEvents } from './handlers/eventHandler.mjs';
 import { logger } from './utils/logger.mjs';
@@ -39,6 +41,8 @@ startSessionCleanup();
 registerEditorHandler();
 registerEmbedHandler();
 registerTemplatesHandler();
+registerConnectionsHandler();
+registerTicketsHandler();
 
 // ── Carregamento de handlers ────────────────────────────────────────────────
 logger.info('Iniciando carregamento de comandos e eventos...');

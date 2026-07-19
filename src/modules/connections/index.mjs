@@ -1,12 +1,15 @@
 /**
- * Sistema de Conexões — executor central e registry de ações.
+ * Sistema de Conexões — Ponto de entrada público.
  *
- * Uma Conexão liga:
- *   AÇÃO → MODELO → CONTEXTO → VARIÁVEIS → CANAL DE DESTINO
+ * Exporta:
+ *   - registerAction / getRegisteredActions / getAction  (registry)
+ *   - executeConnections                                  (executor)
+ *   - registerConnectionsHandler                         (boot)
+ *   - openConexoesPanel                                  (comando /conexoes)
  *
  * Uso básico (disparar conexões ativas para uma ação):
  *
- *   import { executeConnections } from '../../modules/connections/index.mjs';
+ *   import { executeConnections } from '../modules/connections/index.mjs';
  *
  *   const result = await executeConnections('proof', {
  *     guildId:  '123456',
@@ -17,58 +20,38 @@
  *
  *   // result = { sent: 2, errors: [] }
  *
- * Registrar uma ação (para extensibilidade futura):
+ * Registrar uma ação:
  *
- *   import { registerAction } from '../../modules/connections/index.mjs';
+ *   import { registerAction } from '../modules/connections/index.mjs';
  *
  *   registerAction('proof', {
- *     description: 'Prova de venda realizada',
- *     onExecuted: async ({ connection, template, guild, context }) => { ... },
+ *     label:       'Prova de Venda',
+ *     description: 'Disparado quando uma venda é comprovada',
  *   });
  */
 
-import { listActiveConnections } from '../../database/repositories/Connections.mjs';
-import { getTemplate }           from '../../database/repositories/Templates.mjs';
+import { register }                from '../../handlers/componentHandler.mjs';
+import { listActiveConnections }   from '../../database/repositories/Connections.mjs';
+import { getTemplate }             from '../../database/repositories/Templates.mjs';
 import { applyVariablesToEmbedData } from '../variables/index.mjs';
-import { buildEmbed }            from '../templates/definition.mjs';
-import { logger }                from '../../utils/logger.mjs';
+import { buildEmbed }              from '../templates/definition.mjs';
+import { logger }                  from '../../utils/logger.mjs';
+import { registerAction, getRegisteredActions, getAction } from './registry.mjs';
+import { handleConexoesComponent, openConexoesPanel } from './actions.mjs';
 
-// ── Registry de ações ─────────────────────────────────────────────────────────
+// ── Re-exporta registry ───────────────────────────────────────────────────────
+export { registerAction, getRegisteredActions, getAction };
+export { openConexoesPanel };
 
-/**
- * @type {Map<string, { name: string, description: string, onExecuted: Function|null }>}
- */
-const actionRegistry = new Map();
-
-/**
- * Registra uma ação disponível no sistema de conexões.
- *
- * Isso não é obrigatório para que o executor funcione — qualquer string de ação
- * pode ter conexões. O registry serve para rastrear ações disponíveis
- * e permitir callbacks opcionais por ação.
- *
- * @param {string} name - Identificador único (ex: 'proof', 'ticket_closed')
- * @param {{
- *   description?: string,
- *   onExecuted?:  (payload: object) => Promise<void>,
- * }} opts
- */
-export function registerAction(name, opts = {}) {
-  if (!name || typeof name !== 'string') throw new Error('[Connections] Nome de ação inválido.');
-  actionRegistry.set(name, {
-    name,
-    description: opts.description ?? '',
-    onExecuted:  typeof opts.onExecuted === 'function' ? opts.onExecuted : null,
-  });
-  logger.info(`[Connections] Ação registrada: '${name}'`);
-}
+// ── Registro no componentHandler ──────────────────────────────────────────────
 
 /**
- * Retorna todas as ações registradas.
- * @returns {Array<{ name: string, description: string }>}
+ * Registra o namespace 'conexoes' no componentHandler.
+ * Deve ser chamado uma única vez no boot do bot (src/index.mjs).
  */
-export function getRegisteredActions() {
-  return [...actionRegistry.values()].map(({ name, description }) => ({ name, description }));
+export function registerConnectionsHandler() {
+  register('conexoes', handleConexoesComponent);
+  logger.info('[Connections] Handler registrado no namespace "conexoes".');
 }
 
 // ── Executor ──────────────────────────────────────────────────────────────────
@@ -96,7 +79,6 @@ export function getRegisteredActions() {
 export async function executeConnections(action, context, discordClient) {
   const guildId = context?.guildId;
 
-  // ── Proteções básicas ──────────────────────────────────────────────────────
   if (!guildId) {
     logger.warn('[Connections] executeConnections chamado sem guildId no contexto.');
     return { sent: 0, errors: [{ connectionId: null, reason: 'missing_guild_id' }] };
@@ -115,8 +97,8 @@ export async function executeConnections(action, context, discordClient) {
     return { sent: 0, errors: [] };
   }
 
-  const results  = { sent: 0, errors: [] };
-  const actionDef = actionRegistry.get(action) ?? null;
+  const results   = { sent: 0, errors: [] };
+  const actionDef = getAction(action);
 
   for (const conn of connections) {
     try {
@@ -151,10 +133,10 @@ export async function executeConnections(action, context, discordClient) {
       }
 
       // 5. Aplica variáveis numa cópia profunda (original do template intacto)
-      const fullContext   = { ...context, guild, channel };
-      const resolvedData  = applyVariablesToEmbedData(template.data, fullContext);
+      const fullContext  = { ...context, guild, channel };
+      const resolvedData = applyVariablesToEmbedData(template.data, fullContext);
 
-      // 6. Constrói a embed a partir dos dados resolvidos
+      // 6. Constrói a embed
       const embed = buildEmbed(resolvedData);
       if (Array.isArray(resolvedData.fields) && resolvedData.fields.length > 0) {
         for (const f of resolvedData.fields) {
@@ -172,16 +154,16 @@ export async function executeConnections(action, context, discordClient) {
 
       logger.info(`[Connections] Mensagem enviada | ação: ${action} | conexão: ${conn.id} | canal: ${conn.targetChannelId}`);
 
-      // 8. Callback opcional da ação (erros não afetam o contador de sent)
+      // 8. Callback opcional da ação
       if (actionDef?.onExecuted) {
         try {
           await actionDef.onExecuted({
-            connection: conn,
+            connection:   conn,
             template,
             resolvedData,
             channel,
             guild,
-            context: fullContext,
+            context:      fullContext,
           });
         } catch (cbErr) {
           logger.warn(`[Connections] onExecuted '${action}' falhou na conexão ${conn.id}:`, cbErr?.message);
