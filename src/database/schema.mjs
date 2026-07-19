@@ -35,5 +35,21 @@ export function runSchema(db) {
       PRIMARY KEY (id, guild_id),
       FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
     );
+
+    -- Conexões: ligam uma ação a um modelo e a um canal de destino
+    -- Sem FK para template_id: modelos podem ser excluídos independentemente;
+    -- o executor trata o template ausente com graciosidade.
+    CREATE TABLE IF NOT EXISTS connections (
+      id                TEXT    NOT NULL,
+      guild_id          TEXT    NOT NULL,
+      action            TEXT    NOT NULL,
+      template_id       TEXT    NOT NULL,
+      target_channel_id TEXT    NOT NULL,
+      enabled           INTEGER NOT NULL DEFAULT 1,
+      created_at        INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at        INTEGER NOT NULL DEFAULT (unixepoch()),
+      PRIMARY KEY (id, guild_id),
+      FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
+    );
   `);
 }
