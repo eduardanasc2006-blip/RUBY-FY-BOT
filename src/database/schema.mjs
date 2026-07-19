@@ -66,5 +66,25 @@ export function runSchema(db) {
       PRIMARY KEY (id, guild_id),
       FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
     );
+
+    -- Provas de venda registradas por servidor (Etapa 12)
+    -- vendor_id   — quem registrou a prova (Discord userId)
+    -- client_id   — ID Discord do cliente resolvido (null se não identificado)
+    -- cliente_raw — texto original do campo cliente (null se client_id resolvido)
+    -- ticket_id   — referência opcional ao ticket relacionado
+    CREATE TABLE IF NOT EXISTS proofs (
+      id          TEXT    NOT NULL,
+      guild_id    TEXT    NOT NULL,
+      vendor_id   TEXT    NOT NULL,
+      client_id   TEXT,
+      cliente_raw TEXT,
+      produto     TEXT,
+      valor       TEXT,
+      ticket_id   TEXT,
+      notas       TEXT,
+      created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+      PRIMARY KEY (id, guild_id),
+      FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
+    );
   `);
 }

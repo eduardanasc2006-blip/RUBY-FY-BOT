@@ -7,6 +7,7 @@ import { registerEmbedHandler }       from './modules/embed/index.mjs';
 import { registerTemplatesHandler }   from './modules/templates/index.mjs';
 import { registerConnectionsHandler } from './modules/connections/index.mjs';
 import { registerTicketsHandler }     from './modules/tickets/index.mjs';
+import { registerProofsHandler }      from './modules/proofs/index.mjs';
 import { loadCommands } from './handlers/commandHandler.mjs';
 import { loadEvents } from './handlers/eventHandler.mjs';
 import { logger } from './utils/logger.mjs';
@@ -43,6 +44,7 @@ registerEmbedHandler();
 registerTemplatesHandler();
 registerConnectionsHandler();
 registerTicketsHandler();
+registerProofsHandler();
 
 // ── Carregamento de handlers ────────────────────────────────────────────────
 logger.info('Iniciando carregamento de comandos e eventos...');
