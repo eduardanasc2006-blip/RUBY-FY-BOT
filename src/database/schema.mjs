@@ -67,6 +67,24 @@ export function runSchema(db) {
       FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
     );
 
+    -- Clientes cadastrados por servidor (Etapa 14)
+    -- discord_id é único por servidor (UNIQUE ignora NULLs no SQLite,
+    --   portanto múltiplos clientes externos sem Discord são permitidos).
+    CREATE TABLE IF NOT EXISTS clients (
+      id           TEXT    NOT NULL,
+      guild_id     TEXT    NOT NULL,
+      display_name TEXT    NOT NULL,
+      discord_id   TEXT,
+      email        TEXT,
+      phone        TEXT,
+      notas        TEXT,
+      created_at   INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at   INTEGER NOT NULL DEFAULT (unixepoch()),
+      PRIMARY KEY (id, guild_id),
+      UNIQUE (guild_id, discord_id),
+      FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
+    );
+
     -- Pedidos de venda por servidor (Etapa 13)
     -- vendor_id   — quem criou o pedido (Discord userId)
     -- client_id   — ID Discord do cliente resolvido (null se não identificado)

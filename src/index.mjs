@@ -9,6 +9,7 @@ import { registerConnectionsHandler } from './modules/connections/index.mjs';
 import { registerTicketsHandler }     from './modules/tickets/index.mjs';
 import { registerProofsHandler }      from './modules/proofs/index.mjs';
 import { registerOrdersHandler }      from './modules/orders/index.mjs';
+import { registerClientsHandler }     from './modules/clients/index.mjs';
 import { loadCommands } from './handlers/commandHandler.mjs';
 import { loadEvents } from './handlers/eventHandler.mjs';
 import { logger } from './utils/logger.mjs';
@@ -47,6 +48,7 @@ registerConnectionsHandler();
 registerTicketsHandler();
 registerProofsHandler();
 registerOrdersHandler();
+registerClientsHandler();
 
 // ── Carregamento de handlers ────────────────────────────────────────────────
 logger.info('Iniciando carregamento de comandos e eventos...');
