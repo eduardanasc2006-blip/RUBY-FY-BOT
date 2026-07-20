@@ -28,8 +28,8 @@ import { requireAuth, requireGuildAccess, sessionMiddleware } from '../middlewar
 import { logger } from '../../utils/logger.mjs';
 
 // ── Repositories ──────────────────────────────────────────────────────────────
-import { listTemplates }     from '../../database/repositories/Templates.mjs';
-import { listConnections }   from '../../database/repositories/Connections.mjs';
+import { listTemplates, countTemplates }     from '../../database/repositories/Templates.mjs';
+import { listConnections, countConnections } from '../../database/repositories/Connections.mjs';
 import { listTickets, countOpenTickets, countTickets } from '../../database/repositories/Tickets.mjs';
 import { listOrders, countOrders }   from '../../database/repositories/Orders.mjs';
 import { listClients, countClients } from '../../database/repositories/Clients.mjs';
@@ -123,13 +123,14 @@ router.get('/guilds/:guildId/stats', requireGuildAccess, (req, res) => {
     const activeOrders   = totalOrders - doneOrders - cancelOrders;
     const totalProofs    = countProofs(guildId);
     const totalClients   = countClients(guildId);
-    const allConns         = listConnections(guildId);
-    const activeConns      = allConns.filter(c => c.enabled).length;
-    const templates        = listTemplates(guildId);
-    const auditStats       = getAuditStats(guildId);
+    // Otimizado: usa COUNT no banco em vez de carregar todos os registros
+    const totalConns     = countConnections(guildId);
+    const activeConns    = countConnections(guildId, { enabled: true });
+    const templates      = countTemplates(guildId);
+    const auditStats     = getAuditStats(guildId);
     const totalAutomations = countAutomations(guildId);
-    const totalProducts    = countProducts(guildId);
-    const totalPanels      = countPanels(guildId);
+    const totalProducts  = countProducts(guildId);
+    const totalPanels    = countPanels(guildId);
 
     res.json({
       guildId,
@@ -137,8 +138,8 @@ router.get('/guilds/:guildId/stats', requireGuildAccess, (req, res) => {
       orders:      { total: totalOrders, active: activeOrders, completed: doneOrders, cancelled: cancelOrders },
       proofs:      totalProofs,
       clients:     totalClients,
-      connections: { total: allConns.length, active: activeConns },
-      templates:   templates.length,
+      connections: { total: totalConns, active: activeConns },
+      templates:   templates,
       automations: totalAutomations,
       products:    totalProducts,
       panels:      totalPanels,

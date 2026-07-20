@@ -243,16 +243,23 @@ export function getAuditStats(guildId) {
       bySource[r.source] = r.c;
     }
 
-    const now   = Math.floor(Date.now() / 1000);
-    const last24h = db.prepare(
-      'SELECT COUNT(*) as c FROM audit_log WHERE guild_id = ? AND created_at >= ?'
-    ).get(guildId, now - 86400).c;
+    // Otimização: consolidado last24h e last7d em uma única query
+    const now = Math.floor(Date.now() / 1000);
+    const timeStats = db.prepare(`
+      SELECT
+        SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as last24h,
+        SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as last7d
+      FROM audit_log WHERE guild_id = ?
+    `).get(now - 86400, now - 604800, guildId);
 
-    const last7d = db.prepare(
-      'SELECT COUNT(*) as c FROM audit_log WHERE guild_id = ? AND created_at >= ?'
-    ).get(guildId, now - 604800).c;
-
-    return { total, byModule, byResult, bySource, last24h, last7d };
+    return {
+      total,
+      byModule,
+      byResult,
+      bySource,
+      last24h: timeStats?.last24h ?? 0,
+      last7d:  timeStats?.last7d  ?? 0,
+    };
   } catch {
     return { total: 0, byModule: {}, byResult: {}, bySource: {}, last24h: 0, last7d: 0 };
   }

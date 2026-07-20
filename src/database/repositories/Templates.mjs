@@ -69,6 +69,18 @@ export function listTemplates(guildId) {
   return rows.map(deserialize);
 }
 
+/**
+ * Conta modelos do servidor.
+ * Otimizado para dashboard — evita carregar todos os registros só para contar.
+ *
+ * @param {string} guildId
+ * @returns {number}
+ */
+export function countTemplates(guildId) {
+  const db = getDb();
+  return db.prepare('SELECT COUNT(*) as total FROM templates WHERE guild_id = ?').get(guildId)?.total ?? 0;
+}
+
 // ── Atualização ───────────────────────────────────────────────────────────────
 
 /**

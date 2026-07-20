@@ -194,6 +194,31 @@ export function clearConnectionError(guildId, id) {
   `).run(id, guildId);
 }
 
+/**
+ * Conta conexões do servidor.
+ * Otimizado para dashboard — evita carregar todos os registros só para contar.
+ *
+ * @param {string} guildId
+ * @param {{ enabled?: boolean, action?: string }} opts
+ * @returns {number}
+ */
+export function countConnections(guildId, { enabled, action } = {}) {
+  const db   = getDb();
+  let sql    = 'SELECT COUNT(*) as total FROM connections WHERE guild_id = ?';
+  const args = [guildId];
+
+  if (enabled !== undefined) {
+    sql += ' AND enabled = ?';
+    args.push(enabled ? 1 : 0);
+  }
+  if (action) {
+    sql += ' AND action = ?';
+    args.push(action);
+  }
+
+  return db.prepare(sql).get(...args)?.total ?? 0;
+}
+
 // ── Utilitário interno ────────────────────────────────────────────────────────
 
 /**
