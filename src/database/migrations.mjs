@@ -303,6 +303,54 @@ const MIGRATIONS = [
       logger.info('[Migrations] 007: correção do índice idx_connections_guild_action aplicada.');
     },
   },
+  {
+    name: '008_optimal_indexes',
+    up(db) {
+      // ══════════════════════════════════════════════════════════════════════════════
+      // Análise de Otimização — Etapa 20A.1 FASE 2
+      // ══════════════════════════════════════════════════════════════════════════════
+      //
+      // ÍNDICES IDENTIFICADOS COMO NECESSÁRIOS:
+      //
+      // 1. idx_audit_log_guild_result
+      //    Query: SELECT result, COUNT(*) as c FROM audit_log WHERE guild_id = ? GROUP BY result
+      //    Problema: GROUP BY result sem índice específico para result
+      //    Solução: Índice composto (guild_id, result) cobre WHERE + GROUP BY
+      //
+      // 2. idx_connections_guild_action_enabled
+      //    Query: WHERE guild_id = ? AND action = ? AND enabled = 1 ORDER BY created_at
+      //    Problema: Query frequente não coberta por índices existentes
+      //    Solução: Índice composto (guild_id, action, enabled, created_at) para a query mais comum
+      //
+      // NÃO CRIADOS (sem benefício comprovado):
+      // - automation_logs: volume tipicamente pequeno, LIMIT 50 mitiga
+      // - purchase_log: volume pequeno, LIMIT 20 mitiga
+      // - panel_buttons: poucos registros por painel (max 20)
+      //
+      // ══════════════════════════════════════════════════════════════════════════════
+
+      // ── audit_log: índice para GROUP BY result ──────────────────────────────────
+      // Beneficia: getAuditStats() — agrupa logs por resultado
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_audit_log_guild_result
+                   ON audit_log (guild_id, result)`);
+      } catch (err) {
+        logger.warn('[Migrations] 008: não foi possível criar idx_audit_log_guild_result — ' + err.message);
+      }
+
+      // ── connections: índice para query com enabled = 1 ────────────────────────
+      // Beneficia: listConnections(guildId, { action }) quando busca conexões ativas
+      // A query mais frequente é: WHERE guild_id = ? AND action = ? AND enabled = 1
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_connections_guild_action_enabled
+                   ON connections (guild_id, action, enabled, created_at)`);
+      } catch (err) {
+        logger.warn('[Migrations] 008: não foi possível criar idx_connections_guild_action_enabled — ' + err.message);
+      }
+
+      logger.info('[Migrations] 008: índices de performance otimizados aplicados.');
+    },
+  },
 ];
 
 // ── Runner ────────────────────────────────────────────────────────────────────
