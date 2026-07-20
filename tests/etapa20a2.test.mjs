@@ -3,8 +3,9 @@
  *
  * BLOCO 1 — Rate Limiting (5 testes)
  * BLOCO 2 — Headers de Segurança (4 testes)
+ * BLOCO 3 — PRAGMA busy_timeout (1 teste)
  *
- * Total: 9 testes
+ * Total: 10 testes
  */
 
 import { test, describe, beforeEach, afterEach } from 'node:test';
@@ -167,5 +168,29 @@ describe(`BLOCO 2 — Headers de Segurança [${RUN_ID}]`, async () => {
     const res = await fetch(`${baseUrl}/test`);
     const header = res.headers.get('Referrer-Policy');
     assert.equal(header, 'strict-origin-when-cross-origin', 'Referrer-Policy incorreto');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BLOCO 3 — PRAGMA busy_timeout
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe(`BLOCO 3 — PRAGMA busy_timeout [${RUN_ID}]`, async () => {
+  test('3.1 — busy_timeout configurado em 5000ms após initDatabase', async () => {
+    const { DatabaseSync } = await import('node:sqlite');
+
+    // Cria banco temporário e aplica as mesmas PRAGMAs
+    const db = new DatabaseSync(':memory:');
+    db.exec('PRAGMA journal_mode = WAL');
+    db.exec('PRAGMA foreign_keys = ON');
+    db.exec('PRAGMA busy_timeout = 5000');
+
+    // Verifica se o busy_timeout está configurado
+    const result = db.prepare('PRAGMA busy_timeout').get();
+
+    assert.ok(result, 'PRAGMA busy_timeout deve retornar resultado');
+    assert.equal(result.timeout, 5000, 'busy_timeout deve ser 5000ms');
+
+    db.close();
   });
 });

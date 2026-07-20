@@ -29,6 +29,7 @@ export function initDatabase() {
     // Melhora performance e ativa integridade referencial
     db.exec('PRAGMA journal_mode = WAL');
     db.exec('PRAGMA foreign_keys = ON');
+    db.exec('PRAGMA busy_timeout = 5000'); // espera até 5s ao invés de falhar imediatamente
 
     // 1. Cria tabelas base (idempotente: CREATE TABLE IF NOT EXISTS)
     runSchema(db);
