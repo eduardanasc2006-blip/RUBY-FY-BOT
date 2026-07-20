@@ -28,6 +28,7 @@ import apiRouter            from './routes/api.mjs';
 import pagesRouter, { PUBLIC_DIR } from './pages/pagesRouter.mjs';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.mjs';
 import { pruneExpiredSessions }          from '../database/repositories/Sessions.mjs';
+import { rateLimitMiddleware }          from './middleware/rateLimit.mjs';
 import { logger }           from '../utils/logger.mjs';
 
 // ── App principal ─────────────────────────────────────────────────────────────
@@ -55,6 +56,18 @@ export function createApp() {
 
   // Segurança básica: remove header X-Powered-By
   app.disable('x-powered-by');
+
+  // ── Headers de segurança (Etapa 20A.2) ────────────────────────────────────
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
+
+  // ── Rate limiting (Etapa 20A.2) ───────────────────────────────────────────
+  app.use(rateLimitMiddleware);
 
   // ── Assets estáticos (css, js, imagens) ──────────────────────────────────
   app.use(express.static(PUBLIC_DIR, {
