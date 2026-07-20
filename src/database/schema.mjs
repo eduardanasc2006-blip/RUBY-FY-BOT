@@ -159,6 +159,35 @@ export function runSchema(db) {
       executed_at   INTEGER NOT NULL DEFAULT (unixepoch())
     );
 
+    -- Catálogo de produtos por servidor (Etapa 17B)
+    -- status: 'active' | 'inactive' | 'out_of_stock'
+    CREATE TABLE IF NOT EXISTS products (
+      id          TEXT    NOT NULL,
+      guild_id    TEXT    NOT NULL,
+      name        TEXT    NOT NULL,
+      price       TEXT,
+      stock       INTEGER NOT NULL DEFAULT 0,
+      description TEXT,
+      image_url   TEXT,
+      status      TEXT    NOT NULL DEFAULT 'active',
+      created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+      PRIMARY KEY (id, guild_id),
+      FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
+    );
+
+    -- Log de compras (!comprar) por servidor (Etapa 17B)
+    CREATE TABLE IF NOT EXISTS purchase_log (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id     TEXT    NOT NULL,
+      product_id   TEXT    NOT NULL,
+      buyer_id     TEXT    NOT NULL,
+      quantity     INTEGER NOT NULL DEFAULT 1,
+      unit_price   TEXT,
+      order_id     TEXT,
+      purchased_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+
     -- Painéis personalizados criados pelos admins (Etapa 17A)
     -- status: 'draft' | 'published'
     -- channel_id / message_id preenchidos após publicação
