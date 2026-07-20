@@ -185,6 +185,31 @@ const MIGRATIONS = [
       logger.info('[Migrations] 004: tabela audit_log e índices criados.');
     },
   },
+  {
+    name: '005_web_sessions',
+    up(db) {
+      // Etapa 19A: sessões web para autenticação via Discord OAuth2.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS web_sessions (
+          token      TEXT    NOT NULL PRIMARY KEY,
+          user_id    TEXT    NOT NULL,
+          data       TEXT    NOT NULL DEFAULT '{}',
+          expires_at INTEGER NOT NULL,
+          created_at INTEGER NOT NULL DEFAULT (unixepoch())
+        )
+      `);
+
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_web_sessions_user ON web_sessions (user_id)`);
+      } catch { /* idempotente */ }
+
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_web_sessions_expires ON web_sessions (expires_at)`);
+      } catch { /* idempotente */ }
+
+      logger.info('[Migrations] 005: tabela web_sessions criada.');
+    },
+  },
 ];
 
 // ── Runner ────────────────────────────────────────────────────────────────────

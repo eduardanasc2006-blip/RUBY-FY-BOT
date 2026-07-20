@@ -188,6 +188,21 @@ export function runSchema(db) {
       purchased_at INTEGER NOT NULL DEFAULT (unixepoch())
     );
 
+    -- Sessões web de usuários autenticados via Discord OAuth2 (Etapa 19A)
+    CREATE TABLE IF NOT EXISTS web_sessions (
+      token      TEXT    NOT NULL PRIMARY KEY,
+      user_id    TEXT    NOT NULL,
+      data       TEXT    NOT NULL DEFAULT '{}',
+      expires_at INTEGER NOT NULL,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_web_sessions_user
+      ON web_sessions (user_id);
+
+    CREATE INDEX IF NOT EXISTS idx_web_sessions_expires
+      ON web_sessions (expires_at);
+
     -- Tabela de auditoria centralizada (Etapa 18)
     -- Registra ações administrativas, eventos do Discord e ações do sistema.
     -- source: 'admin' | 'discord_event' | 'system'

@@ -17,6 +17,7 @@ import { registerAutomationsHandler } from './modules/automations/index.mjs';
 import { registerAuditHandler }       from './modules/audit/index.mjs';
 import { loadCommands } from './handlers/commandHandler.mjs';
 import { loadEvents } from './handlers/eventHandler.mjs';
+import { startWebServer } from './web/server.mjs';
 import { logger } from './utils/logger.mjs';
 
 // ── Validação do token ──────────────────────────────────────────────────────
@@ -69,3 +70,6 @@ await loadEvents(client);
 // ── Login ───────────────────────────────────────────────────────────────────
 logger.info('Conectando ao Discord...');
 client.login(process.env.DISCORD_TOKEN);
+
+// ── Servidor web (inicia após o login — falha silenciosa) ────────────────────
+startWebServer();
