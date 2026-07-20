@@ -87,19 +87,29 @@
       clients:     'Clientes',
       templates:   'Modelos',
       connections: 'Conexões',
+      // Etapa 19C (preenchidos pelo dashboard19c.js)
+      ...( window.Ruby19C?.titles ?? {} ),
     };
     if (topbarTitle) topbarTitle.textContent = sectionTitles[section] || 'Dashboard';
 
     pageBody.innerHTML = `<div class="loading-state"><div class="spinner"></div><span>Carregando...</span></div>`;
 
+    // Expõe guildId globalmente para dashboard19c.js poder usar
+    window._dashGuildId = guildId;
+
     try {
-      switch (section) {
-        case 'tickets':     await renderTickets(pageBody); break;
-        case 'orders':      await renderOrders(pageBody);  break;
-        case 'clients':     await renderClients(pageBody); break;
-        case 'templates':   await renderTemplates(pageBody); break;
-        case 'connections': await renderConnections(pageBody); break;
-        default:            await renderOverview(pageBody); break;
+      // Seções registradas pela Etapa 19C têm prioridade sobre o default
+      if (window.Ruby19C?.sections?.[section]) {
+        await window.Ruby19C.sections[section](pageBody, guildId);
+      } else {
+        switch (section) {
+          case 'tickets':     await renderTickets(pageBody); break;
+          case 'orders':      await renderOrders(pageBody);  break;
+          case 'clients':     await renderClients(pageBody); break;
+          case 'templates':   await renderTemplates(pageBody); break;
+          case 'connections': await renderConnections(pageBody); break;
+          default:            await renderOverview(pageBody); break;
+        }
       }
     } catch (err) {
       pageBody.innerHTML = `<div class="empty-state" role="alert">

@@ -1,17 +1,26 @@
 /**
- * Rotas da API REST — Etapa 19A.
+ * Rotas da API REST — Etapas 19A + 19C.
  *
  * Todas as rotas exigem autenticação e acesso validado ao guildId.
  * Os dados vêm diretamente dos repositories existentes (sem duplicar lógica).
  *
- * GET /api/guilds                      — servidores do usuário com bot presente
- * GET /api/guilds/:guildId             — dados básicos do servidor
- * GET /api/guilds/:guildId/stats       — estatísticas
- * GET /api/guilds/:guildId/templates   — modelos
- * GET /api/guilds/:guildId/connections — conexões
- * GET /api/guilds/:guildId/tickets     — tickets
- * GET /api/guilds/:guildId/orders      — pedidos
- * GET /api/guilds/:guildId/clients     — clientes
+ * GET /api/guilds                                    — servidores do usuário com bot presente
+ * GET /api/guilds/:guildId                           — dados básicos do servidor
+ * GET /api/guilds/:guildId/stats                     — estatísticas expandidas (19C)
+ * GET /api/guilds/:guildId/templates                 — listar modelos
+ * POST/GET/PATCH/DELETE /api/guilds/:guildId/templates/:id — CRUD modelos (19C)
+ * GET /api/guilds/:guildId/connections               — listar conexões
+ * POST/GET/PATCH/DELETE /api/guilds/:guildId/connections/:id — CRUD conexões (19C)
+ * GET /api/guilds/:guildId/tickets                   — listar tickets
+ * GET /api/guilds/:guildId/orders                    — listar pedidos
+ * GET/PATCH /api/guilds/:guildId/orders/:id          — detalhes + status (19C)
+ * GET /api/guilds/:guildId/clients                   — listar clientes
+ * GET/PATCH/DELETE /api/guilds/:guildId/clients/:id  — CRUD clientes (19C)
+ * GET/POST /api/guilds/:guildId/automations          — CRUD automações (19C)
+ * GET/POST /api/guilds/:guildId/panels               — CRUD painéis (19C)
+ * GET/POST /api/guilds/:guildId/products             — CRUD produtos (19C)
+ * GET /api/guilds/:guildId/proofs                    — listar provas (19C)
+ * GET/PATCH /api/guilds/:guildId/settings/tickets    — config tickets (19C)
  */
 
 import { Router } from 'express';
@@ -27,6 +36,11 @@ import { listClients, countClients } from '../../database/repositories/Clients.m
 import { listProofs, countProofs }   from '../../database/repositories/Proofs.mjs';
 import { getOrCreate }               from '../../database/repositories/GuildConfig.mjs';
 import { getAuditStats }             from '../../database/repositories/AuditLog.mjs';
+import { countAutomations }          from '../../database/repositories/Automations.mjs';
+import { countProducts }             from '../../database/repositories/Products.mjs';
+import { countPanels }               from '../../database/repositories/CustomPanels.mjs';
+
+import api19c from './api19c.mjs';
 
 const router = Router();
 
@@ -109,10 +123,13 @@ router.get('/guilds/:guildId/stats', requireGuildAccess, (req, res) => {
     const activeOrders   = totalOrders - doneOrders - cancelOrders;
     const totalProofs    = countProofs(guildId);
     const totalClients   = countClients(guildId);
-    const allConns       = listConnections(guildId);
-    const activeConns    = allConns.filter(c => c.enabled).length;
-    const templates      = listTemplates(guildId);
-    const auditStats     = getAuditStats(guildId);
+    const allConns         = listConnections(guildId);
+    const activeConns      = allConns.filter(c => c.enabled).length;
+    const templates        = listTemplates(guildId);
+    const auditStats       = getAuditStats(guildId);
+    const totalAutomations = countAutomations(guildId);
+    const totalProducts    = countProducts(guildId);
+    const totalPanels      = countPanels(guildId);
 
     res.json({
       guildId,
@@ -122,6 +139,9 @@ router.get('/guilds/:guildId/stats', requireGuildAccess, (req, res) => {
       clients:     totalClients,
       connections: { total: allConns.length, active: activeConns },
       templates:   templates.length,
+      automations: totalAutomations,
+      products:    totalProducts,
+      panels:      totalPanels,
       audit:       { total: auditStats.total, last24h: auditStats.last24h },
     });
   } catch (err) {
@@ -240,5 +260,8 @@ router.get('/guilds/:guildId/clients', requireGuildAccess, (req, res) => {
     res.status(500).json({ error: 'Erro ao carregar clientes.' });
   }
 });
+
+// ── Etapa 19C — rotas de gerenciamento avançado ───────────────────────────────
+router.use(api19c);
 
 export default router;

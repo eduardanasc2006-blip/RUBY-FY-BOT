@@ -55,6 +55,11 @@ export function requireAuth(req, res, next) {
  * @param {Function} next
  */
 export function requireGuildAccess(req, res, next) {
+  // Sem sessão → 401 (não autenticado)
+  if (!req.session) {
+    return res.status(401).json({ error: 'Não autenticado. Faça login com sua conta Discord.' });
+  }
+
   const { guildId } = req.params;
 
   if (!guildId) {

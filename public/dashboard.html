@@ -50,12 +50,31 @@
           <span class="icon" aria-hidden="true">👥</span> Clientes
         </a>
 
+        <div class="nav-section-title">Automação</div>
+        <a class="nav-item" data-section="automations" href="#" role="menuitem">
+          <span class="icon" aria-hidden="true">⚙️</span> Automações
+        </a>
+        <a class="nav-item" data-section="panels" href="#" role="menuitem">
+          <span class="icon" aria-hidden="true">🎛️</span> Painéis
+        </a>
+
+        <div class="nav-section-title">Loja</div>
+        <a class="nav-item" data-section="products" href="#" role="menuitem">
+          <span class="icon" aria-hidden="true">🛒</span> Produtos
+        </a>
+        <a class="nav-item" data-section="proofs" href="#" role="menuitem">
+          <span class="icon" aria-hidden="true">📸</span> Provas
+        </a>
+
         <div class="nav-section-title">Configuração</div>
         <a class="nav-item" data-section="templates" href="#" role="menuitem">
           <span class="icon" aria-hidden="true">📝</span> Modelos
         </a>
         <a class="nav-item" data-section="connections" href="#" role="menuitem">
           <span class="icon" aria-hidden="true">🔗</span> Conexões
+        </a>
+        <a class="nav-item" data-section="settings" href="#" role="menuitem">
+          <span class="icon" aria-hidden="true">⚙️</span> Configurações
         </a>
       </nav>
 
@@ -93,7 +112,19 @@
 
   <div id="toast-container" class="toast-container" aria-live="assertive" aria-atomic="true"></div>
 
+  <div id="ruby-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title" style="display:none">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-title"></h2>
+        <button class="modal-close" id="modalCloseBtn" aria-label="Fechar">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-footer" id="modal-footer"></div>
+    </div>
+  </div>
+
   <script src="/js/api.js"></script>
   <script src="/js/dashboard.js"></script>
+  <script src="/js/dashboard19c.js"></script>
 </body>
 </html>
