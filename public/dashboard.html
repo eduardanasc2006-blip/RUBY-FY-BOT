@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ruby FY — Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="dashboard-layout" id="app">
+
+    <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+    <aside class="sidebar" id="sidebar" aria-label="Menu lateral">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <span class="sidebar-logo-icon" aria-hidden="true">💜</span>
+          <span>Ruby FY</span>
+        </div>
+      </div>
+
+      <div class="sidebar-guild">
+        <a class="guild-selector" href="/servers" id="guildSelector" aria-label="Trocar de servidor">
+          <div class="guild-icon" id="sidebarGuildIcon" aria-hidden="true">
+            <span>?</span>
+          </div>
+          <div class="guild-info">
+            <div class="name" id="sidebarGuildName">Carregando...</div>
+            <div class="sub">Trocar servidor</div>
+          </div>
+          <span aria-hidden="true">⇄</span>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Navegação principal">
+        <div class="nav-section-title">Visão Geral</div>
+        <a class="nav-item" data-section="overview" href="#" role="menuitem">
+          <span class="icon" aria-hidden="true">📊</span> Dashboard
+        </a>
+
+        <div class="nav-section-title">Gestão</div>
+        <a class="nav-item" data-section="tickets" href="#" role="menuitem">
+          <span class="icon" aria-hidden="true">🎫</span> Tickets
+        </a>
+        <a class="nav-item" data-section="orders" href="#" role="menuitem">
+          <span class="icon" aria-hidden="true">📦</span> Pedidos
+        </a>
+        <a class="nav-item" data-section="clients" href="#" role="menuitem">
+          <span class="icon" aria-hidden="true">👥</span> Clientes
+        </a>
+
+        <div class="nav-section-title">Configuração</div>
+        <a class="nav-item" data-section="templates" href="#" role="menuitem">
+          <span class="icon" aria-hidden="true">📝</span> Modelos
+        </a>
+        <a class="nav-item" data-section="connections" href="#" role="menuitem">
+          <span class="icon" aria-hidden="true">🔗</span> Conexões
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-row">
+          <div class="avatar" id="sidebarAvatar" aria-hidden="true">
+            <img id="sidebarAvatarImg" src="" alt="Avatar" style="display:none" />
+          </div>
+          <div class="info">
+            <div class="name" id="sidebarUserName">—</div>
+            <div class="sub">
+              <button class="btn btn-secondary btn-sm" id="logoutBtn" type="button" style="padding:2px 10px;font-size:.7rem;" aria-label="Sair">Sair</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── Main ─────────────────────────────────────────────────────────────── -->
+    <div class="main-content">
+      <header class="topbar">
+        <div class="topbar-title" id="topbarTitle">Dashboard</div>
+        <div class="topbar-actions" id="topbarActions"></div>
+      </header>
+
+      <main class="page-body" id="pageBody" role="main" aria-live="polite">
+        <div class="loading-state">
+          <div class="spinner" aria-label="Carregando..."></div>
+          <span>Carregando...</span>
+        </div>
+      </main>
+    </div>
+
+  </div>
+
+  <div id="toast-container" class="toast-container" aria-live="assertive" aria-atomic="true"></div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

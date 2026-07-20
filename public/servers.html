@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ruby FY — Servidores</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="servers-page" id="app">
+    <header class="servers-header">
+      <div class="logo">
+        <span class="logo-icon" aria-hidden="true">💜</span>
+        <span>Ruby FY</span>
+      </div>
+      <div class="user-menu">
+        <div class="user-avatar" id="userAvatar" aria-label="Avatar do usuário">
+          <img id="userAvatarImg" src="" alt="Avatar" style="display:none" />
+        </div>
+        <span class="user-name" id="userName">Carregando...</span>
+        <button class="btn btn-secondary btn-sm" id="logoutBtn" type="button" aria-label="Sair">Sair</button>
+      </div>
+    </header>
+
+    <main class="servers-body">
+      <h1>Selecione um servidor</h1>
+      <p class="subtitle">Escolha um servidor para gerenciar. Apenas servidores onde você tem permissão de Gerenciar Servidor são exibidos.</p>
+
+      <div id="serversGrid" class="servers-grid" role="list" aria-label="Lista de servidores">
+        <!-- Skeletons enquanto carrega -->
+        <div class="skeleton skeleton-card" aria-hidden="true"></div>
+        <div class="skeleton skeleton-card" aria-hidden="true"></div>
+        <div class="skeleton skeleton-card" aria-hidden="true"></div>
+        <div class="skeleton skeleton-card" aria-hidden="true"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/servers.js"></script>
+</body>
+</html>

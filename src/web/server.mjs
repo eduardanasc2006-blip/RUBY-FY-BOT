@@ -21,12 +21,14 @@
  */
 
 import express               from 'express';
-import { webConfig }         from '../config/web.mjs';
-import authRouter            from './routes/auth.mjs';
-import apiRouter             from './routes/api.mjs';
+import path                 from 'node:path';
+import { webConfig }        from '../config/web.mjs';
+import authRouter           from './routes/auth.mjs';
+import apiRouter            from './routes/api.mjs';
+import pagesRouter, { PUBLIC_DIR } from './pages/pagesRouter.mjs';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.mjs';
 import { pruneExpiredSessions }          from '../database/repositories/Sessions.mjs';
-import { logger }            from '../utils/logger.mjs';
+import { logger }           from '../utils/logger.mjs';
 
 // ── App principal ─────────────────────────────────────────────────────────────
 
@@ -54,6 +56,14 @@ export function createApp() {
   // Segurança básica: remove header X-Powered-By
   app.disable('x-powered-by');
 
+  // ── Assets estáticos (css, js, imagens) ──────────────────────────────────
+  app.use(express.static(PUBLIC_DIR, {
+    index:    false,            // não serve index.html automaticamente
+    maxAge:   '1h',
+    etag:     true,
+    dotfiles: 'ignore',
+  }));
+
   // ── Health check (sem autenticação) ──────────────────────────────────────
   app.get('/healthz', (_req, res) => {
     res.json({ ok: true, service: 'ruby-fy-web', timestamp: Date.now() });
@@ -64,6 +74,9 @@ export function createApp() {
 
   // ── Rotas da API ──────────────────────────────────────────────────────────
   app.use('/api', apiRouter);
+
+  // ── Páginas do Dashboard (Etapa 19B) ─────────────────────────────────────
+  app.use('/', pagesRouter);
 
   // ── 404 e tratamento de erros ─────────────────────────────────────────────
   app.use(notFoundHandler);
