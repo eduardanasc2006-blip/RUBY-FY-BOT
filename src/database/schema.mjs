@@ -255,6 +255,23 @@ export function runSchema(db) {
       FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
     );
 
+    -- Variáveis personalizadas por servidor (Fase 1)
+    -- Cada servidor pode criar variáveis como {pix}, {loja}, {horario}.
+    -- UNIQUE (guild_id, name): mesmo servidor não pode ter nomes duplicados.
+    -- Servidores diferentes podem ter variáveis com o mesmo nome.
+    CREATE TABLE IF NOT EXISTS server_variables (
+      id          TEXT    NOT NULL PRIMARY KEY,
+      guild_id    TEXT    NOT NULL,
+      name        TEXT    NOT NULL,
+      value       TEXT    NOT NULL,
+      created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+      FOREIGN KEY (guild_id)
+        REFERENCES guild_configs (guild_id)
+        ON DELETE CASCADE,
+      UNIQUE (guild_id, name)
+    );
+
     -- Botões de painéis personalizados (Etapa 17A)
     -- action_type: 'message' | 'open_ticket' | 'give_role' | 'take_role' | 'toggle_role' | 'execute_connection'
     -- action_data: JSON com parâmetros da ação (ex: {"content":"..."} ou {"role_id":"..."})

@@ -351,6 +351,42 @@ const MIGRATIONS = [
       logger.info('[Migrations] 008: índices de performance otimizados aplicados.');
     },
   },
+  {
+    name: '009_server_variables',
+    up(db) {
+      // Fase 1: variáveis personalizadas por servidor.
+      // Permite que admins criem placeholders como {pix}, {loja}, {horario}
+      // que são resolvidos em mensagens, embeds e modelos.
+      // A tabela já é criada pelo runSchema com CREATE TABLE IF NOT EXISTS;
+      // esta migração garante que exista em bancos anteriores ao schema novo.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS server_variables (
+          id          TEXT    NOT NULL PRIMARY KEY,
+          guild_id    TEXT    NOT NULL,
+          name        TEXT    NOT NULL,
+          value       TEXT    NOT NULL,
+          created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+          updated_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+          FOREIGN KEY (guild_id)
+            REFERENCES guild_configs (guild_id)
+            ON DELETE CASCADE,
+          UNIQUE (guild_id, name)
+        )
+      `);
+
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_server_variables_guild
+                   ON server_variables (guild_id)`);
+      } catch { /* idempotente */ }
+
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_server_variables_guild_name
+                   ON server_variables (guild_id, name)`);
+      } catch { /* idempotente */ }
+
+      logger.info('[Migrations] 009: tabela server_variables e índices criados.');
+    },
+  },
 ];
 
 // ── Runner ────────────────────────────────────────────────────────────────────

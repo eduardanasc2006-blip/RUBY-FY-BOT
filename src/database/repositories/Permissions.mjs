@@ -32,6 +32,7 @@ export const SUPPORTED_MODULES = [
   'proofs',
   'painel',
   'stats',
+  'variaveis',
 ];
 
 // ── Leitura ───────────────────────────────────────────────────────────────────

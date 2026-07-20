@@ -24,6 +24,7 @@
  *   painel:automacoes     ← adicionado na Etapa 19D
  *   painel:paineis        ← adicionado na Etapa 19D
  *   painel:produtos       ← adicionado na Etapa 19D
+ *   painel:variaveis      ← adicionado na Fase 1
  *   painel:stats
  *   painel:cancel
  */
@@ -47,6 +48,7 @@ import { openProofsList }       from '../proofs/index.mjs';
 import { openAutomationsPanel } from '../automations/actions.mjs';
 import { openCustomPanelsManager } from '../custompanels/index.mjs';
 import { openProductsManager }  from '../products/index.mjs';
+import { openVariablesPanel }   from '../variables/index.mjs';
 
 // ── Handler principal ─────────────────────────────────────────────────────────
 
@@ -62,6 +64,7 @@ export async function handlePainelComponent(interaction, action) {
     case 'automacoes': return handleModule(interaction, 'automacoes',  openAutomationsPanel);
     case 'paineis':    return handleModule(interaction, 'paineis',     openCustomPanelsManager);
     case 'produtos':   return handleModule(interaction, 'produtos',    openProductsManager);
+    case 'variaveis':  return handleModule(interaction, 'variaveis',   openVariablesPanel);
     case 'stats':      return handleStats(interaction);
     case 'cancel':     return handleCancel(interaction);
     default:
@@ -209,6 +212,7 @@ function buildPainelPayload() {
       '**⚡ Automações** — gatilhos e ações automáticas\n' +
       '**🖼️ Painéis** — painéis personalizados com botões\n' +
       '**🏪 Produtos** — catálogo e estoque\n' +
+      '**🔧 Variáveis** — variáveis personalizadas ({pix}, {loja}...)\n' +
       '**📊 Stats** — estatísticas do servidor',
     );
 
@@ -270,8 +274,13 @@ function buildPainelPayload() {
       .setStyle(ButtonStyle.Secondary),
   );
 
-  // Linha 3 — Stats e Fechar
+  // Linha 3 — Variáveis, Stats e Fechar
   const row3 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('painel:variaveis')
+      .setLabel('Variáveis')
+      .setEmoji('🔧')
+      .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('painel:stats')
       .setLabel('Stats')

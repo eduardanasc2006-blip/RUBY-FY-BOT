@@ -34,6 +34,7 @@
  */
 
 import { logger } from '../../utils/logger.mjs';
+import { register } from '../../handlers/componentHandler.mjs';
 
 // ── Timezone padrão ───────────────────────────────────────────────────────────
 
@@ -91,15 +92,26 @@ export function resolveVariables(text, context = {}) {
   if (!text || typeof text !== 'string') return text;
 
   return text.replace(VARIABLE_PATTERN, (match, name) => {
-    if (!variables.has(name)) return match; // desconhecida → mantém original
-
-    try {
-      const result = variables.get(name)(context);
-      return result != null ? String(result) : match;
-    } catch (err) {
-      logger.warn(`[Variables] Erro ao resolver '{${name}}':`, err?.message);
-      return match; // falha no resolver → mantém original
+    // 1. Variáveis registradas no sistema (prioridade)
+    if (variables.has(name)) {
+      try {
+        const result = variables.get(name)(context);
+        return result != null ? String(result) : match;
+      } catch (err) {
+        logger.warn(`[Variables] Erro ao resolver '{${name}}':`, err?.message);
+        return match;
+      }
     }
+
+    // 2. Variáveis personalizadas do servidor (context.serverVariables)
+    // O chamador deve carregar as variáveis do servidor e passá-las no contexto:
+    //   context.serverVariables = await loadServerVariablesMap(guildId)
+    if (context.serverVariables && name in context.serverVariables) {
+      return String(context.serverVariables[name]);
+    }
+
+    // 3. Desconhecida → mantém original
+    return match;
   });
 }
 
@@ -327,3 +339,40 @@ registerVariable('channel', ctx => {
   if (typeof ctx.channel === 'string') return `<#${ctx.channel}>`;
   return null;
 });
+
+// ── Handler de gerenciamento de variáveis de servidor ──────────────────────────
+
+/**
+ * Registra o namespace 'variaveis' no componentHandler.
+ * Deve ser chamado UMA ÚNICA VEZ em src/index.mjs.
+ */
+export function registerVariablesHandler() {
+  // Import dinâmico para evitar dependência circular no boot
+  import('./actions.mjs').then(({ handleVariablesComponent }) => {
+    register('variaveis', handleVariablesComponent);
+    logger.info('[Variables] Handler registrado no namespace "variaveis".');
+  }).catch(err => {
+    logger.error('[Variables] Falha ao registrar handler:', err);
+  });
+}
+
+/**
+ * Abre o painel de gerenciamento de variáveis.
+ * Chamado pelo comando /variaveis e pelo Painel Central.
+ *
+ * @param {import('discord.js').ChatInputCommandInteraction} interaction
+ */
+export async function openVariablesPanel(interaction) {
+  const { MessageFlags } = await import('discord.js');
+  const { listServerVariables } = await import('../../database/repositories/ServerVariables.mjs');
+  const { buildListPayload } = await import('./flow.mjs');
+
+  const variables = listServerVariables(interaction.guildId);
+  const payload   = buildListPayload(variables);
+
+  if (interaction.replied || interaction.deferred) {
+    await interaction.followUp({ ...payload, flags: MessageFlags.Ephemeral });
+  } else {
+    await interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
+  }
+}
