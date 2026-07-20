@@ -186,19 +186,23 @@ router.get('/guilds/:guildId/tickets', requireGuildAccess, (req, res) => {
 
   try {
     const filters  = status ? { status } : {};
-    const tickets  = listTickets(guildId, filters);
     const pg       = Math.max(1, parseInt(String(page), 10));
     const lim      = Math.min(100, Math.max(1, parseInt(String(limit), 10)));
-    const start    = (pg - 1) * lim;
-    const paginated = tickets.slice(start, start + lim);
+    const offset   = (pg - 1) * lim;
+
+    // Busca apenas os registros necessários para a página
+    const tickets  = listTickets(guildId, { ...filters, limit: lim, offset });
+    // Busca total para calcular páginas (poderia ser otimizado com cache)
+    const allTickets = listTickets(guildId, filters);
+    const total    = allTickets.length;
 
     res.json({
       guildId,
-      tickets:    paginated,
-      total:      tickets.length,
+      tickets:    tickets,
+      total:      total,
       page:       pg,
       limit:      lim,
-      totalPages: Math.max(1, Math.ceil(tickets.length / lim)),
+      totalPages: Math.max(1, Math.ceil(total / lim)),
     });
   } catch (err) {
     logger.error(`[API] Erro em GET /guilds/${guildId}/tickets:`, err);
@@ -214,19 +218,23 @@ router.get('/guilds/:guildId/orders', requireGuildAccess, (req, res) => {
 
   try {
     const filters  = status ? { status } : {};
-    const orders   = listOrders(guildId, filters);
     const pg       = Math.max(1, parseInt(String(page), 10));
     const lim      = Math.min(100, Math.max(1, parseInt(String(limit), 10)));
-    const start    = (pg - 1) * lim;
-    const paginated = orders.slice(start, start + lim);
+    const offset   = (pg - 1) * lim;
+
+    // Busca apenas os registros necessários para a página
+    const orders   = listOrders(guildId, { ...filters, limit: lim, offset });
+    // Busca total para calcular páginas
+    const allOrders = listOrders(guildId, filters);
+    const total    = allOrders.length;
 
     res.json({
       guildId,
-      orders:     paginated,
-      total:      orders.length,
+      orders:     orders,
+      total:      total,
       page:       pg,
       limit:      lim,
-      totalPages: Math.max(1, Math.ceil(orders.length / lim)),
+      totalPages: Math.max(1, Math.ceil(total / lim)),
     });
   } catch (err) {
     logger.error(`[API] Erro em GET /guilds/${guildId}/orders:`, err);
@@ -241,19 +249,23 @@ router.get('/guilds/:guildId/clients', requireGuildAccess, (req, res) => {
   const { page = '1', limit = '20' } = req.query;
 
   try {
-    const clients  = listClients(guildId);
     const pg       = Math.max(1, parseInt(String(page), 10));
     const lim      = Math.min(100, Math.max(1, parseInt(String(limit), 10)));
-    const start    = (pg - 1) * lim;
-    const paginated = clients.slice(start, start + lim);
+    const offset   = (pg - 1) * lim;
+
+    // Busca apenas os registros necessários para a página
+    const clients  = listClients(guildId, { limit: lim, offset });
+    // Busca total para calcular páginas
+    const allClients = listClients(guildId);
+    const total    = allClients.length;
 
     res.json({
       guildId,
-      clients:    paginated,
-      total:      clients.length,
+      clients:    clients,
+      total:      total,
       page:       pg,
       limit:      lim,
-      totalPages: Math.max(1, Math.ceil(clients.length / lim)),
+      totalPages: Math.max(1, Math.ceil(total / lim)),
     });
   } catch (err) {
     logger.error(`[API] Erro em GET /guilds/${guildId}/clients:`, err);

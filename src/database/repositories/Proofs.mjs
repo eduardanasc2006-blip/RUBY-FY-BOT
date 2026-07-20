@@ -79,24 +79,25 @@ export function getProof(guildId, id) {
 
 /**
  * Lista provas do servidor, da mais recente para a mais antiga.
+ * Suporta paginação com LIMIT e OFFSET.
  *
  * @param {string} guildId
- * @param {{ limit?: number, vendorId?: string }} opts
+ * @param {{ limit?: number, offset?: number, vendorId?: string }} opts
  * @returns {object[]}
  */
-export function listProofs(guildId, { limit = 20, vendorId } = {}) {
+export function listProofs(guildId, { limit = 1000, offset = 0, vendorId } = {}) {
   const db = getDb();
 
   if (vendorId) {
     return db
-      .prepare('SELECT * FROM proofs WHERE guild_id = ? AND vendor_id = ? ORDER BY created_at DESC LIMIT ?')
-      .all(guildId, vendorId, limit)
+      .prepare('SELECT * FROM proofs WHERE guild_id = ? AND vendor_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?')
+      .all(guildId, vendorId, limit, offset)
       .map(normalize);
   }
 
   return db
-    .prepare('SELECT * FROM proofs WHERE guild_id = ? ORDER BY created_at DESC, rowid DESC LIMIT ?')
-    .all(guildId, limit)
+    .prepare('SELECT * FROM proofs WHERE guild_id = ? ORDER BY created_at DESC, rowid DESC LIMIT ? OFFSET ?')
+    .all(guildId, limit, offset)
     .map(normalize);
 }
 

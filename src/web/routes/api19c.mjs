@@ -282,9 +282,15 @@ router.get('/guilds/:guildId/automations', requireGuildAccess, (req, res) => {
   const { guildId } = req.params;
   const { trigger, page = '1', limit = '20' } = req.query;
   try {
-    const all = listAutomations(guildId, trigger ? { trigger } : {});
-    const p   = paginate(all, page, limit);
-    res.json({ guildId, automations: p.data, total: p.total, page: p.page, limit: p.limit, totalPages: p.totalPages });
+    const pg     = Math.max(1, parseInt(String(page), 10));
+    const lim    = Math.min(100, Math.max(1, parseInt(String(limit), 10)));
+    const offset = (pg - 1) * lim;
+    // Busca apenas os registros necessários para a página
+    const automations = listAutomations(guildId, { trigger: trigger || undefined, limit: lim, offset });
+    // Busca total para calcular páginas
+    const allAutomations = listAutomations(guildId, { trigger: trigger || undefined });
+    const total = allAutomations.length;
+    res.json({ guildId, automations, total, page: pg, limit: lim, totalPages: Math.max(1, Math.ceil(total / lim)) });
   } catch (e) {
     logger.error(`[API19C] GET /guilds/${guildId}/automations:`, e);
     err(res, 500, 'Erro ao carregar automações.');
@@ -780,12 +786,15 @@ router.get('/guilds/:guildId/proofs', requireGuildAccess, (req, res) => {
   const { guildId } = req.params;
   const { vendorId, page = '1', limit = '20' } = req.query;
   try {
-    const lim   = Math.min(100, Math.max(1, parseInt(String(limit), 10)));
-    const proofs = listProofs(guildId, { limit: lim, vendorId: vendorId || undefined });
+    const pg   = Math.max(1, parseInt(String(page), 10));
+    const lim  = Math.min(100, Math.max(1, parseInt(String(limit), 10)));
+    const offset = (pg - 1) * lim;
+    // Busca apenas os registros necessários para a página
+    const proofs = listProofs(guildId, { limit: lim, offset, vendorId: vendorId || undefined });
     const total  = countProofs(guildId);
-    const p      = paginate(proofs, page, lim);
     res.json({
-      guildId, proofs: p.data, total, page: p.page, limit: p.limit, totalPages: p.totalPages,
+      guildId, proofs, total, page: pg, limit: lim,
+      totalPages: Math.max(1, Math.ceil(total / lim)),
     });
   } catch (e) {
     logger.error(`[API19C] GET /guilds/${guildId}/proofs:`, e);

@@ -144,23 +144,24 @@ export function getTicketByChannel(guildId, channelId) {
 
 /**
  * Lista tickets do servidor. Filtra opcionalmente por status.
+ * Suporta paginação com LIMIT e OFFSET.
  *
  * @param {string} guildId
- * @param {{ status?: 'open'|'closed' }} opts
+ * @param {{ status?: 'open'|'closed', limit?: number, offset?: number }} opts
  * @returns {object[]}
  */
-export function listTickets(guildId, { status } = {}) {
+export function listTickets(guildId, { status, limit = 1000, offset = 0 } = {}) {
   const db = getDb();
   if (status) {
     return db
-      .prepare('SELECT * FROM tickets WHERE guild_id = ? AND status = ? ORDER BY created_at DESC')
-      .all(guildId, status)
+      .prepare('SELECT * FROM tickets WHERE guild_id = ? AND status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?')
+      .all(guildId, status, limit, offset)
       .map(normalize);
   }
   return db
-    .prepare('SELECT * FROM tickets WHERE guild_id = ? ORDER BY created_at DESC')
-    .all(guildId)
-    .map(normalize);
+      .prepare('SELECT * FROM tickets WHERE guild_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?')
+      .all(guildId, limit, offset)
+      .map(normalize);
 }
 
 /**

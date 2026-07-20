@@ -92,12 +92,13 @@ export function getClientByDiscordId(guildId, discordId) {
 
 /**
  * Lista clientes do servidor, do mais recente para o mais antigo.
+ * Suporta paginação com LIMIT e OFFSET.
  *
  * @param {string} guildId
- * @param {{ limit?: number, search?: string }} opts
+ * @param {{ limit?: number, offset?: number, search?: string }} opts
  * @returns {object[]}
  */
-export function listClients(guildId, { limit = 25, search } = {}) {
+export function listClients(guildId, { limit = 1000, offset = 0, search } = {}) {
   const db = getDb();
 
   if (search) {
@@ -108,15 +109,15 @@ export function listClients(guildId, { limit = 25, search } = {}) {
          WHERE guild_id = ?
            AND (display_name LIKE ? OR email LIKE ? OR discord_id LIKE ?)
          ORDER BY created_at DESC, rowid DESC
-         LIMIT ?
+         LIMIT ? OFFSET ?
       `)
-      .all(guildId, q, q, q, limit)
+      .all(guildId, q, q, q, limit, offset)
       .map(normalize);
   }
 
   return db
-    .prepare('SELECT * FROM clients WHERE guild_id = ? ORDER BY created_at DESC, rowid DESC LIMIT ?')
-    .all(guildId, limit)
+    .prepare('SELECT * FROM clients WHERE guild_id = ? ORDER BY created_at DESC, rowid DESC LIMIT ? OFFSET ?')
+    .all(guildId, limit, offset)
     .map(normalize);
 }
 

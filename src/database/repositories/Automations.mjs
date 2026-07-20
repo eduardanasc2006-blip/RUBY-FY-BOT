@@ -52,17 +52,17 @@ export function getAutomation(guildId, id) {
   return parseAutomation(row);
 }
 
-export function listAutomations(guildId, { trigger } = {}) {
+export function listAutomations(guildId, { trigger, limit = 1000, offset = 0 } = {}) {
   const db = getDb();
   if (trigger) {
     const rows = db.prepare(
-      'SELECT * FROM automations WHERE guild_id = ? AND trigger_type = ? ORDER BY created_at ASC'
-    ).all(guildId, trigger);
+      'SELECT * FROM automations WHERE guild_id = ? AND trigger_type = ? ORDER BY created_at ASC LIMIT ? OFFSET ?'
+    ).all(guildId, trigger, limit, offset);
     return rows.map(parseAutomation);
   }
   const rows = db.prepare(
-    'SELECT * FROM automations WHERE guild_id = ? ORDER BY created_at ASC'
-  ).all(guildId);
+    'SELECT * FROM automations WHERE guild_id = ? ORDER BY created_at ASC LIMIT ? OFFSET ?'
+  ).all(guildId, limit, offset);
   return rows.map(parseAutomation);
 }
 
