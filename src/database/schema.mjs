@@ -188,6 +188,36 @@ export function runSchema(db) {
       purchased_at INTEGER NOT NULL DEFAULT (unixepoch())
     );
 
+    -- Tabela de auditoria centralizada (Etapa 18)
+    -- Registra ações administrativas, eventos do Discord e ações do sistema.
+    -- source: 'admin' | 'discord_event' | 'system'
+    -- result: 'success' | 'error' | 'skipped'
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id          TEXT    NOT NULL PRIMARY KEY,
+      guild_id    TEXT    NOT NULL,
+      actor_id    TEXT,
+      module      TEXT    NOT NULL,
+      action      TEXT    NOT NULL,
+      entity      TEXT,
+      entity_id   TEXT,
+      before_data TEXT,
+      after_data  TEXT,
+      result      TEXT    NOT NULL DEFAULT 'success',
+      details     TEXT,
+      source      TEXT    NOT NULL DEFAULT 'admin',
+      created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+      FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_audit_log_guild_created
+      ON audit_log (guild_id, created_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_audit_log_guild_module
+      ON audit_log (guild_id, module);
+
+    CREATE INDEX IF NOT EXISTS idx_audit_log_guild_actor
+      ON audit_log (guild_id, actor_id);
+
     -- Painéis personalizados criados pelos admins (Etapa 17A)
     -- status: 'draft' | 'published'
     -- channel_id / message_id preenchidos após publicação

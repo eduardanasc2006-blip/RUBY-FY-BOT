@@ -137,6 +137,54 @@ const MIGRATIONS = [
       logger.info('[Migrations] 003: tabelas automations e automation_logs criadas.');
     },
   },
+  {
+    name: '004_audit_log',
+    up(db) {
+      // Etapa 18: sistema centralizado de auditoria.
+      // A tabela é criada pelo runSchema com CREATE TABLE IF NOT EXISTS;
+      // esta migração garante que exista em bancos mais antigos e adiciona os índices.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS audit_log (
+          id          TEXT    NOT NULL PRIMARY KEY,
+          guild_id    TEXT    NOT NULL,
+          actor_id    TEXT,
+          module      TEXT    NOT NULL,
+          action      TEXT    NOT NULL,
+          entity      TEXT,
+          entity_id   TEXT,
+          before_data TEXT,
+          after_data  TEXT,
+          result      TEXT    NOT NULL DEFAULT 'success',
+          details     TEXT,
+          source      TEXT    NOT NULL DEFAULT 'admin',
+          created_at  INTEGER NOT NULL DEFAULT (unixepoch())
+        )
+      `);
+
+      try {
+        db.exec(`
+          CREATE INDEX IF NOT EXISTS idx_audit_log_guild_created
+            ON audit_log (guild_id, created_at DESC)
+        `);
+      } catch { /* índice já existe — idempotente */ }
+
+      try {
+        db.exec(`
+          CREATE INDEX IF NOT EXISTS idx_audit_log_guild_module
+            ON audit_log (guild_id, module)
+        `);
+      } catch { /* idempotente */ }
+
+      try {
+        db.exec(`
+          CREATE INDEX IF NOT EXISTS idx_audit_log_guild_actor
+            ON audit_log (guild_id, actor_id)
+        `);
+      } catch { /* idempotente */ }
+
+      logger.info('[Migrations] 004: tabela audit_log e índices criados.');
+    },
+  },
 ];
 
 // ── Runner ────────────────────────────────────────────────────────────────────
