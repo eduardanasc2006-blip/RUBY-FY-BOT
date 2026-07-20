@@ -126,5 +126,37 @@ export function runSchema(db) {
       PRIMARY KEY (id, guild_id),
       FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
     );
+
+    -- Automações visuais por servidor (Etapa 16)
+    -- trigger_type — nome do gatilho (ticket_opened, order_paid, etc.)
+    --               Coluna nomeada trigger_type para evitar conflito com palavra reservada SQL.
+    -- conditions   — JSON array de condições (avaliadas em AND)
+    -- actions      — JSON array de ações (executadas em sequência)
+    CREATE TABLE IF NOT EXISTS automations (
+      id           TEXT    NOT NULL,
+      guild_id     TEXT    NOT NULL,
+      name         TEXT    NOT NULL,
+      trigger_type TEXT    NOT NULL,
+      conditions   TEXT    NOT NULL DEFAULT '[]',
+      actions      TEXT    NOT NULL DEFAULT '[]',
+      enabled      INTEGER NOT NULL DEFAULT 1,
+      created_at   INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at   INTEGER NOT NULL DEFAULT (unixepoch()),
+      PRIMARY KEY (id, guild_id),
+      FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
+    );
+
+    -- Logs de execução de automações (Etapa 16)
+    -- result — 'success' | 'skipped' | 'error'
+    -- detail — motivo do skip/erro (ex: 'rate_limit', 'condition_failed')
+    CREATE TABLE IF NOT EXISTS automation_logs (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      automation_id TEXT    NOT NULL,
+      guild_id      TEXT    NOT NULL,
+      trigger_type  TEXT    NOT NULL,
+      result        TEXT    NOT NULL,
+      detail        TEXT,
+      executed_at   INTEGER NOT NULL DEFAULT (unixepoch())
+    );
   `);
 }

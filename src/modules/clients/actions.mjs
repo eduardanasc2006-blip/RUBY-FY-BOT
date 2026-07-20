@@ -17,6 +17,7 @@
  */
 
 import { MessageFlags } from 'discord.js';
+import { fireAutomationTrigger } from '../automations/index.mjs';
 import {
   createClient,
   getClient,
@@ -87,6 +88,16 @@ async function handleModalSubmit(interaction) {
     }
 
     logger.info(`[Clients] Cliente criado | guild: ${guildId} | id: ${client.id} | nome: ${client.displayName}`);
+
+    // Etapa 16: hook de automações — fire-and-forget
+    fireAutomationTrigger('client_registered', {
+      guildId,
+      userId:   interaction.user.id,
+      clientId: client.id,
+      name:     client.displayName,
+    }, interaction.client).catch(err => {
+      logger.warn('[Clients] Automation hook error:', err?.message);
+    });
 
     await interaction.editReply(buildSuccessPayload(client));
 

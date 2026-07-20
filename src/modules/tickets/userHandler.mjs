@@ -35,6 +35,7 @@ import {
   closeTicket,
   reopenTicket,
 } from '../../database/repositories/Tickets.mjs';
+import { fireAutomationTrigger } from '../automations/index.mjs';
 import {
   sanitizeChannelName,
   buildWelcomePayload,
@@ -123,6 +124,17 @@ async function handleOpen(interaction) {
     await sendTicketLog(guild, config, ticket, 'opened', user);
 
     logger.info(`[Tickets] Ticket aberto: ${ticket.id} | user: ${user.id} | canal: ${channel.id} | guild: ${guildId}`);
+
+    // Etapa 16: hook de automações — fire-and-forget (não bloqueia resposta)
+    fireAutomationTrigger('ticket_opened', {
+      guildId,
+      userId:    user.id,
+      member:    member ?? null,
+      channelId: channel.id,
+      ticketId:  ticket.id,
+    }, interaction.client).catch(err => {
+      logger.warn('[Tickets] Automation hook error:', err?.message);
+    });
 
     return interaction.editReply({
       content: `✅ Seu ticket foi criado: ${channel}\nUm membro da equipe irá atendê-lo em breve.`,

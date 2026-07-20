@@ -100,6 +100,43 @@ const MIGRATIONS = [
       logger.info('[Migrations] 002: suporte a reabertura adicionado à tabela tickets.');
     },
   },
+  {
+    name: '003_automations',
+    up(db) {
+      // Etapa 16: sistema de automações visuais.
+      // As tabelas são criadas pelo runSchema com CREATE TABLE IF NOT EXISTS;
+      // esta migração garante que existam em bancos que não passaram pelo schema novo.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS automations (
+          id           TEXT    NOT NULL,
+          guild_id     TEXT    NOT NULL,
+          name         TEXT    NOT NULL,
+          trigger_type TEXT    NOT NULL,
+          conditions   TEXT    NOT NULL DEFAULT '[]',
+          actions      TEXT    NOT NULL DEFAULT '[]',
+          enabled      INTEGER NOT NULL DEFAULT 1,
+          created_at   INTEGER NOT NULL DEFAULT (unixepoch()),
+          updated_at   INTEGER NOT NULL DEFAULT (unixepoch()),
+          PRIMARY KEY (id, guild_id),
+          FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
+        )
+      `);
+
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS automation_logs (
+          id            INTEGER PRIMARY KEY AUTOINCREMENT,
+          automation_id TEXT    NOT NULL,
+          guild_id      TEXT    NOT NULL,
+          trigger_type  TEXT    NOT NULL,
+          result        TEXT    NOT NULL,
+          detail        TEXT,
+          executed_at   INTEGER NOT NULL DEFAULT (unixepoch())
+        )
+      `);
+
+      logger.info('[Migrations] 003: tabelas automations e automation_logs criadas.');
+    },
+  },
 ];
 
 // ── Runner ────────────────────────────────────────────────────────────────────

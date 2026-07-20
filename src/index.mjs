@@ -11,6 +11,7 @@ import { registerProofsHandler }      from './modules/proofs/index.mjs';
 import { registerOrdersHandler }      from './modules/orders/index.mjs';
 import { registerClientsHandler }     from './modules/clients/index.mjs';
 import { registerPainelHandler }      from './modules/painel/index.mjs';
+import { registerAutomationsHandler } from './modules/automations/index.mjs';
 import { loadCommands } from './handlers/commandHandler.mjs';
 import { loadEvents } from './handlers/eventHandler.mjs';
 import { logger } from './utils/logger.mjs';
@@ -51,6 +52,7 @@ registerProofsHandler();
 registerOrdersHandler();
 registerClientsHandler();
 registerPainelHandler();
+registerAutomationsHandler();
 
 // ── Carregamento de handlers ────────────────────────────────────────────────
 logger.info('Iniciando carregamento de comandos e eventos...');

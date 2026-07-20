@@ -15,6 +15,7 @@
 import { MessageFlags } from 'discord.js';
 import { createProof, listProofs } from '../../database/repositories/Proofs.mjs';
 import { executeConnections } from '../connections/index.mjs';
+import { fireAutomationTrigger } from '../automations/index.mjs';
 import {
   parseModalData,
   resolveUserId,
@@ -111,6 +112,17 @@ async function handleModalSubmit(interaction) {
     };
     executeConnections('proof', context, interaction.client).catch(err => {
       logger.error('[Proofs] Erro ao executar conexões:', err?.message ?? err);
+    });
+
+    // Etapa 16: hook de automações — fire-and-forget
+    fireAutomationTrigger('proof_created', {
+      guildId,
+      userId:  interaction.user.id,
+      proofId: proof.id,
+      produto,
+      valor,
+    }, interaction.client).catch(err => {
+      logger.warn('[Proofs] Automation hook error:', err?.message);
     });
 
     logger.info(`[Proofs] Proof registrada | guild: ${guildId} | id: ${proof.id} | vendedor: ${proof.vendorId}`);

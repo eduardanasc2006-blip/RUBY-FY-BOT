@@ -28,6 +28,7 @@ import {
   cancelOrder,
 } from '../../database/repositories/Orders.mjs';
 import { executeConnections } from '../connections/index.mjs';
+import { fireAutomationTrigger } from '../automations/index.mjs';
 import {
   parseOrderModal,
   buildOrderEmbed,
@@ -186,6 +187,19 @@ async function handleStatusDo(interaction, orderId) {
 
   // Dispara conexão para o novo status
   _fireConnection(guildId, action, order, interaction);
+
+  // Etapa 16: hook de automações para pedido pago — fire-and-forget
+  if (newStatus === 'paid') {
+    fireAutomationTrigger('order_paid', {
+      guildId,
+      userId:      interaction.user.id,
+      orderId:     order.id,
+      orderStatus: 'paid',
+      produto:     order.produto,
+    }, interaction.client).catch(err => {
+      logger.warn('[Orders] Automation hook error:', err?.message);
+    });
+  }
 
   logger.info(`[Orders] Status alterado | guild: ${guildId} | id: ${order.id} | status: ${newStatus}`);
 
