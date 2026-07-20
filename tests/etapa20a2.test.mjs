@@ -4,8 +4,9 @@
  * BLOCO 1 — Rate Limiting (5 testes)
  * BLOCO 2 — Headers de Segurança (4 testes)
  * BLOCO 3 — PRAGMA busy_timeout (1 teste)
+ * BLOCO 4 — HTTP Timeout (1 teste)
  *
- * Total: 10 testes
+ * Total: 11 testes
  */
 
 import { test, describe, beforeEach, afterEach } from 'node:test';
@@ -192,5 +193,33 @@ describe(`BLOCO 3 — PRAGMA busy_timeout [${RUN_ID}]`, async () => {
     assert.equal(result.timeout, 5000, 'busy_timeout deve ser 5000ms');
 
     db.close();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BLOCO 4 — HTTP Timeout
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe(`BLOCO 4 — HTTP Timeout [${RUN_ID}]`, async () => {
+  test('4.1 — timeout de 30000ms configurado no código de startWebServer', async () => {
+    // Lê o código fonte de server.mjs e verifica se o timeout está configurado
+    const fs = await import('node:fs');
+    const serverCode = fs.readFileSync('./src/web/server.mjs', 'utf-8');
+
+    // Verifica se a linha de timeout existe
+    assert.ok(
+      serverCode.includes('httpServer.timeout = 30000'),
+      'server.mjs deve ter httpServer.timeout = 30000'
+    );
+
+    // Verifica que está dentro da função startWebServer
+    const startWebServerMatch = serverCode.match(/export async function startWebServer\(\)[\s\S]*?^}/m);
+    assert.ok(startWebServerMatch, 'startWebServer deve ser exportada');
+
+    const functionBody = startWebServerMatch[0];
+    assert.ok(
+      functionBody.includes('httpServer.timeout = 30000'),
+      'httpServer.timeout = 30000 deve estar dentro de startWebServer'
+    );
   });
 });

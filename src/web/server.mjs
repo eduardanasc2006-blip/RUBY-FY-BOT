@@ -122,6 +122,9 @@ export async function startWebServer() {
       server.once('error', reject);
     });
 
+    // Timeout de requisição: 30 segundos (Etapa 20A.2)
+    httpServer.timeout = 30000;
+
     logger.info(`[WebServer] Servidor web iniciado na porta ${webConfig.port}`);
     logger.info(`[WebServer] Login Discord: ${webConfig.baseUrl}/auth/login`);
 
