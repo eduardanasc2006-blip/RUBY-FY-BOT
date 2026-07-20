@@ -339,7 +339,7 @@ describe('BLOCO 6 — Sessions.mjs — expiração', async () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('BLOCO 7 — config/web.mjs — estrutura', async () => {
-  const { webConfig } = await import('../src/config/web.mjs');
+  const { webConfig, getSessionSecret } = await import('../src/config/web.mjs');
 
   test('7.1 — webConfig.port é número positivo', () => {
     assert.ok(typeof webConfig.port === 'number' && webConfig.port > 0);
@@ -351,16 +351,21 @@ describe('BLOCO 7 — config/web.mjs — estrutura', async () => {
     assert.ok(typeof webConfig.discord.callbackUrl   === 'string');
   });
 
-  test('7.3 — webConfig.session tem secret e ttl', () => {
-    assert.ok(typeof webConfig.session.secret === 'string');
-    assert.ok(typeof webConfig.session.ttl    === 'number' && webConfig.session.ttl > 0);
+  test('7.3 — getSessionSecret retorna string não-vazia', () => {
+    const secret = getSessionSecret();
+    assert.ok(typeof secret === 'string');
+    assert.ok(secret.length > 0);
   });
 
-  test('7.4 — webConfig.corsOrigins é array', () => {
+  test('7.4 — webConfig.session tem ttl (número positivo)', () => {
+    assert.ok(typeof webConfig.session.ttl === 'number' && webConfig.session.ttl > 0);
+  });
+
+  test('7.5 — webConfig.corsOrigins é array', () => {
     assert.ok(Array.isArray(webConfig.corsOrigins));
   });
 
-  test('7.5 — webConfig.isProduction é booleano', () => {
+  test('7.6 — webConfig.isProduction é booleano', () => {
     assert.equal(typeof webConfig.isProduction, 'boolean');
   });
 });

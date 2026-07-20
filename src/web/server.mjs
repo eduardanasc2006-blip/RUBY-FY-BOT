@@ -22,7 +22,7 @@
 
 import express               from 'express';
 import path                 from 'node:path';
-import { webConfig }        from '../config/web.mjs';
+import { webConfig, getSessionSecret } from '../config/web.mjs';
 import authRouter           from './routes/auth.mjs';
 import apiRouter            from './routes/api.mjs';
 import pagesRouter, { PUBLIC_DIR } from './pages/pagesRouter.mjs';
@@ -114,6 +114,9 @@ export async function startWebServer() {
       logger.warn('[WebServer] DISCORD_CLIENT_ID ou DISCORD_CLIENT_SECRET não configurados — servidor web não iniciado.');
       return false;
     }
+
+    // Valida SESSION_SECRET antes de iniciar (sem fallback inseguro)
+    getSessionSecret();
 
     const app = createApp();
 

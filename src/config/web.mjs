@@ -36,10 +36,8 @@ export const webConfig = {
   },
 
   // ── Sessões ────────────────────────────────────────────────────────────────
+  // Nota: session.secret é lazy — validado apenas quando acessado via getSessionSecret()
   session: {
-    /** Secret para assinar cookies de sessão (obrigatório em produção) */
-    secret: process.env.SESSION_SECRET ?? 'ruby-fy-dev-secret-change-in-production',
-
     /** TTL da sessão em segundos (padrão: 7 dias) */
     ttl: parseInt(process.env.SESSION_TTL_SECONDS ?? String(7 * 24 * 60 * 60), 10),
   },
@@ -48,3 +46,21 @@ export const webConfig = {
   /** Origens permitidas para CORS (separadas por vírgula no .env) */
   corsOrigins: (process.env.CORS_ORIGINS ?? baseUrl).split(',').map(s => s.trim()),
 };
+
+/**
+ * Retorna o SESSION_SECRET validado.
+ * Deve ser chamado pelo servidor web antes de iniciar.
+ *
+ * @returns {string} O secret configurado
+ * @throws {Error} Se SESSION_SECRET não estiver definido ou vazio
+ */
+export function getSessionSecret() {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || secret.trim() === '') {
+    throw new Error(
+      'SESSION_SECRET não configurado. Defina SESSION_SECRET no arquivo .env.\n' +
+      'Gere um valor seguro com: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"'
+    );
+  }
+  return secret;
+}
