@@ -158,5 +158,46 @@ export function runSchema(db) {
       detail        TEXT,
       executed_at   INTEGER NOT NULL DEFAULT (unixepoch())
     );
+
+    -- Painéis personalizados criados pelos admins (Etapa 17A)
+    -- status: 'draft' | 'published'
+    -- channel_id / message_id preenchidos após publicação
+    CREATE TABLE IF NOT EXISTS custom_panels (
+      id                TEXT    NOT NULL,
+      guild_id          TEXT    NOT NULL,
+      name              TEXT    NOT NULL,
+      embed_title       TEXT,
+      embed_description TEXT,
+      embed_color       TEXT    NOT NULL DEFAULT '#5865F2',
+      embed_image       TEXT,
+      embed_thumbnail   TEXT,
+      embed_footer      TEXT,
+      status            TEXT    NOT NULL DEFAULT 'draft',
+      channel_id        TEXT,
+      message_id        TEXT,
+      created_at        INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at        INTEGER NOT NULL DEFAULT (unixepoch()),
+      PRIMARY KEY (id, guild_id),
+      FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
+    );
+
+    -- Botões de painéis personalizados (Etapa 17A)
+    -- action_type: 'message' | 'open_ticket' | 'give_role' | 'take_role' | 'toggle_role' | 'execute_connection'
+    -- action_data: JSON com parâmetros da ação (ex: {"content":"..."} ou {"role_id":"..."})
+    -- position: 0-based, usado para ordenar botões em rows (cada row = 5 botões)
+    CREATE TABLE IF NOT EXISTS panel_buttons (
+      id          TEXT    NOT NULL,
+      panel_id    TEXT    NOT NULL,
+      guild_id    TEXT    NOT NULL,
+      label       TEXT    NOT NULL,
+      style       TEXT    NOT NULL DEFAULT 'Primary',
+      emoji       TEXT,
+      action_type TEXT    NOT NULL DEFAULT 'message',
+      action_data TEXT    NOT NULL DEFAULT '{}',
+      position    INTEGER NOT NULL DEFAULT 0,
+      created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+      PRIMARY KEY (id, panel_id, guild_id),
+      FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
+    );
   `);
 }
