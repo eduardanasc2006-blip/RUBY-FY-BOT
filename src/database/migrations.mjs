@@ -210,6 +210,74 @@ const MIGRATIONS = [
       logger.info('[Migrations] 005: tabela web_sessions criada.');
     },
   },
+  {
+    name: '006_performance_indexes',
+    up(db) {
+      // Etapa 19D: índices de performance nas tabelas de alta leitura.
+      // Prioriza colunas usadas em filtros, buscas e ordenação frequentes.
+      // Todos criados com IF NOT EXISTS — idempotentes e seguros.
+
+      // ── tickets ──────────────────────────────────────────────────────────
+      // Consultas mais frequentes: por guild+status, por guild+user, por data
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_tickets_guild_status
+                   ON tickets (guild_id, status)`);
+      } catch { /* idempotente */ }
+
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_tickets_guild_user
+                   ON tickets (guild_id, user_id)`);
+      } catch { /* idempotente */ }
+
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_tickets_guild_created
+                   ON tickets (guild_id, created_at DESC)`);
+      } catch { /* idempotente */ }
+
+      // ── orders ────────────────────────────────────────────────────────────
+      // Filtros frequentes: por guild+status, por guild+client
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_orders_guild_status
+                   ON orders (guild_id, status)`);
+      } catch { /* idempotente */ }
+
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_orders_guild_client
+                   ON orders (guild_id, client_id)`);
+      } catch { /* idempotente */ }
+
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_orders_guild_created
+                   ON orders (guild_id, created_at DESC)`);
+      } catch { /* idempotente */ }
+
+      // ── clients ───────────────────────────────────────────────────────────
+      // Consultas: por guild, por guild+discord_id (busca de cliente por ID Discord)
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_clients_guild
+                   ON clients (guild_id)`);
+      } catch { /* idempotente */ }
+
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_clients_guild_discord
+                   ON clients (guild_id, discord_id)`);
+      } catch { /* idempotente */ }
+
+      // ── connections ───────────────────────────────────────────────────────
+      // Filtros: por guild+enabled (apenas ativas), por guild+action_name
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_connections_guild_enabled
+                   ON connections (guild_id, enabled)`);
+      } catch { /* idempotente */ }
+
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_connections_guild_action
+                   ON connections (guild_id, action_name)`);
+      } catch { /* idempotente */ }
+
+      logger.info('[Migrations] 006: índices de performance criados em tickets, orders, clients, connections.');
+    },
+  },
 ];
 
 // ── Runner ────────────────────────────────────────────────────────────────────

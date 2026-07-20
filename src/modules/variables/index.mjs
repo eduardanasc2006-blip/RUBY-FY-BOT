@@ -12,16 +12,18 @@
  *
  * Contexto esperado (todos os campos são opcionais):
  *   {
- *     guild,      // Discord Guild
- *     guildId,    // string
- *     channel,    // Discord Channel
- *     member,     // Discord GuildMember (quem invocou)
- *     user,       // Discord User       (quem invocou)
- *     cliente,    // Discord User | GuildMember | string
- *     vendedor,   // Discord User | GuildMember | string
- *     produto,    // string
- *     valor,      // string | number
- *     ticket,     // string
+ *     guild,       // Discord Guild
+ *     guildId,     // string
+ *     channel,     // Discord Channel
+ *     member,      // Discord GuildMember (quem invocou)
+ *     user,        // Discord User       (quem invocou)
+ *     cliente,     // Discord User | GuildMember | string — o cliente
+ *     vendedor,    // Discord User | GuildMember | string — o vendedor
+ *     produto,     // string — nome do produto
+ *     valor,       // string | number — valor da venda
+ *     ticket,      // string — referência do ticket
+ *     orderId,     // string — ID do pedido
+ *     clientName,  // string — nome textual do cliente (para {client_name})
  *   }
  *
  * Segurança:
@@ -163,6 +165,24 @@ function toMention(value) {
 }
 
 /**
+ * Resolve o nome de exibição de um usuário/membro Discord.
+ * GuildMember → displayName; User → globalName ?? username; string → string.
+ * @param {*} value
+ * @returns {string|null}
+ */
+function toDisplayName(value) {
+  if (value == null) return null;
+  if (typeof value === 'string') return value;
+  // GuildMember tem displayName
+  if (value?.displayName) return value.displayName;
+  // User tem global_name e username
+  if (value?.globalName) return value.globalName;
+  if (value?.username)   return value.username;
+  if (value?.id)         return `<@${value.id}>`;
+  return String(value);
+}
+
+/**
  * Resolve o ID de um usuário/membro Discord.
  * @param {*} value
  * @returns {string|null}
@@ -176,7 +196,9 @@ function toUserId(value) {
 
 // ── Registro das variáveis padrão ─────────────────────────────────────────────
 
-// ── Pessoas ───────────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════
+// PESSOAS — variáveis em português (originais, preservadas)
+// ════════════════════════════════════════════════════════════════════════════
 
 /** {cliente} → menção do usuário cliente */
 registerVariable('cliente', ctx => toMention(ctx.cliente));
@@ -190,7 +212,9 @@ registerVariable('vendedor', ctx => toMention(ctx.vendedor));
 /** {vendedor_id} → ID do vendedor */
 registerVariable('vendedor_id', ctx => toUserId(ctx.vendedor));
 
-// ── Venda / Contexto ──────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════
+// VENDA / CONTEXTO — variáveis em português (originais, preservadas)
+// ════════════════════════════════════════════════════════════════════════════
 
 /** {produto} → nome do produto */
 registerVariable('produto', ctx => ctx.produto != null ? String(ctx.produto) : null);
@@ -201,7 +225,9 @@ registerVariable('valor', ctx => ctx.valor != null ? String(ctx.valor) : null);
 /** {ticket} → referência do ticket */
 registerVariable('ticket', ctx => ctx.ticket != null ? String(ctx.ticket) : null);
 
-// ── Discord ───────────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════
+// DISCORD — variáveis em português (originais, preservadas)
+// ════════════════════════════════════════════════════════════════════════════
 
 /** {canal} → menção do canal atual */
 registerVariable('canal', ctx => {
@@ -220,7 +246,9 @@ registerVariable('servidor', ctx => {
 /** {servidor_id} → ID do servidor */
 registerVariable('servidor_id', ctx => ctx.guildId ?? ctx.guild?.id ?? null);
 
-// ── Data e Hora ───────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════
+// DATA E HORA — variáveis em português (originais, preservadas)
+// ════════════════════════════════════════════════════════════════════════════
 
 /** {data} → data atual no fuso America/Sao_Paulo (DD/MM/YYYY) */
 registerVariable('data', () =>
@@ -231,3 +259,71 @@ registerVariable('data', () =>
 registerVariable('hora', () =>
   new Date().toLocaleTimeString('pt-BR', { timeZone: TZ }),
 );
+
+// ════════════════════════════════════════════════════════════════════════════
+// ETAPA 19D — NOVAS VARIÁVEIS
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── Pedidos ───────────────────────────────────────────────────────────────────
+
+/**
+ * {order_id} → ID único do pedido (ctx.orderId).
+ * Contexto: passado pelos módulos de Orders e Automações.
+ */
+registerVariable('order_id', ctx =>
+  ctx.orderId != null ? String(ctx.orderId) : null,
+);
+
+// ── Clientes ──────────────────────────────────────────────────────────────────
+
+/**
+ * {client_name} → nome textual do cliente (ctx.clientName).
+ * Contexto: passado pelo módulo de Clients ao registrar um novo cliente.
+ * Diferente de {cliente} (que é menção Discord): este é o nome cadastrado.
+ */
+registerVariable('client_name', ctx =>
+  ctx.clientName != null ? String(ctx.clientName) : null,
+);
+
+// ── Aliases em inglês ─────────────────────────────────────────────────────────
+
+/**
+ * {user} → menção do usuário que invocou a ação (ctx.user ou ctx.member).
+ * Fallback: ctx.vendedor → ctx.cliente.
+ * Compatível com templates que usam nomes de variáveis em inglês.
+ */
+registerVariable('user', ctx => {
+  // Prioridade: quem invocou (member/user) → vendedor → cliente
+  const target = ctx.user ?? ctx.member ?? ctx.vendedor ?? ctx.cliente;
+  return toMention(target);
+});
+
+/**
+ * {username} → nome de exibição do usuário que invocou (ctx.user ou ctx.member).
+ * Retorna displayName do GuildMember, globalName ou username do User.
+ * Fallback: vendedor → cliente.
+ */
+registerVariable('username', ctx => {
+  const target = ctx.user ?? ctx.member ?? ctx.vendedor ?? ctx.cliente;
+  return toDisplayName(target);
+});
+
+/**
+ * {guild} → alias de {servidor} (nome do servidor).
+ * Compatível com templates que usam nomes de variáveis em inglês.
+ */
+registerVariable('guild', ctx => {
+  if (ctx.guild?.name) return ctx.guild.name;
+  return ctx.guildId ? `(${ctx.guildId})` : null;
+});
+
+/**
+ * {channel} → alias de {canal} (menção do canal).
+ * Compatível com templates que usam nomes de variáveis em inglês.
+ */
+registerVariable('channel', ctx => {
+  if (!ctx.channel) return null;
+  if (ctx.channel?.id) return `<#${ctx.channel.id}>`;
+  if (typeof ctx.channel === 'string') return `<#${ctx.channel}>`;
+  return null;
+});

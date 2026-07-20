@@ -4,31 +4,32 @@
  * Cobertura:
  *   BLOCO 1 — registry.mjs (registerAction, getRegisteredActions, getAction)
  *   BLOCO 2 — schema.mjs   (tabela tickets criada corretamente)
- *   BLOCO 3 — Tickets.mjs  (getTicketConfig, setTicketConfig, createTicket,
- *                           getTicket, listTickets, closeTicket, countOpenTickets)
+ *   BLOCO 3 — Tickets.mjs  (módulo REAL — getTicketConfig, setTicketConfig,
+ *                           createTicket, getTicket, listTickets, closeTicket,
+ *                           countOpenTickets, reopenTicket, reopen_count)
  *   BLOCO 4 — Connections  (integração registry → executor — sem Discord client)
  *   BLOCO 5 — Importações e re-exports de index.mjs de conexões e tickets
+ *
+ * Etapa 19D: Bloco 3 corrigido para usar o módulo real Tickets.mjs.
+ *   Os testes agora exercitam o código de produção diretamente,
+ *   detectando bugs no repositório real.
  */
 
-import { test, describe, before, after, beforeEach } from 'node:test';
+import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
+import { randomUUID }   from 'node:crypto';
+
+// RUN_ID único para separar arquivos de banco entre execuções paralelas
+const RUN_ID = randomUUID().slice(0, 8);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SETUP — banco em memória isolado para cada bloco
+// SETUP — banco em memória para blocos 1 e 2
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Injeta um banco de dados em memória antes de importar os módulos que usam getDb()
+// _db é usado apenas pelo bloco 4 (mock de executeConnections em memória)
 let _db = null;
 
-// Mock de getDb() — sobrescreve o módulo de client
-const dbClientMock = {
-  default: { initDatabase: () => {} },
-  getDb:   () => _db,
-  initDatabase: () => {},
-};
-
-// Utilitário: cria um banco em memória e aplica o schema
 async function createTestDb() {
   const { runSchema } = await import('../src/database/schema.mjs');
   const db = new DatabaseSync(':memory:');
@@ -147,42 +148,61 @@ describe('BLOCO 2 — schema.mjs — tabela tickets', () => {
   test('2.5 — runSchema é idempotente (pode rodar duas vezes)', () => {
     assert.doesNotThrow(async () => {
       const { runSchema } = await import('../src/database/schema.mjs');
-      runSchema(db); // segunda execução — IF NOT EXISTS deve proteger
+      runSchema(db);
     });
   });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BLOCO 3 — Tickets.mjs (config + instâncias)
+// BLOCO 3 — Tickets.mjs (módulo REAL, com banco em arquivo temporário)
+//
+// Etapa 19D: este bloco agora importa e exercita o módulo REAL de Tickets.mjs.
+// Qualquer bug introduzido em src/database/repositories/Tickets.mjs será
+// detectado por estes testes — ao contrário da versão anterior, que usava
+// wrappers inline que duplicavam a lógica sem testá-la.
+//
+// Estratégia:
+//   1. Define um DATABASE_PATH único para este bloco.
+//   2. Chama initDatabase() que cria o schema + executa as migrations (incluindo
+//      a migration 002 que adiciona a coluna reopen_count).
+//   3. Importa diretamente as funções de Tickets.mjs.
+//   4. As funções chamam getDb() em tempo de execução — usam o banco real.
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('BLOCO 3 — Tickets.mjs', async () => {
-  // Cria DB isolado e injeta no cliente
-  before(async () => {
-    _db = await createTestDb();
-  });
+describe('BLOCO 3 — Tickets.mjs (módulo real)', () => {
+  const GUILD  = 'guild_t10_real';
+  const DB_PATH = `/tmp/ruby-fy-test-b3-${RUN_ID}.db`;
 
-  after(() => { _db = null; });
-
-  // Reimporta módulos usando o banco injetado
   let getTicketConfig, setTicketConfig;
-  let createTicket, getTicket, listTickets, closeTicket, countOpenTickets;
+  let createTicket, getTicket, getOpenTicketByUser;
+  let listTickets, closeTicket, countOpenTickets, reopenTicket;
 
   before(async () => {
-    // Substitui getDb() pelo mock em memória via patch no módulo de client
-    // Como ES Modules são cacheados, usamos um helper de re-require simulado
-    // através de um wrapper que lê _db diretamente
-    const TicketsMod = await importWithMockedDb();
-    getTicketConfig    = TicketsMod.getTicketConfig;
-    setTicketConfig    = TicketsMod.setTicketConfig;
-    createTicket       = TicketsMod.createTicket;
-    getTicket          = TicketsMod.getTicket;
-    listTickets        = TicketsMod.listTickets;
-    closeTicket        = TicketsMod.closeTicket;
-    countOpenTickets   = TicketsMod.countOpenTickets;
+    // Aponta o database para um arquivo temporário exclusivo deste bloco
+    process.env.DATABASE_PATH = DB_PATH;
+
+    // Inicializa o singleton — cria schema + executa migrações (inclui reopen_count)
+    const { initDatabase } = await import('../src/database/client.mjs');
+    initDatabase();
+
+    // Importa o módulo REAL (cacheado; usa getDb() no runtime → aponta para DB_PATH)
+    const mod = await import('../src/database/repositories/Tickets.mjs');
+    getTicketConfig     = mod.getTicketConfig;
+    setTicketConfig     = mod.setTicketConfig;
+    createTicket        = mod.createTicket;
+    getTicket           = mod.getTicket;
+    getOpenTicketByUser = mod.getOpenTicketByUser;
+    listTickets         = mod.listTickets;
+    closeTicket         = mod.closeTicket;
+    countOpenTickets    = mod.countOpenTickets;
+    reopenTicket        = mod.reopenTicket;
   });
 
-  const GUILD = 'guild_t10_test';
+  after(async () => {
+    // Remove o arquivo temporário após os testes (melhor esforço)
+    const { unlink } = await import('node:fs/promises');
+    unlink(DB_PATH).catch(() => {});
+  });
 
   // ── Config ──────────────────────────────────────────────────────────────
 
@@ -222,7 +242,6 @@ describe('BLOCO 3 — Tickets.mjs', async () => {
   test('3.6 — setTicketConfig patch parcial não apaga outros campos', () => {
     setTicketConfig(GUILD, { enabled: false });
     const cfg = getTicketConfig(GUILD);
-    // category_id configurado no 3.3 deve continuar
     assert.equal(cfg.category_id, '111222333444555');
     assert.equal(cfg.enabled, false);
   });
@@ -238,12 +257,13 @@ describe('BLOCO 3 — Tickets.mjs', async () => {
   test('3.8 — createTicket cria ticket aberto', () => {
     const ticket = createTicket(GUILD, { channelId: 'ch_001', userId: 'user_001' });
     assert.ok(ticket.id);
-    assert.equal(ticket.guildId,   GUILD);
-    assert.equal(ticket.channelId, 'ch_001');
-    assert.equal(ticket.userId,    'user_001');
-    assert.equal(ticket.status,    'open');
-    assert.equal(ticket.closedAt,  null);
-    assert.equal(ticket.closedBy,  null);
+    assert.equal(ticket.guildId,     GUILD);
+    assert.equal(ticket.channelId,   'ch_001');
+    assert.equal(ticket.userId,      'user_001');
+    assert.equal(ticket.status,      'open');
+    assert.equal(ticket.closedAt,    null);
+    assert.equal(ticket.closedBy,    null);
+    assert.equal(ticket.reopenCount, 0, 'Ticket novo deve ter reopenCount=0');
   });
 
   test('3.9 — getTicket retorna ticket por ID', () => {
@@ -297,10 +317,10 @@ describe('BLOCO 3 — Tickets.mjs', async () => {
   });
 
   test('3.17 — countOpenTickets diminui após fechar ticket', () => {
-    const ticket  = createTicket(GUILD, { channelId: 'ch_cnt', userId: 'user_cnt' });
-    const before  = countOpenTickets(GUILD);
+    const ticket = createTicket(GUILD, { channelId: 'ch_cnt', userId: 'user_cnt' });
+    const before = countOpenTickets(GUILD);
     closeTicket(GUILD, ticket.id, 'mod_002');
-    const after   = countOpenTickets(GUILD);
+    const after  = countOpenTickets(GUILD);
     assert.equal(after, before - 1);
   });
 
@@ -313,6 +333,76 @@ describe('BLOCO 3 — Tickets.mjs', async () => {
     createTicket('outro_guild_x', { channelId: 'ch_x', userId: 'u_x' });
     const mine = listTickets(GUILD);
     assert.ok(mine.every(t => t.guildId === GUILD), 'Não deve misturar tickets de guilds diferentes');
+  });
+
+  // ── reopen_count (Etapa 19D) ──────────────────────────────────────────────
+
+  test('3.20 — ticket nunca reaberto tem reopenCount=0', () => {
+    const ticket = createTicket(GUILD, { channelId: 'ch_r0', userId: 'user_r0' });
+    assert.equal(ticket.reopenCount, 0, 'Ticket novo deve ter reopenCount=0');
+  });
+
+  test('3.21 — reopenTicket na primeira reabertura define reopenCount=1', () => {
+    const ticket  = createTicket(GUILD, { channelId: 'ch_r1', userId: 'user_r1' });
+    closeTicket(GUILD, ticket.id, 'mod_r');
+    const reopened = reopenTicket(GUILD, ticket.id, 'ch_r1_new');
+    assert.ok(reopened, 'reopenTicket deve retornar o ticket atualizado');
+    assert.equal(reopened.status,      'open');
+    assert.equal(reopened.channelId,   'ch_r1_new');
+    assert.equal(reopened.closedAt,    null);
+    assert.equal(reopened.closedBy,    null);
+    assert.equal(reopened.reopenCount, 1, 'Primeira reabertura deve ter reopenCount=1');
+  });
+
+  test('3.22 — segunda reabertura incrementa reopenCount para 2', () => {
+    const ticket = createTicket(GUILD, { channelId: 'ch_r2', userId: 'user_r2' });
+
+    // Fechar e reabrir uma vez
+    closeTicket(GUILD, ticket.id, 'mod_r');
+    const r1 = reopenTicket(GUILD, ticket.id, 'ch_r2_v2');
+    assert.equal(r1.reopenCount, 1);
+
+    // Fechar e reabrir novamente
+    closeTicket(GUILD, ticket.id, 'mod_r');
+    const r2 = reopenTicket(GUILD, ticket.id, 'ch_r2_v3');
+    assert.equal(r2.reopenCount, 2, 'Segunda reabertura deve ter reopenCount=2');
+  });
+
+  test('3.23 — fechamento normal NÃO incrementa reopenCount', () => {
+    const ticket  = createTicket(GUILD, { channelId: 'ch_r3', userId: 'user_r3' });
+    const closed  = closeTicket(GUILD, ticket.id, 'mod_r');
+    assert.equal(closed.reopenCount, 0, 'Fechar não deve incrementar reopenCount');
+  });
+
+  test('3.24 — reopenCount persiste no banco (leitura após reabertura)', () => {
+    const ticket  = createTicket(GUILD, { channelId: 'ch_r4', userId: 'user_r4' });
+    closeTicket(GUILD, ticket.id, 'mod_r');
+    reopenTicket(GUILD, ticket.id, 'ch_r4_new');
+
+    // Lê o ticket diretamente do banco para confirmar persistência
+    const fresh = getTicket(GUILD, ticket.id);
+    assert.equal(fresh.reopenCount, 1, 'reopenCount deve estar persistido no banco');
+  });
+
+  test('3.25 — reopenTicket retorna null para ticket inexistente', () => {
+    const result = reopenTicket(GUILD, 'ticket-que-nao-existe', 'ch_x');
+    assert.equal(result, null);
+  });
+
+  test('3.26 — getOpenTicketByUser retorna ticket aberto do usuário', () => {
+    const UNICO = 'user_open_' + randomUUID().slice(0, 6);
+    const ticket = createTicket(GUILD, { channelId: 'ch_obu', userId: UNICO });
+    const found  = getOpenTicketByUser(GUILD, UNICO);
+    assert.ok(found, 'Deve encontrar ticket aberto');
+    assert.equal(found.id, ticket.id);
+  });
+
+  test('3.27 — getOpenTicketByUser retorna null após fechar', () => {
+    const UNICO = 'user_closed_' + randomUUID().slice(0, 6);
+    const ticket = createTicket(GUILD, { channelId: 'ch_obu2', userId: UNICO });
+    closeTicket(GUILD, ticket.id, 'mod_x');
+    const found = getOpenTicketByUser(GUILD, UNICO);
+    assert.equal(found, null, 'Não deve retornar ticket fechado');
   });
 });
 
@@ -391,7 +481,6 @@ describe('BLOCO 4 — connections/index.mjs — registro e re-exports', () => {
   });
 
   test('4.12 — executeConnections retorna sent:0 sem conexões ativas (banco em memória vazio)', async () => {
-    // Sem conexões registradas para esta ação/guild → deve retornar sent:0 sem erros
     _db = await createTestDb();
     const result = await connectionsIndex.executeConnections(
       'bloco4_action',
@@ -399,7 +488,6 @@ describe('BLOCO 4 — connections/index.mjs — registro e re-exports', () => {
       { guilds: { cache: { get: () => null } } },
     );
     assert.equal(result.sent, 0);
-    // Se não há conexões, errors deve ser vazio
     assert.equal(result.errors.length, 0);
   });
 });
@@ -423,119 +511,3 @@ describe('BLOCO 5 — tickets/index.mjs — exports', () => {
     assert.equal(typeof ticketsIndex.openTicketsPanel, 'function');
   });
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Importa Tickets.mjs usando um banco em memória (_db global).
- * Como ES Modules são cacheados, extraímos as funções e as recriamos
- * como wrappers que chamam _db diretamente — sem depender de mocking.
- *
- * Estratégia: importar o módulo real que já usa getDb() do client.mjs,
- * mas antes injetar o banco na variável global _db acessível via closure.
- */
-async function importWithMockedDb() {
-  // Cria um banco temporário e re-usa o código do módulo de forma direta
-  // injetando o banco através de uma função auxiliar que usa o módulo real.
-  // Como node caches modules, precisamos criar wrappers funcionais diretos.
-
-  const { runSchema } = await import('../src/database/schema.mjs');
-  const { randomUUID } = await import('node:crypto');
-
-  const db = new DatabaseSync(':memory:');
-  runSchema(db);
-
-  // Repositório de GuildConfig simplificado (inline)
-  function getOrCreate(guildId) {
-    const existing = db.prepare('SELECT * FROM guild_configs WHERE guild_id = ?').get(guildId);
-    if (existing) return existing;
-    db.prepare('INSERT INTO guild_configs (guild_id) VALUES (?)').run(guildId);
-    return db.prepare('SELECT * FROM guild_configs WHERE guild_id = ?').get(guildId);
-  }
-
-  function getAllSettings(guildId, module) {
-    const rows = db.prepare('SELECT key, value FROM guild_settings WHERE guild_id = ? AND module = ?').all(guildId, module);
-    return Object.fromEntries(rows.map(r => {
-      let val;
-      try { val = JSON.parse(r.value); } catch { val = r.value; }
-      return [r.key, val];
-    }));
-  }
-
-  function setSetting(guildId, module, key, value) {
-    getOrCreate(guildId);
-    db.prepare(`
-      INSERT INTO guild_settings (guild_id, module, key, value, updated_at)
-      VALUES (?, ?, ?, ?, unixepoch())
-      ON CONFLICT (guild_id, module, key)
-      DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-    `).run(guildId, module, key, JSON.stringify(value));
-  }
-
-  const MODULE = 'tickets';
-
-  function getTicketConfig(guildId) {
-    const raw = getAllSettings(guildId, MODULE);
-    return {
-      enabled:         raw.enabled         ?? false,
-      category_id:     raw.category_id     ?? null,
-      log_channel_id:  raw.log_channel_id  ?? null,
-      support_role_id: raw.support_role_id ?? null,
-      intro_message:   raw.intro_message   ?? null,
-    };
-  }
-
-  function setTicketConfig(guildId, patch) {
-    getOrCreate(guildId);
-    const allowed = ['enabled', 'category_id', 'log_channel_id', 'support_role_id', 'intro_message'];
-    for (const key of allowed) {
-      if (key in patch) setSetting(guildId, MODULE, key, patch[key]);
-    }
-  }
-
-  function normalizeTicket(row) {
-    return {
-      id:        row.id,
-      guildId:   row.guild_id,
-      channelId: row.channel_id,
-      userId:    row.user_id,
-      status:    row.status,
-      createdAt: row.created_at,
-      closedAt:  row.closed_at  ?? null,
-      closedBy:  row.closed_by  ?? null,
-    };
-  }
-
-  function createTicket(guildId, { channelId, userId }) {
-    getOrCreate(guildId);
-    const id = randomUUID();
-    db.prepare(`INSERT INTO tickets (id, guild_id, channel_id, user_id, status, created_at) VALUES (?, ?, ?, ?, 'open', unixepoch())`).run(id, guildId, channelId, userId);
-    return getTicket(guildId, id);
-  }
-
-  function getTicket(guildId, id) {
-    const row = db.prepare('SELECT * FROM tickets WHERE id = ? AND guild_id = ?').get(id, guildId);
-    return row ? normalizeTicket(row) : null;
-  }
-
-  function listTickets(guildId, { status } = {}) {
-    if (status) return db.prepare('SELECT * FROM tickets WHERE guild_id = ? AND status = ? ORDER BY created_at DESC').all(guildId, status).map(normalizeTicket);
-    return db.prepare('SELECT * FROM tickets WHERE guild_id = ? ORDER BY created_at DESC').all(guildId).map(normalizeTicket);
-  }
-
-  function countOpenTickets(guildId) {
-    const row = db.prepare("SELECT COUNT(*) as total FROM tickets WHERE guild_id = ? AND status = 'open'").get(guildId);
-    return row?.total ?? 0;
-  }
-
-  function closeTicket(guildId, id, closedBy) {
-    const existing = getTicket(guildId, id);
-    if (!existing) return null;
-    db.prepare(`UPDATE tickets SET status = 'closed', closed_at = unixepoch(), closed_by = ? WHERE id = ? AND guild_id = ?`).run(closedBy, id, guildId);
-    return getTicket(guildId, id);
-  }
-
-  return { getTicketConfig, setTicketConfig, createTicket, getTicket, listTickets, closeTicket, countOpenTickets };
-}
