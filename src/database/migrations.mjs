@@ -264,7 +264,7 @@ const MIGRATIONS = [
       } catch { /* idempotente */ }
 
       // ── connections ───────────────────────────────────────────────────────
-      // Filtros: por guild+enabled (apenas ativas), por guild+action_name
+      // Filtros: por guild+enabled (apenas ativas), por guild+action
       try {
         db.exec(`CREATE INDEX IF NOT EXISTS idx_connections_guild_enabled
                    ON connections (guild_id, enabled)`);
@@ -272,10 +272,35 @@ const MIGRATIONS = [
 
       try {
         db.exec(`CREATE INDEX IF NOT EXISTS idx_connections_guild_action
-                   ON connections (guild_id, action_name)`);
+                   ON connections (guild_id, action)`);
       } catch { /* idempotente */ }
 
       logger.info('[Migrations] 006: índices de performance criados em tickets, orders, clients, connections.');
+    },
+  },
+  {
+    name: '007_fix_connections_action_index',
+    up(db) {
+      // Correção crítica: a migration 006 usou 'action_name' (coluna inexistente)
+      // ao invés de 'action', causando falha silenciosa e índice não criado.
+      //
+      // Esta migração garante que o índice correto seja criado em todos os cenários:
+      //   1. Banco novo: 007 é executada após 006, cria o índice corretamente
+      //   2. Banco que executou 006 com erro: índice não existe, 007 o cria
+      //   3. Banco que executou 006 corretamente: índice já existe, IF NOT EXISTS pula
+      //
+      // Não tentamos DROP INDEX porque:
+      //   - IF NOT EXISTS garante idempotência
+      //   - DROP pode falhar se o índice não existir (requer versão mais antiga do SQLite)
+
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_connections_guild_action
+                   ON connections (guild_id, action)`);
+      } catch (err) {
+        logger.warn('[Migrations] 007: não foi possível criar idx_connections_guild_action — ' + err.message);
+      }
+
+      logger.info('[Migrations] 007: correção do índice idx_connections_guild_action aplicada.');
     },
   },
 ];
