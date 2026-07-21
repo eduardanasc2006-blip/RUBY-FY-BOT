@@ -4,10 +4,10 @@
  * e despacha para a lógica correta.
  */
 
-import { MessageFlags, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { MessageFlags, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } from 'discord.js';
 import { getSession, updateSession, finalizeSession, cancelSession } from '../../core/sessionManager.mjs';
 import { renderPanel } from './renderer.mjs';
-import { getFieldTypeHandler } from './fieldTypes.mjs';
+import { getFieldTypeHandler, ALLOWED_IMAGE_EXTENSIONS, MAX_IMAGE_SIZE } from './fieldTypes.mjs';
 import { build } from '../../utils/customId.mjs';
 import { logger } from '../../utils/logger.mjs';
 
@@ -57,14 +57,16 @@ export async function handleComponent(interaction, action, partes) {
 
   // ── Roteamento por action ───────────────────────────────────────────────────
   switch (action) {
-    case 'edit':    return handleEdit(interaction, session, definition, fieldKey);
-    case 'pick':    return handlePick(interaction, session, definition);
-    case 'select':  return handleSelectSubmit(interaction, session, definition, fieldKey);
-    case 'modal':   return handleModalSubmit(interaction, session, definition, fieldKey);
-    case 'preview': return handlePreview(interaction, session, definition);
-    case 'back':    return handleBack(interaction, session, definition);
-    case 'confirm': return handleConfirm(interaction, session, definition);
-    case 'cancel':  return handleCancel(interaction, session);
+    case 'edit':        return handleEdit(interaction, session, definition, fieldKey);
+    case 'pick':        return handlePick(interaction, session, definition);
+    case 'select':      return handleSelectSubmit(interaction, session, definition, fieldKey);
+    case 'modal':       return handleModalSubmit(interaction, session, definition, fieldKey);
+    case 'image_action': return handleImageAction(interaction, session, definition, fieldKey);
+    case 'image_url':   return handleImageUrlSubmit(interaction, session, definition, fieldKey);
+    case 'preview':     return handlePreview(interaction, session, definition);
+    case 'back':        return handleBack(interaction, session, definition);
+    case 'confirm':     return handleConfirm(interaction, session, definition);
+    case 'cancel':      return handleCancel(interaction, session);
     default:
       logger.warn(`[Editor] Ação desconhecida: '${action}'`);
       return safeReply(interaction, '⚠️ Ação não reconhecida.');
@@ -83,10 +85,11 @@ async function handleEdit(interaction, session, definition, fieldKey) {
 
   // Toggle direto
   if (handler.isDirect) {
+    await interaction.deferUpdate();
     const current = session.data[fieldKey] ?? false;
     updateSession(session.sessionId, interaction.user.id, interaction.guildId, { [fieldKey]: !current });
     const updated = getSession(session.sessionId, interaction.user.id, interaction.guildId);
-    return interaction.update(renderPanel(updated, definition));
+    return interaction.editReply(renderPanel(updated, definition));
   }
 
   // Modal (text, paragraph) — deferir para poder usar editReply após submit
@@ -96,7 +99,7 @@ async function handleEdit(interaction, session, definition, fieldKey) {
     return interaction.showModal(modal);
   }
 
-  // Select em linha (select, color)
+  // Select em linha (select, color, image)
   const selectRow = handler.build(field, session.sessionId);
   const backRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -146,6 +149,160 @@ async function handleModalSubmit(interaction, session, definition, fieldKey) {
   const updated = getSession(session.sessionId, interaction.user.id, interaction.guildId);
 
   // Atualiza a mensagem original usando editReply (já deferido em handleEdit)
+  return interaction.editReply(renderPanel(updated, definition));
+}
+
+// ── Handlers de imagem (URL, Upload, Remove) ──────────────────────────────────
+
+/** Action do select de imagem (url, upload, remove) */
+async function handleImageAction(interaction, session, definition, fieldKey) {
+  const field = definition.fields.find(f => f.key === fieldKey);
+  if (!field) return safeReply(interaction, '⚠️ Campo não encontrado.');
+
+  const action = interaction.values?.[0];
+  if (!action) return safeReply(interaction, '⚠️ Nenhuma ação selecionada.');
+
+  switch (action) {
+    case 'url':
+      return handleImageUrl(interaction, session, definition, field);
+    case 'upload':
+      return handleImageUpload(interaction, session, definition, field);
+    case 'remove':
+      return handleImageRemove(interaction, session, definition, field);
+    default:
+      return safeReply(interaction, '⚠️ Ação desconhecida.');
+  }
+}
+
+/** Abre modal para inserir URL de imagem */
+async function handleImageUrl(interaction, session, definition, field) {
+  await interaction.deferUpdate();
+
+  const modal = new ModalBuilder()
+    .setCustomId(build('editor', 'image_url', session.sessionId, field.key))
+    .setTitle(`Editar: ${field.label}`)
+    .addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('value')
+          .setLabel(field.label)
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMaxLength(512)
+          .setPlaceholder('https://... (URL HTTPS da imagem)')
+          .setValue(session.data[field.key]?.startsWith('http') ? session.data[field.key] : ''),
+      ),
+    );
+
+  return interaction.showModal(modal);
+}
+
+/** Submit do modal de URL de imagem */
+async function handleImageUrlSubmit(interaction, session, definition, fieldKey) {
+  const field = definition.fields.find(f => f.key === fieldKey);
+  if (!field) return safeReply(interaction, '⚠️ Campo não encontrado.');
+
+  const value = interaction.fields.getTextInputValue('value')?.trim();
+  if (!value) return safeReply(interaction, '⚠️ A URL é obrigatória.');
+
+  // Validar HTTPS
+  if (!value.startsWith('https://')) {
+    return safeReply(interaction, '⚠️ A URL deve começar com `https://`.');
+  }
+
+  updateSession(session.sessionId, interaction.user.id, interaction.guildId, { [fieldKey]: value });
+  const updated = getSession(session.sessionId, interaction.user.id, interaction.guildId);
+  return interaction.editReply(renderPanel(updated, definition));
+}
+
+/** Solicita que o usuário envie um arquivo de imagem */
+async function handleImageUpload(interaction, session, definition, field) {
+  await interaction.deferUpdate();
+
+  // Solicitar que o usuário envie a imagem
+  await interaction.editReply({
+    content: `📎 **Enviar imagem para "${field.label}"**\n\n` +
+      `Envie uma imagem nos formatos: **PNG, JPG, JPEG, GIF, WEBP**\n` +
+      `Tamanho máximo: **8 MB**\n\n` +
+      `⏱️ Você tem **60 segundos** para enviar.`,
+    embeds: [],
+    components: [
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(build('editor', 'cancel_upload', session.sessionId, field.key))
+          .setLabel('Cancelar')
+          .setEmoji('❌')
+          .setStyle(ButtonStyle.Danger),
+      ),
+    ],
+  });
+
+  // Coletar a mensagem com o attachment
+  try {
+    const collected = await interaction.channel.awaitMessages({
+      filter: (msg) => msg.author.id === interaction.user.id && msg.attachments.size > 0,
+      max: 1,
+      time: 60_000,
+    });
+
+    const msg = collected.first();
+    if (!msg) {
+      const updated = getSession(session.sessionId, interaction.user.id, interaction.guildId);
+      return interaction.editReply(renderPanel(updated, definition));
+    }
+
+    const attachment = msg.attachments.first();
+    if (!attachment) {
+      const updated = getSession(session.sessionId, interaction.user.id, interaction.guildId);
+      return interaction.editReply(renderPanel(updated, definition));
+    }
+
+    // Validar extensão
+    const ext = '.' + attachment.name.split('.').pop().toLowerCase();
+    if (!ALLOWED_IMAGE_EXTENSIONS.includes(ext)) {
+      const updated = getSession(session.sessionId, interaction.user.id, interaction.guildId);
+      await msg.delete().catch(() => {});
+      await interaction.editReply({
+        ...renderPanel(updated, definition),
+        content: `⚠️ Formato **${ext}** não permitido. Use: ${ALLOWED_IMAGE_EXTENSIONS.join(', ')}`,
+      }).catch(() => {});
+      return;
+    }
+
+    // Validar tamanho
+    if (attachment.size > MAX_IMAGE_SIZE) {
+      const updated = getSession(session.sessionId, interaction.user.id, interaction.guildId);
+      await msg.delete().catch(() => {});
+      await interaction.editReply({
+        ...renderPanel(updated, definition),
+        content: `⚠️ Imagem muito grande (${(attachment.size / 1024 / 1024).toFixed(2)} MB). Máximo: 8 MB.`,
+      }).catch(() => {});
+      return;
+    }
+
+    // Salvar o attachment URL na sessão
+    // Usamos um objeto para distinguir de URLs normais
+    updateSession(session.sessionId, interaction.user.id, interaction.guildId, {
+      [field.key]: { type: 'attachment', url: attachment.url, name: attachment.name },
+    });
+
+    // Limpar mensagem do usuário e atualizar painel
+    await msg.delete().catch(() => {});
+    const updated = getSession(session.sessionId, interaction.user.id, interaction.guildId);
+    return interaction.editReply(renderPanel(updated, definition));
+
+  } catch (err) {
+    logger.warn('[Editor] Timeout ou erro ao coletar imagem:', err?.message);
+    const updated = getSession(session.sessionId, interaction.user.id, interaction.guildId);
+    return interaction.editReply(renderPanel(updated, definition));
+  }
+}
+
+/** Remove a imagem (URL ou attachment) */
+async function handleImageRemove(interaction, session, definition, field) {
+  await interaction.deferUpdate();
+  updateSession(session.sessionId, interaction.user.id, interaction.guildId, { [field.key]: null });
+  const updated = getSession(session.sessionId, interaction.user.id, interaction.guildId);
   return interaction.editReply(renderPanel(updated, definition));
 }
 

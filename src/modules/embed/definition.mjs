@@ -67,6 +67,23 @@ function isValidHex(value) {
 }
 
 /**
+ * Extrai a URL de um campo de imagem.
+ * O valor pode ser:
+ *   - Uma string (URL direta)
+ *   - Um objeto { type: 'attachment', url: string }
+ *   - null ou undefined
+ *
+ * @param {string|object|null} value
+ * @returns {string|null}
+ */
+function getImageUrl(value) {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (value?.type === 'attachment' && value?.url) return value.url;
+  return null;
+}
+
+/**
  * Calcula o total de caracteres que a embed teria,
  * considerando todos os campos de texto relevantes para o limite do Discord.
  */
@@ -186,19 +203,17 @@ export function createDefinition() {
         key:         'imagem_url',
         label:       'Imagem Principal',
         emoji:       '🖼️',
-        type:        'text',
+        type:        'image',
         maxLength:   512,
         required:    false,
-        placeholder: 'https://... (URL HTTPS da imagem)',
       },
       {
         key:         'thumbnail_url',
         label:       'Thumbnail',
         emoji:       '🔲',
-        type:        'text',
+        type:        'image',
         maxLength:   512,
         required:    false,
-        placeholder: 'https://... (URL HTTPS da miniatura)',
       },
 
       // ── Rodapé ────────────────────────────────────────────────────────────
@@ -340,14 +355,16 @@ export function createDefinition() {
         return { ok: false, reason: 'O **Autor — Ícone** deve ser uma URL HTTPS válida.' };
       }
 
-      // Validação de imagem principal (deve ser HTTPS)
-      if (data.imagem_url?.trim() && !isValidHttpsUrl(data.imagem_url.trim())) {
-        return { ok: false, reason: 'A **Imagem Principal** deve ser uma URL HTTPS válida.' };
+      // Validação de imagem principal (URL deve ser HTTPS, attachment é válido)
+      const imgUrl = getImageUrl(data.imagem_url);
+      if (imgUrl && !isValidHttpsUrl(imgUrl)) {
+        return { ok: false, reason: 'A **Imagem Principal** deve ser uma URL HTTPS válida ou um upload de arquivo.' };
       }
 
-      // Validação de thumbnail (deve ser HTTPS)
-      if (data.thumbnail_url?.trim() && !isValidHttpsUrl(data.thumbnail_url.trim())) {
-        return { ok: false, reason: 'A **Thumbnail** deve ser uma URL HTTPS válida.' };
+      // Validação de thumbnail (URL deve ser HTTPS, attachment é válido)
+      const thumbUrl = getImageUrl(data.thumbnail_url);
+      if (thumbUrl && !isValidHttpsUrl(thumbUrl)) {
+        return { ok: false, reason: 'A **Thumbnail** deve ser uma URL HTTPS válida ou um upload de arquivo.' };
       }
 
       // Validação de rodapé — ícone requer texto
@@ -505,9 +522,11 @@ function buildEmbed(data, { footerText, footerIcon, forceTimestamp } = {}) {
     });
   }
 
-  // Imagens
-  if (data.imagem_url?.trim())    embed.setImage(data.imagem_url.trim());
-  if (data.thumbnail_url?.trim()) embed.setThumbnail(data.thumbnail_url.trim());
+  // Imagens (suporta URL ou attachment)
+  const imgUrl = getImageUrl(data.imagem_url);
+  const thumbUrl = getImageUrl(data.thumbnail_url);
+  if (imgUrl)    embed.setImage(imgUrl);
+  if (thumbUrl)  embed.setThumbnail(thumbUrl);
 
   // Rodapé
   if (footerText) {
