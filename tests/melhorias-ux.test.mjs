@@ -80,6 +80,7 @@ describe('BLOCO 1 — Categorização de Comandos', () => {
       'pedidos',
       'provas',
       'utilidades',
+      'outros',
     ];
     assert.deepStrictEqual(CATEGORY_ORDER, expected);
   });
@@ -88,6 +89,33 @@ describe('BLOCO 1 — Categorização de Comandos', () => {
     for (const cat of CATEGORY_ORDER) {
       assert.ok(CATEGORY_EMOJIS[cat], `Categoria ${cat} deve ter emoji`);
     }
+  });
+
+  it('1.9 — DEFAULT_CATEGORY é "outros" para comandos não mapeados', async () => {
+    const { DEFAULT_CATEGORY } = await import('../src/utils/helpBuilder.mjs');
+    assert.strictEqual(DEFAULT_CATEGORY, 'outros');
+  });
+
+  it('1.10 — Comando não mapeado vai para categoria "outros"', async () => {
+    const { buildHelpMenu, DEFAULT_CATEGORY } = await import('../src/utils/helpBuilder.mjs');
+
+    // Cliente com um comando não mapeado
+    const mockClient = {
+      commands: new Map([
+        ['comando_nao_mapeado', {
+          data: { name: 'comando_nao_mapeado', description: 'Um comando sem categoria' },
+        }],
+      ]),
+      user: { username: 'TestBot', displayAvatarURL: () => '' },
+    };
+
+    const result = buildHelpMenu(mockClient);
+
+    // Deve ter pelo menos um embed com a categoria "outros"
+    const outrosEmbed = result.embeds.find(e =>
+      e.data.title?.toLowerCase().includes('outros')
+    );
+    assert.ok(outrosEmbed, 'Deve ter um embed para categoria "outros"');
   });
 });
 

@@ -19,6 +19,7 @@ import {
 /**
  * Mapeamento de comandos para categorias.
  * Novos comandos são automaticamente categorizados ao serem adicionados.
+ * Comandos não mapeados vão para a categoria "outros".
  */
 export const COMMAND_CATEGORIES = {
   // Administração
@@ -62,7 +63,13 @@ export const COMMAND_CATEGORIES = {
 };
 
 /**
+ * Categoria padrão para comandos não mapeados.
+ */
+export const DEFAULT_CATEGORY = 'outros';
+
+/**
  * Nomes das categorias em ordem de exibição.
+ * "outros" é sempre a última categoria.
  */
 export const CATEGORY_ORDER = [
   'administração',
@@ -74,6 +81,7 @@ export const CATEGORY_ORDER = [
   'pedidos',
   'provas',
   'utilidades',
+  'outros',
 ];
 
 /**
@@ -89,6 +97,7 @@ export const CATEGORY_EMOJIS = {
   'pedidos':       '📦',
   'provas':        '📜',
   'utilidades':    '🔧',
+  'outros':        '📌',
 };
 
 /**
@@ -104,6 +113,7 @@ export const CATEGORY_DESCRIPTIONS = {
   'pedidos':      'Registro e acompanhamento de vendas',
   'provas':       'Provas de pagamento e entrega',
   'utilidades':   'Ferramentas úteis do bot',
+  'outros':       'Comandos adicionais disponíveis',
 };
 
 /**
@@ -123,7 +133,7 @@ export function buildHelpMenu(client, interaction = null) {
     const name = cmd.data?.name;
     if (!name || name === 'ajuda') continue; // Pula o próprio comando de ajuda
 
-    const category = COMMAND_CATEGORIES[name] || 'utilidades';
+    const category = COMMAND_CATEGORIES[name] || DEFAULT_CATEGORY;
 
     if (!categories[category]) {
       categories[category] = [];
@@ -138,10 +148,10 @@ export function buildHelpMenu(client, interaction = null) {
   // Ordena categorias
   const sortedCategories = CATEGORY_ORDER.filter(c => categories[c]);
 
-  // Se nenhuma categoria encontrada, adiciona utilitários com o que houver
+  // Se nenhuma categoria encontrada, adiciona "outros" com o que houver
   if (sortedCategories.length === 0) {
-    sortedCategories.push('utilidades');
-    categories['utilidades'] = commands
+    sortedCategories.push(DEFAULT_CATEGORY);
+    categories[DEFAULT_CATEGORY] = commands
       .filter(c => c.data?.name && c.data?.name !== 'ajuda')
       .map(c => ({
         name: c.data.name,
@@ -225,7 +235,7 @@ export function buildSimpleHelpEmbed(client, prefix) {
   const byCategory = {};
   for (const cmd of commands) {
     const name = cmd.data.name;
-    const category = COMMAND_CATEGORIES[name] || 'utilidades';
+    const category = COMMAND_CATEGORIES[name] || DEFAULT_CATEGORY;
     if (!byCategory[category]) byCategory[category] = [];
     byCategory[category].push(`\`/${name}\``);
   }

@@ -72,10 +72,19 @@ export function registerCustomCommandsHandler() {
 export async function openCommandsPanel(interaction) {
   const { MessageFlags } = await import('discord.js');
   const { listCommands } = await import('../../database/repositories/CustomCommands.mjs');
-  const { buildCommandsListEmbed } = await import('./flow.mjs');
+  const { buildCommandsListEmbed, buildListButtons } = await import('./flow.mjs');
 
   const commands = listCommands(interaction.guildId);
-  const payload  = buildCommandsListEmbed(commands, interaction.guild?.name);
+  const embed = buildCommandsListEmbed(commands, interaction.guild?.name);
+
+  // Adiciona botões quando não há comandos
+  let payload;
+  if (commands.length === 0) {
+    const buttons = await buildListButtons();
+    payload = { ...embed, components: [buttons] };
+  } else {
+    payload = embed;
+  }
 
   if (interaction.replied || interaction.deferred) {
     await interaction.followUp({ ...payload, flags: MessageFlags.Ephemeral });
