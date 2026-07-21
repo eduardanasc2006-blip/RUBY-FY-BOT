@@ -182,7 +182,7 @@ async function handleStatusDo(interaction, orderId) {
     return;
   }
 
-  const order = result.order;
+  	  const order = result.order;
   const action = STATUS_ACTIONS[newStatus] ?? `order_${newStatus}`;
 
   // Dispara conexão para o novo status
@@ -201,12 +201,48 @@ async function handleStatusDo(interaction, orderId) {
     });
   }
 
+  // ── Integração com Estoque ──────────────────────────────────────────────
+  // Quando pedido é concluído (completed ou delivered), tenta baixar estoque
+  if (newStatus === 'completed' || newStatus === 'delivered') {
+    _processOrderStock(guildId, order, interaction).catch(err => {
+      logger.warn('[Orders] Stock deduction error:', err?.message);
+    });
+  }
+
   logger.info(`[Orders] Status alterado | guild: ${guildId} | id: ${order.id} | status: ${newStatus}`);
 
   // Volta ao view do pedido atualizado
   const embed      = buildOrderEmbed(order);
   const components = buildViewComponents(order);
   await safeUpdate(interaction, { embeds: [embed], components, flags: MessageFlags.Ephemeral });
+}
+
+/**
+ * Processa a baixa de estoque para um pedido concluído.
+ */
+async function _processOrderStock(guildId, order, _interaction) {
+  // Tenta encontrar o produto pelo nome
+  const { findProductByName, processSale } = await import('../../database/repositories/Products.mjs');
+
+  if (!order.produto) return;
+
+  const product = findProductByName(guildId, order.produto);
+  if (!product) return; // Produto não está no catálogo
+
+  // Só baixa se o produto tiver estoque controlado
+  if (product.stock === null || product.stock === undefined) return;
+
+  // Só baixa se tiver estoque disponível
+  if (product.stock <= 0) return;
+
+  const saleResult = processSale(guildId, product.id, 1, {
+    orderId: order.id,
+    buyerId: order.clientId ?? order.clienteRaw,
+  });
+
+  if (saleResult.ok) {
+    logger.info(`[Orders] Estoque reduzido | guild: ${guildId} | pedido: ${order.id} | produto: ${product.name}`);
+  }
 }
 
 // ── Cancel ────────────────────────────────────────────────────────────────────

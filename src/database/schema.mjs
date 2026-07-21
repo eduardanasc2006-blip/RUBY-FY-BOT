@@ -188,6 +188,31 @@ export function runSchema(db) {
       purchased_at INTEGER NOT NULL DEFAULT (unixepoch())
     );
 
+    -- Histórico de movimentações de estoque
+    -- type: 'entry' | 'exit' | 'adjustment' | 'replenishment'
+    -- reference_type: 'order' | 'manual' | 'system' | 'adjustment'
+    -- reference_id: ID da ordem, ID do ajuste, etc.
+    CREATE TABLE IF NOT EXISTS stock_movements (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id        TEXT    NOT NULL,
+      product_id      TEXT    NOT NULL,
+      type            TEXT    NOT NULL,
+      quantity        INTEGER NOT NULL,
+      previous_stock INTEGER NOT NULL,
+      new_stock       INTEGER NOT NULL,
+      reference_type  TEXT,
+      reference_id    TEXT,
+      reason          TEXT,
+      actor_id        TEXT,
+      created_at      INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_stock_movements_guild
+      ON stock_movements (guild_id);
+
+    CREATE INDEX IF NOT EXISTS idx_stock_movements_product
+      ON stock_movements (guild_id, product_id);
+
     -- Sessões web de usuários autenticados via Discord OAuth2 (Etapa 19A)
     CREATE TABLE IF NOT EXISTS web_sessions (
       token      TEXT    NOT NULL PRIMARY KEY,

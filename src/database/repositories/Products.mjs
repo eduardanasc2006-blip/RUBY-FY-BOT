@@ -270,6 +270,118 @@ export function listPurchaseLogs(guildId, productId, { limit = 20 } = {}) {
     .all(guildId, productId, limit);
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// INTEGRAÇÃO COM ESTOQUE (Stock.mjs)
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Atualiza o estoque de um produto (sem registrar movimentação).
+ * Use addStock/removeStock/setStock de Stock.mjs para registrar movimentações.
+ *
+ * @param {string} guildId
+ * @param {string} productId
+ * @param {number} newStock Novo valor de estoque
+ * @returns {{ ok: boolean, product?: object, reason?: string }}
+ */
+export function updateProductStock(guildId, productId, newStock) {
+  const product = getProduct(guildId, productId);
+  if (!product) return { ok: false, reason: 'product_not_found' };
+  if (newStock < 0) return { ok: false, reason: 'invalid_quantity' };
+
+  const previousStock = product.stock;
+  const finalStock = Math.max(0, newStock);
+
+  // Atualiza estoque do produto
+  const db = getDb();
+  const newStatus = finalStock === 0
+    ? PRODUCT_STATUS.OUT_OF_STOCK
+    : (previousStock === 0 && finalStock > 0 ? PRODUCT_STATUS.ACTIVE : product.status);
+
+  db.prepare(`
+    UPDATE products SET stock = ?, status = ?, updated_at = unixepoch()
+    WHERE id = ? AND guild_id = ?
+  `).run(finalStock, newStatus, productId, guildId);
+
+  return {
+    ok: true,
+    product: getProduct(guildId, productId),
+  };
+}
+
+/**
+ * Processa uma venda (baixa de estoque por pedido).
+ * Verifica estoque antes de vender.
+ *
+ * @param {string} guildId
+ * @param {string} productId
+ * @param {number} quantity
+ * @param {{ orderId?: string, buyerId?: string }} opts
+ * @returns {{ ok: boolean, product?: object, reason?: string, available?: number }}
+ */
+export function processSale(guildId, productId, quantity, opts = {}) {
+  const product = getProduct(guildId, productId);
+  if (!product) return { ok: false, reason: 'product_not_found' };
+
+  // Verifica se há estoque suficiente
+  if (product.stock < quantity) {
+    return {
+      ok: false,
+      reason: 'insufficient_stock',
+      available: product.stock,
+    };
+  }
+
+  // Verifica se produto está ativo
+  if (product.status === PRODUCT_STATUS.INACTIVE) {
+    return { ok: false, reason: 'product_inactive' };
+  }
+
+  // Atualiza estoque com baixa (novo estoque = estoque atual - quantidade)
+  const newStock = Math.max(0, product.stock - quantity);
+  const result = updateProductStock(guildId, productId, newStock);
+
+  if (!result.ok) {
+    return { ok: false, reason: result.reason };
+  }
+
+  // Log da compra
+  try {
+    logPurchase(guildId, {
+      productId,
+      buyerId: opts.buyerId ?? 'unknown',
+      quantity,
+      unitPrice: product.price,
+      orderId: opts.orderId ?? null,
+    });
+  } catch {
+    // Erro no log não deve bloquear a venda
+  }
+
+  return {
+    ok: true,
+    product: result.product,
+  };
+}
+
+/**
+ * Verifica se um produto precisa de reposição (estoque baixo).
+ *
+ * @param {string} guildId
+ * @param {string} productId
+ * @param {number} threshold
+ * @returns {{ needsReplenishment: boolean, stock: number, threshold: number }}
+ */
+export function checkStockLevel(guildId, productId, threshold = 5) {
+  const product = getProduct(guildId, productId);
+  if (!product) return { needsReplenishment: false, stock: 0, threshold };
+
+  return {
+    needsReplenishment: product.stock > 0 && product.stock <= threshold,
+    stock: product.stock,
+    threshold,
+  };
+}
+
 // ── Normalizador interno ──────────────────────────────────────────────────────
 
 function normalize(row) {

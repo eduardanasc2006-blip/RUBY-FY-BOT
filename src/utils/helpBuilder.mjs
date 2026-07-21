@@ -45,6 +45,7 @@ export const COMMAND_CATEGORIES = {
 
   // Produtos
   produto:      'produtos',
+  estoque:      'produtos',
 
   // Clientes
   cliente:      'clientes',

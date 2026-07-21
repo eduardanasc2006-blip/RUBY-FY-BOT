@@ -468,6 +468,43 @@ const MIGRATIONS = [
       logger.info('[Migrations] 011: tabela auto_roles e índices criados.');
     },
   },
+  {
+    name: '012_stock_movements',
+    up(db) {
+      // Sistema de Controle de Estoque: histórico completo de movimentações.
+      // Permite rastrear entradas, saídas, ajustes e reposições de estoque.
+      // A tabela já é criada pelo runSchema com CREATE TABLE IF NOT EXISTS;
+      // esta migração garante que exista em bancos anteriores ao schema novo.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS stock_movements (
+          id              INTEGER PRIMARY KEY AUTOINCREMENT,
+          guild_id        TEXT    NOT NULL,
+          product_id      TEXT    NOT NULL,
+          type            TEXT    NOT NULL,
+          quantity        INTEGER NOT NULL,
+          previous_stock  INTEGER NOT NULL,
+          new_stock       INTEGER NOT NULL,
+          reference_type  TEXT,
+          reference_id    TEXT,
+          reason          TEXT,
+          actor_id        TEXT,
+          created_at      INTEGER NOT NULL DEFAULT (unixepoch())
+        )
+      `);
+
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_stock_movements_guild
+                   ON stock_movements (guild_id)`);
+      } catch { /* idempotente */ }
+
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_stock_movements_product
+                   ON stock_movements (guild_id, product_id)`);
+      } catch { /* idempotente */ }
+
+      logger.info('[Migrations] 012: tabela stock_movements e índices criados.');
+    },
+  },
 ];
 
 // ── Runner ────────────────────────────────────────────────────────────────────
