@@ -23,8 +23,6 @@ import {
   getStockReport,
   getLowStockProducts,
   getOutOfStockProducts,
-  getProduct,
-  listProducts,
   addStock,
   removeStock,
   setStock,
@@ -33,6 +31,7 @@ import {
   normalizeMovement,
   DEFAULT_LOW_STOCK_THRESHOLD,
 } from '../database/repositories/Stock.mjs';
+import { getProduct, listProducts, findProductByName } from '../database/repositories/Products.mjs';
 import {
   buildStockPayload,
   buildStockReportEmbed,
@@ -313,7 +312,6 @@ async function executeHistorico(interaction, guildId, nome) {
   }
 
   // Busca produto pelo nome
-  const { findProductByName } = await import('../database/repositories/Products.mjs');
   const product = findProductByName(guildId, nome);
 
   if (!product) {
@@ -333,7 +331,6 @@ async function executeHistorico(interaction, guildId, nome) {
 async function executeAjustar(interaction, guildId, nome, quantidade, motivo) {
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-  const { findProductByName } = await import('../database/repositories/Products.mjs');
   const product = findProductByName(guildId, nome);
 
   if (!product) {
@@ -390,7 +387,6 @@ async function executeAjustar(interaction, guildId, nome, quantidade, motivo) {
 async function executeRepor(interaction, guildId, nome, quantidade, motivo) {
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-  const { findProductByName } = await import('../database/repositories/Products.mjs');
   const product = findProductByName(guildId, nome);
 
   if (!product) {

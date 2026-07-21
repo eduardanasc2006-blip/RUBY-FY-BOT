@@ -36,10 +36,25 @@ import {
   buildErrorPayload,
 } from './flow.mjs';
 import { logger } from '../../utils/logger.mjs';
+import { hasModulePermission, buildDeniedMessage } from '../../database/repositories/Permissions.mjs';
+import { logAudit } from '../audit/index.mjs';
+
+const MODULE_NAME = 'clientes';
+
+// ── Verificação de Permissão ─────────────────────────────────────────────────
+
+function checkPermission(interaction) {
+  return hasModulePermission(interaction.guildId, MODULE_NAME, interaction.member);
+}
 
 // ── Roteador ──────────────────────────────────────────────────────────────────
 
 export async function handleClientsComponent(interaction, action, partes) {
+  // Verifica permissão do módulo
+  if (!checkPermission(interaction)) {
+    return safeReply(interaction, buildDeniedMessage(MODULE_NAME));
+  }
+
   const clientId = partes[0] ?? null;
 
   switch (action) {
@@ -97,6 +112,18 @@ async function handleModalSubmit(interaction) {
       name:     client.displayName,
     }, interaction.client).catch(err => {
       logger.warn('[Clients] Automation hook error:', err?.message);
+    });
+
+    // Auditoria
+    logAudit(guildId, {
+      actorId: interaction.user.id,
+      module: MODULE_NAME,
+      action: 'client_created',
+      entity: 'client',
+      entityId: client.id,
+      result: 'success',
+      beforeData: null,
+      afterData: { displayName: client.displayName, discordId: client.discordId },
     });
 
     await interaction.editReply(buildSuccessPayload(client));
@@ -185,6 +212,9 @@ async function handleDeleteOk(interaction, clientId) {
     return;
   }
 
+  // Salva dados para auditoria antes de deletar
+  const clientBefore = getClient(guildId, clientId);
+
   const deleted = deleteClient(guildId, clientId);
   if (!deleted) {
     await safeUpdate(interaction, { content: '⚠️ Cliente não encontrado ou já removido.', components: [], embeds: [] });
@@ -192,6 +222,18 @@ async function handleDeleteOk(interaction, clientId) {
   }
 
   logger.info(`[Clients] Cliente removido | guild: ${guildId} | id: ${clientId}`);
+
+  // Auditoria
+  logAudit(guildId, {
+    actorId: interaction.user.id,
+    module: MODULE_NAME,
+    action: 'client_deleted',
+    entity: 'client',
+    entityId: clientId,
+    result: 'success',
+    beforeData: { displayName: clientBefore?.displayName, discordId: clientBefore?.discordId },
+    afterData: null,
+  });
 
   await safeUpdate(interaction, {
     content:    '✅ Cliente removido com sucesso.',

@@ -40,6 +40,9 @@ export const STOCK_STATUS = Object.freeze({
   OUT_OF_STOCK:  'out_of_stock',
 });
 
+/** Limiar padrão para alerta de estoque baixo */
+export const DEFAULT_LOW_STOCK_THRESHOLD = 5;
+
 // ══════════════════════════════════════════════════════════════════════════════
 // MOVIMENTAÇÕES
 // ══════════════════════════════════════════════════════════════════════════════

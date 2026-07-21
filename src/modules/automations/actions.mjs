@@ -58,6 +58,7 @@ import {
   buildSuccessPayload,
   buildErrorPayload,
 } from './flow.mjs';
+import { hasModulePermission } from '../../database/repositories/Permissions.mjs';
 
 // ── Helpers de interação ──────────────────────────────────────────────────────
 
@@ -107,6 +108,14 @@ async function _getSessionOrFail(interaction, sessionId) {
 // ── Roteador principal ────────────────────────────────────────────────────────
 
 export async function handleAtmComponent(interaction, action, partes) {
+  // Verifica permissão do módulo (exceto para toggle, delete, delete_ok que podem ser acionados por qualquer usuário)
+  const noPermissionCheck = ['toggle', 'delete', 'delete_ok'].includes(action);
+  if (!noPermissionCheck && !hasModulePermission(interaction.guildId, 'automations', interaction.member)) {
+    return safeReply(interaction, buildErrorPayload(
+      '❌ Você não tem permissão para gerenciar automações. Peça a um administrador para configurar as permissões.'
+    ));
+  }
+
   switch (action) {
     case 'panel':        return handlePanel(interaction, partes);
     case 'create':       return handleCreate(interaction, partes);

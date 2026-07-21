@@ -30,6 +30,14 @@ if (!process.env.DISCORD_TOKEN) {
   process.exit(1);
 }
 
+// ── Validação do SESSION_SECRET (para servidor web) ────────────────────────
+const isWebServerEnabled = process.env.WEB_PORT && parseInt(process.env.WEB_PORT) > 0;
+if (isWebServerEnabled && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.trim() === '')) {
+  logger.error('SESSION_SECRET não configurado no arquivo .env. O servidor web não pode iniciar.');
+  logger.error('Gere um valor seguro com: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+  process.exit(1);
+}
+
 // ── Criação do client ───────────────────────────────────────────────────────
 const client = new Client({
   intents: [

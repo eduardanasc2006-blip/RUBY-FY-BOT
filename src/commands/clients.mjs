@@ -8,7 +8,7 @@
  * Permissão padrão: ManageMessages
  */
 
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { buildClientModal, openClientsList } from '../modules/clients/index.mjs';
 
 export default {
@@ -31,6 +31,13 @@ export default {
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    */
   async execute(interaction) {
+    if (!interaction.guildId) {
+      return interaction.reply({
+        content: '⚠️ Este comando só pode ser usado em servidores.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
     const sub = interaction.options.getSubcommand();
 
     if (sub === 'registrar') {

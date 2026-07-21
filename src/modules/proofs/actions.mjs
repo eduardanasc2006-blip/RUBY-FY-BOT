@@ -24,6 +24,16 @@ import {
   buildProofListEmbed,
 } from './flow.mjs';
 import { logger } from '../../utils/logger.mjs';
+import { hasModulePermission, buildDeniedMessage } from '../../database/repositories/Permissions.mjs';
+import { logAudit } from '../audit/index.mjs';
+
+const MODULE_NAME = 'proofs';
+
+// ── Verificação de Permissão ─────────────────────────────────────────────────
+
+function checkPermission(interaction) {
+  return hasModulePermission(interaction.guildId, MODULE_NAME, interaction.member);
+}
 
 // ── Roteador do namespace ─────────────────────────────────────────────────────
 
@@ -35,6 +45,11 @@ import { logger } from '../../utils/logger.mjs';
  * @param {string[]} partes
  */
 export async function handleProofsComponent(interaction, action, partes) {
+  // Verifica permissão do módulo
+  if (!checkPermission(interaction)) {
+    return safeReply(interaction, buildDeniedMessage(MODULE_NAME));
+  }
+
   switch (action) {
     case 'modal_submit': return handleModalSubmit(interaction);
     case 'list':         return handleList(interaction);
@@ -126,6 +141,18 @@ async function handleModalSubmit(interaction) {
     });
 
     logger.info(`[Proofs] Proof registrada | guild: ${guildId} | id: ${proof.id} | vendedor: ${proof.vendorId}`);
+
+    // Auditoria
+    logAudit(guildId, {
+      actorId: interaction.user.id,
+      module: MODULE_NAME,
+      action: 'proof_created',
+      entity: 'proof',
+      entityId: proof.id,
+      result: 'success',
+      beforeData: null,
+      afterData: { produto, valor, clientId: clientId || clienteRaw },
+    });
 
     await interaction.editReply(buildSuccessPayload(proof));
 

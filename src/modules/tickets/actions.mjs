@@ -48,10 +48,24 @@ import { getTicketConfig, setTicketConfig, countOpenTickets } from '../../databa
 import { buildOpenPanelPayload } from './flow.mjs';
 import { build } from '../../utils/customId.mjs';
 import { logger } from '../../utils/logger.mjs';
+import { hasModulePermission, buildDeniedMessage } from '../../database/repositories/Permissions.mjs';
+
+const MODULE_NAME = 'tickets';
+
+// ── Verificação de Permissão ─────────────────────────────────────────────────
+
+function checkPermission(interaction) {
+  return hasModulePermission(interaction.guildId, MODULE_NAME, interaction.member);
+}
 
 // ── Handler principal ─────────────────────────────────────────────────────────
 
 export async function handleTcfgComponent(interaction, action, partes) {
+  // Verifica permissão do módulo
+  if (!checkPermission(interaction)) {
+    return safeReply(interaction, buildDeniedMessage(MODULE_NAME));
+  }
+
   const sessionId = partes[0];
 
   if (!sessionId) return safeReply(interaction, '⚠️ Sessão inválida.');

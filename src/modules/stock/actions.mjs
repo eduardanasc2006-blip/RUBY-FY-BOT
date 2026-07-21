@@ -22,8 +22,6 @@ import {
   getStockReport,
   getLowStockProducts,
   getOutOfStockProducts,
-  getProduct,
-  listProducts,
   addStock,
   removeStock,
   setStock,
@@ -33,6 +31,7 @@ import {
   STOCK_REFERENCE_TYPE,
   DEFAULT_LOW_STOCK_THRESHOLD,
 } from '../../database/repositories/Stock.mjs';
+import { getProduct, listProducts } from '../../database/repositories/Products.mjs';
 import { logAudit } from '../../modules/audit/index.mjs';
 import {
   buildStockPayload,

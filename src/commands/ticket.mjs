@@ -66,6 +66,13 @@ export default {
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    */
   async execute(interaction) {
+    if (!interaction.guildId) {
+      return interaction.reply({
+        content: '⚠️ Este comando só pode ser usado em servidores.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
     const sub = interaction.options.getSubcommand();
 
     // Busca ticket pelo canal atual

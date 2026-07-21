@@ -42,10 +42,25 @@ import {
 } from './flow.mjs';
 import { resolveUserId } from '../proofs/flow.mjs';
 import { logger } from '../../utils/logger.mjs';
+import { hasModulePermission, buildDeniedMessage } from '../../database/repositories/Permissions.mjs';
+import { logAudit } from '../audit/index.mjs';
+
+const MODULE_NAME = 'pedidos';
+
+// ── Verificação de Permissão ─────────────────────────────────────────────────
+
+function checkPermission(interaction) {
+  return hasModulePermission(interaction.guildId, MODULE_NAME, interaction.member);
+}
 
 // ── Roteador ──────────────────────────────────────────────────────────────────
 
 export async function handleOrdersComponent(interaction, action, partes) {
+  // Verifica permissão do módulo
+  if (!checkPermission(interaction)) {
+    return safeReply(interaction, buildDeniedMessage(MODULE_NAME));
+  }
+
   const orderId = partes[0] ?? null;
 
   switch (action) {
@@ -101,6 +116,18 @@ async function handleModalSubmit(interaction) {
     _fireConnection(guildId, 'order_created', order, interaction);
 
     logger.info(`[Orders] Pedido criado | guild: ${guildId} | id: ${order.id} | produto: ${order.produto}`);
+
+    // Auditoria
+    logAudit(guildId, {
+      actorId: interaction.user.id,
+      module: MODULE_NAME,
+      action: 'order_created',
+      entity: 'order',
+      entityId: order.id,
+      result: 'success',
+      beforeData: null,
+      afterData: order,
+    });
 
     await interaction.editReply(buildSuccessPayload(order));
 
@@ -160,7 +187,7 @@ async function handleStatusSelect(interaction, orderId) {
   await safeUpdate(interaction, buildStatusSelectPayload(order));
 }
 
-// ── Status Do (select value = new status) ────────────────────────────────────
+  // ── Status Do (select value = new status) ────────────────────────────────────
 
 async function handleStatusDo(interaction, orderId) {
   const guildId   = interaction.guildId;
@@ -170,6 +197,10 @@ async function handleStatusDo(interaction, orderId) {
     await safeUpdate(interaction, { content: '⚠️ Dados inválidos.', components: [], embeds: [] });
     return;
   }
+
+  // Salva status anterior para auditoria
+  const orderBefore = getOrder(guildId, orderId);
+  const oldStatus = orderBefore?.status;
 
   const result = updateOrderStatus(guildId, orderId, newStatus);
 
@@ -182,7 +213,7 @@ async function handleStatusDo(interaction, orderId) {
     return;
   }
 
-  	  const order = result.order;
+  const order = result.order;
   const action = STATUS_ACTIONS[newStatus] ?? `order_${newStatus}`;
 
   // Dispara conexão para o novo status
@@ -210,6 +241,18 @@ async function handleStatusDo(interaction, orderId) {
   }
 
   logger.info(`[Orders] Status alterado | guild: ${guildId} | id: ${order.id} | status: ${newStatus}`);
+
+  // Auditoria
+  logAudit(guildId, {
+    actorId: interaction.user.id,
+    module: MODULE_NAME,
+    action: 'order_status_changed',
+    entity: 'order',
+    entityId: order.id,
+    result: 'success',
+    beforeData: { status: oldStatus },
+    afterData: { status: newStatus },
+  });
 
   // Volta ao view do pedido atualizado
   const embed      = buildOrderEmbed(order);
@@ -272,6 +315,9 @@ async function handleCancelOk(interaction, orderId) {
     return;
   }
 
+  // Salva dados anteriores para auditoria
+  const orderBefore = getOrder(guildId, orderId);
+
   const result = cancelOrder(guildId, orderId);
   if (!result.ok) {
     const msg = result.reason === 'not_found'       ? 'Pedido não encontrado.'
@@ -287,6 +333,18 @@ async function handleCancelOk(interaction, orderId) {
   _fireConnection(guildId, 'order_cancelled', order, interaction);
 
   logger.info(`[Orders] Pedido cancelado | guild: ${guildId} | id: ${order.id}`);
+
+  // Auditoria
+  logAudit(guildId, {
+    actorId: interaction.user.id,
+    module: MODULE_NAME,
+    action: 'order_cancelled',
+    entity: 'order',
+    entityId: order.id,
+    result: 'success',
+    beforeData: { status: orderBefore?.status },
+    afterData: { status: 'cancelled' },
+  });
 
   const embed = buildOrderEmbed(order);
   await safeUpdate(interaction, {
