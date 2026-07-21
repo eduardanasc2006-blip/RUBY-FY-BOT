@@ -28,6 +28,13 @@ export default {
         .setDescription('Lista as provas de venda recentes deste servidor.'),
     ),
 
+  // ── Prefix command ───────────────────────────────────────────────────────
+  name: 'proof',
+
+  async executePrefix(message) {
+    await message.reply('📋 Use `/proof` para gerenciar provas.\n💡 Comandos slash oferecem uma interface visual completa.');
+  },
+
   /**
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    */

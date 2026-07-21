@@ -17,6 +17,13 @@ export default {
     .setDescription('Gerencie as conexões de ações automáticas do servidor.')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
+  // ── Prefix command ───────────────────────────────────────────────────────
+  name: 'conexoes',
+
+  async executePrefix(message) {
+    await message.reply('📋 Use `/conexoes` para gerenciar conexões.\n💡 Comandos slash oferecem uma interface visual completa.');
+  },
+
   /**
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    */

@@ -17,6 +17,13 @@ export default {
     .setName('modelos')
     .setDescription('Gerencie os modelos de mensagens reutilizáveis do servidor.'),
 
+  // ── Prefix command ───────────────────────────────────────────────────────
+  name: 'modelos',
+
+  async executePrefix(message) {
+    await message.reply('📋 Use `/modelos` para gerenciar modelos.\n💡 Comandos slash oferecem uma interface visual completa.');
+  },
+
   /**
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    */

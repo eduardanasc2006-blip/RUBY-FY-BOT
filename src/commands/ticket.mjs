@@ -62,6 +62,13 @@ export default {
         ),
     ),
 
+  // ── Prefix command ───────────────────────────────────────────────────────
+  name: 'ticket',
+
+  async executePrefix(message) {
+    await message.reply('📋 Use `/ticket` para gerenciar tickets.\n💡 Comandos slash oferecem uma interface visual completa.');
+  },
+
   /**
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    */

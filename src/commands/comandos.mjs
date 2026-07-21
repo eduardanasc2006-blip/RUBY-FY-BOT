@@ -22,6 +22,13 @@ export default {
     .setName('comandos')
     .setDescription('Gerencie os comandos personalizados do servidor (/pix, /regras, etc).'),
 
+  // ── Prefix command ───────────────────────────────────────────────────────
+  name: 'comandos',
+
+  async executePrefix(message) {
+    await message.reply('📋 Use `/comandos` para gerenciar comandos personalizados.\n💡 Comandos slash oferecem uma interface visual completa.');
+  },
+
   /**
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    */

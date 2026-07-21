@@ -17,6 +17,13 @@ export default {
     .setDescription('Configure o sistema de atendimento por tickets do servidor.')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
+  // ── Prefix command ───────────────────────────────────────────────────────
+  name: 'tickets',
+
+  async executePrefix(message) {
+    await message.reply('📋 Use `/tickets` para configurar tickets.\n💡 Comandos slash oferecem uma interface visual completa.');
+  },
+
   /**
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    */

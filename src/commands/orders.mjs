@@ -27,6 +27,13 @@ export default {
         .setDescription('Lista os pedidos recentes com opções de gerenciamento.'),
     ),
 
+  // ── Prefix command ───────────────────────────────────────────────────────
+  name: 'pedido',
+
+  async executePrefix(message) {
+    await message.reply('📋 Use `/pedido` para gerenciar pedidos.\n💡 Comandos slash oferecem uma interface visual completa.');
+  },
+
   /**
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    */

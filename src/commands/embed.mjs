@@ -22,6 +22,13 @@ export default {
     .setName('embed')
     .setDescription('Configura e publica uma embed personalizada neste servidor.'),
 
+  // ── Prefix command ───────────────────────────────────────────────────────
+  name: 'embed',
+
+  async executePrefix(message) {
+    await message.reply('📋 Use `/embed` para criar embeds.\n💡 Comandos slash oferecem uma interface visual completa.');
+  },
+
   /**
    * Carrega configuração existente do servidor (se houver) e abre o editor.
    * Se nunca configurado, getAllSettings retorna {} e todos os campos

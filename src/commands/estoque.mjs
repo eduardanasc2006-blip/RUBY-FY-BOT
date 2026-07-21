@@ -134,6 +134,13 @@ export default {
         )
     ),
 
+  // ── Prefix command ───────────────────────────────────────────────────────
+  name: 'estoque',
+
+  async executePrefix(message) {
+    await message.reply('📋 Use `/estoque` para gerenciar estoque.\n💡 Comandos slash oferecem uma interface visual completa.');
+  },
+
   async execute(interaction) {
     const guildId = interaction.guildId;
 

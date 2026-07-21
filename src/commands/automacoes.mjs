@@ -16,6 +16,13 @@ export default {
     .setDescription('Gerencie as automações visuais do servidor.')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
+  // ── Prefix command ───────────────────────────────────────────────────────
+  name: 'automacoes',
+
+  async executePrefix(message) {
+    await message.reply('📋 Use `/automacoes` para gerenciar automações.\n💡 Comandos slash oferecem uma interface visual completa.');
+  },
+
   /**
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    */

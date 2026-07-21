@@ -27,6 +27,13 @@ export default {
     .setName('autorole')
     .setDescription('Gerencie cargos automáticos para novos membros.'),
 
+  // ── Prefix command ───────────────────────────────────────────────────────
+  name: 'autorole',
+
+  async executePrefix(message) {
+    await message.reply('📋 Use `/autorole` para gerenciar cargos automáticos.\n💡 Comandos slash oferecem uma interface visual completa.');
+  },
+
   /**
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    */

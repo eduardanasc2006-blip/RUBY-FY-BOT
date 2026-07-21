@@ -27,6 +27,13 @@ export default {
         .setDescription('Lista os clientes cadastrados com opções de gerenciamento.'),
     ),
 
+  // ── Prefix command ───────────────────────────────────────────────────────
+  name: 'cliente',
+
+  async executePrefix(message) {
+    await message.reply('📋 Use `/cliente` para gerenciar clientes.\n💡 Comandos slash oferecem uma interface visual completa.');
+  },
+
   /**
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    */

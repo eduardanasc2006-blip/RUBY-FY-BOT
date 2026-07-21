@@ -114,6 +114,13 @@ export default {
         )
     ),
 
+  // ── Prefix command ───────────────────────────────────────────────────────
+  name: 'auditoria',
+
+  async executePrefix(message) {
+    await message.reply('📋 Use `/auditoria` para ver registros de auditoria.\n💡 Comandos slash oferecem uma interface visual completa.');
+  },
+
   /**
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    */

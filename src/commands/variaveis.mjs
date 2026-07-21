@@ -21,6 +21,13 @@ export default {
     .setName('variaveis')
     .setDescription('Gerencie as variáveis personalizadas do servidor ({pix}, {loja}, etc).'),
 
+  // ── Prefix command ───────────────────────────────────────────────────────
+  name: 'variaveis',
+
+  async executePrefix(message) {
+    await message.reply('📋 Use `/variaveis` para gerenciar variáveis.\n💡 Comandos slash oferecem uma interface visual completa.');
+  },
+
   /**
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    */

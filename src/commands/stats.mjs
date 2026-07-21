@@ -29,6 +29,13 @@ export default {
     .setDescription('Exibe estatísticas do servidor.')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
+  // ── Prefix command ───────────────────────────────────────────────────────
+  name: 'stats',
+
+  async executePrefix(message) {
+    await message.reply('📋 Use `/stats` para ver estatísticas.\n💡 Comandos slash oferecem uma interface visual completa.');
+  },
+
   /**
    * @param {import('discord.js').ChatInputCommandInteraction} interaction
    */
