@@ -109,6 +109,9 @@ async function handleView(interaction, sessionId, panelId) {
 }
 
 async function handleNew(interaction) {
+  // Deferir para permitir editReply após o modal submit
+  await interaction.deferUpdate();
+  
   const modal = new ModalBuilder()
     .setCustomId('cpnl:new_modal')
     .setTitle('✨ Criar Novo Painel')
@@ -173,12 +176,16 @@ async function handleNewModal(interaction) {
   const session = createSession(interaction.user.id, interaction.guildId, 'cpnl', { page: 0 });
   const payload = buildEditorPayload(session.sessionId, panel, interaction.guildId);
 
-  return interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
+  // Atualiza a mensagem original (já deferido em handleNew)
+  return interaction.editReply({ ...payload, flags: MessageFlags.Ephemeral });
 }
 
 async function handleEditEmbed(interaction, sessionId, panelId) {
   const panel = getPanel(interaction.guildId, panelId);
   if (!panel) return safeReply(interaction, '⚠️ Painel não encontrado.');
+
+  // Deferir para permitir editReply após o modal submit
+  await interaction.deferUpdate();
 
   const modal = new ModalBuilder()
     .setCustomId(build('cpnl', 'edit_modal', panelId))
@@ -239,7 +246,8 @@ async function handleEditModal(interaction, panelId) {
   const session = createSession(interaction.user.id, interaction.guildId, 'cpnl', { page: 0 });
   const payload = buildEditorPayload(session.sessionId, updated, interaction.guildId);
 
-  return interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
+  // Atualiza a mensagem original (já deferido em handleEditEmbed)
+  return interaction.editReply({ ...payload, flags: MessageFlags.Ephemeral });
 }
 
 async function handleAddBtn(interaction, panelId) {
@@ -249,6 +257,9 @@ async function handleAddBtn(interaction, panelId) {
   if (countButtons(interaction.guildId, panelId) >= MAX_BUTTONS) {
     return safeReply(interaction, `⚠️ Limite de ${MAX_BUTTONS} botões atingido.`);
   }
+
+  // Deferir para permitir editReply após o modal submit
+  await interaction.deferUpdate();
 
   const modal = new ModalBuilder()
     .setCustomId(build('cpnl', 'add_btn_modal', panelId))
@@ -322,7 +333,8 @@ async function handleAddBtnModal(interaction, panelId) {
   const updated = getPanel(interaction.guildId, panelId);
   const payload = buildEditorPayload(session.sessionId, updated, interaction.guildId);
 
-  return interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
+  // Atualiza a mensagem original (já deferido em handleAddBtn)
+  return interaction.editReply({ ...payload, flags: MessageFlags.Ephemeral });
 }
 
 async function handleDelBtn(interaction, panelId, buttonId) {

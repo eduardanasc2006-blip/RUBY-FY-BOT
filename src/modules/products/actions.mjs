@@ -88,6 +88,9 @@ async function handleView(interaction, sessionId, productId) {
 }
 
 async function handleNew(interaction) {
+  // Deferir para permitir editReply após o modal submit
+  await interaction.deferUpdate();
+  
   return interaction.showModal(
     new ModalBuilder()
       .setCustomId('prod:new_modal')
@@ -139,7 +142,8 @@ async function handleNewModal(interaction) {
   logger.info(`[Products] Produto criado | id: ${product.id} | guild: ${interaction.guildId}`);
 
   const session = createSession(interaction.user.id, interaction.guildId, 'prod', { page: 0 });
-  return interaction.reply({ ...buildViewPayload(session.sessionId, product), flags: MessageFlags.Ephemeral });
+  // Atualiza a mensagem original (já deferido em handleNew)
+  return interaction.editReply({ ...buildViewPayload(session.sessionId, product), flags: MessageFlags.Ephemeral });
 }
 
 async function handleEditModal(interaction, productId) {

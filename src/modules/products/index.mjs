@@ -53,6 +53,9 @@ async function handleStockBtn(interaction, productId) {
   const product = getProduct(interaction.guildId, productId);
   if (!product)  return safeReply(interaction, '⚠️ Produto não encontrado.');
 
+  // Deferir para permitir editReply após o modal submit
+  await interaction.deferUpdate();
+
   return interaction.showModal(
     new ModalBuilder()
       .setCustomId(build('prod', 'stock_modal', productId))

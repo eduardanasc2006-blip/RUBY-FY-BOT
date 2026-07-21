@@ -200,6 +200,8 @@ async function handleSelect(interaction) {
 // ── Criação ───────────────────────────────────────────────────────────────────
 
 async function showCreateModal(interaction) {
+  // Deferir para permitir editReply após o modal submit
+  await interaction.deferUpdate();
   const modal = await buildCreateModal();
   await interaction.showModal(modal);
 }
@@ -215,27 +217,26 @@ async function handleCreateSubmit(interaction) {
   // Validações
   const nameError = validateName(name);
   if (nameError) {
-    await interaction.reply({ content: `❌ ${nameError}`, ephemeral: true });
+    await interaction.editReply({ content: `❌ ${nameError}` });
     return;
   }
 
   const descError = validateDescription(description);
   if (descError) {
-    await interaction.reply({ content: `❌ ${descError}`, ephemeral: true });
+    await interaction.editReply({ content: `❌ ${descError}` });
     return;
   }
 
   const contentError = validateTextContent(content);
   if (contentError) {
-    await interaction.reply({ content: `❌ ${contentError}`, ephemeral: true });
+    await interaction.editReply({ content: `❌ ${contentError}` });
     return;
   }
 
   // Verifica se nome já existe
   if (existsCommand(guildId, name)) {
-    await interaction.reply({
+    await interaction.editReply({
       content: `❌ Já existe um comando chamado **${name}** neste servidor.`,
-      ephemeral: true,
     });
     return;
   }
@@ -253,15 +254,14 @@ async function handleCreateSubmit(interaction) {
     const embed   = buildCommandDetailEmbed(command, interaction.guild?.name);
     const buttons = await buildDetailButtons(command);
 
-    await interaction.reply({
+    await interaction.editReply({
       content: '✅ Comando criado com sucesso!',
       ...embed,
       components: buttons,
-      ephemeral: true,
     });
   } catch (err) {
     logger.error('[CustomCommands] Erro ao criar comando:', err);
-    await interaction.reply({ content: '❌ Erro ao criar o comando.', ephemeral: true });
+    await interaction.editReply({ content: '❌ Erro ao criar o comando.' });
   }
 }
 
@@ -272,10 +272,12 @@ async function showEditModal(interaction, commandId) {
 
   const command = getCommand(guildId, commandId);
   if (!command) {
-    await interaction.reply({ content: '❌ Comando não encontrado.', ephemeral: true });
+    await interaction.editReply({ content: '❌ Comando não encontrado.' });
     return;
   }
 
+  // Deferir para permitir editReply após o modal submit
+  await interaction.deferUpdate();
   const modal = await buildEditModal(command);
   await interaction.showModal(modal);
 }
@@ -291,28 +293,27 @@ async function handleEditSubmit(interaction, commandId) {
   // Validações
   const nameError = validateName(name);
   if (nameError) {
-    await interaction.reply({ content: `❌ ${nameError}`, ephemeral: true });
+    await interaction.editReply({ content: `❌ ${nameError}` });
     return;
   }
 
   const descError = validateDescription(description);
   if (descError) {
-    await interaction.reply({ content: `❌ ${descError}`, ephemeral: true });
+    await interaction.editReply({ content: `❌ ${descError}` });
     return;
   }
 
   const contentError = validateTextContent(content);
   if (contentError) {
-    await interaction.reply({ content: `❌ ${contentError}`, ephemeral: true });
+    await interaction.editReply({ content: `❌ ${contentError}` });
     return;
   }
 
   // Verifica se nome já existe (exceto se for o mesmo)
   const existing = getCommandByName(guildId, name);
   if (existing && existing.id !== commandId) {
-    await interaction.reply({
+    await interaction.editReply({
       content: `❌ Já existe um comando chamado **${name}** neste servidor.`,
-      ephemeral: true,
     });
     return;
   }
@@ -330,15 +331,14 @@ async function handleEditSubmit(interaction, commandId) {
     const embed   = buildCommandDetailEmbed(command, interaction.guild?.name);
     const buttons = await buildDetailButtons(command);
 
-    await interaction.reply({
+    await interaction.editReply({
       content: '✅ Comando atualizado com sucesso!',
       ...embed,
       components: buttons,
-      ephemeral: true,
     });
   } catch (err) {
     logger.error('[CustomCommands] Erro ao editar comando:', err);
-    await interaction.reply({ content: '❌ Erro ao editar o comando.', ephemeral: true });
+    await interaction.editReply({ content: '❌ Erro ao editar o comando.' });
   }
 }
 
