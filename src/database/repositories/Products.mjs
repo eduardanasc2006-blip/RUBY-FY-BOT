@@ -213,6 +213,22 @@ export function adjustStock(guildId, id, delta) {
     WHERE id = ? AND guild_id = ?
   `).run(newStock, newStatus, id, guildId);
 
+  // Registra movimentação de estoque no sistema de histórico
+  try {
+    const { recordMovement, STOCK_MOVEMENT_TYPE, STOCK_REFERENCE_TYPE } = require('./Stock.mjs');
+    recordMovement(guildId, {
+      productId: id,
+      type: delta < 0 ? STOCK_MOVEMENT_TYPE.EXIT : STOCK_MOVEMENT_TYPE.ENTRY,
+      quantity: Math.abs(delta),
+      previousStock: product.stock,
+      newStock,
+      referenceType: STOCK_REFERENCE_TYPE.ORDER,
+      reason: delta < 0 ? 'Venda via catálogo' : 'Entrada manual',
+    });
+  } catch {
+    // Erro no registro de movimentação não deve bloquear a operação
+  }
+
   return { ok: true, product: getProduct(guildId, id) };
 }
 
