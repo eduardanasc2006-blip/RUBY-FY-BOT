@@ -164,6 +164,24 @@ export function markPublished(guildId, id, channelId, messageId) {
 }
 
 /**
+ * Marca um painel como rascunho (remove channel_id e message_id).
+ * Usado quando a mensagem publicada é apagada.
+ *
+ * @param {string} guildId
+ * @param {string} id
+ * @returns {object|null}
+ */
+export function markUnpublished(guildId, id) {
+  const db = getDb();
+  db.prepare(`
+    UPDATE custom_panels
+       SET status = 'draft', channel_id = NULL, message_id = NULL, updated_at = unixepoch()
+     WHERE id = ? AND guild_id = ?
+  `).run(id, guildId);
+  return getPanel(guildId, id);
+}
+
+/**
  * Exclui um painel e todos os seus botões.
  *
  * @param {string} guildId

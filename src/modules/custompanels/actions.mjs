@@ -380,9 +380,31 @@ async function handlePubSel(interaction, panelId) {
   const payload = buildPublishedPayload(panel, interaction.guildId);
 
   try {
+    // Primeiro tenta editar mensagem existente
+    if (panel.channelId && panel.messageId) {
+      try {
+        const existingMsg = await channel.messages.fetch(panel.messageId);
+        await existingMsg.edit(payload);
+        markPublished(interaction.guildId, panelId, channelId, panel.messageId);
+        logger.info(`[CustomPanels] Painel atualizado | id: ${panelId} | canal: ${channelId} | msg: ${panel.messageId}`);
+
+        return interaction.update({
+          content:    `✅ Painel **"${panel.name}"** atualizado em <#${channelId}>!`,
+          embeds:     [],
+          components: [],
+        });
+      } catch (fetchErr) {
+        // Mensagem não existe mais, vamos criar uma nova
+        if (fetchErr?.code !== 10008) {
+          logger.warn(`[CustomPanels] Erro ao buscar mensagem existente: ${fetchErr?.message}`);
+        }
+      }
+    }
+
+    // Criar nova mensagem
     const msg = await channel.send(payload);
     markPublished(interaction.guildId, panelId, channelId, msg.id);
-    logger.info(`[CustomPanels] Painel publicado | id: ${panelId} | canal: ${channelId}`);
+    logger.info(`[CustomPanels] Painel publicado | id: ${panelId} | canal: ${channelId} | msg: ${msg.id}`);
 
     return interaction.update({
       content:    `✅ Painel **"${panel.name}"** publicado em <#${channelId}>!`,

@@ -1,46 +1,22 @@
-import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import { config } from '../config/bot.mjs';
-
-function buildEmbed(client) {
-  return new EmbedBuilder()
-    .setColor(config.embedColor)
-    .setTitle(`${config.botName} — Central de Ajuda`)
-    .setDescription('> Bot em desenvolvimento. Novos comandos serão adicionados em breve.')
-    .addFields(
-      {
-        name: '🏓 Ping',
-        value: '`!ping` `p` · `/ping`\nVerifica se o bot está online e mostra a latência.',
-      },
-      {
-        name: '❓ Ajuda',
-        value: '`!ajuda` `!help` · `/ajuda` `/help`\nExibe esta mensagem com todos os comandos disponíveis.',
-      },
-      {
-        name: '📋 Embed',
-        value: '`/embed`\nConfigura e publica uma embed personalizada neste servidor.',
-      },
-    )
-    .setFooter({ text: `${config.botName} • Use ${config.prefix}ajuda para ver os comandos`, iconURL: client.user.displayAvatarURL() })
-    .setTimestamp();
-}
+import { SlashCommandBuilder } from 'discord.js';
+import { buildHelpMenu, buildSimpleHelpEmbed } from '../utils/helpBuilder.mjs';
 
 export default {
-  // ── Slash command ────────────────────────────────────────────────────────
   data: new SlashCommandBuilder()
     .setName('ajuda')
     .setDescription('Exibe todos os comandos disponíveis do bot.'),
 
   async execute(interaction) {
-    const embed = buildEmbed(interaction.client);
-    await interaction.reply({ embeds: [embed] });
+    const payload = buildHelpMenu(interaction.client, interaction);
+    await interaction.reply(payload);
   },
 
-  // ── Prefix command ───────────────────────────────────────────────────────
   name: 'ajuda',
   aliases: ['help'],
 
   async executePrefix(message) {
-    const embed = buildEmbed(message.client);
+    const { config } = await import('../config/bot.mjs');
+    const embed = buildSimpleHelpEmbed(message.client, config.prefix);
     await message.reply({ embeds: [embed] });
   },
 };

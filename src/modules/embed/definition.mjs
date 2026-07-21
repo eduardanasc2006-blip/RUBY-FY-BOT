@@ -13,10 +13,11 @@
  *                    thumbnail_url, rodape_*, timestamp
  *   Etapa 6 Fase B — canal_id migrado de 'text' para 'channel' (seletor nativo)
  *   Etapa 6 Fase C — suporte a embed fields (gerenciados via painel separado)
+ *   Melhoria       — message_id salvo para permitir edição da mensagem
  */
 
 import { EmbedBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { setSetting } from '../../database/repositories/GuildConfig.mjs';
+import { setSetting, getSetting } from '../../database/repositories/GuildConfig.mjs';
 import { config } from '../../config/bot.mjs';
 import { logger } from '../../utils/logger.mjs';
 import { build } from '../../utils/customId.mjs';
@@ -428,14 +429,37 @@ export function createDefinition() {
         }
       }
 
-      try {
-        await channel.send({ embeds: [embed] });
-      } catch (err) {
-        logger.error(`[Embed] Falha ao publicar no canal ${canalId}:`, err);
-        throw new Error(
-          `Não foi possível publicar no canal <#${canalId}>. ` +
-          'Verifique se o bot tem permissão para enviar mensagens neste canal.',
-        );
+      let messageId = null;
+
+      // Primeiro tenta editar mensagem existente
+      const existingMsgId = getSetting(guildId, 'embed', 'message_id');
+      if (existingMsgId && canalId === data.canal_id) {
+        try {
+          const existingMsg = await channel.messages.fetch(existingMsgId);
+          await existingMsg.edit({ embeds: [embed] });
+          messageId = existingMsgId;
+          logger.info(`[Embed] Embed atualizada | guild: ${guildId} | canal: ${canalId} | msg: ${messageId}`);
+        } catch (fetchErr) {
+          // Mensagem não existe mais, vamos criar uma nova
+          if (fetchErr?.code !== 10008) {
+            logger.warn(`[Embed] Erro ao buscar mensagem existente: ${fetchErr?.message}`);
+          }
+        }
+      }
+
+      // Se não conseguiu editar, criar nova
+      if (!messageId) {
+        try {
+          const msg = await channel.send({ embeds: [embed] });
+          messageId = msg.id;
+          logger.info(`[Embed] Embed publicada | guild: ${guildId} | canal: ${canalId} | msg: ${messageId}`);
+        } catch (err) {
+          logger.error(`[Embed] Falha ao publicar no canal ${canalId}:`, err);
+          throw new Error(
+            `Não foi possível publicar no canal <#${canalId}>. ` +
+            'Verifique se o bot tem permissão para enviar mensagens neste canal.',
+          );
+        }
       }
 
       // ── Passo 3: Salva configuração no banco (pós-publicação) ──────────────
@@ -445,10 +469,14 @@ export function createDefinition() {
         'autor_nome', 'autor_url', 'autor_icone',
         'imagem_url', 'thumbnail_url',
         'rodape_texto', 'rodape_icone',
-        'timestamp', 'canal_id',
+        'timestamp', 'canal_id', 'message_id',
       ];
       for (const campo of campos) {
-        setSetting(guildId, 'embed', campo, data[campo] ?? null);
+        if (campo === 'message_id') {
+          setSetting(guildId, 'embed', campo, messageId);
+        } else {
+          setSetting(guildId, 'embed', campo, data[campo] ?? null);
+        }
       }
 
       // Persiste fields (array JSON)
