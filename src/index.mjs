@@ -17,6 +17,7 @@ import { registerAutomationsHandler } from './modules/automations/index.mjs';
 import { registerAuditHandler }           from './modules/audit/index.mjs';
 import { registerVariablesHandler }       from './modules/variables/index.mjs';
 import { registerCustomCommandsHandler }  from './modules/customcommands/index.mjs';
+import { registerAutoRoleHandler }        from './modules/autorole/index.mjs';
 import { loadCommands } from './handlers/commandHandler.mjs';
 import { loadEvents } from './handlers/eventHandler.mjs';
 import { startWebServer } from './web/server.mjs';
@@ -64,6 +65,7 @@ registerAutomationsHandler();
 registerAuditHandler();
 registerVariablesHandler();
 registerCustomCommandsHandler();
+registerAutoRoleHandler();
 
 // ── Carregamento de handlers ────────────────────────────────────────────────
 logger.info('Iniciando carregamento de comandos e eventos...');

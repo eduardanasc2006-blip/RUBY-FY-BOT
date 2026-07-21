@@ -320,5 +320,31 @@ export function runSchema(db) {
 
     CREATE INDEX IF NOT EXISTS idx_custom_commands_guild_enabled
       ON custom_commands (guild_id, enabled);
+
+    -- Cargos automáticos para novos membros (Fase 4)
+    -- priority: menor número = maior prioridade (0 executa primeiro)
+    -- enabled: 1 = ativo, 0 = desativado
+    CREATE TABLE IF NOT EXISTS auto_roles (
+      id          TEXT    NOT NULL PRIMARY KEY,
+      guild_id    TEXT    NOT NULL,
+      role_id     TEXT    NOT NULL,
+      priority    INTEGER NOT NULL DEFAULT 100,
+      enabled     INTEGER NOT NULL DEFAULT 1,
+      created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+      FOREIGN KEY (guild_id)
+        REFERENCES guild_configs (guild_id)
+        ON DELETE CASCADE,
+      UNIQUE (guild_id, role_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_auto_roles_guild
+      ON auto_roles (guild_id);
+
+    CREATE INDEX IF NOT EXISTS idx_auto_roles_guild_enabled
+      ON auto_roles (guild_id, enabled);
+
+    CREATE INDEX IF NOT EXISTS idx_auto_roles_guild_priority
+      ON auto_roles (guild_id, priority);
   `);
 }

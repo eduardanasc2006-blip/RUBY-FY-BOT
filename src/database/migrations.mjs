@@ -426,6 +426,48 @@ const MIGRATIONS = [
       logger.info('[Migrations] 010: tabela custom_commands e índices criados.');
     },
   },
+  {
+    name: '011_auto_roles',
+    up(db) {
+      // Fase 4: cargos automáticos para novos membros.
+      // Permite configurar cargos que serão atribuídos automaticamente
+      // quando um usuário entrar no servidor.
+      // A tabela já é criada pelo runSchema com CREATE TABLE IF NOT EXISTS;
+      // esta migração garante que exista em bancos anteriores ao schema novo.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS auto_roles (
+          id          TEXT    NOT NULL PRIMARY KEY,
+          guild_id    TEXT    NOT NULL,
+          role_id     TEXT    NOT NULL,
+          priority    INTEGER NOT NULL DEFAULT 100,
+          enabled     INTEGER NOT NULL DEFAULT 1,
+          created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+          updated_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+          FOREIGN KEY (guild_id)
+            REFERENCES guild_configs (guild_id)
+            ON DELETE CASCADE,
+          UNIQUE (guild_id, role_id)
+        )
+      `);
+
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_auto_roles_guild
+                   ON auto_roles (guild_id)`);
+      } catch { /* idempotente */ }
+
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_auto_roles_guild_enabled
+                   ON auto_roles (guild_id, enabled)`);
+      } catch { /* idempotente */ }
+
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_auto_roles_guild_priority
+                   ON auto_roles (guild_id, priority)`);
+      } catch { /* idempotente */ }
+
+      logger.info('[Migrations] 011: tabela auto_roles e índices criados.');
+    },
+  },
 ];
 
 // ── Runner ────────────────────────────────────────────────────────────────────

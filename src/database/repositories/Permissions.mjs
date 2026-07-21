@@ -34,6 +34,7 @@ export const SUPPORTED_MODULES = [
   'stats',
   'variaveis',
   'comandos',
+  'autorole',
 ];
 
 // ── Leitura ───────────────────────────────────────────────────────────────────
