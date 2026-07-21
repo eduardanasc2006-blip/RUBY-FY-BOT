@@ -47,7 +47,7 @@ export {
 export function registerCustomCommandsHandler() {
   // Import dinâmico para evitar dependência circular no boot
   import('./actions.mjs').then(({ handleCustomCommandsComponent, handleDeleteConfirm }) => {
-    register('comandos', handleCustomCommandsComponent);
+    // Handler único que decide o comportamento baseado no customId
     register('comandos', (interaction) => {
       // Handler especial para confirmação de exclusão
       if (interaction.customId.startsWith('comandos:confirm_delete:')) {

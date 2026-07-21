@@ -13,15 +13,20 @@ import { fileURLToPath, pathToFileURL } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Obtém o CLIENT_ID a partir do token (base64 da primeira parte)
 const token = process.env.DISCORD_TOKEN;
+const clientId = process.env.CLIENT_ID;
+
 if (!token) {
   console.error('[Deploy] DISCORD_TOKEN não encontrado no .env');
   process.exit(1);
 }
 
-const clientId = Buffer.from(token.split('.')[0], 'base64').toString('ascii');
-const guildId  = process.env.GUILD_ID || null;
+if (!clientId) {
+  console.error('[Deploy] CLIENT_ID não encontrado no .env');
+  process.exit(1);
+}
+
+const guildId = process.env.GUILD_ID || null;
 
 // Coleta os dados de todos os comandos slash
 const commands = [];
