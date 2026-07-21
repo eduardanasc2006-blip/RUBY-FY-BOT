@@ -1,5 +1,5 @@
 /**
- * Sistema de Painéis Personalizados — Lógica central (Etapa 17A).
+ * Sistema de Painéis Personalizados — Lógica central (Etapa 17A + Fase 3).
  *
  * Funções reutilizadas pelo handler de componentes e pelo comando /paineis.
  *
@@ -27,6 +27,13 @@ import {
   VALID_STYLES,
 } from '../../database/repositories/CustomPanels.mjs';
 import { logger } from '../../utils/logger.mjs';
+import {
+  checkBotManageRolesPermission,
+  validateRole,
+  safeAddRole,
+  safeRemoveRole,
+  ERROR_MESSAGES,
+} from './botValidator.mjs';
 
 // ── Mapa de estilos ───────────────────────────────────────────────────────────
 
@@ -229,46 +236,165 @@ async function handleGiveRole(interaction, data) {
   const roleId = data?.role_id;
   if (!roleId) return safeReply(interaction, '⚠️ Cargo não configurado neste botão.', true);
 
-  const role = interaction.guild?.roles?.cache?.get(roleId);
-  if (!role) return safeReply(interaction, '⚠️ Cargo não encontrado.', true);
+  const guild = interaction.guild;
+  const member = interaction.member;
+  const botMember = guild?.members?.me;
+  const role = guild?.roles?.cache?.get(roleId);
 
-  if (interaction.member?.roles?.cache?.has(roleId)) {
-    return safeReply(interaction, `ℹ️ Você já possui o cargo ${role.name}.`, true);
+  // 1. Verifica se o bot tem permissão Manage Roles
+  const permissionCheck = checkBotManageRolesPermission(guild);
+  if (!permissionCheck.hasPermission) {
+    await logRoleAction(interaction, 'role_give_failed', roleId, role?.name, 'error', permissionCheck.reason);
+    return safeReply(interaction, ERROR_MESSAGES.BOT_NO_PERMISSION, true);
   }
 
-  await interaction.member?.roles?.add(role).catch(() => null);
-  return safeReply(interaction, `✅ Cargo **${role.name}** concedido!`, true);
+  // 2. Valida o cargo
+  const roleCheck = validateRole(role, botMember);
+  if (!roleCheck.valid) {
+    await logRoleAction(interaction, 'role_give_failed', roleId, role?.name, 'error', roleCheck.reason);
+    if (roleCheck.reason?.includes('hierarquia')) {
+      return safeReply(interaction, ERROR_MESSAGES.BOT_ROLE_NOT_MANAGEABLE, true);
+    }
+    return safeReply(interaction, ERROR_MESSAGES.ROLE_NOT_FOUND, true);
+  }
+
+  // 3. Verifica se o membro já tem o cargo
+  if (member?.roles?.cache?.has(roleId)) {
+    await logRoleAction(interaction, 'role_give_skipped', roleId, role.name, 'skipped', 'Already has role');
+    return safeReply(interaction, ERROR_MESSAGES.MEMBER_ALREADY_HAS_ROLE, true);
+  }
+
+  // 4. Executa a ação
+  const result = await safeAddRole(member, role);
+  if (!result.success) {
+    await logRoleAction(interaction, 'role_give_failed', roleId, role.name, 'error', result.reason);
+    return safeReply(interaction, ERROR_MESSAGES.ERROR_ADD(role.name), true);
+  }
+
+  // 5. Sucesso
+  await logRoleAction(interaction, 'role_give_success', roleId, role.name, 'success');
+  return safeReply(interaction, ERROR_MESSAGES.SUCCESS_GIVE(role.name), true);
 }
 
 async function handleTakeRole(interaction, data) {
   const roleId = data?.role_id;
   if (!roleId) return safeReply(interaction, '⚠️ Cargo não configurado neste botão.', true);
 
-  const role = interaction.guild?.roles?.cache?.get(roleId);
-  if (!role) return safeReply(interaction, '⚠️ Cargo não encontrado.', true);
+  const guild = interaction.guild;
+  const member = interaction.member;
+  const botMember = guild?.members?.me;
+  const role = guild?.roles?.cache?.get(roleId);
 
-  if (!interaction.member?.roles?.cache?.has(roleId)) {
-    return safeReply(interaction, `ℹ️ Você não possui o cargo **${role.name}**.`, true);
+  // 1. Verifica se o bot tem permissão Manage Roles
+  const permissionCheck = checkBotManageRolesPermission(guild);
+  if (!permissionCheck.hasPermission) {
+    await logRoleAction(interaction, 'role_take_failed', roleId, role?.name, 'error', permissionCheck.reason);
+    return safeReply(interaction, ERROR_MESSAGES.BOT_NO_PERMISSION, true);
   }
 
-  await interaction.member?.roles?.remove(role).catch(() => null);
-  return safeReply(interaction, `✅ Cargo **${role.name}** removido.`, true);
+  // 2. Valida o cargo
+  const roleCheck = validateRole(role, botMember);
+  if (!roleCheck.valid) {
+    await logRoleAction(interaction, 'role_take_failed', roleId, role?.name, 'error', roleCheck.reason);
+    if (roleCheck.reason?.includes('hierarquia')) {
+      return safeReply(interaction, ERROR_MESSAGES.BOT_ROLE_NOT_MANAGEABLE, true);
+    }
+    return safeReply(interaction, ERROR_MESSAGES.ROLE_NOT_FOUND, true);
+  }
+
+  // 3. Verifica se o membro tem o cargo
+  if (!member?.roles?.cache?.has(roleId)) {
+    await logRoleAction(interaction, 'role_take_skipped', roleId, role.name, 'skipped', 'Does not have role');
+    return safeReply(interaction, ERROR_MESSAGES.MEMBER_DOES_NOT_HAVE_ROLE, true);
+  }
+
+  // 4. Executa a ação
+  const result = await safeRemoveRole(member, role);
+  if (!result.success) {
+    await logRoleAction(interaction, 'role_take_failed', roleId, role.name, 'error', result.reason);
+    return safeReply(interaction, ERROR_MESSAGES.ERROR_REMOVE(role.name), true);
+  }
+
+  // 5. Sucesso
+  await logRoleAction(interaction, 'role_take_success', roleId, role.name, 'success');
+  return safeReply(interaction, ERROR_MESSAGES.SUCCESS_TAKE(role.name), true);
 }
 
 async function handleToggleRole(interaction, data) {
   const roleId = data?.role_id;
   if (!roleId) return safeReply(interaction, '⚠️ Cargo não configurado neste botão.', true);
 
-  const role = interaction.guild?.roles?.cache?.get(roleId);
-  if (!role) return safeReply(interaction, '⚠️ Cargo não encontrado.', true);
+  const guild = interaction.guild;
+  const member = interaction.member;
+  const botMember = guild?.members?.me;
+  const role = guild?.roles?.cache?.get(roleId);
 
-  const has = interaction.member?.roles?.cache?.has(roleId);
-  if (has) {
-    await interaction.member?.roles?.remove(role).catch(() => null);
-    return safeReply(interaction, `✅ Cargo **${role.name}** removido.`, true);
+  // 1. Verifica se o bot tem permissão Manage Roles
+  const permissionCheck = checkBotManageRolesPermission(guild);
+  if (!permissionCheck.hasPermission) {
+    await logRoleAction(interaction, 'role_toggle_failed', roleId, role?.name, 'error', permissionCheck.reason);
+    return safeReply(interaction, ERROR_MESSAGES.BOT_NO_PERMISSION, true);
+  }
+
+  // 2. Valida o cargo
+  const roleCheck = validateRole(role, botMember);
+  if (!roleCheck.valid) {
+    await logRoleAction(interaction, 'role_toggle_failed', roleId, role?.name, 'error', roleCheck.reason);
+    if (roleCheck.reason?.includes('hierarquia')) {
+      return safeReply(interaction, ERROR_MESSAGES.BOT_ROLE_NOT_MANAGEABLE, true);
+    }
+    return safeReply(interaction, ERROR_MESSAGES.ROLE_NOT_FOUND, true);
+  }
+
+  // 3. Verifica e executa o toggle
+  const hasRole = member?.roles?.cache?.has(roleId);
+  let result;
+
+  if (hasRole) {
+    result = await safeRemoveRole(member, role);
+    if (result.success) {
+      await logRoleAction(interaction, 'role_toggle_remove', roleId, role.name, 'success');
+      return safeReply(interaction, ERROR_MESSAGES.SUCCESS_TOGGLE_TAKE(role.name), true);
+    }
   } else {
-    await interaction.member?.roles?.add(role).catch(() => null);
-    return safeReply(interaction, `✅ Cargo **${role.name}** concedido!`, true);
+    result = await safeAddRole(member, role);
+    if (result.success) {
+      await logRoleAction(interaction, 'role_toggle_add', roleId, role.name, 'success');
+      return safeReply(interaction, ERROR_MESSAGES.SUCCESS_TOGGLE_GIVE(role.name), true);
+    }
+  }
+
+  // 4. Erro
+  await logRoleAction(interaction, 'role_toggle_failed', roleId, role.name, 'error', result.reason);
+  return safeReply(interaction, `❌ Erro ao gerenciar o cargo **${role.name}**.`, true);
+}
+
+// ── Auditoria de Ações de Cargo ───────────────────────────────────────────────
+
+/**
+ * Registra ação de cargo no audit log.
+ */
+async function logRoleAction(interaction, action, roleId, roleName, result, reason = null) {
+  try {
+    const { logAudit } = await import('../../database/repositories/AuditLog.mjs');
+    logAudit({
+      guildId: interaction.guildId,
+      actorId: interaction.user.id,
+      module: 'painel',
+      action,
+      entity: 'role',
+      entityId: roleId,
+      result,
+      details: {
+        roleName,
+        roleId,
+        reason,
+        buttonId: interaction.customId,
+      },
+      source: 'discord_event',
+    });
+  } catch (err) {
+    logger.warn('[CustomPanels] Falha ao registrar auditoria de cargo:', err?.message);
   }
 }
 
