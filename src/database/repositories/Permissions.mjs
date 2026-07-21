@@ -35,6 +35,7 @@ export const SUPPORTED_MODULES = [
   'variaveis',
   'comandos',
   'autorole',
+  'stock',
 ];
 
 // ── Leitura ───────────────────────────────────────────────────────────────────
