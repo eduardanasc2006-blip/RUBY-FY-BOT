@@ -33,6 +33,7 @@ export const SUPPORTED_MODULES = [
   'painel',
   'stats',
   'variaveis',
+  'comandos',
 ];
 
 // ── Leitura ───────────────────────────────────────────────────────────────────

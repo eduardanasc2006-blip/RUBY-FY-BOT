@@ -290,5 +290,35 @@ export function runSchema(db) {
       PRIMARY KEY (id, panel_id, guild_id),
       FOREIGN KEY (guild_id) REFERENCES guild_configs (guild_id) ON DELETE CASCADE
     );
+
+    -- Comandos personalizados por servidor (Fase 2)
+    -- Cada servidor pode criar comandos como /pix, /regras, /horario
+    -- UNIQUE (guild_id, name): mesmo servidor não pode ter nomes duplicados
+    -- content_type: 'text' | 'embed'
+    -- content_data: JSON com o conteúdo (texto ou dados do embed)
+    -- enabled: 1 = ativo, 0 = desativado
+    -- use_count: quantas vezes o comando foi executado
+    CREATE TABLE IF NOT EXISTS custom_commands (
+      id          TEXT    NOT NULL PRIMARY KEY,
+      guild_id    TEXT    NOT NULL,
+      name        TEXT    NOT NULL,
+      description TEXT,
+      content_type TEXT   NOT NULL DEFAULT 'text',
+      content_data TEXT    NOT NULL DEFAULT '{}',
+      enabled     INTEGER NOT NULL DEFAULT 1,
+      use_count   INTEGER NOT NULL DEFAULT 0,
+      created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+      updated_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+      FOREIGN KEY (guild_id)
+        REFERENCES guild_configs (guild_id)
+        ON DELETE CASCADE,
+      UNIQUE (guild_id, name)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_custom_commands_guild
+      ON custom_commands (guild_id);
+
+    CREATE INDEX IF NOT EXISTS idx_custom_commands_guild_enabled
+      ON custom_commands (guild_id, enabled);
   `);
 }

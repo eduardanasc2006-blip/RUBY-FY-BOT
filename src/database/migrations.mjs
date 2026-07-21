@@ -387,6 +387,45 @@ const MIGRATIONS = [
       logger.info('[Migrations] 009: tabela server_variables e índices criados.');
     },
   },
+  {
+    name: '010_custom_commands',
+    up(db) {
+      // Fase 2: comandos personalizados por servidor.
+      // Permite que admins criem comandos como /pix, /regras, /horario.
+      // A tabela já é criada pelo runSchema com CREATE TABLE IF NOT EXISTS;
+      // esta migração garante que exista em bancos anteriores ao schema novo.
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS custom_commands (
+          id          TEXT    NOT NULL PRIMARY KEY,
+          guild_id    TEXT    NOT NULL,
+          name        TEXT    NOT NULL,
+          description TEXT,
+          content_type TEXT   NOT NULL DEFAULT 'text',
+          content_data TEXT    NOT NULL DEFAULT '{}',
+          enabled     INTEGER NOT NULL DEFAULT 1,
+          use_count   INTEGER NOT NULL DEFAULT 0,
+          created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+          updated_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+          FOREIGN KEY (guild_id)
+            REFERENCES guild_configs (guild_id)
+            ON DELETE CASCADE,
+          UNIQUE (guild_id, name)
+        )
+      `);
+
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_custom_commands_guild
+                   ON custom_commands (guild_id)`);
+      } catch { /* idempotente */ }
+
+      try {
+        db.exec(`CREATE INDEX IF NOT EXISTS idx_custom_commands_guild_enabled
+                   ON custom_commands (guild_id, enabled)`);
+      } catch { /* idempotente */ }
+
+      logger.info('[Migrations] 010: tabela custom_commands e índices criados.');
+    },
+  },
 ];
 
 // ── Runner ────────────────────────────────────────────────────────────────────

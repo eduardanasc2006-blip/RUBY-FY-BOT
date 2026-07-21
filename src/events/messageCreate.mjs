@@ -11,18 +11,31 @@ export default {
     if (!message.content.startsWith(config.prefix)) return;
 
     // Extrai nome do comando e argumentos
-    const args = message.content.slice(config.prefix.length).trim().split(/\s+/);
+    const contentWithoutPrefix = message.content.slice(config.prefix.length);
+    const args = contentWithoutPrefix.trim().split(/\s+/);
     const commandName = args.shift().toLowerCase();
 
+    // Primeiro tenta comandos nativos de prefixo
     const command = message.client.prefixCommands.get(commandName);
 
-    if (!command) return; // Comando desconhecido — ignora silenciosamente
+    if (command) {
+      try {
+        await command.executePrefix(message, args);
+      } catch (error) {
+        console.error(`[MessageCreate] Erro ao executar !${commandName}:`, error);
+        message.reply('Ocorreu um erro ao executar este comando.').catch(() => {});
+      }
+      return;
+    }
 
-    try {
-      await command.executePrefix(message, args);
-    } catch (error) {
-      console.error(`[MessageCreate] Erro ao executar !${commandName}:`, error);
-      message.reply('Ocorreu um erro ao executar este comando.').catch(() => {});
+    // Se não encontrou comando nativo, tenta comandos personalizados
+    if (message.guildId) {
+      try {
+        const { executeByPrefix } = await import('../modules/customcommands/index.mjs');
+        await executeByPrefix(message, commandName);
+      } catch (error) {
+        console.error(`[MessageCreate] Erro ao executar comando personalizado ${commandName}:`, error);
+      }
     }
   },
 };
