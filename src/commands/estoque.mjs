@@ -45,6 +45,7 @@ import {
 } from '../modules/stock/flow.mjs';
 import { logAudit } from '../modules/audit/index.mjs';
 import { logger } from '../utils/logger.mjs';
+import { hasModulePermission, buildDeniedMessage } from '../database/repositories/Permissions.mjs';
 
 const MODULE_NAME = 'stock';
 
@@ -142,6 +143,12 @@ export default {
         content: '⚠️ Este comando só pode ser usado em servidores.',
         flags: MessageFlags.Ephemeral,
       });
+    }
+
+    // Verifica permissão do módulo
+    const member = interaction.member;
+    if (member && !hasModulePermission(guildId, MODULE_NAME, member)) {
+      return interaction.reply(buildDeniedMessage(MODULE_NAME, 'estoque'));
     }
 
     // Verifica se há produtos cadastrados
