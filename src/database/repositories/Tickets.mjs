@@ -34,16 +34,20 @@ const MODULE = 'tickets';
  *   log_channel_id: string|null,
  *   support_role_id: string|null,
  *   intro_message: string|null,
+ *   panel_channel_id: string|null,
+ *   panel_message_id: string|null,
  * }}
  */
 export function getTicketConfig(guildId) {
   const raw = getAllSettings(guildId, MODULE);
   return {
-    enabled:         raw.enabled         ?? false,
-    category_id:     raw.category_id     ?? null,
-    log_channel_id:  raw.log_channel_id  ?? null,
-    support_role_id: raw.support_role_id ?? null,
-    intro_message:   raw.intro_message   ?? null,
+    enabled:          raw.enabled          ?? false,
+    category_id:      raw.category_id      ?? null,
+    log_channel_id:   raw.log_channel_id   ?? null,
+    support_role_id:  raw.support_role_id  ?? null,
+    intro_message:    raw.intro_message    ?? null,
+    panel_channel_id: raw.panel_channel_id ?? null,
+    panel_message_id: raw.panel_message_id ?? null,
   };
 }
 
@@ -53,16 +57,21 @@ export function getTicketConfig(guildId) {
  *
  * @param {string} guildId
  * @param {{
- *   enabled?:         boolean,
- *   category_id?:     string|null,
- *   log_channel_id?:  string|null,
- *   support_role_id?: string|null,
- *   intro_message?:   string|null,
+ *   enabled?:           boolean,
+ *   category_id?:       string|null,
+ *   log_channel_id?:    string|null,
+ *   support_role_id?:   string|null,
+ *   intro_message?:     string|null,
+ *   panel_channel_id?:  string|null,
+ *   panel_message_id?:  string|null,
  * }} patch
  */
 export function setTicketConfig(guildId, patch) {
   getOrCreate(guildId);
-  const allowed = ['enabled', 'category_id', 'log_channel_id', 'support_role_id', 'intro_message'];
+  const allowed = [
+    'enabled', 'category_id', 'log_channel_id', 'support_role_id',
+    'intro_message', 'panel_channel_id', 'panel_message_id',
+  ];
   for (const key of allowed) {
     if (key in patch) {
       setSetting(guildId, MODULE, key, patch[key]);

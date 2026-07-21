@@ -77,6 +77,7 @@ export async function handleTcfgComponent(interaction, action, partes) {
     case 'clear_category': return handleClearCategory(interaction, session);
     case 'clear_log':      return handleClearLog(interaction, session);
     case 'clear_role':     return handleClearRole(interaction, session);
+    case 'clear_panel':    return handleClearPanel(interaction, session);
     case 'cancel':         return handleCancel(interaction, session);
     default:
       logger.warn(`[Tickets] Ação de config desconhecida: '${action}'`);
@@ -281,18 +282,46 @@ async function handlePubSelect(interaction, session) {
     return safeReply(interaction, `⚠️ Não tenho permissão para enviar mensagens em <#${channelId}>.`);
   }
 
-  try {
-    const payload = buildOpenPanelPayload(config);
-    await channel.send(payload);
+  const payload = buildOpenPanelPayload(config);
+  let messageId = null;
 
-    logger.info(`[Tickets] Painel publicado | canal: ${channelId} | guild: ${interaction.guildId}`);
+  try {
+    // Primeiro tenta editar mensagem existente (mesmo canal)
+    if (config.panel_channel_id === channelId && config.panel_message_id) {
+      try {
+        const existingMsg = await channel.messages.fetch(config.panel_message_id);
+        await existingMsg.edit(payload);
+        messageId = config.panel_message_id;
+        logger.info(`[Tickets] Painel atualizado | canal: ${channelId} | msg: ${messageId}`);
+      } catch (fetchErr) {
+        // Mensagem não existe mais, vamos criar uma nova
+        if (fetchErr?.code !== 10008) {
+          logger.warn(`[Tickets] Erro ao buscar mensagem existente: ${fetchErr?.message}`);
+        }
+      }
+    }
+
+    // Se não conseguiu editar, criar nova mensagem
+    if (!messageId) {
+      const msg = await channel.send(payload);
+      messageId = msg.id;
+      logger.info(`[Tickets] Painel publicado | canal: ${channelId} | msg: ${messageId}`);
+    }
+
+    // Salva channel_id e message_id
+    setTicketConfig(interaction.guildId, {
+      panel_channel_id: channelId,
+      panel_message_id: messageId,
+    });
 
     return interaction.update(buildMainPanel(
       session.sessionId,
       interaction.guildId,
       getTicketConfig(interaction.guildId),
       interaction.guild,
-      `✅ Painel publicado em <#${channelId}>!`,
+      messageId === config.panel_message_id
+        ? `✅ Painel atualizado em <#${channelId}>!`
+        : `✅ Painel publicado em <#${channelId}>!`,
     ));
   } catch (err) {
     logger.error('[Tickets] Erro ao publicar painel:', err?.message);
@@ -318,6 +347,12 @@ async function handleClearRole(interaction, session) {
   return interaction.update(buildMainPanel(session.sessionId, interaction.guildId, config, interaction.guild));
 }
 
+async function handleClearPanel(interaction, session) {
+  setTicketConfig(interaction.guildId, { panel_channel_id: null, panel_message_id: null });
+  const config = getTicketConfig(interaction.guildId);
+  return interaction.update(buildMainPanel(session.sessionId, interaction.guildId, config, interaction.guild, '✅ Painel removido da publicação.'));
+}
+
 function handleCancel(interaction, session) {
   cancelSession(session.sessionId, interaction.user.id, interaction.guildId);
   return interaction.update({ embeds: [], components: [], content: '❌ Painel de configuração de tickets fechado.' });
@@ -340,6 +375,13 @@ function buildMainPanel(sessionId, guildId, config, guild, successMsg = null) {
     { name: '📁 Categoria',        value: categoryName,   inline: true },
     { name: '📋 Canal de Logs',    value: logName,        inline: true },
     { name: '🛡️ Cargo de Suporte', value: supportRoleName, inline: true },
+    {
+      name:  '📢 Painel Publicado',
+      value: config.panel_channel_id && config.panel_message_id
+        ? `<#${config.panel_channel_id}> • ID: \`${config.panel_message_id}\``
+        : '*Não publicado*',
+      inline: false,
+    },
     {
       name:  '💬 Mensagem de Boas-vindas',
       value: config.intro_message
@@ -428,6 +470,15 @@ function buildMainPanel(sessionId, guildId, config, guild, successMsg = null) {
       new ButtonBuilder()
         .setCustomId(build('tcfg', 'clear_role', sessionId))
         .setLabel('Limpar Cargo')
+        .setEmoji('🗑️')
+        .setStyle(ButtonStyle.Danger),
+    );
+  }
+  if (config.panel_channel_id && config.panel_message_id) {
+    clearButtons.push(
+      new ButtonBuilder()
+        .setCustomId(build('tcfg', 'clear_panel', sessionId))
+        .setLabel('Remover Painel')
         .setEmoji('🗑️')
         .setStyle(ButtonStyle.Danger),
     );

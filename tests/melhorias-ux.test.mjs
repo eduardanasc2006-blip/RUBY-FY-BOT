@@ -257,3 +257,67 @@ describe('BLOCO 4 — Integração de Fluxo', () => {
     assert.strictEqual(v2.messageId, 'msg-3');
   });
 });
+
+// ── BLOCO 5: Tickets Config ─────────────────────────────────────────────────
+describe('BLOCO 5 — Tickets Config com Panel IDs', () => {
+
+  it('5.1 — getTicketConfig retorna panel_channel_id e panel_message_id', async () => {
+    const { getTicketConfig } = await import('../src/database/repositories/Tickets.mjs');
+    const guildId = `guild-${Date.now()}-tk1`;
+
+    const config = getTicketConfig(guildId);
+
+    assert.ok('panel_channel_id' in config, 'Deve ter panel_channel_id');
+    assert.ok('panel_message_id' in config, 'Deve ter panel_message_id');
+    assert.strictEqual(config.panel_channel_id, null);
+    assert.strictEqual(config.panel_message_id, null);
+  });
+
+  it('5.2 — setTicketConfig salva panel_channel_id e panel_message_id', async () => {
+    const { getTicketConfig, setTicketConfig } = await import('../src/database/repositories/Tickets.mjs');
+    const guildId = `guild-${Date.now()}-tk2`;
+
+    setTicketConfig(guildId, {
+      panel_channel_id: '123456',
+      panel_message_id: '999999',
+    });
+
+    const config = getTicketConfig(guildId);
+    assert.strictEqual(config.panel_channel_id, '123456');
+    assert.strictEqual(config.panel_message_id, '999999');
+  });
+
+  it('5.3 — setTicketConfig atualiza panel_message_id mantendo channel_id', async () => {
+    const { getTicketConfig, setTicketConfig } = await import('../src/database/repositories/Tickets.mjs');
+    const guildId = `guild-${Date.now()}-tk3`;
+
+    setTicketConfig(guildId, { panel_channel_id: 'ch-1', panel_message_id: 'msg-1' });
+    setTicketConfig(guildId, { panel_message_id: 'msg-2' });
+
+    const config = getTicketConfig(guildId);
+    assert.strictEqual(config.panel_channel_id, 'ch-1');
+    assert.strictEqual(config.panel_message_id, 'msg-2');
+  });
+
+  it('5.4 — setTicketConfig salva múltiplos campos de uma vez', async () => {
+    const { getTicketConfig, setTicketConfig } = await import('../src/database/repositories/Tickets.mjs');
+    const guildId = `guild-${Date.now()}-tk4`;
+
+    setTicketConfig(guildId, {
+      enabled: true,
+      category_id: 'cat-123',
+      log_channel_id: 'log-456',
+      support_role_id: 'role-789',
+      panel_channel_id: 'ch-1',
+      panel_message_id: 'msg-1',
+    });
+
+    const config = getTicketConfig(guildId);
+    assert.strictEqual(config.enabled, true);
+    assert.strictEqual(config.category_id, 'cat-123');
+    assert.strictEqual(config.log_channel_id, 'log-456');
+    assert.strictEqual(config.support_role_id, 'role-789');
+    assert.strictEqual(config.panel_channel_id, 'ch-1');
+    assert.strictEqual(config.panel_message_id, 'msg-1');
+  });
+});
