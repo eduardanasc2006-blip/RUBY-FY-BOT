@@ -49,8 +49,20 @@ import {
 } from './flow.mjs';
 import { createSession, getSession } from '../../core/sessionManager.mjs';
 import { logger } from '../../utils/logger.mjs';
+import { hasModulePermission, buildDeniedMessage } from '../../database/repositories/Permissions.mjs';
 
 const MODULE_NAME = 'stock';
+
+/**
+ * Verifica permissão do módulo stock para o usuário.
+ * Retorna true se o usuário tem permissão, false caso contrário.
+ */
+function checkPermission(interaction) {
+  if (!interaction.member || !interaction.guildId) {
+    return false;
+  }
+  return hasModulePermission(interaction.guildId, MODULE_NAME, interaction.member);
+}
 
 // ── Roteador ──────────────────────────────────────────────────────────────────
 
@@ -94,6 +106,11 @@ export async function handleStockComponent(interaction, action, partes) {
 // ── Handlers de Select ────────────────────────────────────────────────────────
 
 async function handleMainSelect(interaction, sessionId) {
+  // Verifica permissão do módulo
+  if (!checkPermission(interaction)) {
+    return safeReply(interaction, buildDeniedMessage(MODULE_NAME));
+  }
+
   const value = interaction.values?.[0];
   if (!value) {
     await safeUpdate(interaction, { content: '⚠️ Nenhuma opção selecionada.', components: [] });
@@ -170,6 +187,11 @@ async function handleMainSelect(interaction, sessionId) {
 }
 
 async function handleSelect(interaction, sessionId) {
+  // Verifica permissão do módulo
+  if (!checkPermission(interaction)) {
+    return safeReply(interaction, buildDeniedMessage(MODULE_NAME));
+  }
+
   const value = interaction.values?.[0];
   if (!value) {
     await safeUpdate(interaction, { content: '⚠️ Nenhuma opção selecionada.', components: [] });
@@ -211,6 +233,11 @@ async function handleStockAction(interaction, action, productId) {
 // ── Handlers de Ação ─────────────────────────────────────────────────────────
 
 async function handleView(interaction, productId) {
+  // Verifica permissão do módulo
+  if (!checkPermission(interaction)) {
+    return safeReply(interaction, buildDeniedMessage(MODULE_NAME));
+  }
+
   const guildId = interaction.guildId;
 
   const product = getProduct(guildId, productId);
@@ -242,6 +269,11 @@ async function handleView(interaction, productId) {
 }
 
 async function handleAdd(interaction, productId) {
+  // Verifica permissão do módulo
+  if (!checkPermission(interaction)) {
+    return safeReply(interaction, buildDeniedMessage(MODULE_NAME));
+  }
+
   const guildId = interaction.guildId;
 
   const product = getProduct(guildId, productId);
@@ -255,6 +287,11 @@ async function handleAdd(interaction, productId) {
 }
 
 async function handleAdjust(interaction, productId) {
+  // Verifica permissão do módulo
+  if (!checkPermission(interaction)) {
+    return safeReply(interaction, buildDeniedMessage(MODULE_NAME));
+  }
+
   const guildId = interaction.guildId;
 
   const product = getProduct(guildId, productId);
@@ -268,6 +305,11 @@ async function handleAdjust(interaction, productId) {
 }
 
 async function handleHistory(interaction, productId) {
+  // Verifica permissão do módulo
+  if (!checkPermission(interaction)) {
+    return safeReply(interaction, buildDeniedMessage(MODULE_NAME));
+  }
+
   const guildId = interaction.guildId;
 
   const product = getProduct(guildId, productId);
@@ -289,6 +331,11 @@ async function handleHistory(interaction, productId) {
 }
 
 async function handleBack(interaction, sessionId) {
+  // Verifica permissão do módulo
+  if (!checkPermission(interaction)) {
+    return safeReply(interaction, buildDeniedMessage(MODULE_NAME));
+  }
+
   const guildId = interaction.guildId;
   const report = getStockReport(guildId);
   const payload = buildStockPayload(sessionId, report);
@@ -299,6 +346,11 @@ async function handleBack(interaction, sessionId) {
 // ── Quick Replenish ───────────────────────────────────────────────────────────
 
 async function handleQuickReplenish(interaction) {
+  // Verifica permissão do módulo
+  if (!checkPermission(interaction)) {
+    return safeReply(interaction, buildDeniedMessage(MODULE_NAME));
+  }
+
   const productId = interaction.values?.[0];
   if (!productId) {
     await safeReply(interaction, '⚠️ Nenhum produto selecionado.');
@@ -322,6 +374,15 @@ async function handleQuickReplenish(interaction) {
  * Processa o modal de ajuste de estoque.
  */
 export async function handleStockAdjustModal(interaction, productId) {
+  // Verifica permissão do módulo
+  if (!checkPermission(interaction)) {
+    await interaction.reply({
+      content: buildDeniedMessage(MODULE_NAME),
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
   try {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -379,6 +440,15 @@ export async function handleStockAdjustModal(interaction, productId) {
  * Processa o modal de reposição de estoque.
  */
 export async function handleStockReplenishModal(interaction, productId) {
+  // Verifica permissão do módulo
+  if (!checkPermission(interaction)) {
+    await interaction.reply({
+      content: buildDeniedMessage(MODULE_NAME),
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
   try {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -437,6 +507,15 @@ export async function handleStockReplenishModal(interaction, productId) {
  * Processa o modal de alteração de estoque (adição ou remoção).
  */
 export async function handleStockChangeModal(interaction, productId, isRemovalStr) {
+  // Verifica permissão do módulo
+  if (!checkPermission(interaction)) {
+    await interaction.reply({
+      content: buildDeniedMessage(MODULE_NAME),
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
   try {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
