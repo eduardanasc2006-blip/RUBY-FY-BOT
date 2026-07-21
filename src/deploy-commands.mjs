@@ -182,4 +182,8 @@ async function main() {
 }
 
 // Executa apenas se for rodado diretamente (não se for importado)
-main().catch(() => {});
+// Em ES Modules, import.meta.url contém o caminho do arquivo atual
+const isMainModule = import.meta.url === `file://${process.argv[1]}`;
+if (isMainModule) {
+  main().catch(console.error);
+}
