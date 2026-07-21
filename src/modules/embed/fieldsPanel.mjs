@@ -176,6 +176,9 @@ async function showAddModal(interaction, session) {
     return safeReply(interaction, '⚠️ A embed já possui **25 fields** — o máximo permitido pelo Discord.');
   }
 
+  // Deferir para permitir update após o modal submit
+  await interaction.deferUpdate();
+
   const modal = new ModalBuilder()
     .setCustomId(build('embed', 'add_modal', session.sessionId))
     .setTitle('Adicionar Field')
@@ -232,12 +235,9 @@ async function handleAddModal(interaction, session) {
   fields.push({ name, value, inline });
   updateSession(session.sessionId, interaction.user.id, interaction.guildId, { fields });
 
-  // Modal submit → não pode usar update(), usa reply() ephemeral
+  // Atualiza a mensagem original usando editReply (já deferido em showAddModal)
   const updated = getSession(session.sessionId, interaction.user.id, interaction.guildId);
-  return interaction.reply({
-    ...buildFieldsPanelPayload(updated),
-    flags: MessageFlags.Ephemeral,
-  });
+  return interaction.editReply(buildFieldsPanelPayload(updated));
 }
 
 // ── Editar field ──────────────────────────────────────────────────────────────
@@ -252,6 +252,9 @@ async function handleEditSelect(interaction, session) {
   }
 
   const field = fields[index];
+
+  // Deferir para permitir update após o modal submit
+  await interaction.deferUpdate();
 
   const modal = new ModalBuilder()
     .setCustomId(build('embed', 'edit_modal', session.sessionId, String(index)))
@@ -311,11 +314,9 @@ async function handleEditModal(interaction, session, indexStr) {
   const newFields = fields.map((f, i) => i === index ? { name, value, inline } : f);
   updateSession(session.sessionId, interaction.user.id, interaction.guildId, { fields: newFields });
 
+  // Atualiza a mensagem original usando editReply (já deferido em handleEditSelect)
   const updated = getSession(session.sessionId, interaction.user.id, interaction.guildId);
-  return interaction.reply({
-    ...buildFieldsPanelPayload(updated),
-    flags: MessageFlags.Ephemeral,
-  });
+  return interaction.editReply(buildFieldsPanelPayload(updated));
 }
 
 // ── Remover field ─────────────────────────────────────────────────────────────

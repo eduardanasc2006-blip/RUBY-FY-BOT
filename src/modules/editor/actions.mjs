@@ -89,8 +89,9 @@ async function handleEdit(interaction, session, definition, fieldKey) {
     return interaction.update(renderPanel(updated, definition));
   }
 
-  // Modal (text, paragraph)
+  // Modal (text, paragraph) — deferir para poder usar editReply após submit
   if (handler.isModal) {
+    await interaction.deferUpdate();
     const modal = handler.build(field, session.sessionId, session.data[fieldKey]);
     return interaction.showModal(modal);
   }
@@ -144,11 +145,8 @@ async function handleModalSubmit(interaction, session, definition, fieldKey) {
 
   const updated = getSession(session.sessionId, interaction.user.id, interaction.guildId);
 
-  // Modal submit não permite update() — envia novo ephemeral com o painel atualizado
-  return interaction.reply({
-    ...renderPanel(updated, definition),
-    flags: MessageFlags.Ephemeral,
-  });
+  // Atualiza a mensagem original usando editReply (já deferido em handleEdit)
+  return interaction.editReply(renderPanel(updated, definition));
 }
 
 /** Botão Prévia */
