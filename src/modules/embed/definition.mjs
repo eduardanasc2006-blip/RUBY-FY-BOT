@@ -391,31 +391,19 @@ export function createDefinition() {
     /**
      * Executado pelo editor após validação bem-sucedida.
      *
-     * Ordem deliberada:
-     *   1. Busca e valida o canal → sem efeito colateral
-     *   2. Publica a embed no canal → se falhar, nada é salvo
-     *   3. Salva configuração no banco → só após publicação bem-sucedida
+     * Usa MessageManager centralizado para publicar/atualizar a embed.
      *
      * @param {import('discord.js').Interaction} interaction
      * @param {object} data - Cópia dos dados da sessão (spread pelo editor)
      */
     async onConfirm(interaction, data) {
-      const { guildId } = interaction;
+      const { guildId, guild } = interaction;
       const canalId = data.canal_id;
 
-      // ── Passo 1: Busca e valida o canal ────────────────────────────────────
-      let channel;
-      try {
-        channel = await interaction.client.channels.fetch(canalId);
-      } catch {
-        throw new Error(`Canal <#${canalId}> não encontrado. Verifique se o bot tem acesso ao servidor.`);
-      }
+      // ── Passo 1: Busca message_id existente ────────────────────────────────
+      const existingMsgId = getSetting(guildId, 'embed', 'message_id');
 
-      if (!channel?.isTextBased()) {
-        throw new Error(`O canal <#${canalId}> não é um canal de texto. Selecione um canal de texto.`);
-      }
-
-      // ── Passo 2: Constrói e publica a embed ────────────────────────────────
+      // ── Passo 2: Constrói a embed ─────────────────────────────────────────
       const embed = buildEmbed(data, {
         footerText:     data.rodape_texto?.trim() || `Configurado por ${interaction.user.username}`,
         footerIcon:     data.rodape_icone?.trim() || undefined,
@@ -429,60 +417,53 @@ export function createDefinition() {
         }
       }
 
-      let messageId = null;
+      const payload = { embeds: [embed] };
 
-      // Primeiro tenta editar mensagem existente
-      const existingMsgId = getSetting(guildId, 'embed', 'message_id');
-      if (existingMsgId && canalId === data.canal_id) {
-        try {
-          const existingMsg = await channel.messages.fetch(existingMsgId);
-          await existingMsg.edit({ embeds: [embed] });
-          messageId = existingMsgId;
-          logger.info(`[Embed] Embed atualizada | guild: ${guildId} | canal: ${canalId} | msg: ${messageId}`);
-        } catch (fetchErr) {
-          // Mensagem não existe mais, vamos criar uma nova
-          if (fetchErr?.code !== 10008) {
-            logger.warn(`[Embed] Erro ao buscar mensagem existente: ${fetchErr?.message}`);
-          }
+      // ── Passo 3: Publica ou atualiza usando MessageManager ───────────────
+      const { publishOrUpdate } = await import('../../utils/messageManager.mjs');
+
+      const result = await publishOrUpdate({
+        guild,
+        channelId: canalId,
+        messageId: existingMsgId,
+        payload,
+        saveCallback: (chId, msgId) => {
+          // Salva channel_id e message_id
+          setSetting(guildId, 'embed', 'canal_id', chId);
+          setSetting(guildId, 'embed', 'message_id', msgId);
+        },
+      });
+
+      if (!result.success) {
+        if (result.channelNotFound) {
+          throw new Error(`O canal <#${canalId}> foi deletado. Selecione outro canal.`);
         }
+        if (result.error === 'no_permission') {
+          throw new Error(`Não tenho permissão para enviar mensagens no canal <#${canalId}>.`);
+        }
+        throw new Error(`Não foi possível publicar a embed: ${result.error}`);
       }
 
-      // Se não conseguiu editar, criar nova
-      if (!messageId) {
-        try {
-          const msg = await channel.send({ embeds: [embed] });
-          messageId = msg.id;
-          logger.info(`[Embed] Embed publicada | guild: ${guildId} | canal: ${canalId} | msg: ${messageId}`);
-        } catch (err) {
-          logger.error(`[Embed] Falha ao publicar no canal ${canalId}:`, err);
-          throw new Error(
-            `Não foi possível publicar no canal <#${canalId}>. ` +
-            'Verifique se o bot tem permissão para enviar mensagens neste canal.',
-          );
-        }
-      }
+      const messageId = result.newMessageId;
 
-      // ── Passo 3: Salva configuração no banco (pós-publicação) ──────────────
+      // ── Passo 4: Salva configuração no banco ───────────────────────────────
       const campos = [
         'titulo', 'descricao', 'url_embed',
         'cor', 'cor_hex',
         'autor_nome', 'autor_url', 'autor_icone',
         'imagem_url', 'thumbnail_url',
         'rodape_texto', 'rodape_icone',
-        'timestamp', 'canal_id', 'message_id',
+        'timestamp',
       ];
       for (const campo of campos) {
-        if (campo === 'message_id') {
-          setSetting(guildId, 'embed', campo, messageId);
-        } else {
-          setSetting(guildId, 'embed', campo, data[campo] ?? null);
-        }
+        setSetting(guildId, 'embed', campo, data[campo] ?? null);
       }
 
       // Persiste fields (array JSON)
       setSetting(guildId, 'embed', 'fields', data.fields ?? []);
 
-      logger.info(`[Embed] Embed publicada e configuração salva — guild: ${guildId} | canal: ${canalId}`);
+      const action = result.updated ? 'atualizada' : 'publicada';
+      logger.info(`[Embed] Embed ${action} | guild: ${guildId} | canal: ${canalId} | msg: ${messageId}`);
     },
   };
 }

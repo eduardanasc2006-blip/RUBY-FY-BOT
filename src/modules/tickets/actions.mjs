@@ -269,64 +269,47 @@ async function handlePubSelect(interaction, session) {
   if (!channelId) return safeReply(interaction, '⚠️ Nenhum canal selecionado.');
 
   const config  = getTicketConfig(interaction.guildId);
-  const channel = interaction.guild.channels.cache.get(channelId)
-    ?? await interaction.guild.channels.fetch(channelId).catch(() => null);
-
-  if (!channel?.isTextBased()) {
-    return safeReply(interaction, '⚠️ Canal inválido ou sem permissão de envio.');
-  }
-
-  // Verifica se o bot tem permissão de enviar no canal
-  const botMember = interaction.guild.members.me;
-  if (botMember && !channel.permissionsFor(botMember)?.has('SendMessages')) {
-    return safeReply(interaction, `⚠️ Não tenho permissão para enviar mensagens em <#${channelId}>.`);
-  }
-
   const payload = buildOpenPanelPayload(config);
-  let messageId = null;
 
-  try {
-    // Primeiro tenta editar mensagem existente (mesmo canal)
-    if (config.panel_channel_id === channelId && config.panel_message_id) {
-      try {
-        const existingMsg = await channel.messages.fetch(config.panel_message_id);
-        await existingMsg.edit(payload);
-        messageId = config.panel_message_id;
-        logger.info(`[Tickets] Painel atualizado | canal: ${channelId} | msg: ${messageId}`);
-      } catch (fetchErr) {
-        // Mensagem não existe mais, vamos criar uma nova
-        if (fetchErr?.code !== 10008) {
-          logger.warn(`[Tickets] Erro ao buscar mensagem existente: ${fetchErr?.message}`);
-        }
-      }
-    }
+  // Usa MessageManager centralizado
+  const { publishOrUpdate } = await import('../../utils/messageManager.mjs');
 
-    // Se não conseguiu editar, criar nova mensagem
-    if (!messageId) {
-      const msg = await channel.send(payload);
-      messageId = msg.id;
-      logger.info(`[Tickets] Painel publicado | canal: ${channelId} | msg: ${messageId}`);
-    }
+  const result = await publishOrUpdate({
+    guild: interaction.guild,
+    channelId,
+    messageId: config.panel_message_id,
+    payload,
+    saveCallback: (chId, msgId) => setTicketConfig(interaction.guildId, {
+      panel_channel_id: chId,
+      panel_message_id: msgId,
+    }),
+  });
 
-    // Salva channel_id e message_id
-    setTicketConfig(interaction.guildId, {
-      panel_channel_id: channelId,
-      panel_message_id: messageId,
-    });
+  if (result.success) {
+    const successMsg = result.updated
+      ? `✅ Painel atualizado em <#${channelId}>!`
+      : `✅ Painel publicado em <#${channelId}>!`;
 
     return interaction.update(buildMainPanel(
       session.sessionId,
       interaction.guildId,
       getTicketConfig(interaction.guildId),
       interaction.guild,
-      messageId === config.panel_message_id
-        ? `✅ Painel atualizado em <#${channelId}>!`
-        : `✅ Painel publicado em <#${channelId}>!`,
+      successMsg,
     ));
-  } catch (err) {
-    logger.error('[Tickets] Erro ao publicar painel:', err?.message);
-    return safeReply(interaction, `❌ Erro ao publicar o painel: ${err.message}`);
   }
+
+  // Erro
+  let errorMsg = `❌ Erro ao publicar o painel.`;
+  if (result.channelNotFound) {
+    errorMsg = `⚠️ O canal foi deletado. Selecione outro canal.`;
+  } else if (result.error === 'no_permission') {
+    errorMsg = `⚠️ Não tenho permissão para enviar mensagens neste canal.`;
+  } else if (result.error) {
+    errorMsg = `❌ Erro ao publicar o painel: ${result.error}`;
+  }
+
+  return safeReply(interaction, errorMsg);
 }
 
 async function handleClearCategory(interaction, session) {

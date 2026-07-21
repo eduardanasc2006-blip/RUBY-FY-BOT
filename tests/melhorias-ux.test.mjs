@@ -321,3 +321,253 @@ describe('BLOCO 5 — Tickets Config com Panel IDs', () => {
     assert.strictEqual(config.panel_message_id, 'msg-1');
   });
 });
+
+// ── BLOCO 6: MessageManager Centralizado ───────────────────────────────────
+describe('BLOCO 6 — MessageManager Centralizado', () => {
+
+  it('6.1 — clearPublished executa callback para limpar IDs', async () => {
+    const { clearPublished } = await import('../src/utils/messageManager.mjs');
+    let cleared = false;
+    let callOrder = [];
+
+    clearPublished(() => {
+      cleared = true;
+      callOrder.push('callback');
+    });
+
+    assert.strictEqual(cleared, true, 'Callback deve ser executado');
+  });
+
+  it('6.2 — checkPublished retorna exists=false quando channelId é null', async () => {
+    const { checkPublished } = await import('../src/utils/messageManager.mjs');
+
+    // Mock de guild
+    const guild = { channels: { cache: { get: () => null } } };
+
+    const result = await checkPublished(guild, null, 'msg-123');
+    assert.strictEqual(result.exists, false, 'exists deve ser false');
+    assert.strictEqual(result.channelFound, true, 'channelFound deve ser true (sem channel)');
+  });
+
+  it('6.3 — checkPublished retorna exists=false quando messageId é null', async () => {
+    const { checkPublished } = await import('../src/utils/messageManager.mjs');
+
+    const guild = { channels: { cache: { get: () => null } } };
+
+    const result = await checkPublished(guild, 'ch-123', null);
+    assert.strictEqual(result.exists, false, 'exists deve ser false');
+  });
+
+  it('6.4 — publishOrUpdate retorna erro quando channelId é null', async () => {
+    const { publishOrUpdate } = await import('../src/utils/messageManager.mjs');
+
+    const guild = { channels: { cache: { get: () => null } } };
+
+    const result = await publishOrUpdate({
+      guild,
+      channelId: null,
+      messageId: null,
+      payload: { content: 'test' },
+    });
+
+    assert.strictEqual(result.success, false, 'success deve ser false');
+    assert.strictEqual(result.error, 'channelId_required', 'error deve ser channelId_required');
+  });
+
+  it('6.5 — publishOrUpdate retorna channelNotFound quando canal não existe', async () => {
+    const { publishOrUpdate } = await import('../src/utils/messageManager.mjs');
+
+    const guild = { channels: { cache: { get: () => null } }, members: { me: null } };
+
+    const result = await publishOrUpdate({
+      guild,
+      channelId: 'invalid-channel',
+      messageId: null,
+      payload: { content: 'test' },
+    });
+
+    assert.strictEqual(result.success, false, 'success deve ser false');
+    assert.strictEqual(result.channelNotFound, true, 'channelNotFound deve ser true');
+  });
+
+  it('6.6 — publishOrUpdate retorna no_permission quando sem permissão', async () => {
+    const { publishOrUpdate } = await import('../src/utils/messageManager.mjs');
+
+    const mockChannel = {
+      permissionsFor: () => ({ has: () => false }),
+    };
+    const guild = {
+      channels: { cache: { get: () => mockChannel } },
+      members: { me: { id: 'bot' } },
+    };
+
+    const result = await publishOrUpdate({
+      guild,
+      channelId: 'ch-123',
+      messageId: null,
+      payload: { content: 'test' },
+    });
+
+    assert.strictEqual(result.success, false, 'success deve ser false');
+    assert.strictEqual(result.error, 'no_permission', 'error deve ser no_permission');
+  });
+
+  it('6.7 — safeReply trata deferred corretamente', async () => {
+    const { safeReply } = await import('../src/utils/messageManager.mjs');
+
+    const mockInteraction = {
+      deferred: false,
+      replied: false,
+      reply: async (payload) => {
+        mockInteraction.replied = true;
+        return payload;
+      },
+      followUp: async (payload) => {
+        return payload;
+      },
+    };
+
+    await safeReply(mockInteraction, { content: 'test' });
+    assert.strictEqual(mockInteraction.replied, true, 'reply deve ser chamado');
+  });
+
+  it('6.8 — safeReply trata deferred=true corretamente', async () => {
+    const { safeReply } = await import('../src/utils/messageManager.mjs');
+
+    const mockInteraction = {
+      deferred: true,
+      replied: false,
+      reply: async () => {},
+      followUp: async (payload) => {
+        return payload;
+      },
+    };
+
+    await safeReply(mockInteraction, { content: 'test' });
+    assert.strictEqual(mockInteraction.replied, false, 'reply não deve ser chamado');
+  });
+});
+
+// ── BLOCO 7: Ajuda com Publicação Permanente ────────────────────────────────
+describe('BLOCO 7 — Ajuda com Publicação Permanente', () => {
+
+  it('7.1 — getHelpPublished retorna nulls inicialmente', async () => {
+    // Importa diretamente do módulo de comando (após remover export default)
+    const { getSetting } = await import('../src/database/repositories/GuildConfig.mjs');
+    const guildId = `guild-${Date.now()}-help1`;
+
+    const channelId = getSetting(guildId, 'ajuda', 'channel_id');
+    const messageId = getSetting(guildId, 'ajuda', 'message_id');
+
+    assert.strictEqual(channelId, null, 'channel_id deve ser null');
+    assert.strictEqual(messageId, null, 'message_id deve ser null');
+  });
+
+  it('7.2 — setHelpPublished salva channel_id e message_id', async () => {
+    const { getSetting, setSetting } = await import('../src/database/repositories/GuildConfig.mjs');
+    const guildId = `guild-${Date.now()}-help2`;
+
+    // Simula o que o comando faz
+    setSetting(guildId, 'ajuda', 'channel_id', 'ch-123456');
+    setSetting(guildId, 'ajuda', 'message_id', 'msg-789012');
+
+    const channelId = getSetting(guildId, 'ajuda', 'channel_id');
+    const messageId = getSetting(guildId, 'ajuda', 'message_id');
+
+    assert.strictEqual(channelId, 'ch-123456', 'channel_id deve ser salvo');
+    assert.strictEqual(messageId, 'msg-789012', 'message_id deve ser salvo');
+  });
+
+  it('7.3 — clearHelpPublished limpa os IDs', async () => {
+    const { getSetting, setSetting } = await import('../src/database/repositories/GuildConfig.mjs');
+    const guildId = `guild-${Date.now()}-help3`;
+
+    // Salva
+    setSetting(guildId, 'ajuda', 'channel_id', 'ch-123');
+    setSetting(guildId, 'ajuda', 'message_id', 'msg-456');
+
+    // Limpa
+    setSetting(guildId, 'ajuda', 'channel_id', null);
+    setSetting(guildId, 'ajuda', 'message_id', null);
+
+    const channelId = getSetting(guildId, 'ajuda', 'channel_id');
+    const messageId = getSetting(guildId, 'ajuda', 'message_id');
+
+    assert.strictEqual(channelId, null, 'channel_id deve ser null após limpar');
+    assert.strictEqual(messageId, null, 'message_id deve ser null após limpar');
+  });
+
+  it('7.4 — publicação pode ser atualizada mantendo channel_id', async () => {
+    const { getSetting, setSetting } = await import('../src/database/repositories/GuildConfig.mjs');
+    const guildId = `guild-${Date.now()}-help4`;
+
+    // Primeira publicação
+    setSetting(guildId, 'ajuda', 'channel_id', 'ch-1');
+    setSetting(guildId, 'ajuda', 'message_id', 'msg-1');
+
+    // Segunda publicação (atualiza message_id)
+    setSetting(guildId, 'ajuda', 'message_id', 'msg-2');
+
+    const channelId = getSetting(guildId, 'ajuda', 'channel_id');
+    const messageId = getSetting(guildId, 'ajuda', 'message_id');
+
+    assert.strictEqual(channelId, 'ch-1', 'channel_id não deve mudar');
+    assert.strictEqual(messageId, 'msg-2', 'message_id deve ser atualizado');
+  });
+});
+
+// ── BLOCO 8: Integração com Módulos Reais ───────────────────────────────────
+describe('BLOCO 8 — Integração com Módulos Reais', () => {
+
+  it('8.1 — CustomPanels usa markPublished para salvar IDs', async () => {
+    const { createPanel, getPanel, markPublished } = await import('../src/database/repositories/CustomPanels.mjs');
+    const guildId = `guild-${Date.now()}-int1`;
+
+    // Cria painel primeiro
+    const created = createPanel(guildId, { name: 'Teste Painel' });
+
+    // Simula publicação
+    markPublished(guildId, created.id, 'ch-1', 'msg-1');
+
+    // Busca painel atualizado
+    const updated = getPanel(guildId, created.id);
+
+    assert.strictEqual(updated.channelId, 'ch-1', 'channelId deve ser salvo');
+    assert.strictEqual(updated.messageId, 'msg-1', 'messageId deve ser salvo');
+  });
+
+  it('8.2 — CustomPanels markUnpublished limpa IDs', async () => {
+    const { createPanel, markPublished, markUnpublished, getPanel } = await import('../src/database/repositories/CustomPanels.mjs');
+    const guildId = `guild-${Date.now()}-int2`;
+
+    // Cria e publica
+    const created = createPanel(guildId, { name: 'Teste Painel 2' });
+    markPublished(guildId, created.id, 'ch-1', 'msg-1');
+
+    // Despublica
+    markUnpublished(guildId, created.id);
+
+    // Busca painel
+    const updated = getPanel(guildId, created.id);
+
+    assert.strictEqual(updated.channelId, null, 'channelId deve ser null após despublicar');
+    assert.strictEqual(updated.messageId, null, 'messageId deve ser null após despublicar');
+  });
+
+  it('8.3 — Tickets usa setTicketConfig para painel', async () => {
+    const { getTicketConfig, setTicketConfig } = await import('../src/database/repositories/Tickets.mjs');
+    const guildId = `guild-${Date.now()}-int3`;
+
+    // Salva painel
+    setTicketConfig(guildId, {
+      panel_channel_id: 'ch-help',
+      panel_message_id: 'msg-help',
+    });
+
+    // Busca config
+    const config = getTicketConfig(guildId);
+
+    assert.strictEqual(config.panel_channel_id, 'ch-help');
+    assert.strictEqual(config.panel_message_id, 'msg-help');
+  });
+});

@@ -368,53 +368,40 @@ async function handlePubSel(interaction, panelId) {
   const panel = getPanel(interaction.guildId, panelId);
   if (!panel)  return safeReply(interaction, '⚠️ Painel não encontrado.');
 
-  const channel = interaction.guild?.channels?.cache?.get(channelId);
-  if (!channel) return safeReply(interaction, '⚠️ Canal não encontrado no servidor.');
-
-  // Verifica permissão de envio
-  const me = interaction.guild?.members?.me;
-  if (me && !channel.permissionsFor(me)?.has('SendMessages')) {
-    return safeReply(interaction, `⚠️ Sem permissão para enviar mensagens em ${channel.name}.`);
-  }
-
   const payload = buildPublishedPayload(panel, interaction.guildId);
 
-  try {
-    // Primeiro tenta editar mensagem existente
-    if (panel.channelId && panel.messageId) {
-      try {
-        const existingMsg = await channel.messages.fetch(panel.messageId);
-        await existingMsg.edit(payload);
-        markPublished(interaction.guildId, panelId, channelId, panel.messageId);
-        logger.info(`[CustomPanels] Painel atualizado | id: ${panelId} | canal: ${channelId} | msg: ${panel.messageId}`);
+  // Usa MessageManager centralizado
+  const { publishOrUpdate } = await import('../../utils/messageManager.mjs');
 
-        return interaction.update({
-          content:    `✅ Painel **"${panel.name}"** atualizado em <#${channelId}>!`,
-          embeds:     [],
-          components: [],
-        });
-      } catch (fetchErr) {
-        // Mensagem não existe mais, vamos criar uma nova
-        if (fetchErr?.code !== 10008) {
-          logger.warn(`[CustomPanels] Erro ao buscar mensagem existente: ${fetchErr?.message}`);
-        }
-      }
-    }
+  const result = await publishOrUpdate({
+    guild: interaction.guild,
+    channelId,
+    messageId: panel.messageId,
+    payload,
+    saveCallback: (chId, msgId) => markPublished(interaction.guildId, panelId, chId, msgId),
+  });
 
-    // Criar nova mensagem
-    const msg = await channel.send(payload);
-    markPublished(interaction.guildId, panelId, channelId, msg.id);
-    logger.info(`[CustomPanels] Painel publicado | id: ${panelId} | canal: ${channelId} | msg: ${msg.id}`);
+  if (result.success) {
+    const msg = result.updated
+      ? `✅ Painel **"${panel.name}"** atualizado em <#${channelId}>!`
+      : `✅ Painel **"${panel.name}"** publicado em <#${channelId}>!`;
 
     return interaction.update({
-      content:    `✅ Painel **"${panel.name}"** publicado em <#${channelId}>!`,
+      content:    msg,
       embeds:     [],
       components: [],
     });
-  } catch (err) {
-    logger.error('[CustomPanels] Erro ao publicar painel:', err?.message);
-    return safeReply(interaction, '❌ Erro ao publicar o painel. Verifique as permissões do bot.');
   }
+
+  // Erro
+  let errorMsg = '❌ Erro ao publicar o painel.';
+  if (result.channelNotFound) {
+    errorMsg = '⚠️ O canal foi deletado. Selecione outro canal.';
+  } else if (result.error === 'no_permission') {
+    errorMsg = '⚠️ Sem permissão para enviar mensagens neste canal.';
+  }
+
+  return safeReply(interaction, errorMsg);
 }
 
 async function handleDeleteConfirm(interaction, panelId) {
