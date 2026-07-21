@@ -82,6 +82,17 @@ export async function handleStockComponent(interaction, action, partes) {
     return handleQuickReplenish(interaction);
   }
 
+  // Modais
+  if (action === 'adjust_modal') {
+    return handleStockAdjustModal(interaction, partes[0]);
+  }
+  if (action === 'replenish_modal') {
+    return handleStockReplenishModal(interaction, partes[0]);
+  }
+  if (action === 'change_modal') {
+    return handleStockChangeModal(interaction, partes[0], partes[1]);
+  }
+
   const [firstAction, ...rest] = action.split('_');
   const sessionId = partes[0];
   const productId = firstAction === 'back' ? null : action.split(':')[1]?.split('_')[0];
