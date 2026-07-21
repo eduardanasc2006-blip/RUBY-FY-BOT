@@ -17,7 +17,7 @@ import {
   existsCommand,
   CONTENT_TYPES,
 } from '../../database/repositories/CustomCommands.mjs';
-import { CONTENT_TYPES as VAR_CONTENT_TYPES } from '../../database/repositories/ServerVariables.mjs';
+import { CONTENT_TYPES as VAR_CONTENT_TYPES } from '../../database/repositories/CustomCommands.mjs';
 import { hasModulePermission, buildDeniedMessage } from '../../database/repositories/Permissions.mjs';
 import { resolveVariables, applyVariablesToEmbedData } from '../variables/index.mjs';
 import { loadServerVariablesMap } from '../../database/repositories/ServerVariables.mjs';
