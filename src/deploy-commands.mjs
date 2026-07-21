@@ -132,13 +132,21 @@ export async function deployCommands({ token, clientId, guildId = null, commands
     
     // ── 5. Registrar comandos atualizados ──────────────────────────────────────
     console.log(`[Deploy] ✨ Registrando ${commands.length} comando(s)...`);
+    console.log('[Deploy] 📋 Lista de comandos enviados:');
+    commands.forEach((cmd, i) => {
+      console.log(`[Deploy]   ${i + 1}. /${cmd.name}`);
+    });
 
     if (guildId) {
-      await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
+      console.log(`[Deploy] 🔗 URL: /applications/${clientId}/guilds/${guildId}/commands`);
+      const response = await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
       console.log(`[Deploy] ✅ Deploy em guild ${guildId} concluído.`);
+      console.log(`[Deploy] 📊 Resposta da API: ${response.length} comandos registrados`);
     } else {
-      await rest.put(Routes.applicationCommands(clientId), { body: commands });
+      console.log(`[Deploy] 🔗 URL: /applications/${clientId}/commands (GLOBAL)`);
+      const response = await rest.put(Routes.applicationCommands(clientId), { body: commands });
       console.log('[Deploy] ✅ Deploy global concluído (pode demorar até 1 hora para aparecer).');
+      console.log(`[Deploy] 📊 Resposta da API: ${response.length} comandos registrados`);
     }
     
     console.log('\n[Deploy] 📋 Resumo:');
