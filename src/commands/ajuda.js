@@ -35,7 +35,7 @@ module.exports = {
           value: [
             '`!settaxa 100 <valor>` — Altera a taxa da faixa 100–999 Robux. Ex: `!settaxa 100 3,50`',
             '`!settaxa 1000 <valor>` — Altera a taxa da faixa 1.000+ Robux. Ex: `!settaxa 1000 34,99`',
-            '*(somente administradores; a alteração fica salva mesmo após reiniciar)*',
+            '*(somente administradores; fica salvo após reiniciar e o painel do `!tabela` atualiza automaticamente)*',
           ].join('\n'),
         },
         {
