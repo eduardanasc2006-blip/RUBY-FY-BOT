@@ -25,7 +25,7 @@ module.exports = {
         : `${formatBRL(rates.TIER2_PRICE_PER_1000)} a cada 1.000 Robux`;
 
     const embed = new EmbedBuilder()
-      .setColor(0x57f287)
+      .setColor(0x7c3aed)
       .setTitle('💎 Robux → Reais')
       .setDescription(`**${formatRobux(robux)} Robux** = **${formatBRL(reais)}**`)
       .setFooter({ text: `Taxa aplicada: ${taxa}` });

@@ -40,7 +40,7 @@ module.exports = {
 
     const exemploQtd = faixaArg === '100' ? 100 : 1000;
     const embed = new EmbedBuilder()
-      .setColor(0x57f287)
+      .setColor(0x7c3aed)
       .setTitle('✅ Taxa atualizada')
       .addFields(
         { name: 'Faixa alterada', value: faixa.descricao },

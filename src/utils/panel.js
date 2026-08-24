@@ -1,44 +1,46 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const { robuxToReais, formatBRL, formatRobux } = require('./robuxConverter');
 
+const COR = 0x7c3aed;
+
 // Valores de referência exibidos no painel — sempre calculados com as taxas atuais
 const REFERENCIAS = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 2000, 3000];
 
 function buildPanel() {
   const linhas = REFERENCIAS.map(
-    (r) => `\`${formatRobux(r)} Robux\` → **${formatBRL(robuxToReais(r))}**`
+    (r) => `\`${formatRobux(r)} Robux\`  ➜  **${formatBRL(robuxToReais(r))}**`
   );
 
   const embed = new EmbedBuilder()
-    .setColor(0x9b59b6)
-    .setTitle('💜 RUBY FY — CONVERSOR DE ROBUX')
-    .setDescription('Escolha uma opção abaixo:\n\n' + linhas.join('\n'))
-    .setFooter({ text: 'Clique em um botão • a resposta é privada, só você vê' });
+    .setColor(COR)
+    .setTitle('RUBY FY  •  Conversor de Robux')
+    .setDescription(
+      'Clique em um botão abaixo e informe o valor.\nSua resposta aparece somente para você.\n\n' +
+        '**Tabela de referência**\n' +
+        linhas.join('\n')
+    )
+    .setFooter({ text: 'RUBY FY • As taxas podem ser atualizadas pela administração' });
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('panel:robux')
-      .setLabel('Robux → R$')
-      .setEmoji('🎮')
+      .setLabel('Robux para Reais')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId('panel:reais')
-      .setLabel('R$ → Robux')
-      .setEmoji('💵')
-      .setStyle(ButtonStyle.Success),
+      .setLabel('Reais para Robux')
+      .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId('panel:gamepass')
-      .setLabel('Game Pass')
-      .setEmoji('🎟️')
+      .setLabel('Calcular Game Pass')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('panel:taxas')
       .setLabel('Ver Taxas')
-      .setEmoji('📊')
       .setStyle(ButtonStyle.Secondary)
   );
 
   return { embeds: [embed], components: [row] };
 }
 
-module.exports = { buildPanel };
+module.exports = { buildPanel, COR };

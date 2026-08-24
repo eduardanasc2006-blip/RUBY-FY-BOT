@@ -6,49 +6,44 @@ function buildConfigPanel() {
   const taxaGamepass = Math.round(rates.GAMEPASS_FEE * 100);
 
   const embed = new EmbedBuilder()
-    .setColor(0x9b59b6)
-    .setTitle('💜 RUBY FY — CONFIGURAÇÃO DE TAXAS')
+    .setColor(0x7c3aed)
+    .setTitle('RUBY FY  •  Configuração de Taxas')
+    .setDescription('Clique em um botão para alterar. A mudança vale na hora e fica salva.')
     .addFields(
       {
-        name: '🎮 100–999 Robux',
-        value: `**${formatBRL(rates.TIER1_PRICE_PER_100)}** por 100 Robux`,
+        name: 'Faixa 1 — 100 a 999 Robux',
+        value: `**${formatBRL(rates.TIER1_PRICE_PER_100)}** a cada 100 Robux`,
       },
       {
-        name: '🎮 1.000+ Robux',
-        value: `**${formatBRL(rates.TIER2_PRICE_PER_1000)}** por 1.000 Robux`,
+        name: 'Faixa 2 — 1.000 Robux ou mais',
+        value: `**${formatBRL(rates.TIER2_PRICE_PER_1000)}** a cada 1.000 Robux`,
       },
       {
-        name: '🎟️ Game Pass',
-        value: `**${taxaGamepass}%** de desconto (você recebe ${100 - taxaGamepass}%)`,
+        name: 'Game Pass',
+        value: `Roblox desconta **${taxaGamepass}%** (você recebe ${100 - taxaGamepass}%)`,
       }
-    )
-    .setFooter({ text: 'Painel privado • alterações valem na hora e ficam salvas' });
+    );
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('cfg:tier1')
-      .setLabel('Alterar 100–999')
-      .setEmoji('✏️')
+      .setLabel('Alterar Faixa 1')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId('cfg:tier2')
-      .setLabel('Alterar 1.000+')
-      .setEmoji('✏️')
+      .setLabel('Alterar Faixa 2')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId('cfg:gamepass')
       .setLabel('Alterar Game Pass')
-      .setEmoji('✏️')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId('cfg:refresh')
       .setLabel('Atualizar')
-      .setEmoji('🔄')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('cfg:close')
       .setLabel('Fechar')
-      .setEmoji('❌')
       .setStyle(ButtonStyle.Danger)
   );
 

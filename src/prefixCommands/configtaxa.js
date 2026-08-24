@@ -11,7 +11,7 @@ module.exports = {
       return message.reply('🔒 Somente administradores podem configurar as taxas.');
     }
 
-    // Painel privado: só você vê, e some ao reiniciar o Discord
-    return message.reply({ ...buildConfigPanel(), ephemeral: true });
+    // Painel de uso pessoal do admin; quem clicar nos botões passa por nova verificação de permissão
+    return message.reply({ ...buildConfigPanel(), allowedMentions: { repliedUser: false } });
   },
 };
