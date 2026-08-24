@@ -4,12 +4,15 @@ Bot de Discord simples para conversão de Robux ↔ Reais e cálculo de Game Pas
 
 ## Comandos
 
+Todos os comandos funcionam com **prefixo `!`** e também como **slash command `/`**:
+
 | Comando | Descrição |
 | --- | --- |
-| `/robux <quantidade>` | Converte Robux para R$ |
-| `/reais <valor>` | Converte R$ para Robux |
-| `/gamepass <robux>` | Quanto colocar no Game Pass para receber X Robux (Roblox desconta 30%) |
-| `/taxa` | Mostra as taxas atuais |
+| `!robux <quantidade>` ou `/robux` | Converte Robux para R$ |
+| `!reais <valor>` ou `/reais` | Converte R$ para Robux |
+| `!gamepass <robux>` ou `/gamepass` | Quanto colocar no Game Pass para receber X Robux (Roblox desconta 30%) |
+| `!taxa` ou `/taxa` | Mostra as taxas atuais |
+| `!comandos` ou `/comandos` | Menu com todos os comandos |
 
 ## Taxas
 
@@ -48,12 +51,21 @@ Comando de inicialização: `node src/index.js`
 src/
 ├── config/
 │   └── rates.js          ← taxas (edite aqui)
-├── commands/
+├── commands/             ← slash commands (/)
 │   ├── robux.js
 │   ├── reais.js
 │   ├── gamepass.js
-│   └── taxa.js
+│   ├── taxa.js
+│   └── comandos.js
+├── prefixCommands/       ← comandos com prefixo (!)
+│   ├── robux.js
+│   ├── reais.js
+│   ├── gamepass.js
+│   ├── taxa.js
+│   └── comandos.js
 ├── utils/
 │   └── robuxConverter.js ← cálculos
 └── index.js              ← entrada do bot
 ```
+
+> **Importante (comandos com `!`):** para o bot ler mensagens, ative o **Message Content Intent** no [Discord Developer Portal](https://discord.com/developers/applications) → sua aplicação → **Bot** → ligue **Message Content Intent**. Sem isso, os comandos `!` não respondem (os `/` continuam funcionando).
