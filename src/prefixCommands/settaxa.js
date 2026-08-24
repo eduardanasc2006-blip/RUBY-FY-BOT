@@ -8,19 +8,20 @@ const FAIXAS = {
   1000: { chave: 'TIER2_PRICE_PER_1000', descricao: '1.000+ Robux (por 1.000)' },
 };
 
-function isAdmin(message) {
-  if (message.member?.permissions.has(PermissionFlagsBits.Administrator)) return true;
+function isAdmin(member, userId) {
+  if (member?.permissions?.has?.(PermissionFlagsBits.Administrator)) return true;
   const ids = (process.env.ADMIN_IDS || '').split(',').map((s) => s.trim()).filter(Boolean);
-  return ids.includes(message.author.id);
+  return ids.includes(userId);
 }
 
 module.exports = {
   name: 'settaxa',
   description: 'Altera as taxas de conversão (restrito a administradores)',
   usage: '!settaxa <100|1000> <valor>',
+  isAdmin,
 
   async execute(message, args) {
-    if (!isAdmin(message)) {
+    if (!isAdmin(message.member, message.author.id)) {
       return message.reply('🔒 Somente administradores podem alterar as taxas.');
     }
 

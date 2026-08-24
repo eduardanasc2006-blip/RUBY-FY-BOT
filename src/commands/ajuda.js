@@ -36,6 +36,7 @@ module.exports = {
             '`!settaxa 100 <valor>` — Altera a taxa da faixa 100–999 Robux. Ex: `!settaxa 100 3,50`',
             '`!settaxa 1000 <valor>` — Altera a taxa da faixa 1.000+ Robux. Ex: `!settaxa 1000 34,99`',
             '`!tabela` — Publica/atualiza o painel de conversão no canal',
+            '`!configtaxa` — Abre o painel de configuração de taxas (botões com modal)',
             '*(somente administradores; fica salvo após reiniciar e o painel do `!tabela` atualiza automaticamente)*',
           ].join('\n'),
         },

@@ -177,6 +177,115 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
+// ----- Painel de configuração de taxas (somente admin, sempre privado) -----
+
+const { buildConfigPanel } = require('./utils/configPanel');
+const { refreshSavedPanel } = require('./utils/panelStore');
+const { isAdmin } = require('./prefixCommands/settaxa');
+
+const MODAIS_CFG = {
+  tier1: {
+    titulo: '✏️ Alterar 100–999 Robux',
+    label: 'Nova taxa (R$ por 100 Robux)',
+    placeholder: '3,50',
+    chave: 'TIER1_PRICE_PER_100',
+    resumo: (v) => `100–999 Robux → **${formatBRL(v)}** por 100 Robux`,
+  },
+  tier2: {
+    titulo: '✏️ Alterar 1.000+ Robux',
+    label: 'Nova taxa (R$ por 1.000 Robux)',
+    placeholder: '34,99',
+    chave: 'TIER2_PRICE_PER_1000',
+    resumo: (v) => `1.000+ Robux → **${formatBRL(v)}** por 1.000 Robux`,
+  },
+  gamepass: {
+    titulo: '✏️ Alterar Game Pass',
+    label: 'Desconto do Roblox em % (ex: 30)',
+    placeholder: '30',
+    chave: 'GAMEPASS_FEE',
+    porcentagem: true,
+    resumo: (v) => `Game Pass → **${Math.round(v * 100)}%** de desconto`,
+  },
+};
+
+client.on('interactionCreate', async (interaction) => {
+  if (interaction.isButton() && interaction.customId.startsWith('cfg:')) {
+    const acao = interaction.customId.split(':')[1];
+
+    if (!isAdmin(interaction.member, interaction.user.id)) {
+      return interaction.reply({
+        content: '🔒 Somente administradores podem configurar as taxas.',
+        ephemeral: true,
+      });
+    }
+
+    if (acao === 'refresh') {
+      return interaction.update(buildConfigPanel());
+    }
+
+    if (acao === 'close') {
+      return interaction.update({ content: '✅ Painel de configuração fechado.', embeds: [], components: [] });
+    }
+
+    const config = MODAIS_CFG[acao];
+    if (!config) return;
+
+    const modal = new ModalBuilder()
+      .setCustomId(`cfgmodal:${acao}`)
+      .setTitle(config.titulo)
+      .addComponents(
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId('valor')
+            .setLabel(config.label)
+            .setPlaceholder(config.placeholder)
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+        )
+      );
+
+    return interaction.showModal(modal);
+  }
+
+  if (interaction.isModalSubmit() && interaction.customId.startsWith('cfgmodal:')) {
+    const acao = interaction.customId.split(':')[1];
+    const config = MODAIS_CFG[acao];
+    if (!config) return;
+
+    if (!isAdmin(interaction.member, interaction.user.id)) {
+      return interaction.reply({
+        content: '🔒 Somente administradores podem configurar as taxas.',
+        ephemeral: true,
+      });
+    }
+
+    const bruto = interaction.fields.getTextInputValue('valor').trim();
+    let numero = parseFloat(bruto.replace(/\./g, '').replace(',', '.'));
+
+    if (isNaN(numero) || numero <= 0) {
+      return interaction.reply({
+        content: '❌ Valor inválido. Tente novamente com um número, ex: `3,50` ou `30`.',
+        ephemeral: true,
+      });
+    }
+
+    if (config.porcentagem) {
+      if (numero >= 100) {
+        return interaction.reply({ content: '❌ A porcentagem deve ser menor que 100.', ephemeral: true });
+      }
+      numero = numero / 100;
+    }
+
+    rates.setOverride(config.chave, numero);
+    await refreshSavedPanel(client);
+
+    return interaction.reply({
+      content: `✅ Taxa atualizada: ${config.resumo(numero)}\n💾 Salva mesmo após reiniciar • tabela pública e comandos já usam o novo valor.`,
+      ephemeral: true,
+    });
+  }
+});
+
 // Responde comandos de prefixo
 client.on(Events.MessageCreate, async (message) => {
   if (message.author.bot || !message.content.startsWith(PREFIX)) return;
