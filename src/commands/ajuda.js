@@ -23,7 +23,7 @@ module.exports = {
         {
           name: '💜 PAINEL DE CONVERSÃO',
           value: [
-            '`!tabela` — Publica o painel com botões de conversão no canal (qualquer pessoa pode usar; as respostas são privadas). Executar de novo atualiza o painel existente',
+            'O painel com botões fica fixo no canal e qualquer pessoa pode usar (as respostas são privadas)',
           ].join('\n'),
         },
         {
@@ -35,6 +35,7 @@ module.exports = {
           value: [
             '`!settaxa 100 <valor>` — Altera a taxa da faixa 100–999 Robux. Ex: `!settaxa 100 3,50`',
             '`!settaxa 1000 <valor>` — Altera a taxa da faixa 1.000+ Robux. Ex: `!settaxa 1000 34,99`',
+            '`!tabela` — Publica/atualiza o painel de conversão no canal',
             '*(somente administradores; fica salvo após reiniciar e o painel do `!tabela` atualiza automaticamente)*',
           ].join('\n'),
         },
