@@ -1,0 +1,14 @@
+{
+  "name": "ruby-fy-bot",
+  "version": "1.0.0",
+  "description": "Bot de Discord para conversão de Robux",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "deploy": "node deploy-commands.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5"
+  }
+}
