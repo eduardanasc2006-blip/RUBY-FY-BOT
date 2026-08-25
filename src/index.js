@@ -9,6 +9,7 @@ const {
   Events,
   GatewayIntentBits,
   ModalBuilder,
+  Partials,
   TextInputBuilder,
   TextInputStyle,
 } = require('discord.js');
@@ -32,8 +33,11 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent,
   ],
+  // Necessário para receber mensagens e interações em DM (canal parcial)
+  partials: [Partials.Channel],
 });
 
 // Slash commands (/)

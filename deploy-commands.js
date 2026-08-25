@@ -11,7 +11,11 @@ if (!process.env.DISCORD_TOKEN || !process.env.CLIENT_ID) {
 const commands = [];
 const commandsPath = path.join(__dirname, 'src', 'commands');
 for (const file of fs.readdirSync(commandsPath).filter((f) => f.endsWith('.js'))) {
-  commands.push(require(path.join(commandsPath, file)).data.toJSON());
+  const cmd = require(path.join(commandsPath, file)).data.toJSON();
+  // Permite uso em servidores e em DM (botão/modal do painel também funcionam na DM)
+  cmd.contexts = [0, 1]; // 0 = Guild, 1 = Bot DM
+  cmd.integration_types = [0]; // instalado no servidor
+  commands.push(cmd);
 }
 
 const rest = new REST().setToken(process.env.DISCORD_TOKEN);

@@ -7,6 +7,10 @@ module.exports = {
   usage: '!tabela',
 
   async execute(message) {
+    if (!message.guild) {
+      return message.reply('🔒 O painel de conversão só pode ser publicado no servidor. Na DM, use os comandos normalmente, ex: !robux 500');
+    }
+
     const ids = (process.env.ADMIN_IDS || '').split(',').map((s) => s.trim()).filter(Boolean);
     const autorizado =
       message.member?.permissions.has(PermissionFlagsBits.Administrator) ||

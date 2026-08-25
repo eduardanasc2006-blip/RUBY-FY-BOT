@@ -9,7 +9,9 @@ const FAIXAS = {
 };
 
 function isAdmin(member, userId) {
-  if (member?.permissions?.has?.(PermissionFlagsBits.Administrator)) return true;
+  // Em DM member é null — admin só existe no contexto do servidor
+  if (!member) return false;
+  if (member.permissions?.has?.(PermissionFlagsBits.Administrator)) return true;
   const ids = (process.env.ADMIN_IDS || '').split(',').map((s) => s.trim()).filter(Boolean);
   return ids.includes(userId);
 }
@@ -21,6 +23,10 @@ module.exports = {
   isAdmin,
 
   async execute(message, args) {
+    if (!message.guild) {
+      return message.reply('🔒 Este comando só pode ser usado no servidor.');
+    }
+
     if (!isAdmin(message.member, message.author.id)) {
       return message.reply('🔒 Somente administradores podem alterar as taxas.');
     }

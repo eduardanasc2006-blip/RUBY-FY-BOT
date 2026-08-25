@@ -7,6 +7,10 @@ module.exports = {
   usage: '!configtaxa',
 
   async execute(message) {
+    if (!message.guild) {
+      return message.reply('🔒 Este comando só pode ser usado no servidor.');
+    }
+
     if (!isAdmin(message.member, message.author.id)) {
       return message.reply('🔒 Somente administradores podem configurar as taxas.');
     }
