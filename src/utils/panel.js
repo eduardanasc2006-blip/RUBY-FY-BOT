@@ -1,25 +1,27 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
-const { robuxToReais, formatBRL, formatRobux } = require('./robuxConverter');
+const { robuxToReais, gamepassPrice, formatBRL, formatRobux } = require('./robuxConverter');
 
 const COR = 0xbeb6ff;
 
-// Valores de referência exibidos no painel — sempre calculados com as taxas atuais
-const REFERENCIAS = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 2000, 3000];
+// Faixas de referência: 100-1000 de 100 em 100, depois 1500-5000 de 500 em 500
+const REFERENCIAS = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000];
 
 function buildPanel() {
+  // Tabela: Robux | Preço | Game Pass necessário
   const linhas = REFERENCIAS.map(
-    (r) => `\`${formatRobux(r)} Robux\`  ➜  **${formatBRL(robuxToReais(r))}**`
+    (r) =>
+      `\`${formatRobux(r)}\` ➜ **${formatBRL(robuxToReais(r))}**  *(GP: ${formatRobux(gamepassPrice(r))})*`
   );
 
   const embed = new EmbedBuilder()
     .setColor(COR)
     .setTitle('☁️ RUBY FY  •  Conversor de Robux')
     .setDescription(
-      'Clique em um botão abaixo e informe o valor.\nSua resposta aparece somente para você.\n\n' +
-        '**Tabela de referência**\n' +
+      '**Selecione um botão abaixo e informe o valor.**\n*A resposta aparece somente para você.*\n\n' +
+        '**Tabela de referência** *(GP = valor a criar no Game Pass)*\n' +
         linhas.join('\n')
     )
-    .setFooter({ text: 'RUBY FY • As taxas podem ser atualizadas pela administração' });
+    .setFooter({ text: '☁️ RUBY FY • Taxas atualizadas pela administração' });
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()

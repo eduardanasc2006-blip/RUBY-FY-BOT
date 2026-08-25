@@ -451,6 +451,28 @@ client.on('interactionCreate', async (interaction) => {
           ],
         });
       }
+
+      // ----- remover categoria -----
+      if (acao === 'remcat') return interaction.update(estoquePanel.adminEscolherCategoria('remcat2'));
+      if (acao === 'remcat2') {
+        const catId = partes[2];
+        const cat = estoqueDb.categoria(catId);
+        if (!cat) return interaction.update({ content: '❌ Categoria não encontrada.', embeds: [], components: [] });
+        const ok = estoqueDb.removeCategoria(catId);
+        if (ok) await refreshPainelEstoque(client);
+        await painelCategoria.refresh(client);
+        return interaction.update({
+          content: ok
+            ? `🗑️ Categoria **${cat.nome}** removida (com ${cat.produtos.length} produto(s)).`
+            : '❌ Categoria não encontrada.',
+          embeds: [],
+          components: [
+            new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId('estadm:menu').setLabel('⬅️ Voltar ao menu').setStyle(ButtonStyle.Secondary)
+            ),
+          ],
+        });
+      }
       return;
     }
 

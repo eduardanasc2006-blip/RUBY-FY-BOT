@@ -84,6 +84,13 @@ const estoque = {
     salvar();
     return true;
   },
+  removeCategoria(catId) {
+    const i = dados.categorias.findIndex((c) => c.id === catId);
+    if (i === -1) return false;
+    dados.categorias.splice(i, 1);
+    salvar();
+    return true;
+  },
 
   // ----- status de exibição -----
   status(p) {
