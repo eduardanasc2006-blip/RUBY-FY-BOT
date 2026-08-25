@@ -69,6 +69,9 @@ function buildDescricao(naDM) {
       '',
       '**!painelestoque**',
       'Publica o painel fixo de estoque no canal (atualiza sozinho quando algo muda).',
+      '',
+      '**!limpar <quantidade>**',
+      'Apaga mensagens do canal. Ex: !limpar 20',
       ''
     );
   }

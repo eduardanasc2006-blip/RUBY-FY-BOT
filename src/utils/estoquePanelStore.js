@@ -29,13 +29,20 @@ async function publicarOuAtualizar(channel) {
       await msg.edit(payload);
       return { atualizado: true, mensagem: msg };
     } catch {
-      // Painel antigo sumiu — publica um novo.
+      // Referência inválida: limpa e publica novo abaixo.
+      limparRef();
     }
   }
 
   const msg = await channel.send(payload);
   salvar({ channelId: msg.channelId, messageId: msg.id });
   return { atualizado: false, mensagem: msg };
+}
+
+function limparRef() {
+  try {
+    fs.rmSync(FILE);
+  } catch {}
 }
 
 // Re-renderiza o painel fixo (chamado apos qualquer mudanca no estoque)

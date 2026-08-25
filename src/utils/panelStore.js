@@ -29,13 +29,20 @@ async function publishOrUpdatePanel(channel) {
       await mensagem.edit(payload);
       return { atualizado: true, mensagem };
     } catch {
-      // Painel antigo sumiu — publica um novo abaixo.
+      // Referência inválida (mensagem apagada ou canal inacessível): limpa e publica novo.
+      limparRef();
     }
   }
 
   const mensagem = await channel.send(payload);
   savePanelRef({ channelId: mensagem.channelId, messageId: mensagem.id });
   return { atualizado: false, mensagem };
+}
+
+function limparRef() {
+  try {
+    fs.rmSync(PANEL_FILE);
+  } catch {}
 }
 
 // Re-renderiza o painel salvo (usado pelo !settaxa para refletir a nova taxa)
