@@ -82,6 +82,7 @@ function adminMenu() {
         btn('estadm:remover', '🗑️ Remover produto', ButtonStyle.Danger)
       ),
       row(
+        btn('estadm:nome', '✏️ Editar nome', ButtonStyle.Secondary),
         btn('estadm:remcat', '🗑️ Remover categoria', ButtonStyle.Danger)
       ),
     ],

@@ -61,7 +61,16 @@ for (const file of fs.readdirSync(prefixPath).filter((f) => f.endsWith('.js'))) 
   }
 }
 
+// Status do bot com a taxa atual (atualiza sozinho quando muda via !settaxa/!configtaxa)
+function atualizarStatus() {
+  client.user.setActivity(
+    `☁️ ${formatBRL(rates.TIER1_PRICE_PER_100)} / 100 Robux | !ajuda`,
+    { type: 3 } // 3 = Watching
+  );
+}
+
 client.once(Events.ClientReady, () => {
+  atualizarStatus();
   console.log(`✅ Bot online como ${client.user.tag}`);
 });
 
@@ -294,6 +303,7 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       rates.setOverride(config.chave, numero);
+      atualizarStatus();
       await refreshSavedPanel(client);
 
       // Atualiza o proprio painel de taxas com os novos valores
@@ -473,6 +483,19 @@ client.on('interactionCreate', async (interaction) => {
           ],
         });
       }
+
+      // ----- editar nome -----
+      if (acao === 'nome') return interaction.update(estoquePanel.adminEscolherCategoria('nome2'));
+      if (acao === 'nome2') return interaction.update(estoquePanel.adminEscolherProduto('nome3', partes[2]));
+      if (acao === 'nome3') {
+        const [, , catId, prodId] = partes;
+        const modal = new ModalBuilder().setCustomId(`estmodal:nome:${catId}:${prodId}`).setTitle('Editar nome do produto').addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('nome').setLabel('Novo nome').setStyle(TextInputStyle.Short).setRequired(true)
+          )
+        );
+        return interaction.showModal(modal);
+      }
       return;
     }
 
@@ -538,8 +561,26 @@ client.on('interactionCreate', async (interaction) => {
         const p = estoqueDb.setQuantidade(catId, prodId, qtd);
         if (p) await refreshPainelEstoque(client);
         await painelCategoria.refresh(client);
+        // Avisa quando o produto esgota
+        if (p && p.quantidade === 0) {
+          const { avisar } = require('./utils/avisos');
+          await avisar(client, `⚠️ **${p.nome}** esgotou no estoque!`);
+        }
         return voltarMenu(
           p ? `✅ **${p.nome}** agora tem **${p.quantidade}** em estoque.` : '❌ Produto não encontrado ou sem controle de quantidade.'
+        );
+      }
+
+      if (acao === 'nome') {
+        const [, , catId, prodId] = partes;
+        const novoNome = interaction.fields.getTextInputValue('nome').trim();
+        if (!novoNome) return voltarMenu('❌ Nome inválido.');
+        const antes = estoqueDb.produto(catId, prodId)?.nome;
+        const p = estoqueDb.setNome(catId, prodId, novoNome);
+        if (p) await refreshPainelEstoque(client);
+        await painelCategoria.refresh(client);
+        return voltarMenu(
+          p ? `✅ Produto renomeado: **${antes}** → **${novoNome}**` : '❌ Produto não encontrado.'
         );
       }
       return;

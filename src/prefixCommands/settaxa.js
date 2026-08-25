@@ -42,6 +42,14 @@ module.exports = {
     }
 
     rates.setOverride(faixa.chave, valor);
+
+    // Atualiza o status do bot com a nova taxa
+    try {
+      message.client.user.setActivity(
+        `☁️ ${formatBRL(rates.TIER1_PRICE_PER_100)} / 100 Robux | !ajuda`,
+        { type: 3 }
+      );
+    } catch {}
     const painelAtualizado = await refreshSavedPanel(message.client);
 
     const exemploQtd = faixaArg === '100' ? 100 : 1000;

@@ -68,6 +68,13 @@ const estoque = {
     salvar();
     return p;
   },
+  setNome(catId, prodId, nome) {
+    const p = estoque.produto(catId, prodId);
+    if (!p) return null;
+    p.nome = nome;
+    salvar();
+    return p;
+  },
   toggleAtivo(catId, prodId) {
     const p = estoque.produto(catId, prodId);
     if (!p) return null;
