@@ -24,19 +24,8 @@ const {
 
 const PREFIX = process.env.PREFIX || '!';
 
-// Quem pode usar o bot por DM. Se vazio, só o dono do bot (OWNER_ID) pode.
-// Para autorizar outra pessoa, adicione o ID dela aqui ou em DM_ALLOWED_IDS no .env.
-const OWNER_ID = process.env.OWNER_ID || '';
-const DM_ALLOWED_IDS = new Set(
-  [OWNER_ID, ...(process.env.DM_ALLOWED_IDS || '').split(',')]
-    .map((s) => s.trim())
-    .filter(Boolean)
-);
-
-// Em DM, só usuários autorizados recebem resposta. No servidor, todos podem usar.
-function podeUsarNaDM(userId) {
-  return DM_ALLOWED_IDS.has(userId);
-}
+// Quem pode usar o bot por DM: dono (.env OWNER_ID/DM_ALLOWED_IDS) + autorizados por !permitir
+const { podeUsarNaDM } = require('./utils/dmAllowed');
 
 if (!process.env.DISCORD_TOKEN) {
   console.error('❌ DISCORD_TOKEN não definido. Crie um arquivo .env baseado no .env.example.');

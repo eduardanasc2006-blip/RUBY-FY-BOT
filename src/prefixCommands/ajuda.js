@@ -54,6 +54,15 @@ function buildDescricao(naDM) {
       '',
       '**!configtaxa**',
       '*Abre o painel visual para configurar as taxas.*',
+      '',
+      '**!permitir <id>**',
+      '*Autoriza um usuário a usar o bot por DM.*',
+      '',
+      '**!removerdm <id>**',
+      '*Remove a autorização de DM de um usuário.*',
+      '',
+      '**!dmlista**',
+      '*Lista os usuários autorizados na DM.*',
       ''
     );
   }
