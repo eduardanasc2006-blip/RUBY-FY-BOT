@@ -24,6 +24,20 @@ const {
 
 const PREFIX = process.env.PREFIX || '!';
 
+// Quem pode usar o bot por DM. Se vazio, só o dono do bot (OWNER_ID) pode.
+// Para autorizar outra pessoa, adicione o ID dela aqui ou em DM_ALLOWED_IDS no .env.
+const OWNER_ID = process.env.OWNER_ID || '';
+const DM_ALLOWED_IDS = new Set(
+  [OWNER_ID, ...(process.env.DM_ALLOWED_IDS || '').split(',')]
+    .map((s) => s.trim())
+    .filter(Boolean)
+);
+
+// Em DM, só usuários autorizados recebem resposta. No servidor, todos podem usar.
+function podeUsarNaDM(userId) {
+  return DM_ALLOWED_IDS.has(userId);
+}
+
 if (!process.env.DISCORD_TOKEN) {
   console.error('❌ DISCORD_TOKEN não definido. Crie um arquivo .env baseado no .env.example.');
   process.exit(1);
@@ -67,6 +81,14 @@ client.once(Events.ClientReady, () => {
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
+  // Em DM, so responde a usuarios autorizados
+  if (!interaction.guild && !podeUsarNaDM(interaction.user.id)) {
+    return interaction.reply({
+      content: '🔒 Este bot só responde por DM a usuários autorizados pelo dono.',
+      ephemeral: true,
+    });
+  }
+
   const command = client.commands.get(interaction.commandName);
   if (!command) return;
 
@@ -94,6 +116,12 @@ const MODAIS = {
 client.on('interactionCreate', async (interaction) => {
   try {
     if (interaction.isButton() && interaction.customId.startsWith('panel:')) {
+      if (!interaction.guild && !podeUsarNaDM(interaction.user.id)) {
+        return interaction.reply({
+          content: '🔒 Este bot só responde por DM a usuários autorizados pelo dono.',
+          ephemeral: true,
+        });
+      }
       const acao = interaction.customId.split(':')[1];
 
     if (acao === 'taxas') {
@@ -136,6 +164,12 @@ client.on('interactionCreate', async (interaction) => {
   }
 
   if (interaction.isModalSubmit() && interaction.customId.startsWith('modal:')) {
+    if (!interaction.guild && !podeUsarNaDM(interaction.user.id)) {
+      return interaction.reply({
+        content: '🔒 Este bot só responde por DM a usuários autorizados pelo dono.',
+        ephemeral: true,
+      });
+    }
     const acao = interaction.customId.split(':')[1];
     const bruto = interaction.fields.getTextInputValue('valor').trim();
     const numero = parseFloat(bruto.replace(/\./g, '').replace(',', '.'));
@@ -311,6 +345,11 @@ client.on('interactionCreate', async (interaction) => {
 // Responde comandos de prefixo
 client.on(Events.MessageCreate, async (message) => {
   if (message.author.bot || !message.content.startsWith(PREFIX)) return;
+
+  // Em DM, so responde a usuarios autorizados
+  if (!message.guild && !podeUsarNaDM(message.author.id)) {
+    return message.reply('🔒 Este bot só responde por DM a usuários autorizados pelo dono.');
+  }
 
   const args = message.content.slice(PREFIX.length).trim().split(/\s+/);
   const commandName = args.shift().toLowerCase();

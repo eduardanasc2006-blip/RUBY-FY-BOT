@@ -12,9 +12,10 @@ const commands = [];
 const commandsPath = path.join(__dirname, 'src', 'commands');
 for (const file of fs.readdirSync(commandsPath).filter((f) => f.endsWith('.js'))) {
   const cmd = require(path.join(commandsPath, file)).data.toJSON();
-  // Permite uso em servidores e em DM (botão/modal do painel também funcionam na DM)
-  cmd.contexts = [0, 1]; // 0 = Guild, 1 = Bot DM
-  cmd.integration_types = [0]; // instalado no servidor
+  // 0 = Guild Install (servidor), 1 = User Install (usar em qualquer DM/grupo, estilo Loritta)
+  cmd.integration_types = [0, 1];
+  // 0 = Guild, 1 = Bot DM, 2 = DMs/grupos privados
+  cmd.contexts = [0, 1, 2];
   commands.push(cmd);
 }
 
