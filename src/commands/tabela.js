@@ -1,4 +1,4 @@
-const { PermissionFlagsBits, SlashCommandBuilder } = require('discord.js');
+const { PermissionFlagsBits, SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { publishOrUpdatePanel } = require('../utils/panelStore');
 
 module.exports = {
@@ -15,7 +15,7 @@ module.exports = {
     if (!autorizado) {
       return interaction.reply({
         content: '🔒 Somente administradores podem publicar o painel de conversão.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -25,7 +25,7 @@ module.exports = {
       content: atualizado
         ? '✅ Painel de conversão **atualizado** com as taxas atuais.'
         : '✅ Painel de conversão publicado! Qualquer pessoa pode usar os botões.',
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   },
 };

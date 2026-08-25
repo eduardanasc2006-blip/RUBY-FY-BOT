@@ -12,6 +12,7 @@ const {
   GatewayIntentBits,
   ModalBuilder,
   Partials,
+  MessageFlags,
   TextInputBuilder,
   TextInputStyle,
 } = require('discord.js');
@@ -94,7 +95,7 @@ client.on('interactionCreate', async (interaction) => {
     await command.execute(interaction);
   } catch (error) {
     console.error(error);
-    const mensagem = { content: '❌ Ocorreu um erro ao executar este comando.', ephemeral: true };
+    const mensagem = { content: '❌ Ocorreu um erro ao executar este comando.', flags: MessageFlags.Ephemeral };
     if (interaction.replied || interaction.deferred) {
       await interaction.followUp(mensagem);
     } else {
@@ -132,7 +133,7 @@ client.on('interactionCreate', async (interaction) => {
           },
           { name: 'Game Pass', value: `Roblox desconta **${taxa}%** (você recebe ${100 - taxa}%)` }
         );
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     }
 
     const config = MODAIS[acao];
@@ -159,7 +160,7 @@ client.on('interactionCreate', async (interaction) => {
     const acao = interaction.customId.split(':')[1];
     const bruto = interaction.fields.getTextInputValue('valor').trim();
     const numero = parseFloat(bruto.replace(/\./g, '').replace(',', '.'));
-    const respostaPrivada = (payload) => interaction.reply({ ...payload, ephemeral: true });
+    const respostaPrivada = (payload) => interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
 
     if (isNaN(numero) || numero <= 0) {
       return respostaPrivada({ content: '❌ Valor inválido. Tente novamente com um número, ex: `500` ou `10,50`.' });
@@ -204,7 +205,7 @@ client.on('interactionCreate', async (interaction) => {
     console.error('[Painel de conversão] Erro na interação:', error);
     try {
       if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: '❌ Ocorreu um erro. Tente novamente.', ephemeral: true });
+        await interaction.reply({ content: '❌ Ocorreu um erro. Tente novamente.', flags: MessageFlags.Ephemeral });
       }
     } catch {}
   }
@@ -249,7 +250,7 @@ client.on('interactionCreate', async (interaction) => {
       if (!isAdmin(interaction.member, interaction.user.id)) {
         return interaction.reply({
           content: '🔒 Somente administradores podem configurar as taxas.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -289,7 +290,7 @@ client.on('interactionCreate', async (interaction) => {
       if (!isAdmin(interaction.member, interaction.user.id)) {
         return interaction.reply({
           content: '🔒 Somente administradores podem configurar as taxas.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -299,13 +300,13 @@ client.on('interactionCreate', async (interaction) => {
       if (isNaN(numero) || numero <= 0) {
         return interaction.reply({
           content: '❌ Valor inválido. Tente novamente com um número, ex: `3,50` ou `30`.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
 
       if (config.porcentagem) {
         if (numero >= 100) {
-          return interaction.reply({ content: '❌ A porcentagem deve ser menor que 100.', ephemeral: true });
+          return interaction.reply({ content: '❌ A porcentagem deve ser menor que 100.', flags: MessageFlags.Ephemeral });
         }
         numero = numero / 100;
       }
@@ -321,7 +322,7 @@ client.on('interactionCreate', async (interaction) => {
     console.error('[Painel de taxas] Erro na interação:', error);
     try {
       if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: '❌ Ocorreu um erro. Tente novamente.', ephemeral: true });
+        await interaction.reply({ content: '❌ Ocorreu um erro. Tente novamente.', flags: MessageFlags.Ephemeral });
       }
     } catch {}
   }
@@ -346,7 +347,7 @@ client.on('interactionCreate', async (interaction) => {
     console.error('[Ajuda] Erro na interação:', error);
     try {
       if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: '❌ Ocorreu um erro. Tente novamente.', ephemeral: true });
+        await interaction.reply({ content: '❌ Ocorreu um erro. Tente novamente.', flags: MessageFlags.Ephemeral });
       }
     } catch {}
   }
@@ -380,13 +381,13 @@ client.on('interactionCreate', async (interaction) => {
       if (dentroDeEphemeral) {
         return interaction.update(payload); // edita a mesma mensagem privada
       }
-      return interaction.reply({ ...payload, ephemeral: true }); // primeira resposta privada
+      return interaction.reply({ ...payload, flags: MessageFlags.Ephemeral }); // primeira resposta privada
     }
 
     // ----- admin: estadm:* -----
     if (interaction.isButton() && interaction.customId.startsWith('estadm:')) {
       if (!isAdmin(interaction.member, interaction.user.id)) {
-        return interaction.reply({ content: '🔒 Somente administradores.', ephemeral: true });
+        return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
       }
       const partes = interaction.customId.split(':');
       const acao = partes[1];
@@ -443,7 +444,7 @@ client.on('interactionCreate', async (interaction) => {
         const p = estoqueDb.toggleAtivo(catId, prodId);
         if (p) await refreshPainelEstoque(client);
         await painelCategoria.refresh(client);
-        if (!p) return interaction.reply({ content: '❌ Produto não encontrado.', ephemeral: true });
+        if (!p) return interaction.reply({ content: '❌ Produto não encontrado.', flags: MessageFlags.Ephemeral });
         const s = estoqueDb.status(p);
         return interaction.update({
           content: `✅ **${p.nome}** agora está: ${s.emoji} ${s.texto}`,
@@ -538,7 +539,7 @@ client.on('interactionCreate', async (interaction) => {
     // ----- modais do estoque -----
     if (interaction.isModalSubmit() && interaction.customId.startsWith('estmodal:')) {
       if (!isAdmin(interaction.member, interaction.user.id)) {
-        return interaction.reply({ content: '🔒 Somente administradores.', ephemeral: true });
+        return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
       }
       const partes = interaction.customId.split(':');
       const acao = partes[1];
@@ -624,7 +625,7 @@ client.on('interactionCreate', async (interaction) => {
     console.error('[Estoque] Erro na interação:', error);
     try {
       if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: '❌ Ocorreu um erro. Tente novamente.', ephemeral: true });
+        await interaction.reply({ content: '❌ Ocorreu um erro. Tente novamente.', flags: MessageFlags.Ephemeral });
       }
     } catch {}
   }

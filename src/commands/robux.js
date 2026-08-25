@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, MessageFlags } = require('discord.js');
 const rates = require('../config/rates');
 const { robuxToReais, formatBRL, formatRobux } = require('../utils/robuxConverter');
 
@@ -20,7 +20,7 @@ module.exports = {
     if (robux < rates.MIN_ROBUX) {
       return interaction.reply({
         content: `❌ O valor mínimo é **${formatRobux(rates.MIN_ROBUX)} Robux**.`,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
