@@ -1,16 +1,14 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { buildDescricao } = require('../prefixCommands/ajuda');
+const { SlashCommandBuilder } = require('discord.js');
+const { buildAjuda } = require('../utils/ajudaPanel');
+const { isAdmin } = require('../prefixCommands/settaxa');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('ajuda')
-    .setDescription('Mostra o menu de ajuda com todos os comandos do bot'),
+    .setDescription('Mostra o menu de ajuda interativo'),
 
   async execute(interaction) {
-    const embed = new EmbedBuilder()
-      .setColor(0x7c3aed)
-      .setDescription(buildDescricao(!interaction.guild));
-
-    return interaction.reply({ embeds: [embed] });
+    const admin = interaction.guild ? isAdmin(interaction.member, interaction.user.id) : false;
+    return interaction.reply(buildAjuda('inicio', admin));
   },
 };

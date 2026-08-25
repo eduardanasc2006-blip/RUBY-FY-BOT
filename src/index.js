@@ -307,6 +307,29 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
+// ----- Menu de ajuda: botões de navegação -----
+
+const { buildAjuda } = require('./utils/ajudaPanel');
+
+client.on('interactionCreate', async (interaction) => {
+  try {
+    if (interaction.isButton() && interaction.customId.startsWith('ajuda:')) {
+      const pagina = interaction.customId.split(':')[1];
+      const admin = interaction.guild ? isAdmin(interaction.member, interaction.user.id) : false;
+      // Esconde a página admin de quem não é admin
+      const pag = pagina === 'admin' && !admin ? 'inicio' : pagina;
+      return interaction.update(buildAjuda(pag, admin));
+    }
+  } catch (error) {
+    console.error('[Ajuda] Erro na interação:', error);
+    try {
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: '❌ Ocorreu um erro. Tente novamente.', ephemeral: true });
+      }
+    } catch {}
+  }
+});
+
 // ----- Estoque: navegação pública e painel admin -----
 
 const estoqueDb = require('./utils/estoque');
