@@ -317,7 +317,9 @@ client.on('interactionCreate', async (interaction) => {
   try {
     // ----- Menu de ajuda: botões de navegação -----
     if (interaction.isButton() && interaction.customId.startsWith('ajuda:')) {
-      const pagina = interaction.customId.split(':')[1];
+      const partes = interaction.customId.split(':');
+      // formatos: ajuda:cat:<pagina> | ajuda:nav:prev:<pagina> | ajuda:nav:home:<pagina>
+      const pagina = partes.length >= 3 ? partes[partes.length - 1] : partes[1];
       const admin = interaction.guild ? isAdmin(interaction.member, interaction.user.id) : false;
       const pag = (pagina === 'admin' || pagina === 'painel') && !admin ? 'inicio' : pagina;
       return interaction.update(buildAjuda(pag, admin));

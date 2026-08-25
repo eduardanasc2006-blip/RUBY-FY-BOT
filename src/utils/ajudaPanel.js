@@ -109,20 +109,21 @@ function buildAjuda(pagina = 'inicio', isAdmin = false) {
   const anterior = ORDEM[(idx - 1 + ORDEM.length) % ORDEM.length];
   const proximo = ORDEM[(idx + 1) % ORDEM.length];
 
+  // custom_id unicos por pagina para nunca duplicar com os botoes de categoria
   const nav = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`ajuda:${anterior}`).setEmoji('◀️').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('ajuda:inicio').setEmoji('🏠').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`ajuda:${proximo}`).setEmoji('▶️').setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder().setCustomId(`ajuda:nav:prev:${anterior}`).setEmoji('◀️').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('ajuda:nav:home:inicio').setEmoji('🏠').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`ajuda:nav:next:${proximo}`).setEmoji('▶️').setStyle(ButtonStyle.Secondary)
   );
 
   const cats = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('ajuda:conversor').setLabel('🎮 Conversor').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('ajuda:estoque').setLabel('📦 Estoque').setStyle(ButtonStyle.Primary)
+    new ButtonBuilder().setCustomId('ajuda:cat:conversor').setLabel('🎮 Conversor').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('ajuda:cat:estoque').setLabel('📦 Estoque').setStyle(ButtonStyle.Primary)
   );
   if (isAdmin) {
     cats.addComponents(
-      new ButtonBuilder().setCustomId('ajuda:painel').setLabel('📊 Painel').setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder().setCustomId('ajuda:admin').setLabel('⚙️ Admin').setStyle(ButtonStyle.Danger)
+      new ButtonBuilder().setCustomId('ajuda:cat:painel').setLabel('📊 Painel').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('ajuda:cat:admin').setLabel('⚙️ Admin').setStyle(ButtonStyle.Danger)
     );
   }
 
