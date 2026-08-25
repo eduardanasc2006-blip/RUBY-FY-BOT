@@ -500,8 +500,20 @@ client.on('interactionCreate', async (interaction) => {
       if (acao === 'vender3') {
         const [, , catId, prodId] = partes;
         const atual = estoqueDb.produto(catId, prodId);
-        if (!atual) return interaction.update({ content: '❌ Produto não encontrado.', embeds: [], components: [] });
-        if (!atual.controlarQtd) return interaction.update({ content: `❌ **${atual.nome}** não tem controle de quantidade.`, embeds: [], components: [] });
+
+        const responder = async (payload) => {
+          try {
+            return await interaction.update(payload);
+          } catch {
+            // Interacao expirada (bot reiniciou ou demorou): responde como nova
+            try {
+              return await interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
+            } catch {}
+          }
+        };
+
+        if (!atual) return responder({ content: '❌ Produto não encontrado.', embeds: [], components: [] });
+        if (!atual.controlarQtd) return responder({ content: `❌ **${atual.nome}** não tem controle de quantidade.`, embeds: [], components: [] });
 
         const novaQtd = Math.max(0, atual.quantidade - 1);
         const p = estoqueDb.setQuantidade(catId, prodId, novaQtd);
@@ -511,7 +523,7 @@ client.on('interactionCreate', async (interaction) => {
         if (p && p.quantidade === 0) {
           avisar(client, `⚠️ **${p.nome}** esgotou no estoque!`).catch(() => {});
         }
-        return interaction.update({
+        return responder({
           content: `📦 Venda registrada: **${p.nome}** agora tem **${p.quantidade}** em estoque.`,
           embeds: [],
           components: [

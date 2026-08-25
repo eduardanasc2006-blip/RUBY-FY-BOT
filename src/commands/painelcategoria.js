@@ -27,7 +27,7 @@ module.exports = {
     }
 
     const msg = await interaction.channel.send({ embeds: [embed] });
-    painelCategoria.salvar(msg.id, catId);
+    painelCategoria.salvar(msg.id, catId, interaction.channel.id);
 
     return interaction.reply({ content: `✅ Painel da categoria **${catId}** fixado no canal.`, flags: MessageFlags.Ephemeral });
   },

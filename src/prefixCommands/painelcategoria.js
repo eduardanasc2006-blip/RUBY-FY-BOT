@@ -10,9 +10,9 @@ const FILE = path.join(__dirname, '..', '..', 'data', 'painel_categoria.json');
 function carregar() {
   try { return JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch { return {}; }
 }
-function salvar(msgId, catId) {
+function salvar(msgId, catId, channelId) {
   const dados = carregar();
-  dados[msgId] = catId;
+  dados[msgId] = { catId, channelId };
   fs.mkdirSync(path.dirname(FILE), { recursive: true });
   fs.writeFileSync(FILE, JSON.stringify(dados, null, 2));
 }
@@ -56,7 +56,7 @@ module.exports = {
     }
 
     const msg = await message.channel.send({ embeds: [embed] });
-    salvar(msg.id, catId);
+    salvar(msg.id, catId, message.channel.id);
 
     // Confirmação some depois de 5 segundos para não poluir o canal
     const confirmacao = await message.reply(`✅ Painel da categoria **${catId}** fixado no canal.`);
@@ -69,16 +69,20 @@ module.exports = {
   // Chamado pela index ao alterar o estoque
   async refresh(client) {
     const dados = carregar();
-    for (const [msgId, catId] of Object.entries(dados)) {
+    for (const [msgId, info] of Object.entries(dados)) {
       try {
-        for (const guild of client.guilds.cache.values()) {
-          for (const ch of guild.channels.cache.values()) {
-            if (!ch.isTextBased()) continue;
-            try {
-              const msg = await ch.messages.fetch(msgId);
+        // Compatibilidade: formato antigo (string) ou novo (objeto)
+        const catId = typeof info === 'string' ? info : info.catId;
+        const channelId = typeof info === 'string' ? null : info.channelId;
+
+        if (channelId) {
+          const ch = await client.channels.fetch(channelId).catch(() => null);
+          if (ch) {
+            const msg = await ch.messages.fetch(msgId).catch(() => null);
+            if (msg) {
               const embed = buildCategoria(catId);
               if (embed) await msg.edit({ embeds: [embed] });
-            } catch {}
+            }
           }
         }
       } catch {}
