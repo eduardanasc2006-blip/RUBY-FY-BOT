@@ -11,7 +11,7 @@ module.exports = {
       return message.reply('🔒 Somente administradores podem usar este comando.');
     }
 
-    const canal = message.mentions.channels.first() || message.channel;
+    const canal = message.mentions?.channels?.first() || message.channel;
     definir(canal.id);
 
     return message.reply(`✅ Avisos de estoque serão enviados em ${canal}.`);
