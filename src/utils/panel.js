@@ -11,7 +11,7 @@ function buildPanel() {
   const linhas = REFERENCIAS.map((r) => {
     const preco = formatBRL(robuxToReais(r));
     const gp = formatRobux(gamepassPrice(r));
-    return `\`${formatRobux(r)}\` ➜ **${preco}**  ·  🎟️ \`${gp}\``;
+    return `\`${formatRobux(r)}\` ➜ **${preco}**  ·  \`${gp}\` GP`;
   });
 
   const embed = new EmbedBuilder()
