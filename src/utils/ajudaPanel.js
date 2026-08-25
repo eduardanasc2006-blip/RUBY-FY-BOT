@@ -1,43 +1,42 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 
 const COR = 0x7c3aed;
-
-// Ordem das páginas para as setas de navegação
-const ORDEM = ['inicio', 'conversao', 'estoque', 'admin'];
+const ORDEM = ['inicio', 'conversor', 'estoque', 'painel', 'admin'];
 
 const PAGINAS = {
   inicio: () => ({
     titulo: '💜 RUBY FY BOT — Central de Ajuda',
     descricao: [
-      'Conversor de Robux + estoque de produtos, tudo em um lugar só.',
+      'Conversor de Robux + estoque de produtos, tudo em um lugar.',
       '',
-      '**Escolha uma categoria abaixo:**',
+      '**Escolha uma categoria:**',
       '',
-      '🎮 **Conversão** — calcular Robux ↔ Reais e Game Pass',
+      '🎮 **Conversor** — calcular Robux ↔ Reais, Game Pass e taxas',
       '📦 **Estoque** — ver produtos e preços',
-      '⚙️ **Administração** — comandos para administradores',
+      '📊 **Painel** — painéis fixos de conversão e estoque',
+      '⚙️ **Administração** — comandos para admins',
       '',
       'Use as **setas** para navegar ou clique numa **categoria**.',
     ].join('\n'),
   }),
 
-  conversao: () => ({
-    titulo: '🎮 Conversão de Robux',
+  conversor: () => ({
+    titulo: '🎮 Conversor de Robux',
     descricao: [
       '**!robux <quantidade>**',
-      'Quanto custa X Robux em reais.',
+      '*Descubra quanto custa X Robux em reais.*',
       'Exemplo: !robux 500 → R$ 19,00',
       '',
       '**!reais <valor>**',
-      'Quantos Robux você consegue com X reais.',
+      '*Descubra quantos Robux você consegue com X reais.*',
       'Exemplo: !reais 10 → 263 Robux',
       '',
       '**!gamepass <robux>**',
-      'Quanto cobrar no Game Pass para você receber X Robux.',
+      '*Quanto cobrar no Game Pass para receber X Robux.*',
       'Exemplo: !gamepass 1000 → crie por 1.429 Robux',
       '',
       '**!taxa**',
-      'Veja as taxas atuais de conversão.',
+      '*Veja as taxas atuais de conversão.*',
       '',
       '✨ Slash: **/robux** • **/reais** • **/gamepass** • **/taxa**',
     ].join('\n'),
@@ -47,12 +46,28 @@ const PAGINAS = {
     titulo: '📦 Estoque de Produtos',
     descricao: [
       '**!estoque**',
-      'Mostra os produtos organizados por categoria (MM2, FTF etc).',
+      '*Mostra os produtos por categoria (MM2, FTF etc).*',
       'Clique na categoria para ver itens, preços e disponibilidade.',
       '',
-      '*Os produtos são gerenciados pela administração.*',
+      '*Produtos gerenciados pela administração.*',
       '',
       '✨ Slash: **/estoque**',
+    ].join('\n'),
+  }),
+
+  painel: () => ({
+    titulo: '📊 Painéis Fixos',
+    descricao: [
+      '**!tabela** *(admin)*',
+      '*Publica o painel de conversão com botões no canal.*',
+      '',
+      '**!painelestoque** *(admin)*',
+      '*Publica o painel fixo de estoque (atualiza sozinho).*',
+      '',
+      '**!painelcategoria <categoria>** *(admin)*',
+      '*Fixa no canal os produtos de UMA categoria (ex: !painelcategoria mm2).*',
+      '',
+      '*Os painéis atualizam automaticamente quando algo muda.*',
     ].join('\n'),
   }),
 
@@ -61,32 +76,35 @@ const PAGINAS = {
     descricao: [
       '🔒 *Somente administradores autorizados.*',
       '',
-      '**!tabela**',
-      'Publica ou atualiza o painel de conversão com botões.',
+      '**!settaxa 100 <valor>**',
+      '*Taxa de 100 a 999 Robux. Ex: !settaxa 100 3,50*',
       '',
-      '**!settaxa 100 <valor>** — taxa de 100 a 999 Robux.',
-      '**!settaxa 1000 <valor>** — taxa de 1.000+ Robux.',
-      '**!configtaxa** — painel visual de taxas.',
+      '**!settaxa 1000 <valor>**',
+      '*Taxa de 1.000+ Robux. Ex: !settaxa 1000 34,99*',
       '',
-      '**!configestoque** — gerencia produtos e categorias.',
-      '**!painelestoque** — publica o painel fixo de estoque.',
+      '**!configtaxa**',
+      '*Painel visual para mudar as taxas.*',
       '',
-      '**!limpar <1-100>** — apaga mensagens do canal.',
+      '**!configestoque**',
+      '*Gerencia categorias, produtos e quantidades.*',
+      '',
+      '**!limpar <1-100>**',
+      '*Apaga mensagens do canal. Ex: !limpar 20*',
     ].join('\n'),
   }),
 };
 
 function buildAjuda(pagina = 'inicio', isAdmin = false) {
-  const pag = PAGINAS[pagina] ? pagina : 'inicio';
-  const dados = PAGINAS[pag]();
+  let pag = PAGINAS[pagina] ? pagina : 'inicio';
+  if ((pag === 'admin' || pag === 'painel') && !isAdmin) pag = 'inicio';
 
+  const dados = PAGINAS[pag]();
   const embed = new EmbedBuilder()
     .setColor(COR)
     .setTitle(dados.titulo)
     .setDescription(dados.descricao)
     .setFooter({ text: 'RUBY FY • Use os botões para navegar' });
 
-  // Linha de navegação: setas + início
   const idx = ORDEM.indexOf(pag);
   const anterior = ORDEM[(idx - 1 + ORDEM.length) % ORDEM.length];
   const proximo = ORDEM[(idx + 1) % ORDEM.length];
@@ -97,14 +115,14 @@ function buildAjuda(pagina = 'inicio', isAdmin = false) {
     new ButtonBuilder().setCustomId(`ajuda:${proximo}`).setEmoji('▶️').setStyle(ButtonStyle.Secondary)
   );
 
-  // Linha de categorias (admin só aparece para admin)
   const cats = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('ajuda:conversao').setLabel('🎮 Conversão').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('ajuda:conversor').setLabel('🎮 Conversor').setStyle(ButtonStyle.Primary),
     new ButtonBuilder().setCustomId('ajuda:estoque').setLabel('📦 Estoque').setStyle(ButtonStyle.Primary)
   );
   if (isAdmin) {
     cats.addComponents(
-      new ButtonBuilder().setCustomId('ajuda:admin').setLabel('⚙️ Admin').setStyle(ButtonStyle.Secondary)
+      new ButtonBuilder().setCustomId('ajuda:painel').setLabel('📊 Painel').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('ajuda:admin').setLabel('⚙️ Admin').setStyle(ButtonStyle.Danger)
     );
   }
 

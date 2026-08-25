@@ -313,11 +313,11 @@ const { buildAjuda } = require('./utils/ajudaPanel');
 
 client.on('interactionCreate', async (interaction) => {
   try {
+    // ----- Menu de ajuda: botões de navegação -----
     if (interaction.isButton() && interaction.customId.startsWith('ajuda:')) {
       const pagina = interaction.customId.split(':')[1];
       const admin = interaction.guild ? isAdmin(interaction.member, interaction.user.id) : false;
-      // Esconde a página admin de quem não é admin
-      const pag = pagina === 'admin' && !admin ? 'inicio' : pagina;
+      const pag = (pagina === 'admin' || pagina === 'painel') && !admin ? 'inicio' : pagina;
       return interaction.update(buildAjuda(pag, admin));
     }
   } catch (error) {
@@ -335,20 +335,29 @@ client.on('interactionCreate', async (interaction) => {
 const estoqueDb = require('./utils/estoque');
 const estoquePanel = require('./utils/estoquePanel');
 const { refreshPainelEstoque } = require('./utils/estoquePanelStore');
+const painelCategoria = require('./prefixCommands/painelcategoria');
 
 client.on('interactionCreate', async (interaction) => {
   try {
     // ----- painel fixo de estoque: estfixo:cat:<id> e estfixo:voltar -----
-    // Cada clique responde EPHEMERAL (so quem clicou ve), sem criar mensagens
+    // Clique no PAINEL PUBLICO -> responde ephemeral (so quem clicou ve)
+    // Clique DENTRO da resposta ephemeral -> EDITA a mesma mensagem
     if (interaction.isButton() && interaction.customId.startsWith('estfixo:')) {
       const [, acao, catId] = interaction.customId.split(':');
-      if (acao === 'voltar') {
-        return interaction.reply({ ...estoquePanel.publicoCategorias(), ephemeral: true });
+      const dentroDeEphemeral = interaction.message.flags.has('Ephemeral');
+
+      const payload =
+        acao === 'voltar'
+          ? estoquePanel.publicoCategorias()
+          : acao === 'cat'
+            ? estoquePanel.publicoProdutos(catId)
+            : null;
+      if (!payload) return;
+
+      if (dentroDeEphemeral) {
+        return interaction.update(payload); // edita a mesma mensagem privada
       }
-      if (acao === 'cat') {
-        return interaction.reply({ ...estoquePanel.publicoProdutos(catId), ephemeral: true });
-      }
-      return;
+      return interaction.reply({ ...payload, ephemeral: true }); // primeira resposta privada
     }
 
     // ----- admin: estadm:* -----
@@ -410,6 +419,7 @@ client.on('interactionCreate', async (interaction) => {
         const [, , catId, prodId] = partes;
         const p = estoqueDb.toggleAtivo(catId, prodId);
         if (p) await refreshPainelEstoque(client);
+        await painelCategoria.refresh(client);
         if (!p) return interaction.reply({ content: '❌ Produto não encontrado.', ephemeral: true });
         const s = estoqueDb.status(p);
         return interaction.update({
@@ -424,6 +434,7 @@ client.on('interactionCreate', async (interaction) => {
         const [, , catId, prodId] = partes;
         const ok = estoqueDb.removeProduto(catId, prodId);
         if (ok) await refreshPainelEstoque(client);
+        await painelCategoria.refresh(client);
         return interaction.update({
           content: ok ? '🗑️ Produto removido.' : '❌ Produto não encontrado.',
           embeds: [],
@@ -459,6 +470,7 @@ client.on('interactionCreate', async (interaction) => {
         const nome = interaction.fields.getTextInputValue('nome').trim();
         const cat = estoqueDb.addCategoria(nome);
         if (cat) await refreshPainelEstoque(client);
+        await painelCategoria.refresh(client);
         return voltarMenu(cat ? `✅ Categoria **${nome}** criada.` : `❌ A categoria **${nome}** já existe.`);
       }
 
@@ -479,6 +491,7 @@ client.on('interactionCreate', async (interaction) => {
 
         const p = estoqueDb.addProduto(catId, { nome, valor, controlarQtd, quantidade });
         if (p) await refreshPainelEstoque(client);
+        await painelCategoria.refresh(client);
         return voltarMenu(
           p
             ? `✅ Produto **${nome}** adicionado por ${formatBRL(valor)}${controlarQtd ? ` (estoque: ${quantidade})` : ' (sem controle de quantidade)'}.`
@@ -494,6 +507,7 @@ client.on('interactionCreate', async (interaction) => {
         }
         const p = estoqueDb.setQuantidade(catId, prodId, qtd);
         if (p) await refreshPainelEstoque(client);
+        await painelCategoria.refresh(client);
         return voltarMenu(
           p ? `✅ **${p.nome}** agora tem **${p.quantidade}** em estoque.` : '❌ Produto não encontrado ou sem controle de quantidade.'
         );
