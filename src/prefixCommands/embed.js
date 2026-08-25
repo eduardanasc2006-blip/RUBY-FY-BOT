@@ -33,16 +33,21 @@ module.exports = {
     }
 
     const texto = args.join(' ');
-    if (!texto) {
+    const anexo = message.attachments?.first();
+    const temAnexo = anexo && anexo.contentType?.startsWith('image/');
+
+    if (!texto && !temAnexo) {
       return message.reply(
-        '❌ Use: `!embed título | descrição | cor | link-imagem`\n' +
-        'Cores: lilas, roxo, azul, verde, amarelo, vermelho, rosa\n' +
-        'Exemplo: `!embed Promoção ☁️ | 500 Robux por apenas R$ 19,00! | lilas`'
+        '❌ Use: `!embed título | descrição | cor` — ou anexe uma foto!\n' +
+        'Cores: lilas, roxo, azul, verde, amarelo, vermelho, rosa, ou #hex\n' +
+        'Exemplos:\n' +
+        '`!embed Promoção ☁️ | 500 Robux por R$ 19,00! | lilas`\n' +
+        '`!embed Novidade ☁️ | Chegou MM2 novo!` (anexando uma foto)'
       );
     }
 
-    const partes = texto.split('|').map((s) => s.trim());
-    const [titulo, descricao, corNome, imagem] = partes;
+    const partes = texto ? texto.split('|').map((s) => s.trim()) : [];
+    const [titulo, descricao, corNome, imagemLink] = partes;
 
     if (!titulo || !descricao) {
       return message.reply('❌ Precisa de pelo menos **título** e **descrição**, separados por `|`');
@@ -53,8 +58,11 @@ module.exports = {
       .setTitle(titulo)
       .setDescription(descricao);
 
-    if (imagem && imagem.startsWith('http')) {
-      embed.setImage(imagem);
+    // Imagem por anexo (upload) tem prioridade sobre link
+    if (temAnexo) {
+      embed.setImage(anexo.url);
+    } else if (imagemLink && imagemLink.startsWith('http')) {
+      embed.setImage(imagemLink);
     }
 
     await message.channel.send({ embeds: [embed] });

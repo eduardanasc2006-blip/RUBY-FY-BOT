@@ -668,42 +668,6 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
-// ----- Embed personalizada via modal -----
-
-client.on('interactionCreate', async (interaction) => {
-  try {
-    if (interaction.isModalSubmit() && interaction.customId === 'embmodal:criar') {
-      const { isAdmin } = require('./prefixCommands/settaxa');
-      const { resolverCor } = require('./prefixCommands/embed');
-
-      if (!isAdmin(interaction.member, interaction.user.id)) {
-        return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
-      }
-
-      const titulo = interaction.fields.getTextInputValue('titulo').trim();
-      const descricao = interaction.fields.getTextInputValue('descricao').trim();
-      const corBruta = (interaction.fields.getTextInputValue('cor') || '').trim();
-      const imagem = (interaction.fields.getTextInputValue('imagem') || '').trim();
-
-      const embed = new EmbedBuilder()
-        .setColor(resolverCor(corBruta))
-        .setTitle(titulo)
-        .setDescription(descricao);
-      if (imagem && imagem.startsWith('http')) embed.setImage(imagem);
-
-      await interaction.channel.send({ embeds: [embed] });
-      return interaction.reply({ content: '✅ Embed publicada!', flags: MessageFlags.Ephemeral });
-    }
-  } catch (error) {
-    console.error('[Embed] Erro:', error);
-    try {
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: '❌ Ocorreu um erro.', flags: MessageFlags.Ephemeral });
-      }
-    } catch {}
-  }
-});
-
 // Responde comandos de prefixo
 client.on(Events.MessageCreate, async (message) => {
   if (message.author.bot || !message.content.startsWith(PREFIX)) return;

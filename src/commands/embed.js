@@ -1,35 +1,41 @@
-const { PermissionFlagsBits, SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { PermissionFlagsBits, SlashCommandBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
 const { isAdmin } = require('../prefixCommands/settaxa');
+const { resolverCor } = require('../prefixCommands/embed');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('embed')
-    .setDescription('Abre o formulário para criar uma embed personalizada (admin)'),
+    .setDescription('Cria uma embed personalizada no canal (admin)')
+    .addStringOption((o) => o.setName('titulo').setDescription('Título da embed').setRequired(true))
+    .addStringOption((o) => o.setName('descricao').setDescription('Texto da embed').setRequired(true))
+    .addStringOption((o) => o.setName('cor').setDescription('Cor: lilas, roxo, azul, verde, rosa, ou #hex').setRequired(false))
+    .addAttachmentOption((o) => o.setName('imagem').setDescription('Foto/imagem (upload)').setRequired(false))
+    .addStringOption((o) => o.setName('link_imagem').setDescription('Link da imagem (alternativa)').setRequired(false)),
 
   async execute(interaction) {
     if (!interaction.guild || !isAdmin(interaction.member, interaction.user.id)) {
       return interaction.reply({ content: '🔒 Somente administradores podem usar este comando.', flags: MessageFlags.Ephemeral });
     }
 
-    // O modal é aberto pelo handler no index.js (customId: embmodal)
-    const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
-    const modal = new ModalBuilder()
-      .setCustomId('embmodal:criar')
-      .setTitle('Criar Embed Personalizada')
-      .addComponents(
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder().setCustomId('titulo').setLabel('Título').setStyle(TextInputStyle.Short).setRequired(true)
-        ),
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder().setCustomId('descricao').setLabel('Descrição').setStyle(TextInputStyle.Paragraph).setRequired(true)
-        ),
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder().setCustomId('cor').setLabel('Cor (nome ou #hex) — ex: lilas ou #beb6ff').setStyle(TextInputStyle.Short).setRequired(false)
-        ),
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder().setCustomId('imagem').setLabel('Link da imagem (opcional)').setStyle(TextInputStyle.Short).setRequired(false)
-        )
-      );
-    return interaction.showModal(modal);
+    const titulo = interaction.options.getString('titulo');
+    const descricao = interaction.options.getString('descricao');
+    const cor = interaction.options.getString('cor');
+    const anexo = interaction.options.getAttachment('imagem');
+    const link = interaction.options.getString('link_imagem');
+
+    const embed = new EmbedBuilder()
+      .setColor(resolverCor(cor))
+      .setTitle(titulo)
+      .setDescription(descricao);
+
+    // Anexo (upload) tem prioridade sobre link
+    if (anexo && anexo.contentType?.startsWith('image/')) {
+      embed.setImage(anexo.url);
+    } else if (link && link.startsWith('http')) {
+      embed.setImage(link);
+    }
+
+    await interaction.channel.send({ embeds: [embed] });
+    return interaction.reply({ content: '✅ Embed publicada!', flags: MessageFlags.Ephemeral });
   },
 };
