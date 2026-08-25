@@ -2,88 +2,90 @@ const { EmbedBuilder } = require('discord.js');
 
 function buildDescricao(naDM) {
   const partes = [
-    '💜 **RUBY FY BOT — AJUDA**',
+    '💜 **RUBY FY BOT — CENTRAL DE AJUDA**',
     '',
-    '*Conversões rápidas de Robux, valores em reais e Game Pass.*',
-    '',
-    '━━━━━━━━━━━━━━━━━━',
-    '',
-    '🎮 **CONVERSÃO**',
-    '',
-    '**!robux <qtd>**',
-    '*Descubra quanto custa determinada quantidade de Robux.*',
-    'Exemplo: !robux 500 → R$ 19,00',
-    '',
-    '**!reais <valor>**',
-    '*Descubra quantos Robux você consegue com determinado valor.*',
-    'Exemplo: !reais 10 → 263 Robux',
-    '',
-    '**!gamepass <robux>**',
-    '*Saiba quanto cobrar no Game Pass para receber a quantidade desejada.*',
-    'Exemplo: !gamepass 1000 → 1.429 Robux',
-    '',
-    '**!taxa**',
-    '*Consulte as taxas atuais de conversão.*',
+    '*Conversor de Robux + estoque de produtos, tudo em um lugar só.*',
     '',
   ];
 
+  // ----- CONVERSÃO -----
+  partes.push(
+    '━━━━━━━━━━━━━━━━━━',
+    '',
+    '🎮 **CONVERTER ROBUX**',
+    '',
+    '*Use para calcular valores rapidamente:*',
+    '',
+    '**!robux <quantidade>**',
+    'Quanto custa X Robux em reais.',
+    'Exemplo: !robux 500 → R$ 19,00',
+    '',
+    '**!reais <valor>**',
+    'Quantos Robux você consegue com X reais.',
+    'Exemplo: !reais 10 → 263 Robux',
+    '',
+    '**!gamepass <robux>**',
+    'Quanto cobrar no Game Pass para você receber X Robux.',
+    'Exemplo: !gamepass 1000 → crie por 1.429 Robux',
+    '',
+    '**!taxa**',
+    'Veja as taxas atuais de conversão.',
+    ''
+  );
+
+  // ----- ESTOQUE -----
+  partes.push(
+    '━━━━━━━━━━━━━━━━━━',
+    '',
+    '📦 **VER PRODUTOS**',
+    '',
+    '**!estoque**',
+    'Mostra os produtos organizados por categoria (MM2, FTF etc).',
+    'Clique na categoria para ver os itens, preços e disponibilidade.',
+    ''
+  );
+
+  // ----- ADMIN (só no servidor) -----
   if (!naDM) {
     partes.push(
       '━━━━━━━━━━━━━━━━━━',
       '',
-      '📊 **PAINEL**',
+      '⚙️ **ADMINISTRAÇÃO** *(só administradores)*',
       '',
       '**!tabela**',
-      '*Abre ou atualiza o painel de conversão com botões.*',
-      '',
-      '*As conversões feitas pelo painel aparecem somente para quem utilizou.*',
-      '',
-      '━━━━━━━━━━━━━━━━━━',
-      '',
-      '⚙️ **ADMINISTRAÇÃO**',
-      '',
-      '🔒 *Somente administradores autorizados.*',
+      'Publica ou atualiza o painel de conversão com botões no canal.',
       '',
       '**!settaxa 100 <valor>**',
-      '*Altera a taxa de 100 a 999 Robux.*',
-      'Exemplo: !settaxa 100 3,50',
+      'Muda a taxa de 100 a 999 Robux. Ex: !settaxa 100 3,50',
       '',
       '**!settaxa 1000 <valor>**',
-      '*Altera a taxa para 1.000 Robux ou mais.*',
-      'Exemplo: !settaxa 1000 34,99',
+      'Muda a taxa de 1.000 Robux ou mais. Ex: !settaxa 1000 34,99',
       '',
       '**!configtaxa**',
-      '*Abre o painel visual para configurar as taxas.*',
+      'Painel visual para mudar as taxas com botões.',
       '',
       '**!configestoque**',
-      '*Abre o painel de gerenciamento do estoque (categorias, produtos, quantidades).*',
+      'Painel para gerenciar o estoque: criar categorias, adicionar/editar/remover produtos, alterar quantidades.',
       ''
     );
   }
 
+  // ----- SLASH + AJUDA -----
   partes.push(
     '━━━━━━━━━━━━━━━━━━',
     '',
-    '📦 **ESTOQUE**',
-    '',
-    '**!estoque**',
-    '*Mostra os produtos disponíveis por categoria.*',
-    '',
-    '━━━━━━━━━━━━━━━━━━',
-    '',
-    '✨ **SLASH COMMANDS**',
-    '',
-    '*Os comandos também estão disponíveis no formato Slash.*',
+    '✨ **TAMBÉM FUNCIONA COM SLASH**',
     '',
     naDM
-      ? '**/robux** • **/reais** • **/gamepass** • **/taxa** • **/ajuda**'
-      : '**/robux** • **/reais** • **/gamepass** • **/taxa** • **/tabela** • **/estoque** • **/ajuda**',
+      ? '**/robux** • **/reais** • **/gamepass** • **/taxa** • **/estoque** • **/ajuda**'
+      : '**/robux** • **/reais** • **/gamepass** • **/taxa** • **/estoque** • **/tabela** • **/ajuda**',
     '',
     '━━━━━━━━━━━━━━━━━━',
     '',
-    '💡 **AJUDA**',
+    '💡 **Precisa de ajuda de novo?**',
+    'Use **!ajuda**, **!help** ou **!menu**.',
     '',
-    '*Use **!ajuda**, **!help** ou **!menu** para abrir este menu novamente.*'
+    '*Dúvidas ou problemas? Chame um administrador.*'
   );
 
   return partes.join('\n');
@@ -99,7 +101,8 @@ module.exports = {
   async execute(message) {
     const embed = new EmbedBuilder()
       .setColor(0x7c3aed)
-      .setDescription(buildDescricao(!message.guild));
+      .setDescription(buildDescricao(!message.guild))
+      .setFooter({ text: 'RUBY FY • Conversor de Robux e Estoque' });
 
     return message.reply({ embeds: [embed] });
   },
