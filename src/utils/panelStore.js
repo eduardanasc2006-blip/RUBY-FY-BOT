@@ -17,10 +17,11 @@ function savePanelRef(ref) {
   fs.writeFileSync(PANEL_FILE, JSON.stringify(ref, null, 2));
 }
 
-// Edita o painel existente se ainda existir; senão publica um novo no canal
-async function publishOrUpdatePanel(channel) {
+// Edita o painel existente se ainda existir; senão publica um novo no canal.
+// forcarNovo=true ignora a referência salva e sempre publica um painel novo.
+async function publishOrUpdatePanel(channel, forcarNovo = false) {
   const payload = buildPanel();
-  const ref = loadPanelRef();
+  const ref = forcarNovo ? null : loadPanelRef();
 
   if (ref) {
     try {

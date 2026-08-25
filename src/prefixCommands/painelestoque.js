@@ -6,12 +6,13 @@ module.exports = {
   description: 'Publica (ou atualiza) o painel fixo de estoque no canal (restrito a administradores)',
   usage: '!painelestoque',
 
-  async execute(message) {
+  async execute(message, args) {
     if (!message.guild || !isAdmin(message.member, message.author.id)) {
       return message.reply('🔒 Somente administradores podem publicar o painel de estoque.');
     }
 
-    const { atualizado } = await publicarOuAtualizar(message.channel);
+    const forcarNovo = args[0] === 'nova' || args[0] === 'novo';
+    const { atualizado } = await publicarOuAtualizar(message.channel, forcarNovo);
     return message.reply(
       atualizado
         ? '✅ Painel de estoque **atualizado**.'

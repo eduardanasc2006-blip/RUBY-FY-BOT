@@ -17,10 +17,10 @@ function salvar(ref) {
   fs.writeFileSync(FILE, JSON.stringify(ref, null, 2));
 }
 
-// Publica o painel fixo ou edita o existente
-async function publicarOuAtualizar(channel) {
+// Publica o painel fixo ou edita o existente. forcarNovo=true sempre publica novo.
+async function publicarOuAtualizar(channel, forcarNovo = false) {
   const payload = publicoCategorias();
-  const ref = carregar();
+  const ref = forcarNovo ? null : carregar();
 
   if (ref) {
     try {

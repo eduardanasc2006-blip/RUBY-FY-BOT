@@ -6,9 +6,9 @@ module.exports = {
   description: 'Publica (ou atualiza) o painel de conversão no canal (somente administradores)',
   usage: '!tabela',
 
-  async execute(message) {
+  async execute(message, args) {
     if (!message.guild) {
-      return message.reply('🔒 O painel de conversão só pode ser publicado no servidor. Na DM, use os comandos normalmente, ex: !robux 500');
+      return message.reply('🔒 O painel de conversão só pode ser publicado no servidor.');
     }
 
     const ids = (process.env.ADMIN_IDS || '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -20,7 +20,9 @@ module.exports = {
       return message.reply('🔒 Somente administradores podem publicar o painel de conversão.');
     }
 
-    const { atualizado } = await publishOrUpdatePanel(message.channel);
+    // Se o usuario pedir "nova", ignora a referencia antiga e publica um painel novo
+    const forcarNovo = args[0] === 'nova' || args[0] === 'novo';
+    const { atualizado } = await publishOrUpdatePanel(message.channel, forcarNovo);
 
     return message.reply(
       atualizado
