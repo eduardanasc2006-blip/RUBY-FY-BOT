@@ -74,6 +74,14 @@ client.once(Events.ClientReady, () => {
   console.log(`✅ Bot online como ${client.user.tag}`);
 });
 
+// Evita que o bot morra por erros não tratados (ex: interação expirada após restart)
+process.on('unhandledRejection', (error) => {
+  console.error('[Erro não tratado]', error?.code || error?.message || error);
+});
+client.on('error', (error) => {
+  console.error('[Erro do client]', error?.message || error);
+});
+
 // Responde slash commands
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
@@ -350,6 +358,7 @@ const estoqueDb = require('./utils/estoque');
 const estoquePanel = require('./utils/estoquePanel');
 const { refreshPainelEstoque } = require('./utils/estoquePanelStore');
 const painelCategoria = require('./prefixCommands/painelcategoria');
+const { avisar } = require('./utils/avisos');
 
 client.on('interactionCreate', async (interaction) => {
   try {
@@ -563,7 +572,6 @@ client.on('interactionCreate', async (interaction) => {
         await painelCategoria.refresh(client);
         // Avisa quando o produto esgota
         if (p && p.quantidade === 0) {
-          const { avisar } = require('./utils/avisos');
           await avisar(client, `⚠️ **${p.nome}** esgotou no estoque!`);
         }
         return voltarMenu(
