@@ -20,7 +20,7 @@ module.exports = {
     const taxa = Math.round(rates.GAMEPASS_FEE * 100);
 
     const embed = new EmbedBuilder()
-      .setColor(0xa8c6fa)
+      .setColor(0xbeb6ff)
       .setTitle('🎮 Game Pass')
       .setDescription(
         `Para receber **${formatRobux(robux)} Robux**, crie um Game Pass de **${formatRobux(gamepass)} Robux**`

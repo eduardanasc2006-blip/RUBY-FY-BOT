@@ -1,7 +1,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const { robuxToReais, formatBRL, formatRobux } = require('./robuxConverter');
 
-const COR = 0xa8c6fa;
+const COR = 0xbeb6ff;
 
 // Valores de referência exibidos no painel — sempre calculados com as taxas atuais
 const REFERENCIAS = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 2000, 3000];

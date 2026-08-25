@@ -102,7 +102,7 @@ client.on('interactionCreate', async (interaction) => {
     if (acao === 'taxas') {
       const taxa = Math.round(rates.GAMEPASS_FEE * 100);
       const embed = new EmbedBuilder()
-        .setColor(0xa8c6fa)
+        .setColor(0xbeb6ff)
         .setTitle('Taxas atuais')
         .addFields(
           {
@@ -154,7 +154,7 @@ client.on('interactionCreate', async (interaction) => {
         return respostaPrivada({ content: `❌ O valor mínimo é **${formatRobux(rates.MIN_ROBUX)} Robux**.` });
       }
       const embed = new EmbedBuilder()
-        .setColor(0xa8c6fa)
+        .setColor(0xbeb6ff)
         .setTitle('Conversão de Robux')
         .setDescription(`**${formatRobux(robux)} Robux**\n= **${formatBRL(robuxToReais(robux))}**`);
       return respostaPrivada({ embeds: [embed] });
@@ -165,7 +165,7 @@ client.on('interactionCreate', async (interaction) => {
         return respostaPrivada({ content: `❌ O valor mínimo é **${formatBRL(rates.TIER1_PRICE_PER_100)}**.` });
       }
       const embed = new EmbedBuilder()
-        .setColor(0xa8c6fa)
+        .setColor(0xbeb6ff)
         .setTitle('Conversão de Reais')
         .setDescription(`**${formatBRL(numero)}**\n= **${formatRobux(reaisToRobux(numero))} Robux**`);
       return respostaPrivada({ embeds: [embed] });
@@ -174,7 +174,7 @@ client.on('interactionCreate', async (interaction) => {
     if (acao === 'gamepass') {
       const robux = Math.floor(numero);
       const embed = new EmbedBuilder()
-        .setColor(0xa8c6fa)
+        .setColor(0xbeb6ff)
         .setTitle('Cálculo de Game Pass')
         .setDescription(
           `Para receber **${formatRobux(robux)} Robux**, crie o Game Pass por\n**${formatRobux(gamepassPrice(robux))} Robux**`

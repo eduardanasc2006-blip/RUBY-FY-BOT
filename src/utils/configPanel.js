@@ -6,7 +6,7 @@ function buildConfigPanel() {
   const taxaGamepass = Math.round(rates.GAMEPASS_FEE * 100);
 
   const embed = new EmbedBuilder()
-    .setColor(0xa8c6fa)
+    .setColor(0xbeb6ff)
     .setTitle('☁️ RUBY FY  •  Configuração de Taxas')
     .setDescription('Clique em um botão para alterar. A mudança vale na hora e fica salva.')
     .addFields(

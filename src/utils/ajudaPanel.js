@@ -1,6 +1,6 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 
-const COR = 0xa8c6fa;
+const COR = 0xbeb6ff;
 const ORDEM = ['inicio', 'conversor', 'estoque', 'painel', 'admin'];
 
 const PAGINAS = {

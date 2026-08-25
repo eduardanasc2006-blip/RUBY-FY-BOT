@@ -22,7 +22,7 @@ module.exports = {
     const robux = reaisToRobux(reais);
 
     const embed = new EmbedBuilder()
-      .setColor(0xa8c6fa)
+      .setColor(0xbeb6ff)
       .setTitle('💵 Reais → Robux')
       .setDescription(`**${formatBRL(reais)}** = **${formatRobux(robux)} Robux**`)
       .setFooter({ text: 'Valor aproximado, calculado com as taxas atuais' });

@@ -2,7 +2,7 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('
 const estoque = require('./estoque');
 const { formatBRL } = require('./robuxConverter');
 
-const COR = 0xa8c6fa;
+const COR = 0xbeb6ff;
 
 function row(...btns) {
   return new ActionRowBuilder().addComponents(...btns);
