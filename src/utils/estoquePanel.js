@@ -13,7 +13,7 @@ const btn = (id, label, style = ButtonStyle.Secondary, emoji) => {
   return b;
 };
 
-// ---------- VISÃO PÚBLICA (!estoque) ----------
+// ----- VISÃO PÚBLICA (!estoque / painel fixo) ----------
 
 function publicoCategorias() {
   const cats = estoque.categorias();
@@ -22,13 +22,14 @@ function publicoCategorias() {
     .setTitle('📦 Estoque')
     .setDescription(
       cats.length
-        ? 'Escolha uma categoria abaixo:'
+        ? 'Clique em uma categoria abaixo para ver os produtos.\n*A lista aparece somente para você.*'
         : 'Nenhum produto cadastrado ainda.'
-    );
+    )
+    .setFooter({ text: 'Atualizado automaticamente pela administração' });
 
   const linhas = cats.slice(0, 5).map((c) => {
     const total = c.produtos.filter((p) => p.ativo).length;
-    return btn(`est:cat:${c.id}`, `${c.nome} (${total})`, ButtonStyle.Primary);
+    return btn(`estfixo:cat:${c.id}`, `${c.nome} (${total})`, ButtonStyle.Primary);
   });
   return { embeds: [embed], components: linhas.length ? [row(...linhas)] : [] };
 }
@@ -39,7 +40,6 @@ function publicoProdutos(catId) {
 
   const linhas = cat.produtos.map((p) => {
     const s = estoque.status(p);
-    // Mostra a quantidade apenas quando há mais de 1 unidade
     const qtd =
       p.controlarQtd && p.quantidade > 1 ? `\n📦 ${p.quantidade} unidades` : '';
     return `${s.emoji} **${p.nome}**\n💵 ${formatBRL(p.valor)}\n${s.texto}${qtd}`;
@@ -47,12 +47,12 @@ function publicoProdutos(catId) {
 
   const embed = new EmbedBuilder()
     .setColor(COR)
-    .setTitle(`💜 Estoque — ${cat.nome}`)
+    .setTitle(`📦 ${cat.nome}`)
     .setDescription(linhas.length ? linhas.join('\n\n') : 'Nenhum produto nesta categoria.');
 
   return {
     embeds: [embed],
-    components: [row(btn('est:voltar', '⬅️ Voltar', ButtonStyle.Secondary))],
+    components: [row(btn('estfixo:voltar', '⬅️ Voltar às categorias', ButtonStyle.Secondary))],
   };
 }
 
