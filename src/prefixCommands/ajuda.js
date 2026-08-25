@@ -66,6 +66,9 @@ function buildDescricao(naDM) {
       '',
       '**!configestoque**',
       'Painel para gerenciar o estoque: criar categorias, adicionar/editar/remover produtos, alterar quantidades.',
+      '',
+      '**!painelestoque**',
+      'Publica o painel fixo de estoque no canal (atualiza sozinho quando algo muda).',
       ''
     );
   }
