@@ -442,8 +442,8 @@ client.on('interactionCreate', async (interaction) => {
       if (acao === 'toggle3') {
         const [, , catId, prodId] = partes;
         const p = estoqueDb.toggleAtivo(catId, prodId);
-        if (p) await refreshPainelEstoque(client);
-        await painelCategoria.refresh(client);
+        if (p) refreshPainelEstoque(client).catch(() => {});
+        painelCategoria.refresh(client).catch(() => {});
         if (!p) return interaction.reply({ content: '❌ Produto não encontrado.', flags: MessageFlags.Ephemeral });
         const s = estoqueDb.status(p);
         return interaction.update({
@@ -459,8 +459,8 @@ client.on('interactionCreate', async (interaction) => {
       if (acao === 'remover3') {
         const [, , catId, prodId] = partes;
         const ok = estoqueDb.removeProduto(catId, prodId);
-        if (ok) await refreshPainelEstoque(client);
-        await painelCategoria.refresh(client);
+        if (ok) refreshPainelEstoque(client).catch(() => {});
+        painelCategoria.refresh(client).catch(() => {});
         return interaction.update({
           content: ok ? '🗑️ Produto removido.' : '❌ Produto não encontrado.',
           embeds: [],
@@ -479,8 +479,8 @@ client.on('interactionCreate', async (interaction) => {
         const cat = estoqueDb.categoria(catId);
         if (!cat) return interaction.update({ content: '❌ Categoria não encontrada.', embeds: [], components: [] });
         const ok = estoqueDb.removeCategoria(catId);
-        if (ok) await refreshPainelEstoque(client);
-        await painelCategoria.refresh(client);
+        if (ok) refreshPainelEstoque(client).catch(() => {});
+        painelCategoria.refresh(client).catch(() => {});
         return interaction.update({
           content: ok
             ? `🗑️ Categoria **${cat.nome}** removida (com ${cat.produtos.length} produto(s)).`
@@ -505,10 +505,11 @@ client.on('interactionCreate', async (interaction) => {
 
         const novaQtd = Math.max(0, atual.quantidade - 1);
         const p = estoqueDb.setQuantidade(catId, prodId, novaQtd);
-        if (p) await refreshPainelEstoque(client);
-        await painelCategoria.refresh(client);
+        if (p) refreshPainelEstoque(client).catch(() => {});
+        painelCategoria.refresh(client).catch(() => {});
+        // Aviso de esgotado em background (nao trava a resposta)
         if (p && p.quantidade === 0) {
-          await avisar(client, `⚠️ **${p.nome}** esgotou no estoque!`);
+          avisar(client, `⚠️ **${p.nome}** esgotou no estoque!`).catch(() => {});
         }
         return interaction.update({
           content: `📦 Venda registrada: **${p.nome}** agora tem **${p.quantidade}** em estoque.`,
@@ -571,8 +572,8 @@ client.on('interactionCreate', async (interaction) => {
       if (acao === 'addcat') {
         const nome = interaction.fields.getTextInputValue('nome').trim();
         const cat = estoqueDb.addCategoria(nome);
-        if (cat) await refreshPainelEstoque(client);
-        await painelCategoria.refresh(client);
+        if (cat) refreshPainelEstoque(client).catch(() => {});
+        painelCategoria.refresh(client).catch(() => {});
         return voltarMenu(cat ? `✅ Categoria **${nome}** criada.` : `❌ A categoria **${nome}** já existe.`);
       }
 
@@ -592,8 +593,8 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         const p = estoqueDb.addProduto(catId, { nome, valor, controlarQtd, quantidade });
-        if (p) await refreshPainelEstoque(client);
-        await painelCategoria.refresh(client);
+        if (p) refreshPainelEstoque(client).catch(() => {});
+        painelCategoria.refresh(client).catch(() => {});
         return voltarMenu(
           p
             ? `✅ Produto **${nome}** adicionado por ${formatBRL(valor)}${controlarQtd ? ` (estoque: ${quantidade})` : ' (sem controle de quantidade)'}.`
@@ -608,11 +609,11 @@ client.on('interactionCreate', async (interaction) => {
           return voltarMenu('❌ Quantidade inválida.');
         }
         const p = estoqueDb.setQuantidade(catId, prodId, qtd);
-        if (p) await refreshPainelEstoque(client);
-        await painelCategoria.refresh(client);
+        if (p) refreshPainelEstoque(client).catch(() => {});
+        painelCategoria.refresh(client).catch(() => {});
         // Avisa quando o produto esgota
         if (p && p.quantidade === 0) {
-          await avisar(client, `⚠️ **${p.nome}** esgotou no estoque!`);
+          avisar(client, `⚠️ **${p.nome}** esgotou no estoque!`).catch(() => {});
         }
         return voltarMenu(
           p ? `✅ **${p.nome}** agora tem **${p.quantidade}** em estoque.` : '❌ Produto não encontrado ou sem controle de quantidade.'
@@ -625,8 +626,8 @@ client.on('interactionCreate', async (interaction) => {
         if (!novoNome) return voltarMenu('❌ Nome inválido.');
         const antes = estoqueDb.produto(catId, prodId)?.nome;
         const p = estoqueDb.setNome(catId, prodId, novoNome);
-        if (p) await refreshPainelEstoque(client);
-        await painelCategoria.refresh(client);
+        if (p) refreshPainelEstoque(client).catch(() => {});
+        painelCategoria.refresh(client).catch(() => {});
         return voltarMenu(
           p ? `✅ Produto renomeado: **${antes}** → **${novoNome}**` : '❌ Produto não encontrado.'
         );
@@ -637,8 +638,8 @@ client.on('interactionCreate', async (interaction) => {
         const novoNome = interaction.fields.getTextInputValue('nome').trim();
         if (!novoNome) return voltarMenu('❌ Nome inválido.');
         const cat = estoqueDb.renomearCategoria(catId, novoNome);
-        if (cat) await refreshPainelEstoque(client);
-        await painelCategoria.refresh(client);
+        if (cat) refreshPainelEstoque(client).catch(() => {});
+        painelCategoria.refresh(client).catch(() => {});
         return voltarMenu(
           cat ? `✅ Categoria renomeada para **${novoNome}**` : '❌ Categoria não encontrada.'
         );
