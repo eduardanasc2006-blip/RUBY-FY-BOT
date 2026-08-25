@@ -55,19 +55,20 @@ function buildDescricao(naDM) {
       '**!configtaxa**',
       '*Abre o painel visual para configurar as taxas.*',
       '',
-      '**!permitir <id>**',
-      '*Autoriza um usuário a usar o bot por DM.*',
-      '',
-      '**!removerdm <id>**',
-      '*Remove a autorização de DM de um usuário.*',
-      '',
-      '**!dmlista**',
-      '*Lista os usuários autorizados na DM.*',
+      '**!configestoque**',
+      '*Abre o painel de gerenciamento do estoque (categorias, produtos, quantidades).*',
       ''
     );
   }
 
   partes.push(
+    '━━━━━━━━━━━━━━━━━━',
+    '',
+    '📦 **ESTOQUE**',
+    '',
+    '**!estoque**',
+    '*Mostra os produtos disponíveis por categoria.*',
+    '',
     '━━━━━━━━━━━━━━━━━━',
     '',
     '✨ **SLASH COMMANDS**',
@@ -76,7 +77,7 @@ function buildDescricao(naDM) {
     '',
     naDM
       ? '**/robux** • **/reais** • **/gamepass** • **/taxa** • **/ajuda**'
-      : '**/robux** • **/reais** • **/gamepass** • **/taxa** • **/tabela** • **/ajuda**',
+      : '**/robux** • **/reais** • **/gamepass** • **/taxa** • **/tabela** • **/estoque** • **/ajuda**',
     '',
     '━━━━━━━━━━━━━━━━━━',
     '',

@@ -24,9 +24,6 @@ const {
 
 const PREFIX = process.env.PREFIX || '!';
 
-// Quem pode usar o bot por DM: dono (.env OWNER_ID/DM_ALLOWED_IDS) + autorizados por !permitir
-const { podeUsarNaDM } = require('./utils/dmAllowed');
-
 if (!process.env.DISCORD_TOKEN) {
   console.error('❌ DISCORD_TOKEN não definido. Crie um arquivo .env baseado no .env.example.');
   process.exit(1);
@@ -70,13 +67,6 @@ client.once(Events.ClientReady, () => {
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
-  // Em DM, so responde a usuarios autorizados
-  if (!interaction.guild && !podeUsarNaDM(interaction.user.id)) {
-    return interaction.reply({
-      content: '🔒 Este bot só responde por DM a usuários autorizados pelo dono.',
-      ephemeral: true,
-    });
-  }
 
   const command = client.commands.get(interaction.commandName);
   if (!command) return;
@@ -105,12 +95,6 @@ const MODAIS = {
 client.on('interactionCreate', async (interaction) => {
   try {
     if (interaction.isButton() && interaction.customId.startsWith('panel:')) {
-      if (!interaction.guild && !podeUsarNaDM(interaction.user.id)) {
-        return interaction.reply({
-          content: '🔒 Este bot só responde por DM a usuários autorizados pelo dono.',
-          ephemeral: true,
-        });
-      }
       const acao = interaction.customId.split(':')[1];
 
     if (acao === 'taxas') {
@@ -153,12 +137,6 @@ client.on('interactionCreate', async (interaction) => {
   }
 
   if (interaction.isModalSubmit() && interaction.customId.startsWith('modal:')) {
-    if (!interaction.guild && !podeUsarNaDM(interaction.user.id)) {
-      return interaction.reply({
-        content: '🔒 Este bot só responde por DM a usuários autorizados pelo dono.',
-        ephemeral: true,
-      });
-    }
     const acao = interaction.customId.split(':')[1];
     const bruto = interaction.fields.getTextInputValue('valor').trim();
     const numero = parseFloat(bruto.replace(/\./g, '').replace(',', '.'));
@@ -331,14 +309,172 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
+// ----- Estoque: navegação pública e painel admin -----
+
+const estoqueDb = require('./utils/estoque');
+const estoquePanel = require('./utils/estoquePanel');
+
+client.on('interactionCreate', async (interaction) => {
+  try {
+    // ----- público: est:cat:<id> e est:voltar -----
+    if (interaction.isButton() && interaction.customId.startsWith('est:')) {
+      const [, acao, catId] = interaction.customId.split(':');
+      if (acao === 'voltar') return interaction.update(estoquePanel.publicoCategorias());
+      if (acao === 'cat') return interaction.update(estoquePanel.publicoProdutos(catId));
+      return;
+    }
+
+    // ----- admin: estadm:* -----
+    if (interaction.isButton() && interaction.customId.startsWith('estadm:')) {
+      if (!isAdmin(interaction.member, interaction.user.id)) {
+        return interaction.reply({ content: '🔒 Somente administradores.', ephemeral: true });
+      }
+      const partes = interaction.customId.split(':');
+      const acao = partes[1];
+
+      if (acao === 'menu') return interaction.update(estoquePanel.adminMenu());
+      if (acao === 'lista') return interaction.update(estoquePanel.adminLista());
+
+      if (acao === 'addcat') {
+        const modal = new ModalBuilder().setCustomId('estmodal:addcat').setTitle('Nova categoria').addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('nome').setLabel('Nome da categoria (ex: MM2)')
+              .setStyle(TextInputStyle.Short).setRequired(true)
+          )
+        );
+        return interaction.showModal(modal);
+      }
+
+      if (acao === 'addprod') return interaction.update(estoquePanel.adminEscolherCategoria('addprod2'));
+      if (acao === 'addprod2') {
+        const catId = partes[2];
+        const modal = new ModalBuilder().setCustomId(`estmodal:addprod:${catId}`).setTitle('Novo produto').addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('nome').setLabel('Nome do produto').setStyle(TextInputStyle.Short).setRequired(true)
+          ),
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('valor').setLabel('Valor em R$ (ex: 15,00)').setStyle(TextInputStyle.Short).setRequired(true)
+          ),
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('qtd').setLabel('Quantidade (deixe vazio = sem controle)').setStyle(TextInputStyle.Short).setRequired(false)
+          )
+        );
+        return interaction.showModal(modal);
+      }
+
+      if (acao === 'qtd') return interaction.update(estoquePanel.adminEscolherCategoria('qtd2'));
+      if (acao === 'toggle') return interaction.update(estoquePanel.adminEscolherCategoria('toggle2'));
+      if (acao === 'remover') return interaction.update(estoquePanel.adminEscolherCategoria('remover2'));
+
+      if (acao === 'qtd2') return interaction.update(estoquePanel.adminEscolherProduto('qtd3', partes[2]));
+      if (acao === 'toggle2') return interaction.update(estoquePanel.adminEscolherProduto('toggle3', partes[2]));
+      if (acao === 'remover2') return interaction.update(estoquePanel.adminEscolherProduto('remover3', partes[2]));
+
+      if (acao === 'qtd3') {
+        const [, , catId, prodId] = partes;
+        const modal = new ModalBuilder().setCustomId(`estmodal:qtd:${catId}:${prodId}`).setTitle('Alterar quantidade').addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('qtd').setLabel('Nova quantidade').setStyle(TextInputStyle.Short).setRequired(true)
+          )
+        );
+        return interaction.showModal(modal);
+      }
+      if (acao === 'toggle3') {
+        const [, , catId, prodId] = partes;
+        const p = estoqueDb.toggleAtivo(catId, prodId);
+        if (!p) return interaction.reply({ content: '❌ Produto não encontrado.', ephemeral: true });
+        const s = estoqueDb.status(p);
+        return interaction.update({
+          content: `✅ **${p.nome}** agora está: ${s.emoji} ${s.texto}`,
+          embeds: [],
+          components: [new ActionRowBuilder().addComponents(
+            new (require('discord.js').ButtonBuilder)().setCustomId('estadm:menu').setLabel('⬅️ Voltar ao menu').setStyle(2)
+          )],
+        });
+      }
+      if (acao === 'remover3') {
+        const [, , catId, prodId] = partes;
+        const ok = estoqueDb.removeProduto(catId, prodId);
+        return interaction.update({
+          content: ok ? '🗑️ Produto removido.' : '❌ Produto não encontrado.',
+          embeds: [],
+          components: [new ActionRowBuilder().addComponents(
+            new (require('discord.js').ButtonBuilder)().setCustomId('estadm:menu').setLabel('⬅️ Voltar ao menu').setStyle(2)
+          )],
+        });
+      }
+      return;
+    }
+
+    // ----- modais do estoque -----
+    if (interaction.isModalSubmit() && interaction.customId.startsWith('estmodal:')) {
+      if (!isAdmin(interaction.member, interaction.user.id)) {
+        return interaction.reply({ content: '🔒 Somente administradores.', ephemeral: true });
+      }
+      const partes = interaction.customId.split(':');
+      const acao = partes[1];
+
+      if (acao === 'addcat') {
+        const nome = interaction.fields.getTextInputValue('nome').trim();
+        const cat = estoqueDb.addCategoria(nome);
+        return interaction.reply({
+          content: cat ? `✅ Categoria **${nome}** criada.` : `❌ A categoria **${nome}** já existe.`,
+          ephemeral: true,
+        });
+      }
+
+      if (acao === 'addprod') {
+        const catId = partes[2];
+        const nome = interaction.fields.getTextInputValue('nome').trim();
+        const valor = parseFloat(interaction.fields.getTextInputValue('valor').trim().replace(/\./g, '').replace(',', '.'));
+        const qtdBruta = (interaction.fields.getTextInputValue('qtd') || '').trim();
+        const controlarQtd = qtdBruta !== '';
+        const quantidade = controlarQtd ? parseInt(qtdBruta, 10) : null;
+
+        if (isNaN(valor) || valor <= 0) {
+          return interaction.reply({ content: '❌ Valor inválido.', ephemeral: true });
+        }
+        if (controlarQtd && (isNaN(quantidade) || quantidade < 0)) {
+          return interaction.reply({ content: '❌ Quantidade inválida.', ephemeral: true });
+        }
+
+        const p = estoqueDb.addProduto(catId, { nome, valor, controlarQtd, quantidade });
+        return interaction.reply({
+          content: p
+            ? `✅ Produto **${nome}** adicionado por ${formatBRL(valor)}${controlarQtd ? ` (estoque: ${quantidade})` : ' (sem controle de quantidade)'}.`
+            : '❌ Já existe um produto com esse nome nessa categoria.',
+          ephemeral: true,
+        });
+      }
+
+      if (acao === 'qtd') {
+        const [, , catId, prodId] = partes;
+        const qtd = parseInt(interaction.fields.getTextInputValue('qtd').trim(), 10);
+        if (isNaN(qtd) || qtd < 0) {
+          return interaction.reply({ content: '❌ Quantidade inválida.', ephemeral: true });
+        }
+        const p = estoqueDb.setQuantidade(catId, prodId, qtd);
+        return interaction.reply({
+          content: p ? `✅ **${p.nome}** agora tem **${p.quantidade}** em estoque.` : '❌ Produto não encontrado ou sem controle de quantidade.',
+          ephemeral: true,
+        });
+      }
+      return;
+    }
+  } catch (error) {
+    console.error('[Estoque] Erro na interação:', error);
+    try {
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: '❌ Ocorreu um erro. Tente novamente.', ephemeral: true });
+      }
+    } catch {}
+  }
+});
+
 // Responde comandos de prefixo
 client.on(Events.MessageCreate, async (message) => {
   if (message.author.bot || !message.content.startsWith(PREFIX)) return;
 
-  // Em DM, so responde a usuarios autorizados
-  if (!message.guild && !podeUsarNaDM(message.author.id)) {
-    return message.reply('🔒 Este bot só responde por DM a usuários autorizados pelo dono.');
-  }
 
   const args = message.content.slice(PREFIX.length).trim().split(/\s+/);
   const commandName = args.shift().toLowerCase();
