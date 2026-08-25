@@ -98,6 +98,13 @@ const estoque = {
     salvar();
     return true;
   },
+  renomearCategoria(catId, novoNome) {
+    const cat = estoque.categoria(catId);
+    if (!cat) return null;
+    cat.nome = novoNome;
+    salvar();
+    return cat;
+  },
 
   // ----- status de exibição -----
   status(p) {

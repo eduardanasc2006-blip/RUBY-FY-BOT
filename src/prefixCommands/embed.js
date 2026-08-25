@@ -1,7 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
 const { isAdmin } = require('./settaxa');
 
-// Cores disponíveis por nome
+// Cores disponíveis por nome + aceita hex (#rrggbb)
 const CORES = {
   lilas: 0xbeb6ff,
   roxo: 0x7c3aed,
@@ -11,6 +11,16 @@ const CORES = {
   vermelho: 0xed4245,
   rosa: 0xeb459e,
 };
+
+function resolverCor(entrada) {
+  if (!entrada) return CORES.lilas;
+  const nome = entrada.toLowerCase().trim();
+  if (CORES[nome] !== undefined) return CORES[nome];
+  // hex tipo #beb6ff ou beb6ff
+  const hex = nome.replace('#', '');
+  if (/^[0-9a-f]{6}$/i.test(hex)) return parseInt(hex, 16);
+  return CORES.lilas;
+}
 
 module.exports = {
   name: 'embed',
@@ -39,7 +49,7 @@ module.exports = {
     }
 
     const embed = new EmbedBuilder()
-      .setColor(CORES[corNome?.toLowerCase()] ?? CORES.lilas)
+      .setColor(resolverCor(corNome))
       .setTitle(titulo)
       .setDescription(descricao);
 
@@ -50,4 +60,6 @@ module.exports = {
     await message.channel.send({ embeds: [embed] });
     return message.delete().catch(() => {});
   },
+
+  resolverCor,
 };

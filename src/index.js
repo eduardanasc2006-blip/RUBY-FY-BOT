@@ -521,7 +521,7 @@ client.on('interactionCreate', async (interaction) => {
         });
       }
 
-      // ----- editar nome -----
+      // ----- editar nome produto -----
       if (acao === 'nome') return interaction.update(estoquePanel.adminEscolherCategoria('nome2'));
       if (acao === 'nome2') return interaction.update(estoquePanel.adminEscolherProduto('nome3', partes[2]));
       if (acao === 'nome3') {
@@ -529,6 +529,18 @@ client.on('interactionCreate', async (interaction) => {
         const modal = new ModalBuilder().setCustomId(`estmodal:nome:${catId}:${prodId}`).setTitle('Editar nome do produto').addComponents(
           new ActionRowBuilder().addComponents(
             new TextInputBuilder().setCustomId('nome').setLabel('Novo nome').setStyle(TextInputStyle.Short).setRequired(true)
+          )
+        );
+        return interaction.showModal(modal);
+      }
+
+      // ----- renomear categoria -----
+      if (acao === 'rencat') return interaction.update(estoquePanel.adminEscolherCategoria('rencat2'));
+      if (acao === 'rencat2') {
+        const catId = partes[2];
+        const modal = new ModalBuilder().setCustomId(`estmodal:rencat:${catId}`).setTitle('Renomear categoria').addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('nome').setLabel('Novo nome da categoria').setStyle(TextInputStyle.Short).setRequired(true)
           )
         );
         return interaction.showModal(modal);
@@ -619,6 +631,18 @@ client.on('interactionCreate', async (interaction) => {
           p ? `✅ Produto renomeado: **${antes}** → **${novoNome}**` : '❌ Produto não encontrado.'
         );
       }
+
+      if (acao === 'rencat') {
+        const catId = partes[2];
+        const novoNome = interaction.fields.getTextInputValue('nome').trim();
+        if (!novoNome) return voltarMenu('❌ Nome inválido.');
+        const cat = estoqueDb.renomearCategoria(catId, novoNome);
+        if (cat) await refreshPainelEstoque(client);
+        await painelCategoria.refresh(client);
+        return voltarMenu(
+          cat ? `✅ Categoria renomeada para **${novoNome}**` : '❌ Categoria não encontrada.'
+        );
+      }
       return;
     }
   } catch (error) {
@@ -626,6 +650,42 @@ client.on('interactionCreate', async (interaction) => {
     try {
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({ content: '❌ Ocorreu um erro. Tente novamente.', flags: MessageFlags.Ephemeral });
+      }
+    } catch {}
+  }
+});
+
+// ----- Embed personalizada via modal -----
+
+client.on('interactionCreate', async (interaction) => {
+  try {
+    if (interaction.isModalSubmit() && interaction.customId === 'embmodal:criar') {
+      const { isAdmin } = require('./prefixCommands/settaxa');
+      const { resolverCor } = require('./prefixCommands/embed');
+
+      if (!isAdmin(interaction.member, interaction.user.id)) {
+        return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+      }
+
+      const titulo = interaction.fields.getTextInputValue('titulo').trim();
+      const descricao = interaction.fields.getTextInputValue('descricao').trim();
+      const corBruta = (interaction.fields.getTextInputValue('cor') || '').trim();
+      const imagem = (interaction.fields.getTextInputValue('imagem') || '').trim();
+
+      const embed = new EmbedBuilder()
+        .setColor(resolverCor(corBruta))
+        .setTitle(titulo)
+        .setDescription(descricao);
+      if (imagem && imagem.startsWith('http')) embed.setImage(imagem);
+
+      await interaction.channel.send({ embeds: [embed] });
+      return interaction.reply({ content: '✅ Embed publicada!', flags: MessageFlags.Ephemeral });
+    }
+  } catch (error) {
+    console.error('[Embed] Erro:', error);
+    try {
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: '❌ Ocorreu um erro.', flags: MessageFlags.Ephemeral });
       }
     } catch {}
   }

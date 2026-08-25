@@ -84,6 +84,7 @@ function adminMenu() {
       ),
       row(
         btn('estadm:nome', '✏️ Editar nome', ButtonStyle.Secondary),
+        btn('estadm:rencat', '✏️ Renomear categoria', ButtonStyle.Secondary),
         btn('estadm:remcat', '🗑️ Remover categoria', ButtonStyle.Danger)
       ),
     ],
