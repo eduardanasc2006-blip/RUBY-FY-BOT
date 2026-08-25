@@ -8,20 +8,24 @@ const REFERENCIAS = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1500, 20
 
 function buildPanel() {
   // Tabela: Robux | Preço | Game Pass necessário
-  const linhas = REFERENCIAS.map(
-    (r) =>
-      `\`${formatRobux(r)}\` ➜ **${formatBRL(robuxToReais(r))}**  *(GP: ${formatRobux(gamepassPrice(r))})*`
-  );
+  const linhas = REFERENCIAS.map((r) => {
+    const preco = formatBRL(robuxToReais(r));
+    const gp = formatRobux(gamepassPrice(r));
+    return `\`${formatRobux(r)}\` ➜ **${preco}**  ·  🎟️ \`${gp}\``;
+  });
 
   const embed = new EmbedBuilder()
     .setColor(COR)
-    .setTitle('☁️ RUBY FY  •  Conversor de Robux')
+    .setTitle('☁️  RUBY FY  •  Conversor de Robux  ☁️')
     .setDescription(
-      '**Selecione um botão abaixo e informe o valor.**\n*A resposta aparece somente para você.*\n\n' +
-        '**Tabela de referência** *(GP = valor a criar no Game Pass)*\n' +
+      '✨ **Selecione um botão abaixo e informe o valor.**\n' +
+        'A resposta aparece somente para você.\n\n' +
+        '📋 **Tabela de referência**\n' +
+        'GP = valor a criar no Game Pass\n' +
+        '──────────────────────\n' +
         linhas.join('\n')
     )
-    .setFooter({ text: '☁️ RUBY FY • Taxas atualizadas pela administração' });
+    .setFooter({ text: '☁️ RUBY FY • taxas atualizadas pela administração ☁️' });
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
