@@ -57,7 +57,13 @@ module.exports = {
 
     const msg = await message.channel.send({ embeds: [embed] });
     salvar(msg.id, catId);
-    return message.reply(`✅ Painel da categoria **${catId}** fixado no canal. Atualiza sozinho quando você mexer no estoque.`);
+
+    // Confirmação some depois de 5 segundos para não poluir o canal
+    const confirmacao = await message.reply(`✅ Painel da categoria **${catId}** fixado no canal.`);
+    setTimeout(() => {
+      confirmacao.delete().catch(() => {});
+      message.delete().catch(() => {});
+    }, 5000);
   },
 
   // Chamado pela index ao alterar o estoque
@@ -80,4 +86,5 @@ module.exports = {
   },
 
   buildCategoria,
+  salvar,
 };
