@@ -493,6 +493,33 @@ client.on('interactionCreate', async (interaction) => {
         });
       }
 
+      // ----- vender: diminui 1 da quantidade -----
+      if (acao === 'vender') return interaction.update(estoquePanel.adminEscolherCategoria('vender2'));
+      if (acao === 'vender2') return interaction.update(estoquePanel.adminEscolherProduto('vender3', partes[2]));
+      if (acao === 'vender3') {
+        const [, , catId, prodId] = partes;
+        const atual = estoqueDb.produto(catId, prodId);
+        if (!atual) return interaction.update({ content: '❌ Produto não encontrado.', embeds: [], components: [] });
+        if (!atual.controlarQtd) return interaction.update({ content: `❌ **${atual.nome}** não tem controle de quantidade.`, embeds: [], components: [] });
+
+        const novaQtd = Math.max(0, atual.quantidade - 1);
+        const p = estoqueDb.setQuantidade(catId, prodId, novaQtd);
+        if (p) await refreshPainelEstoque(client);
+        await painelCategoria.refresh(client);
+        if (p && p.quantidade === 0) {
+          await avisar(client, `⚠️ **${p.nome}** esgotou no estoque!`);
+        }
+        return interaction.update({
+          content: `📦 Venda registrada: **${p.nome}** agora tem **${p.quantidade}** em estoque.`,
+          embeds: [],
+          components: [
+            new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId('estadm:menu').setLabel('⬅️ Voltar ao menu').setStyle(ButtonStyle.Secondary)
+            ),
+          ],
+        });
+      }
+
       // ----- editar nome -----
       if (acao === 'nome') return interaction.update(estoquePanel.adminEscolherCategoria('nome2'));
       if (acao === 'nome2') return interaction.update(estoquePanel.adminEscolherProduto('nome3', partes[2]));

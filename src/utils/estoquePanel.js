@@ -78,6 +78,7 @@ function adminMenu() {
       ),
       row(
         btn('estadm:qtd', '🔢 Quantidade', ButtonStyle.Secondary),
+        btn('estadm:vender', '➖ Vender (−1)', ButtonStyle.Primary),
         btn('estadm:toggle', '👁️ Ativar/Desativar', ButtonStyle.Secondary),
         btn('estadm:remover', '🗑️ Remover produto', ButtonStyle.Danger)
       ),
