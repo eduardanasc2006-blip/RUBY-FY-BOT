@@ -39,7 +39,9 @@ function publicoProdutos(catId) {
 
   const linhas = cat.produtos.map((p) => {
     const s = estoque.status(p);
-    const qtd = p.controlarQtd ? `\n📦 ${p.quantidade} unidade${p.quantidade === 1 ? '' : 's'}` : '';
+    // Mostra a quantidade apenas quando há mais de 1 unidade
+    const qtd =
+      p.controlarQtd && p.quantidade > 1 ? `\n📦 ${p.quantidade} unidades` : '';
     return `${s.emoji} **${p.nome}**\n💵 ${formatBRL(p.valor)}\n${s.texto}${qtd}`;
   });
 

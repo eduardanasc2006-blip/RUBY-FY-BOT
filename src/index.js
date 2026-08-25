@@ -294,10 +294,8 @@ client.on('interactionCreate', async (interaction) => {
       rates.setOverride(config.chave, numero);
       await refreshSavedPanel(client);
 
-      return interaction.reply({
-        content: `✅ Taxa atualizada: ${config.resumo(numero)}\nSalva mesmo após reiniciar • tabela pública e comandos já usam o novo valor.`,
-        ephemeral: true,
-      });
+      // Atualiza o proprio painel de taxas com os novos valores
+      return interaction.update(buildConfigPanel());
     }
   } catch (error) {
     console.error('[Painel de taxas] Erro na interação:', error);
@@ -414,13 +412,22 @@ client.on('interactionCreate', async (interaction) => {
       const partes = interaction.customId.split(':');
       const acao = partes[1];
 
+      // Edita o proprio painel com o resultado, em vez de criar mensagem nova
+      const voltarMenu = (texto) =>
+        interaction.update({
+          content: texto,
+          embeds: [],
+          components: [
+            new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId('estadm:menu').setLabel('⬅️ Voltar ao menu').setStyle(ButtonStyle.Secondary)
+            ),
+          ],
+        });
+
       if (acao === 'addcat') {
         const nome = interaction.fields.getTextInputValue('nome').trim();
         const cat = estoqueDb.addCategoria(nome);
-        return interaction.reply({
-          content: cat ? `✅ Categoria **${nome}** criada.` : `❌ A categoria **${nome}** já existe.`,
-          ephemeral: true,
-        });
+        return voltarMenu(cat ? `✅ Categoria **${nome}** criada.` : `❌ A categoria **${nome}** já existe.`);
       }
 
       if (acao === 'addprod') {
@@ -432,32 +439,30 @@ client.on('interactionCreate', async (interaction) => {
         const quantidade = controlarQtd ? parseInt(qtdBruta, 10) : null;
 
         if (isNaN(valor) || valor <= 0) {
-          return interaction.reply({ content: '❌ Valor inválido.', ephemeral: true });
+          return voltarMenu('❌ Valor inválido.');
         }
         if (controlarQtd && (isNaN(quantidade) || quantidade < 0)) {
-          return interaction.reply({ content: '❌ Quantidade inválida.', ephemeral: true });
+          return voltarMenu('❌ Quantidade inválida.');
         }
 
         const p = estoqueDb.addProduto(catId, { nome, valor, controlarQtd, quantidade });
-        return interaction.reply({
-          content: p
+        return voltarMenu(
+          p
             ? `✅ Produto **${nome}** adicionado por ${formatBRL(valor)}${controlarQtd ? ` (estoque: ${quantidade})` : ' (sem controle de quantidade)'}.`
-            : '❌ Já existe um produto com esse nome nessa categoria.',
-          ephemeral: true,
-        });
+            : '❌ Já existe um produto com esse nome nessa categoria.'
+        );
       }
 
       if (acao === 'qtd') {
         const [, , catId, prodId] = partes;
         const qtd = parseInt(interaction.fields.getTextInputValue('qtd').trim(), 10);
         if (isNaN(qtd) || qtd < 0) {
-          return interaction.reply({ content: '❌ Quantidade inválida.', ephemeral: true });
+          return voltarMenu('❌ Quantidade inválida.');
         }
         const p = estoqueDb.setQuantidade(catId, prodId, qtd);
-        return interaction.reply({
-          content: p ? `✅ **${p.nome}** agora tem **${p.quantidade}** em estoque.` : '❌ Produto não encontrado ou sem controle de quantidade.',
-          ephemeral: true,
-        });
+        return voltarMenu(
+          p ? `✅ **${p.nome}** agora tem **${p.quantidade}** em estoque.` : '❌ Produto não encontrado ou sem controle de quantidade.'
+        );
       }
       return;
     }
