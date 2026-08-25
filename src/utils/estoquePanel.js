@@ -2,7 +2,7 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('
 const estoque = require('./estoque');
 const { formatBRL } = require('./robuxConverter');
 
-const COR = 0x7c3aed;
+const COR = 0xa8c6fa;
 
 function row(...btns) {
   return new ActionRowBuilder().addComponents(...btns);
@@ -19,13 +19,13 @@ function publicoCategorias() {
   const cats = estoque.categorias();
   const embed = new EmbedBuilder()
     .setColor(COR)
-    .setTitle('📦 Estoque')
+    .setTitle('☁️ Estoque — RUBY FY')
     .setDescription(
       cats.length
-        ? 'Clique em uma categoria abaixo para ver os produtos.\n*A lista aparece somente para você.*'
-        : 'Nenhum produto cadastrado ainda.'
+        ? '**Selecione uma categoria abaixo para visualizar os produtos disponíveis.**'
+        : '*Nenhum produto cadastrado no momento.*'
     )
-    .setFooter({ text: 'Atualizado automaticamente pela administração' });
+    .setFooter({ text: '☁️ RUBY FY • Atualizado em tempo real' });
 
   const linhas = cats.slice(0, 5).map((c) => {
     const total = c.produtos.filter((p) => p.ativo).length;

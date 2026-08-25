@@ -12,7 +12,7 @@ module.exports = {
     const taxa = Math.round(rates.GAMEPASS_FEE * 100);
 
     const embed = new EmbedBuilder()
-      .setColor(0x7c3aed)
+      .setColor(0xa8c6fa)
       .setTitle('📊 Taxas atuais')
       .addFields(
         {

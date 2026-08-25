@@ -28,7 +28,7 @@ function buildCategoria(catId) {
     });
 
   return new EmbedBuilder()
-    .setColor(0x7c3aed)
+    .setColor(0xa8c6fa)
     .setTitle(`📦 ${cat.nome}`)
     .setDescription(linhas.length ? linhas.join('\n') : 'Nenhum produto disponível.')
     .setFooter({ text: '*valor por unidade*' });

@@ -1,11 +1,11 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 
-const COR = 0x7c3aed;
+const COR = 0xa8c6fa;
 const ORDEM = ['inicio', 'conversor', 'estoque', 'painel', 'admin'];
 
 const PAGINAS = {
   inicio: () => ({
-    titulo: '💜 RUBY FY BOT — Central de Ajuda',
+    titulo: '☁️ RUBY FY BOT — Central de Ajuda',
     descricao: [
       'Conversor de Robux + estoque de produtos, tudo em um lugar.',
       '',
@@ -43,7 +43,7 @@ const PAGINAS = {
   }),
 
   estoque: () => ({
-    titulo: '📦 Estoque de Produtos',
+    titulo: '☁️ Estoque de Produtos',
     descricao: [
       '**!estoque**',
       '*Mostra os produtos por categoria (MM2, FTF etc).*',

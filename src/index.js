@@ -3,6 +3,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const {
   ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   Client,
   Collection,
   EmbedBuilder,
@@ -100,7 +102,7 @@ client.on('interactionCreate', async (interaction) => {
     if (acao === 'taxas') {
       const taxa = Math.round(rates.GAMEPASS_FEE * 100);
       const embed = new EmbedBuilder()
-        .setColor(0x7c3aed)
+        .setColor(0xa8c6fa)
         .setTitle('Taxas atuais')
         .addFields(
           {
@@ -152,7 +154,7 @@ client.on('interactionCreate', async (interaction) => {
         return respostaPrivada({ content: `❌ O valor mínimo é **${formatRobux(rates.MIN_ROBUX)} Robux**.` });
       }
       const embed = new EmbedBuilder()
-        .setColor(0x7c3aed)
+        .setColor(0xa8c6fa)
         .setTitle('Conversão de Robux')
         .setDescription(`**${formatRobux(robux)} Robux**\n= **${formatBRL(robuxToReais(robux))}**`);
       return respostaPrivada({ embeds: [embed] });
@@ -163,7 +165,7 @@ client.on('interactionCreate', async (interaction) => {
         return respostaPrivada({ content: `❌ O valor mínimo é **${formatBRL(rates.TIER1_PRICE_PER_100)}**.` });
       }
       const embed = new EmbedBuilder()
-        .setColor(0x7c3aed)
+        .setColor(0xa8c6fa)
         .setTitle('Conversão de Reais')
         .setDescription(`**${formatBRL(numero)}**\n= **${formatRobux(reaisToRobux(numero))} Robux**`);
       return respostaPrivada({ embeds: [embed] });
@@ -172,7 +174,7 @@ client.on('interactionCreate', async (interaction) => {
     if (acao === 'gamepass') {
       const robux = Math.floor(numero);
       const embed = new EmbedBuilder()
-        .setColor(0x7c3aed)
+        .setColor(0xa8c6fa)
         .setTitle('Cálculo de Game Pass')
         .setDescription(
           `Para receber **${formatRobux(robux)} Robux**, crie o Game Pass por\n**${formatRobux(gamepassPrice(robux))} Robux**`
@@ -425,9 +427,11 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.update({
           content: `✅ **${p.nome}** agora está: ${s.emoji} ${s.texto}`,
           embeds: [],
-          components: [new ActionRowBuilder().addComponents(
-            new (require('discord.js').ButtonBuilder)().setCustomId('estadm:menu').setLabel('⬅️ Voltar ao menu').setStyle(2)
-          )],
+          components: [
+            new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId('estadm:menu').setLabel('⬅️ Voltar ao menu').setStyle(ButtonStyle.Secondary)
+            ),
+          ],
         });
       }
       if (acao === 'remover3') {
@@ -438,9 +442,11 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.update({
           content: ok ? '🗑️ Produto removido.' : '❌ Produto não encontrado.',
           embeds: [],
-          components: [new ActionRowBuilder().addComponents(
-            new (require('discord.js').ButtonBuilder)().setCustomId('estadm:menu').setLabel('⬅️ Voltar ao menu').setStyle(2)
-          )],
+          components: [
+            new ActionRowBuilder().addComponents(
+              new ButtonBuilder().setCustomId('estadm:menu').setLabel('⬅️ Voltar ao menu').setStyle(ButtonStyle.Secondary)
+            ),
+          ],
         });
       }
       return;

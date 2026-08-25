@@ -1,7 +1,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const { robuxToReais, formatBRL, formatRobux } = require('./robuxConverter');
 
-const COR = 0x7c3aed;
+const COR = 0xa8c6fa;
 
 // Valores de referência exibidos no painel — sempre calculados com as taxas atuais
 const REFERENCIAS = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 2000, 3000];
@@ -13,7 +13,7 @@ function buildPanel() {
 
   const embed = new EmbedBuilder()
     .setColor(COR)
-    .setTitle('RUBY FY  •  Conversor de Robux')
+    .setTitle('☁️ RUBY FY  •  Conversor de Robux')
     .setDescription(
       'Clique em um botão abaixo e informe o valor.\nSua resposta aparece somente para você.\n\n' +
         '**Tabela de referência**\n' +
