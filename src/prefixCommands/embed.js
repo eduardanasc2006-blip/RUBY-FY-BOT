@@ -32,6 +32,13 @@ module.exports = {
       return message.reply('🔒 Somente administradores podem usar este comando.');
     }
 
+    // Sem argumentos: abre o painel visual
+    if (args.length === 0) {
+      const { buildPainel } = require('../utils/embedPainel');
+      return message.reply({ ...buildPainel(message.author.id), allowedMentions: { repliedUser: false } });
+    }
+
+    // Com argumentos: modo rapido (antigo)
     const texto = args.join(' ');
     const anexo = message.attachments?.first();
     const temAnexo = anexo && anexo.contentType?.startsWith('image/');

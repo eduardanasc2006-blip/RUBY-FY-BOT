@@ -715,6 +715,144 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
+// ----- Painel visual de embed -----
+
+const { getSessao, limparSessao, buildEmbed, buildPainel } = require('./utils/embedPainel');
+
+client.on('interactionCreate', async (interaction) => {
+  try {
+    if (interaction.isButton() && interaction.customId.startsWith('embedpainel:')) {
+      const partes = interaction.customId.split(':');
+      const acao = partes[1];
+      const donoId = partes[2];
+
+      // So o dono do painel pode usar
+      if (interaction.user.id !== donoId) {
+        return interaction.reply({ content: '🔒 Este painel não é seu. Use `!embed` para criar o seu.', flags: MessageFlags.Ephemeral });
+      }
+      if (!isAdmin(interaction.member, interaction.user.id)) {
+        return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+      }
+
+      const estado = getSessao(donoId);
+
+      // Abre modal para editar um campo
+      const abrirModal = (campo, titulo, label, multiline = false) => {
+        const modal = new ModalBuilder()
+          .setCustomId(`embedmodal:${campo}:${donoId}`)
+          .setTitle(titulo)
+          .addComponents(
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('valor')
+                .setLabel(label)
+                .setStyle(multiline ? TextInputStyle.Paragraph : TextInputStyle.Short)
+                .setRequired(campo !== 'imagem' && campo !== 'thumbnail' && campo !== 'autor' && campo !== 'rodape' && campo !== 'textofora' && campo !== 'fields' && campo !== 'cargos')
+                .setValue(estado[campo] || '')
+            )
+          );
+        return interaction.showModal(modal);
+      };
+
+      if (acao === 'titulo') return abrirModal('titulo', '📝 Título', 'Título da embed');
+      if (acao === 'descricao') return abrirModal('descricao', '📄 Descrição', 'Texto da embed', true);
+      if (acao === 'cor') return abrirModal('cor', '🎨 Cor', 'Nome ou #hex (ex: lilas ou #beb6ff)');
+      if (acao === 'imagem') return abrirModal('imagem', '🖼️ Imagem', 'Link da imagem (opcional)');
+      if (acao === 'thumbnail') return abrirModal('thumbnail', '🔳 Thumbnail', 'Link da thumbnail (opcional)');
+      if (acao === 'autor') return abrirModal('autor', '👤 Autor', 'Nome do autor (opcional)');
+      if (acao === 'rodape') return abrirModal('rodape', '📝 Rodapé', 'Texto do rodapé (opcional)');
+      if (acao === 'textofora') return abrirModal('textofora', '💬 Texto fora', 'Mensagem fora da embed (opcional)');
+      if (acao === 'fields') return abrirModal('fields', '➕ Adicionar Field', 'Título | valor (um por linha)');
+      if (acao === 'cargos') {
+        const modal = new ModalBuilder()
+          .setCustomId(`embedmodal:cargos:${donoId}`)
+          .setTitle('👥 Cargos para mencionar')
+          .addComponents(
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('valor')
+                .setLabel('IDs dos cargos separados por vírgula')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(false)
+                .setPlaceholder('123456789, 987654321')
+                .setValue(estado.cargos.join(', '))
+            )
+          );
+        return interaction.showModal(modal);
+      }
+
+      if (acao === 'preview') {
+        return interaction.reply({ ...buildPainel(donoId), flags: MessageFlags.Ephemeral });
+      }
+
+      if (acao === 'enviar') {
+        if (!estado.titulo && !estado.descricao) {
+          return interaction.reply({ content: '❌ Preencha pelo menos o **título** ou a **descrição** antes de enviar.', flags: MessageFlags.Ephemeral });
+        }
+        const embed = buildEmbed(estado);
+        const mencoes = estado.cargos.map((c) => `<@&${c}>`).join(' ');
+        const conteudo = [estado.textoFora, mencoes].filter(Boolean).join(' ') || null;
+        await interaction.channel.send({
+          content: conteudo,
+          embeds: [embed],
+          allowedMentions: estado.cargos.length ? { roles: estado.cargos } : { parse: [] },
+        });
+        limparSessao(donoId);
+        return interaction.update({ content: '✅ Embed enviada!', embeds: [], components: [] });
+      }
+
+      if (acao === 'cancelar') {
+        limparSessao(donoId);
+        return interaction.update({ content: '❌ Montagem cancelada.', embeds: [], components: [] });
+      }
+      return;
+    }
+
+    // Modais do painel de embed
+    if (interaction.isModalSubmit() && interaction.customId.startsWith('embedmodal:')) {
+      const partes = interaction.customId.split(':');
+      const campo = partes[1];
+      const donoId = partes[2];
+
+      if (interaction.user.id !== donoId) {
+        return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
+      }
+
+      const estado = getSessao(donoId);
+      const valor = interaction.fields.getTextInputValue('valor').trim();
+
+      if (campo === 'cargos') {
+        // Parse IDs de cargo separados por virgula
+        estado.cargos = valor
+          ? valor.split(',').map((s) => s.trim()).filter((s) => /^\d+$/.test(s))
+          : [];
+      } else if (campo === 'fields') {
+        // Formato: "Titulo | valor" por linha
+        estado.fields = valor
+          .split('\n')
+          .map((l) => l.trim())
+          .filter(Boolean)
+          .map((l) => {
+            const [name, ...v] = l.split('|');
+            return { name: name.trim(), value: v.join('|').trim() || '\u200b', inline: true };
+          })
+          .slice(0, 25);
+      } else {
+        estado[campo] = valor || null;
+      }
+
+      return interaction.update(buildPainel(donoId));
+    }
+  } catch (error) {
+    console.error('[Embed painel] Erro:', error);
+    try {
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: '❌ Ocorreu um erro.', flags: MessageFlags.Ephemeral });
+      }
+    } catch {}
+  }
+});
+
 // Responde comandos de prefixo
 client.on(Events.MessageCreate, async (message) => {
   if (message.author.bot || !message.content.startsWith(PREFIX)) return;
