@@ -5,18 +5,25 @@ const ORDEM = ['inicio', 'conversor', 'estoque', 'painel', 'admin'];
 
 const PAGINAS = {
   inicio: () => ({
-    titulo: '☁️ RUBY FY BOT — Central de Ajuda',
+    titulo: '☁️  RUBY FY BOT  ☁️',
     descricao: [
-      'Conversor de Robux + estoque de produtos, tudo em um lugar.',
+      '*Conversor de Robux + Estoque de produtos*',
       '',
-      '**Escolha uma categoria:**',
+      '**Escolha uma categoria abaixo:**',
       '',
-      '🎮 **Conversor** — calcular Robux ↔ Reais, Game Pass e taxas',
-      '📦 **Estoque** — ver produtos e preços',
-      '📊 **Painel** — painéis fixos de conversão e estoque',
-      '⚙️ **Administração** — comandos para admins',
+      '🎮 **Conversor**',
+      '*Calcular Robux ↔ Reais, Game Pass e taxas*',
       '',
-      'Use as **setas** para navegar ou clique numa **categoria**.',
+      '📦 **Estoque**',
+      '*Ver produtos, preços e disponibilidade*',
+      '',
+      '📊 **Painéis**',
+      '*Painéis fixos de conversão e estoque*',
+      '',
+      '⚙️ **Administração**',
+      '*Comandos para administradores*',
+      '',
+      '✨ *Use as setas para navegar ou clique numa categoria*',
     ].join('\n'),
   }),
 
@@ -112,7 +119,7 @@ function buildAjuda(pagina = 'inicio', isAdmin = false) {
     .setColor(COR)
     .setTitle(dados.titulo)
     .setDescription(dados.descricao)
-    .setFooter({ text: 'RUBY FY • Use os botões para navegar' });
+    .setFooter({ text: '☁️ RUBY FY • !ajuda !help !menu ☁️' });
 
   const idx = ORDEM.indexOf(pag);
   const anterior = ORDEM[(idx - 1 + ORDEM.length) % ORDEM.length];
