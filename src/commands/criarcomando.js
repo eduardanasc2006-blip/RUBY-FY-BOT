@@ -38,14 +38,19 @@ module.exports = {
       .map((s) => s.trim())
       .filter(Boolean)
       .map((s) => {
-        const partes = s.split(':');
-        // Se tiver 3+ partes: nome:tipo:valor. Se tiver 2: nome:valor (copiavel por padrao)
-        if (partes.length >= 3) {
-          const [n, tipo, ...v] = partes;
-          return { nome: n.trim(), tipo: tipo.trim().toLowerCase(), valor: v.join(':').trim() };
+        // Formato: nome:tipo:valor — mas URLs tem : (https://), entao pega os 2 primeiros e junta o resto
+        const idx1 = s.indexOf(':');
+        const idx2 = s.indexOf(':', idx1 + 1);
+        if (idx2 === -1) {
+          // nome:valor (copiavel por padrao)
+          return { nome: s.slice(0, idx1).trim(), tipo: 'copiavel', valor: s.slice(idx1 + 1).trim() };
         }
-        const [n, ...v] = partes;
-        return { nome: n.trim(), tipo: 'copiavel', valor: v.join(':').trim() };
+        // nome:tipo:valor
+        return {
+          nome: s.slice(0, idx1).trim(),
+          tipo: s.slice(idx1 + 1, idx2).trim().toLowerCase(),
+          valor: s.slice(idx2 + 1).trim(),
+        };
       })
       .filter((c) => c.nome && c.valor)
       .map((c) => {
