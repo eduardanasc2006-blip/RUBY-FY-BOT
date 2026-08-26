@@ -34,7 +34,13 @@ module.exports = {
 
     // Sem argumentos: abre o painel visual
     if (args.length === 0) {
-      const { buildPainel } = require('../utils/embedPainel');
+      const { buildPainel, getSessao } = require('../utils/embedPainel');
+      // Upload por anexo: preenche a imagem do painel com a foto enviada junto ao '!embed'
+      const anexoImg = message.attachments?.first();
+      if (anexoImg && anexoImg.contentType?.startsWith('image/')) {
+        const sessao = getSessao(message.author.id);
+        sessao.imagem = anexoImg.url;
+      }
       return message.reply({ ...buildPainel(message.author.id), allowedMentions: { repliedUser: false } });
     }
 

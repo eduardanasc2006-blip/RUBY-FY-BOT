@@ -792,7 +792,8 @@ client.on('interactionCreate', async (interaction) => {
       if (acao === 'titulo') return abrirModal('titulo', '📝 Título', 'Título da embed');
       if (acao === 'descricao') return abrirModal('descricao', '📄 Descrição', 'Texto da embed', true);
       if (acao === 'cor') return abrirModal('cor', '🎨 Cor', 'Nome ou #hex (ex: lilas ou #beb6ff)');
-      if (acao === 'imagem') return abrirModal('imagem', '🖼️ Imagem', 'Link da imagem (opcional)');
+      // Dica: upload por anexo e aceito ao chamar '!embed' com uma foto na mensagem
+      if (acao === 'imagem') return abrirModal('imagem', '🖼️ Imagem', 'Link da imagem (ou anexe a foto no chamar !embed)');
       if (acao === 'thumbnail') return abrirModal('thumbnail', '🔳 Thumbnail', 'Link da thumbnail (opcional)');
       if (acao === 'autor') return abrirModal('autor', '👤 Autor', 'Nome do autor (opcional)');
       if (acao === 'rodape') return abrirModal('rodape', '📝 Rodapé', 'Texto do rodapé (opcional)');

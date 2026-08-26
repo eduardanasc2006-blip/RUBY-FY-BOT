@@ -13,10 +13,14 @@ module.exports = {
 
     const forcarNovo = args[0] === 'nova' || args[0] === 'novo';
     const { atualizado } = await publicarOuAtualizar(message.channel, forcarNovo);
-    return message.reply(
+
+    // Confirma um sume apos 4 segundos para nao poluir o canal
+    const confirmacao = await message.reply(
       atualizado
         ? '✅ Painel de estoque **atualizado**.'
         : '✅ Painel de estoque publicado! Qualquer pessoa pode clicar nas categorias — cada um vê a lista de forma privada.'
     );
+    setTimeout(() => confirmacao.delete().catch(() => {}), 4000);
+    return;
   },
 };

@@ -24,10 +24,13 @@ module.exports = {
     const forcarNovo = args[0] === 'nova' || args[0] === 'novo';
     const { atualizado } = await publishOrUpdatePanel(message.channel, forcarNovo);
 
-    return message.reply(
+    // Confirma um sume apos alguns segundos para nao poluir o canal
+    const confirmacao = await message.reply(
       atualizado
         ? '✅ Painel de conversão **atualizado** com as taxas atuais.'
         : '✅ Painel de conversão publicado! Qualquer pessoa pode usar os botões.'
     );
+    setTimeout(() => confirmacao.delete().catch(() => {}), 5000);
+    return;
   },
 };
