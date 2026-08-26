@@ -87,9 +87,24 @@ client.on('error', (error) => {
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
-
   const command = client.commands.get(interaction.commandName);
-  if (!command) return;
+
+  // Comandos personalizados (criados pelo /criarcomando)
+  if (!command) {
+    const custom = require('./utils/customCommands');
+    const { buildResposta } = require('./utils/customCommandsPanel');
+    const cmdCustom = custom.obter(interaction.commandName);
+    if (cmdCustom) {
+      try {
+        const payload = buildResposta(cmdCustom);
+        return await interaction.reply({ ...payload, flags: cmdCustom.ephemeral ? MessageFlags.Ephemeral : undefined });
+      } catch (error) {
+        console.error('[Comando custom]', error);
+        return interaction.reply({ content: '❌ Erro ao executar o comando.', flags: MessageFlags.Ephemeral }).catch(() => {});
+      }
+    }
+    return;
+  }
 
   try {
     await command.execute(interaction);
@@ -663,6 +678,38 @@ client.on('interactionCreate', async (interaction) => {
     try {
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({ content: '❌ Ocorreu um erro. Tente novamente.', flags: MessageFlags.Ephemeral });
+      }
+    } catch {}
+  }
+});
+
+// ----- Botões de conteúdo copiável (comandos personalizados) -----
+
+client.on('interactionCreate', async (interaction) => {
+  try {
+    if (interaction.isButton() && interaction.customId.startsWith('custom:copy:')) {
+      const custom = require('./utils/customCommands');
+      const partes = interaction.customId.split(':');
+      const nomeCmd = partes[2];
+      const idx = parseInt(partes[3], 10);
+
+      const cmd = custom.obter(nomeCmd);
+      if (!cmd || !cmd.copiaveis[idx]) {
+        return interaction.reply({ content: '❌ Conteúdo não encontrado.', flags: MessageFlags.Ephemeral });
+      }
+
+      const item = cmd.copiaveis[idx];
+      // Resposta ephemeral com o valor isolado em code block (facil de selecionar e copiar)
+      return interaction.reply({
+        content: `📋 **${item.nome}:**\n\`\`\`\n${item.valor}\n\`\`\`\n*Selecione o valor acima para copiar.*`,
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+  } catch (error) {
+    console.error('[Copiar]', error);
+    try {
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: '❌ Erro ao copiar.', flags: MessageFlags.Ephemeral });
       }
     } catch {}
   }
