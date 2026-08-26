@@ -3,6 +3,14 @@ const { isAdmin } = require('../prefixCommands/settaxa');
 const custom = require('../utils/customCommands');
 const { registrarUm } = require('../utils/customSync');
 
+// Nomes de comandos nativos do bot (nao podem ser usado por comandos personalizados,
+// senao o comando nativo sempre "vence" e o personalizado fica sem funcionar)
+const COMANDOS_RESERVADOS = [
+  'ajuda', 'backup', 'canalavisos', 'configestoque', 'configtaxa', 'criarcomando',
+  'embed', 'estoque', 'gamepass', 'gerenciarcomandos', 'limpar', 'painelcategoria',
+  'painelestoque', 'reais', 'robux', 'rolegive', 'settaxa', 'tabela', 'taxa',
+];
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('criarcomando')
@@ -26,6 +34,9 @@ module.exports = {
 
     if (!/^[a-z0-9_-]+$/i.test(nome)) {
       return interaction.reply({ content: '❌ Nome inválido. Use apenas letras, números, - ou _ (sem espaços).', flags: MessageFlags.Ephemeral });
+    }
+    if (COMANDOS_RESERVADOS.includes(nome.toLowerCase())) {
+      return interaction.reply({ content: `❌ O nome **${nome}** é um comando padrão do bot. Escolha outro nome.`, flags: MessageFlags.Ephemeral });
     }
     if (custom.existe(nome)) {
       return interaction.reply({ content: `❌ O comando **/${nome}** já existe. Use **/gerenciarcomandos** para editar.`, flags: MessageFlags.Ephemeral });

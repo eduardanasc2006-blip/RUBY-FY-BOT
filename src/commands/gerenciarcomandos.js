@@ -22,15 +22,24 @@ module.exports = {
     const nome = interaction.options.getString('nome');
 
     if (acao === 'listar') {
-      await registrarTodos(interaction.client); // garante que todos os salvos estejam ativos no Discord
+      // Sincroniza antes de listar para garantir que todos os salvos estejam ativos.
+      // usa defer pois registrar no Discord (global) pode demorar.
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      try {
+        await registrarTodos(interaction.client);
+      } catch (error) {
+        console.error('[gerenciarcomandos] Erro ao sincronizar:', error?.message || error);
+      }
+
       const lista = Object.values(custom.listar());
       if (!lista.length) {
-        return interaction.reply({ content: '📋 Nenhum comando personalizado criado ainda. Use /criarcomando.', flags: MessageFlags.Ephemeral });
+        return interaction.editReply('📋 Nenhum comando personalizado criado ainda. Use /criarcomando.');
       }
-      const texto = lista.map((c) =>
-        `/${c.nome}` + (c.descricao ? ` — ${c.descricao}` : '') + (c.copiaveis.length ? ` 📋 ${c.copiaveis.length} copiável(is)` : '')
+      const texto = lista.map((c, i) =>
+        `\`${i + 1}\` — **/${c.nome}**` + (c.descricao ? ` · ${c.descricao}` : '') + (c.copiaveis.length ? ` · 📋 ${c.copiaveis.length} copiável(is)` : '')
       ).join('\n');
-      return interaction.reply({ content: `**Comandos personalizados (${lista.length}):**\n${texto}`, flags: MessageFlags.Ephemeral });
+      const aviso = '\n\n_Use /criarcomando para adicionar; demora até 1h para aparecer para todos no Discord._';
+      return interaction.editReply(`**Comandos personalizados (${lista.length}):**\n${texto}${aviso}`);
     }
 
     if (acao === 'excluir') {

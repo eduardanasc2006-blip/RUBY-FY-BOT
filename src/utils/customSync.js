@@ -1,10 +1,22 @@
 const custom = require('./customCommands');
 
+// Nomes que pertencem a comandos nativos do bot. Comandos personalizados nunca
+// devem criar/editar/excluir algo com esses nomes para nao interferir no bot.
+const RESERVADOS = new Set([
+  'ajuda', 'backup', 'canalavisos', 'configestoque', 'configtaxa', 'criarcomando',
+  'embed', 'estoque', 'gamepass', 'gerenciarcomandos', 'limpar', 'painelcategoria',
+  'painelestoque', 'reais', 'robux', 'rolegive', 'settaxa', 'tabela', 'taxa',
+]);
+
+function eReservado(nome) {
+  return RESERVADOS.has(String(nome || '').toLowerCase().trim());
+}
+
 // Registra (ou atualiza) um comando personalizado como slash command global no Discord.
 // Sem isso o Discord nao reconhece o /nome, entao a resposta do bot nunca dispara.
 async function registrarUm(client, nome, descricao) {
   const nomeLower = String(nome).toLowerCase().trim();
-  if (!nomeLower) return null;
+  if (!nomeLower || eReservado(nomeLower)) return null;
 
   await client.application.commands.fetch();
   const existente = client.application.commands.cache.find((c) => c.name === nomeLower);
@@ -27,7 +39,7 @@ async function registrarUm(client, nome, descricao) {
 // Remove um comando personalizado registrado no Discord.
 async function excluirUm(client, nome) {
   const nomeLower = String(nome).toLowerCase().trim();
-  if (!nomeLower) return;
+  if (!nomeLower || eReservado(nomeLower)) return;
 
   await client.application.commands.fetch();
   const existente = client.application.commands.cache.find((c) => c.name === nomeLower);

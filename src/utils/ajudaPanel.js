@@ -7,6 +7,9 @@ const ORDEM_VISIVEL = ['inicio', 'conversor', 'estoque', 'comandos', 'painel'];
 
 // Lista central de comandos (prefixo e slash) para o menu de ajuda
 const COMANDOS = [
+  { grupo: '🏠 Ajuda', cmd: 'ajuda', pre: '!ajuda', slash: '/ajuda', desc: 'Abre este menu de ajuda.', admin: false },
+  { grupo: '🏠 Ajuda', cmd: 'help', pre: '!help', slash: null, desc: 'Alias do menu de ajuda.', admin: false },
+  { grupo: '🏠 Ajuda', cmd: 'menu', pre: '!menu', slash: null, desc: 'Alias do menu de ajuda.', admin: false },
   { grupo: '🎮 Conversor', cmd: 'robux', pre: '!robux 500', slash: '/robux', desc: 'Converte Robux em reais.', admin: false },
   { grupo: '🎮 Conversor', cmd: 'reais', pre: '!reais 10', slash: '/reais', desc: 'Converte reais em Robux.', admin: false },
   { grupo: '🎮 Conversor', cmd: 'gamepass', pre: '!gamepass 1000', slash: '/gamepass', desc: 'Calcula o valor do Game Pass.', admin: false },
