@@ -59,6 +59,12 @@ module.exports = {
     if (!titulo || !descricao) {
       return message.reply('❌ Precisa de pelo menos **título** e **descrição**, separados por `|`');
     }
+    if (titulo.length > 256) {
+      return message.reply('❌ O **título** deve ter no máximo 256 caracteres.');
+    }
+    if (descricao.length > 4096) {
+      return message.reply('❌ A **descrição** deve ter no máximo 4096 caracteres.');
+    }
 
     const embed = new EmbedBuilder()
       .setColor(resolverCor(corNome))

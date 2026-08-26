@@ -35,6 +35,13 @@ module.exports = {
       embed.setImage(link);
     }
 
+    if (titulo.length > 256) {
+      return interaction.reply({ content: '❌ O **título** deve ter no máximo 256 caracteres.', flags: MessageFlags.Ephemeral });
+    }
+    if (descricao.length > 4096) {
+      return interaction.reply({ content: '❌ A **descrição** deve ter no máximo 4096 caracteres.', flags: MessageFlags.Ephemeral });
+    }
+
     await interaction.channel.send({ embeds: [embed] });
     return interaction.reply({ content: '✅ Embed publicada!', flags: MessageFlags.Ephemeral });
   },

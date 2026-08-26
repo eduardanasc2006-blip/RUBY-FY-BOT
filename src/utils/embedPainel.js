@@ -28,6 +28,14 @@ function limparSessao(userId) {
 
 // Monta a embed de preview a partir do estado
 function buildEmbed(estado) {
+  const temConteudo = !!(
+    estado.titulo || estado.descricao || estado.autor || estado.rodape ||
+    estado.imagem || estado.thumbnail || estado.fields.length
+  );
+  // Embed totalmente vazia é rejeitada pela API do Discord ("empty embed").
+  // Retorna null nesse caso para que o painel não quebre ao abrir/previewar.
+  if (!temConteudo) return null;
+
   const embed = new EmbedBuilder().setColor(resolverCor(estado.cor));
   if (estado.titulo) embed.setTitle(estado.titulo);
   if (estado.descricao) embed.setDescription(estado.descricao);
@@ -91,7 +99,7 @@ function buildPainel(userId) {
 
   return {
     content: estado.textoFora || null,
-    embeds: [resumo, embed],
+    embeds: embed ? [resumo, embed] : [resumo],
     components: [linha1, linha2, linha3, linha4],
   };
 }

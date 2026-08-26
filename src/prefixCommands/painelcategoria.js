@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const estoque = require('../utils/estoque');
 const { formatBRL } = require('../utils/robuxConverter');
 const { isAdmin } = require('./settaxa');
@@ -34,6 +34,38 @@ function buildCategoria(catId) {
     .setFooter({ text: '*valor por unidade*' });
 }
 
+// Painel visual para o admin escolher qual categoria fixar no canal
+function construirPainelSelecao() {
+  const cats = estoque.categorias();
+  const embed = new EmbedBuilder()
+    .setColor(0xbeb6ff)
+    .setTitle('📌 Fixar painel de categoria')
+    .setDescription(
+      'Escolha a categoria para fixar no canal com os produtos:\n\n' +
+      cats.map((c) => `**${c.id}** — ${c.produtos.length} produto(s)`).join('\n') ||
+      'Nenhuma categoria cadastrada.'
+    );
+
+  // Agrupa em linhas de ate 5 botoes
+  const linhas = [];
+  let linha = new ActionRowBuilder();
+  cats.forEach((c, i) => {
+    if (i > 0 && i % 5 === 0) {
+      linhas.push(linha);
+      linha = new ActionRowBuilder();
+    }
+    linha.addComponents(
+      new ButtonBuilder()
+        .setCustomId(`painelcat:${c.id}`)
+        .setLabel(c.id.slice(0, 80))
+        .setStyle(ButtonStyle.Primary)
+    );
+  });
+  if (linha.components.length) linhas.push(linha);
+
+  return { embeds: [embed], components: linhas };
+}
+
 module.exports = {
   name: 'painelcategoria',
   description: 'Fixa no canal os produtos de uma categoria (restrito a administradores)',
@@ -42,6 +74,15 @@ module.exports = {
   async execute(message, args) {
     if (!message.guild || !isAdmin(message.member, message.author.id)) {
       return message.reply('🔒 Somente administradores podem usar este comando.');
+    }
+
+    // Sem argumentos: mostra um painel visual interativo para o admin escolher a categoria
+    if (args.length === 0) {
+      const cats = estoque.categorias();
+      if (!cats.length) {
+        return message.reply('❌ Nenhuma categoria cadastrada. Use `!configestoque` para criar uma.');
+      }
+      return message.reply({ ...construirPainelSelecao(), allowedMentions: { repliedUser: false } });
     }
 
     const catId = (args[0] || '').toLowerCase().trim();
@@ -91,4 +132,5 @@ module.exports = {
 
   buildCategoria,
   salvar,
+  construirPainelSelecao,
 };

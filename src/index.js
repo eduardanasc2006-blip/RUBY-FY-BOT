@@ -411,6 +411,24 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ ...payload, flags: MessageFlags.Ephemeral }); // primeira resposta privada
     }
 
+    // ----- fixar painel de categoria (selecao visual do !painelcategoria) -----
+    if (interaction.isButton() && interaction.customId.startsWith('painelcat:')) {
+      if (!isAdmin(interaction.member, interaction.user.id)) {
+        return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+      }
+      const catId = interaction.customId.split(':')[1];
+      if (!interaction.channel) {
+        return interaction.reply({ content: '❌ Não consegui identificar o canal.', flags: MessageFlags.Ephemeral });
+      }
+      const embed = painelCategoria.buildCategoria(catId);
+      if (!embed) {
+        return interaction.reply({ content: '❌ Categoria não encontrada.', flags: MessageFlags.Ephemeral });
+      }
+      const msg = await interaction.channel.send({ embeds: [embed] });
+      painelCategoria.salvar(msg.id, catId, interaction.channel.id);
+      return interaction.reply({ content: `✅ Painel da categoria **${catId}** fixado no canal.`, flags: MessageFlags.Ephemeral });
+    }
+
     // ----- admin: estadm:* -----
     if (interaction.isButton() && interaction.customId.startsWith('estadm:')) {
       if (!isAdmin(interaction.member, interaction.user.id)) {
