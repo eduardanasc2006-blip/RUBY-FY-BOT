@@ -12,8 +12,9 @@ const commands = [];
 const commandsPath = path.join(__dirname, 'src', 'commands');
 for (const file of fs.readdirSync(commandsPath).filter((f) => f.endsWith('.js'))) {
   const cmd = require(path.join(commandsPath, file)).data.toJSON();
-  // 0 = Guild Install (servidor), 1 = User Install (usar em qualquer DM/grupo, estilo Loritta)
-  cmd.integration_types = [0, 1];
+  // Apenas Guild Install (0). Habilitar tambem User Install (1) faz o servidor
+  // mostrar CADA comando DUPLICADO no seletor. Mantemos so o install no servidor.
+  cmd.integration_types = [0];
   // 0 = Guild, 1 = Bot DM, 2 = DMs/grupos privados
   cmd.contexts = [0, 1, 2];
   commands.push(cmd);
