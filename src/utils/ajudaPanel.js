@@ -106,6 +106,9 @@ const PAGINAS = {
       '',
       '**!limpar <1-100>** ou **/limpar**',
       '*Apaga mensagens do canal. Ex: !limpar 20*',
+      '',
+      '**/rolegive**',
+      '*Dá um cargo a um membro (escolhe cargo e usuário pelo menu).*',
     ].join('\n'),
   }),
 };
