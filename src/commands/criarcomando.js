@@ -33,13 +33,16 @@ module.exports = {
     const copiaveisBruto = interaction.options.getString('copiaveis') || '';
 
     if (!/^[a-z0-9_-]+$/i.test(nome)) {
-      return interaction.reply({ content: '❌ Nome inválido. Use apenas letras, números, - ou _ (sem espaços).', flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: '❌ Nome inválido. Use apenas letras, números, `-` ou `_` (sem espaços).', flags: MessageFlags.Ephemeral });
+    }
+    if (nome.length > 32) {
+      return interaction.reply({ content: '❌ O nome deve ter no máximo 32 caracteres (limite do Discord).', flags: MessageFlags.Ephemeral });
     }
     if (COMANDOS_RESERVADOS.includes(nome.toLowerCase())) {
       return interaction.reply({ content: `❌ O nome **${nome}** é um comando padrão do bot. Escolha outro nome.`, flags: MessageFlags.Ephemeral });
     }
     if (custom.existe(nome)) {
-      return interaction.reply({ content: `❌ O comando **/${nome}** já existe. Use **/gerenciarcomandos** para editar.`, flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: `❌ O comando \`${nome}\` já existe. Use \`/gerenciarcomandos\` para editar.`, flags: MessageFlags.Ephemeral });
     }
 
     // Parse copiaveis: "nome:tipo:valor" separados por ;
@@ -82,10 +85,10 @@ module.exports = {
     // Valida: links precisam ser URL valida
     const linkInvalido = copiaveis.find((c) => c.tipo === 'link' && !/^https?:\/\/.+/i.test(c.valor));
     if (linkInvalido) {
-      return interaction.reply({ content: `❌ O link **${linkInvalido.nome}** não é uma URL válida. Use formato: https://...`, flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: `❌ O link \`${linkInvalido.nome}\` não é uma URL válida. Use formato: https://...`, flags: MessageFlags.Ephemeral });
     }
 
-    const cmd = custom.criar(nome, { descricao, mensagem, ephemeral, copiaveis });
+    const cmd = custom.criar(nome, { descricao, mensagem, ephemeral, copiaveis, autor: interaction.user.id });
     if (!cmd) {
       return interaction.reply({ content: '❌ Não consegui criar o comando.', flags: MessageFlags.Ephemeral });
     }
@@ -96,7 +99,7 @@ module.exports = {
     } catch (error) {
       console.error('[criarcomando] Falha ao registrar no Discord:', error?.message || error);
       return interaction.reply({
-        content: `✅ Comando /${nome} salvo, mas não consegui registrá-lo no Discord agora.\n` +
+        content: `✅ Comando \`/${nome}\` salvo, mas não consegui registrá-lo no Discord agora.\n` +
           'Tente de novo daqui a pouco ou reinicie o bot.',
         flags: MessageFlags.Ephemeral,
       });
@@ -107,7 +110,7 @@ module.exports = {
       : 'Sem conteúdo copiável.';
 
     return interaction.reply({
-      content: `✅ Comando /${nome} criado!\n${aviso}\n` +
+      content: `✅ Comando \`/${nome}\` criado!\n${aviso}\n` +
         '🕒 Pode levar alguns minutos até o / aparecer para todos no servidor (o Discord atualiza globalmente).',
       flags: MessageFlags.Ephemeral,
     });

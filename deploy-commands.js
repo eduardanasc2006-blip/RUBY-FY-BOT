@@ -19,6 +19,19 @@ for (const file of fs.readdirSync(commandsPath).filter((f) => f.endsWith('.js'))
   commands.push(cmd);
 }
 
+// Inclui tambem os comandos personalizados salvos, para que o deploy nao os apague.
+try {
+  const custom = require('./src/utils/customCommands');
+  for (const cmd of Object.values(custom.listar())) {
+    commands.push({
+      name: cmd.nome.toLowerCase(),
+      description: (cmd.descricao || 'Comando personalizado').slice(0, 100),
+    });
+  }
+} catch (error) {
+  console.warn('⚠️ Não foi possível carregar comandos personalizados:', error?.message || error);
+}
+
 const rest = new REST().setToken(process.env.DISCORD_TOKEN);
 
 (async () => {

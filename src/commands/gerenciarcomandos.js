@@ -36,14 +36,18 @@ module.exports = {
         return interaction.editReply('📋 Nenhum comando personalizado criado ainda. Use /criarcomando.');
       }
       const texto = lista.map((c, i) =>
-        `\`${i + 1}\` — **/${c.nome}**` + (c.descricao ? ` · ${c.descricao}` : '') + (c.copiaveis.length ? ` · 📋 ${c.copiaveis.length} copiável(is)` : '')
+        '`' + (i + 1) + '`' + ' — ' + '**/' + c.nome + '**' + (c.descricao ? ' · ' + c.descricao : '') + (c.copiaveis.length ? ' · 📋 ' + c.copiaveis.length + ' copiável(is)' : '')
       ).join('\n');
       const aviso = '\n\n_Use /criarcomando para adicionar; demora até 1h para aparecer para todos no Discord._';
-      return interaction.editReply(`**Comandos personalizados (${lista.length}):**\n${texto}${aviso}`);
+      return interaction.editReply('**Comandos personalizados (' + lista.length + '):**\n' + texto + aviso);
     }
 
     if (acao === 'excluir') {
-      if (!nome) return interaction.reply({ content: '❌ Informe o nome do comando para excluir.', flags: MessageFlags.Ephemeral });
+      if (!nome) {
+        return interaction.reply({ content: '❌ Informe o nome do comando para excluir.', flags: MessageFlags.Ephemeral });
+      }
+      // Remover do Discord (comando global) pode demorar: usa defer para nao dar timeout de 3s.
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       const ok = custom.excluir(nome);
       if (ok) {
         try {
@@ -52,10 +56,9 @@ module.exports = {
           console.error('[gerenciarcomandos] Falha ao remover do Discord:', error?.message || error);
         }
       }
-      return interaction.reply({
-        content: ok ? `✅ Comando /${nome} excluído.` : `❌ Comando /${nome} não encontrado.`,
-        flags: MessageFlags.Ephemeral,
-      });
+      return interaction.editReply(
+        ok ? '✅ Comando /' + nome + ' excluído.' : '❌ Comando /' + nome + ' não encontrado.'
+      );
     }
   },
 };
