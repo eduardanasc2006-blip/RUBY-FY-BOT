@@ -36,7 +36,7 @@ function buildResposta(cmd) {
         // Botao copiavel: handler mostra o valor em ephemeral
         row.addComponents(
           new ButtonBuilder()
-            .setCustomId(`custom:copy:${cmd.autor || 'x'}:${cmd.nome.toLowerCase()}:${i}`)
+            .setCustomId(`custom:copy:${cmd.nome.toLowerCase()}:${i}`)
             .setLabel(`📋 ${c.nome}`)
             .setStyle(ButtonStyle.Secondary)
         );

@@ -29,7 +29,6 @@ const custom = {
       mensagem: dados.mensagem || '',
       embed: dados.embed || null, // { titulo, descricao, cor, imagem }
       ephemeral: !!dados.ephemeral,
-      autor: dados.autor || null, // ID de quem criou (so o autor pode copiar)
       // itens: [{ nome, tipo: 'copiavel'|'link', valor }]
       copiaveis: (dados.copiaveis || []).map((c) => ({
         nome: c.nome,

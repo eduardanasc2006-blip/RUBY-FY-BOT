@@ -88,7 +88,7 @@ module.exports = {
       return interaction.reply({ content: `❌ O link \`${linkInvalido.nome}\` não é uma URL válida. Use formato: https://...`, flags: MessageFlags.Ephemeral });
     }
 
-    const cmd = custom.criar(nome, { descricao, mensagem, ephemeral, copiaveis, autor: interaction.user.id });
+    const cmd = custom.criar(nome, { descricao, mensagem, ephemeral, copiaveis });
     if (!cmd) {
       return interaction.reply({ content: '❌ Não consegui criar o comando.', flags: MessageFlags.Ephemeral });
     }

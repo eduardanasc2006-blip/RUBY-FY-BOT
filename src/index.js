@@ -707,22 +707,12 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.isButton() && interaction.customId.startsWith('custom:copy:')) {
       const custom = require('./utils/customCommands');
       const partes = interaction.customId.split(':');
-      // Formato novo: custom:copy:<autor>:<nome>:<idx> | Formato antigo (sem autor): custom:copy:<nome>:<idx>
-      const temAutorNoId = partes.length === 5;
-      const nomeCmd = temAutorNoId ? partes[3] : partes[2];
-      const idx = parseInt(temAutorNoId ? partes[4] : partes[3], 10);
+      const nomeCmd = partes[2];
+      const idx = parseInt(partes[3], 10);
 
       const cmd = custom.obter(nomeCmd);
       if (!cmd || !cmd.copiaveis[idx]) {
         return interaction.reply({ content: '❌ Conteúdo não encontrado.', flags: MessageFlags.Ephemeral });
-      }
-
-      // So quem criou o comando pode copiar. Comandos antigos (sem autor) continuam
-      // acessiveis a todos, pois nao ha como identificar o dono.
-      const ehAdmin = interaction.guild ? isAdmin(interaction.member, interaction.user.id) : false;
-      const ehAutor = !cmd.autor ? true : interaction.user.id === cmd.autor;
-      if (!ehAutor && !ehAdmin) {
-        return interaction.reply({ content: '🔒 Apenas quem criou este comando pode usar o botão.', flags: MessageFlags.Ephemeral });
       }
 
       const item = cmd.copiaveis[idx];
