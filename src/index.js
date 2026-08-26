@@ -516,11 +516,16 @@ client.on('interactionCreate', async (interaction) => {
         const [, , catId, prodId] = partes;
         const atual = estoqueDb.produto(catId, prodId);
 
+        // Defer imediato para ganhar tempo (evita timeout de 3s)
+        await interaction.deferUpdate().catch(() => {});
+
         const responder = async (payload) => {
           try {
+            if (interaction.deferred) {
+              return await interaction.editReply(payload);
+            }
             return await interaction.update(payload);
           } catch {
-            // Interacao expirada (bot reiniciou ou demorou): responde como nova
             try {
               return await interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
             } catch {}
