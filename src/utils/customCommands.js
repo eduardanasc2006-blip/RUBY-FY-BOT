@@ -29,7 +29,12 @@ const custom = {
       mensagem: dados.mensagem || '',
       embed: dados.embed || null, // { titulo, descricao, cor, imagem }
       ephemeral: !!dados.ephemeral,
-      copiaveis: dados.copiaveis || [], // [{ nome, valor }]
+      // itens: [{ nome, tipo: 'copiavel'|'link', valor }]
+      copiaveis: (dados.copiaveis || []).map((c) => ({
+        nome: c.nome,
+        tipo: c.tipo === 'link' ? 'link' : 'copiavel',
+        valor: c.valor,
+      })),
     };
     salvar();
     return comandos[key];

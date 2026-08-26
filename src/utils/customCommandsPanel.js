@@ -16,16 +16,27 @@ function buildResposta(cmd) {
     payload.content = cmd.mensagem;
   }
 
-  // Botoes copiaveis (max 5 por linha, 1 linha por simplicidade)
+  // Botoes: copiaveis (handler) + links (ButtonStyle.Link nativo)
   if (cmd.copiaveis && cmd.copiaveis.length > 0) {
     const row = new ActionRowBuilder();
     cmd.copiaveis.slice(0, 5).forEach((c, i) => {
-      row.addComponents(
-        new ButtonBuilder()
-          .setCustomId(`custom:copy:${cmd.nome.toLowerCase()}:${i}`)
-          .setLabel(`📋 ${c.nome}`)
-          .setStyle(ButtonStyle.Secondary)
-      );
+      if (c.tipo === 'link') {
+        // Botao nativo de link: abre a URL direto, sem handler
+        row.addComponents(
+          new ButtonBuilder()
+            .setURL(c.valor)
+            .setLabel(`🔗 ${c.nome}`)
+            .setStyle(ButtonStyle.Link)
+        );
+      } else {
+        // Botao copiavel: handler mostra o valor em ephemeral
+        row.addComponents(
+          new ButtonBuilder()
+            .setCustomId(`custom:copy:${cmd.nome.toLowerCase()}:${i}`)
+            .setLabel(`📋 ${c.nome}`)
+            .setStyle(ButtonStyle.Secondary)
+        );
+      }
     });
     payload.components = [row];
   }

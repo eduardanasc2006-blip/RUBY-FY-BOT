@@ -10,7 +10,7 @@ module.exports = {
     .addStringOption((o) => o.setName('descricao').setDescription('Descrição do comando').setRequired(true))
     .addStringOption((o) => o.setName('mensagem').setDescription('Mensagem de resposta').setRequired(true))
     .addBooleanOption((o) => o.setName('ephemeral').setDescription('Resposta privada (ephemeral)? Padrão: sim').setRequired(false))
-    .addStringOption((o) => o.setName('copiaveis').setDescription('Itens copiáveis: nome:valor; nome2:valor2').setRequired(false)),
+    .addStringOption((o) => o.setName('copiaveis').setDescription('Itens: nome:tipo:valor; — tipo: copiavel ou link').setRequired(false)),
 
   async execute(interaction) {
     if (!interaction.guild || !isAdmin(interaction.member, interaction.user.id)) {
@@ -30,16 +30,43 @@ module.exports = {
       return interaction.reply({ content: `❌ O comando \`${nome}\` já existe. Use \`/gerenciarcomandos\` para editar.`, flags: MessageFlags.Ephemeral });
     }
 
-    // Parse copiaveis: "PIX:12345678900; WhatsApp:11999998888"
+    // Parse copiaveis: "nome:tipo:valor" separados por ;
+    // tipo: copiavel (ou copia/copiar) | link
+    // Ex: "PIX:copiavel:12345678900; Instagram:link:https://instagram.com/rubyfy"
     const copiaveis = copiaveisBruto
       .split(';')
       .map((s) => s.trim())
       .filter(Boolean)
       .map((s) => {
-        const [n, ...v] = s.split(':');
-        return { nome: n.trim(), valor: v.join(':').trim() };
+        const partes = s.split(':');
+        // Se tiver 3+ partes: nome:tipo:valor. Se tiver 2: nome:valor (copiavel por padrao)
+        if (partes.length >= 3) {
+          const [n, tipo, ...v] = partes;
+          return { nome: n.trim(), tipo: tipo.trim().toLowerCase(), valor: v.join(':').trim() };
+        }
+        const [n, ...v] = partes;
+        return { nome: n.trim(), tipo: 'copiavel', valor: v.join(':').trim() };
       })
-      .filter((c) => c.nome && c.valor);
+      .filter((c) => c.nome && c.valor)
+      .map((c) => {
+        // Normaliza tipo
+        const tipo = ['link', 'url'].includes(c.tipo) ? 'link' : 'copiavel';
+        let valor = c.valor;
+        // Valida link: normaliza para https:// se nao tiver protocolo
+        if (tipo === 'link') {
+          if (!/^https?:\/\//i.test(valor)) valor = 'https://' + valor;
+          // Valida URL
+          try { new URL(valor); } catch { return null; }
+        }
+        return { nome: c.nome, tipo, valor };
+      })
+      .filter(Boolean);
+
+    // Valida: links precisam ser URL valida
+    const linkInvalido = copiaveis.find((c) => c.tipo === 'link' && !/^https?:\/\/.+/i.test(c.valor));
+    if (linkInvalido) {
+      return interaction.reply({ content: `❌ O link \`${linkInvalido.nome}\` não é uma URL válida. Use formato: https://...`, flags: MessageFlags.Ephemeral });
+    }
 
     const cmd = custom.criar(nome, { descricao, mensagem, ephemeral, copiaveis });
     if (!cmd) {
