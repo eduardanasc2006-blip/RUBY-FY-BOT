@@ -5,16 +5,20 @@ const { resolverCor } = require('../prefixCommands/embed');
 function buildResposta(cmd) {
   const payload = {};
 
-  if (cmd.embed) {
-    const embed = new EmbedBuilder()
-      .setColor(resolverCor(cmd.embed.cor))
-      .setTitle(cmd.embed.titulo)
-      .setDescription(cmd.embed.descricao);
-    if (cmd.embed.imagem) embed.setImage(cmd.embed.imagem);
-    payload.embeds = [embed];
-  } else if (cmd.mensagem) {
-    payload.content = cmd.mensagem;
+  // Monta a descricao: mensagem + valores copiaveis listados
+  let descricao = cmd.mensagem || '';
+  const copiaveisLista = (cmd.copiaveis || []).filter((c) => c.tipo !== 'link');
+  if (copiaveisLista.length > 0) {
+    descricao += (descricao ? '\n\n' : '') + copiaveisLista.map((c) => `**${c.nome}:** \`${c.valor}\``).join('\n');
   }
+
+  // Sempre usa embed (mais bonito)
+  const embed = new EmbedBuilder()
+    .setColor(resolverCor(cmd.embed?.cor))
+    .setTitle(cmd.embed?.titulo || cmd.descricao || cmd.nome)
+    .setDescription(cmd.embed?.descricao || descricao);
+  if (cmd.embed?.imagem) embed.setImage(cmd.embed.imagem);
+  payload.embeds = [embed];
 
   // Botoes: copiaveis (handler) + links (ButtonStyle.Link nativo)
   if (cmd.copiaveis && cmd.copiaveis.length > 0) {
