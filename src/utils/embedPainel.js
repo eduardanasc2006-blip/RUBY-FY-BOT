@@ -1,4 +1,4 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, StringSelectMenuBuilder } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, RoleSelectMenuBuilder } = require('discord.js');
 const { resolverCor } = require('../prefixCommands/embed');
 
 // Estado temporario da embed sendo montada (por usuario)
@@ -75,13 +75,18 @@ function buildPainel(userId) {
 
   const linha3 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`embedpainel:textofora:${userId}`).setLabel('💬 Texto fora').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`embedpainel:cargos:${userId}`).setLabel('👥 Cargos').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(`embedpainel:preview:${userId}`).setLabel('👁️ Preview').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`embedpainel:enviar:${userId}`).setLabel('✅ Enviar').setStyle(ButtonStyle.Success)
+    new ButtonBuilder().setCustomId(`embedpainel:enviar:${userId}`).setLabel('✅ Enviar').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`embedpainel:cancelar:${userId}`).setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
   );
 
+  // Menu de selecao de cargos (nativo do Discord)
   const linha4 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`embedpainel:cancelar:${userId}`).setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
+    new RoleSelectMenuBuilder()
+      .setCustomId(`embedpainel:selcargos:${userId}`)
+      .setPlaceholder('👥 Selecionar cargos para mencionar')
+      .setMinValues(0)
+      .setMaxValues(10)
   );
 
   return {

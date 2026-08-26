@@ -764,21 +764,8 @@ client.on('interactionCreate', async (interaction) => {
       if (acao === 'textofora') return abrirModal('textofora', '💬 Texto fora', 'Mensagem fora da embed (opcional)');
       if (acao === 'fields') return abrirModal('fields', '➕ Adicionar Field', 'Título | valor (um por linha)');
       if (acao === 'cargos') {
-        const modal = new ModalBuilder()
-          .setCustomId(`embedmodal:cargos:${donoId}`)
-          .setTitle('👥 Cargos para mencionar')
-          .addComponents(
-            new ActionRowBuilder().addComponents(
-              new TextInputBuilder()
-                .setCustomId('valor')
-                .setLabel('IDs dos cargos separados por vírgula')
-                .setStyle(TextInputStyle.Short)
-                .setRequired(false)
-                .setPlaceholder('123456789, 987654321')
-                .setValue(estado.cargos.join(', '))
-            )
-          );
-        return interaction.showModal(modal);
+        // Botao legado: nao faz nada (a selecao agora e pelo menu nativo abaixo)
+        return interaction.reply({ content: '👥 Use o **menu de seleção de cargos** abaixo dos botões para escolher.', flags: MessageFlags.Ephemeral });
       }
 
       if (acao === 'preview') {
@@ -806,6 +793,20 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.update({ content: '❌ Montagem cancelada.', embeds: [], components: [] });
       }
       return;
+    }
+
+    // Menu de selecao de cargos (RoleSelectMenu nativo)
+    if (interaction.isRoleSelectMenu() && interaction.customId.startsWith('embedpainel:selcargos:')) {
+      const donoId = interaction.customId.split(':')[2];
+      if (interaction.user.id !== donoId) {
+        return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
+      }
+      if (!isAdmin(interaction.member, interaction.user.id)) {
+        return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+      }
+      const estado = getSessao(donoId);
+      estado.cargos = [...interaction.values]; // IDs dos cargos selecionados
+      return interaction.update(buildPainel(donoId));
     }
 
     // Modais do painel de embed
