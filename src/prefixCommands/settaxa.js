@@ -37,7 +37,7 @@ module.exports = {
 
     if (!faixa || isNaN(valor) || valor <= 0) {
       return message.reply(
-        '❌ Use: **!settaxa <100|1000> <valor>** — exemplos: **!settaxa 100 3,50** ou **!settaxa 1000 34,99**'
+        '❌ Use: `!settaxa <100|1000> <valor>` — exemplos: `!settaxa 100 3,50` ou `!settaxa 1000 34,99`'
       );
     }
 

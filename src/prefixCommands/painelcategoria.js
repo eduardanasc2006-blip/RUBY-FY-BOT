@@ -46,13 +46,13 @@ module.exports = {
 
     const catId = (args[0] || '').toLowerCase().trim();
     if (!catId) {
-      const cats = estoque.categorias().map((c) => `**${c.id}**`).join(', ') || '(nenhuma)';
-      return message.reply(`❌ Use: **!painelcategoria <categoria>** — categorias: ${cats}`);
+      const cats = estoque.categorias().map((c) => `\`${c.id}\``).join(', ') || '(nenhuma)';
+      return message.reply(`❌ Use: \`!painelcategoria <categoria>\` — categorias: ${cats}`);
     }
 
     const embed = buildCategoria(catId);
     if (!embed) {
-      return message.reply(`❌ Categoria **${catId}** não encontrada.`);
+      return message.reply(`❌ Categoria \`${catId}\` não encontrada.`);
     }
 
     const msg = await message.channel.send({ embeds: [embed] });

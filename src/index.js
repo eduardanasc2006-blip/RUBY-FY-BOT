@@ -190,7 +190,7 @@ client.on('interactionCreate', async (interaction) => {
     const respostaPrivada = (payload) => interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
 
     if (isNaN(numero) || numero <= 0) {
-      return respostaPrivada({ content: '❌ Valor inválido. Tente novamente com um número, ex: **500** ou **10,50**.' });
+      return respostaPrivada({ content: '❌ Valor inválido. Tente novamente com um número, ex: `500` ou `10,50`.' });
     }
 
     if (acao === 'robux') {
@@ -326,7 +326,7 @@ client.on('interactionCreate', async (interaction) => {
 
       if (isNaN(numero) || numero <= 0) {
         return interaction.reply({
-          content: '❌ Valor inválido. Tente novamente com um número, ex: **3,50** ou **30**.',
+          content: '❌ Valor inválido. Tente novamente com um número, ex: `3,50` ou `30`.',
           flags: MessageFlags.Ephemeral,
         });
       }
@@ -716,8 +716,9 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       const item = cmd.copiaveis[idx];
+      // Resposta ephemeral com o valor isolado em code block (facil de selecionar e copiar)
       return interaction.reply({
-        content: `📋 **${item.nome}:**\n**${item.valor}**\n_Selecione o valor acima para copiar._`,
+        content: `📋 **${item.nome}:**\n\`\`\`\n${item.valor}\n\`\`\`\n*Selecione o valor acima para copiar.*`,
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -744,7 +745,7 @@ client.on('interactionCreate', async (interaction) => {
 
       // So o dono do painel pode usar
       if (interaction.user.id !== donoId) {
-        return interaction.reply({ content: '🔒 Este painel não é seu. Use **!embed** para criar o seu.', flags: MessageFlags.Ephemeral });
+        return interaction.reply({ content: '🔒 Este painel não é seu. Use `!embed` para criar o seu.', flags: MessageFlags.Ephemeral });
       }
       if (!isAdmin(interaction.member, interaction.user.id)) {
         return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });

@@ -22,8 +22,8 @@ module.exports = {
     const catId = interaction.options.getString('categoria').toLowerCase().trim();
     const embed = painelCategoria.buildCategoria(catId);
     if (!embed) {
-      const cats = estoque.categorias().map((c) => `**${c.id}**`).join(', ') || '(nenhuma)';
-      return interaction.reply({ content: `❌ Categoria **${catId}** não encontrada. Categorias: ${cats}`, flags: MessageFlags.Ephemeral });
+      const cats = estoque.categorias().map((c) => `\`${c.id}\``).join(', ') || '(nenhuma)';
+      return interaction.reply({ content: `❌ Categoria \`${catId}\` não encontrada. Categorias: ${cats}`, flags: MessageFlags.Ephemeral });
     }
 
     const msg = await interaction.channel.send({ embeds: [embed] });

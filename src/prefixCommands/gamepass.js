@@ -11,7 +11,7 @@ module.exports = {
     const robux = parseInt(args[0], 10);
 
     if (!args[0] || isNaN(robux) || robux < 1) {
-      return message.reply('❌ Use: **!gamepass <robux>** — exemplo: **!gamepass 1000**');
+      return message.reply('❌ Use: `!gamepass <robux>` — exemplo: `!gamepass 1000`');
     }
 
     const gamepass = gamepassPrice(robux);
