@@ -7,11 +7,7 @@ const PAGINAS = {
   inicio: () => ({
     titulo: '☁️  RUBY FY BOT  ☁️',
     descricao: [
-      '☁️━━━━━━━━━━━━━━━━━━☁️',
-      '',
       '*Conversor de Robux + Estoque de produtos*',
-      '',
-      '━━━━━━━━━━━━━━━━━━',
       '',
       '🎮 **Conversor**',
       '*Calcular Robux ↔ Reais, Game Pass e taxas*',
@@ -25,9 +21,7 @@ const PAGINAS = {
       '⚙️ **Administração**',
       '*Comandos para administradores*',
       '',
-      '━━━━━━━━━━━━━━━━━━',
-      '',
-      '✨ *Clique numa categoria ou use as setas ◀️ ▶️*',
+      '✨ *Clique numa categoria ou use as setas*',
     ].join('\n'),
   }),
 
