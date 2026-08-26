@@ -205,7 +205,7 @@ function buildAjuda(pagina = 'inicio', isAdmin = false) {
     .setColor(COR)
     .setTitle(dados.titulo)
     .setDescription(dados.descricao)
-    .setFooter({ text: '☁️ RUBY FY • !ajuda !help !menu ☁️' });
+    .setFooter({ text: '☁️ RUBY FY • criador: Finix.Yin • !ajuda !help !menu ☁️' });
 
   // Navegação respeitando a visibilidade da página para o usuário
   const listaIds = isAdmin ? ORDEM : ORDEM_VISIVEL;

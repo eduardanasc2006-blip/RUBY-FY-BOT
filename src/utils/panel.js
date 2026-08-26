@@ -25,7 +25,7 @@ function buildPanel() {
         '──────────────────────\n' +
         linhas.join('\n')
     )
-    .setFooter({ text: '☁️ RUBY FY • taxas atualizadas pela administração ☁️' });
+    .setFooter({ text: '☁️ RUBY FY • criador: Finix.Yin • taxas pela administração ☁️' });
 
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()

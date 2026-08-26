@@ -48,6 +48,7 @@ module.exports = {
     // Parse copiaveis: "nome:tipo:valor" separados por ;
     // tipo: copiavel (ou copia/copiar) | link
     // Ex: "PIX:copiavel:12345678900; Instagram:link:https://instagram.com/rubyfy"
+    let linkInvalido = null;
     const copiaveis = copiaveisBruto
       .split(';')
       .map((s) => s.trim())
@@ -56,36 +57,50 @@ module.exports = {
         // Formato: nome:tipo:valor — mas URLs tem : (https://), entao pega os 2 primeiros e junta o resto
         const idx1 = s.indexOf(':');
         const idx2 = s.indexOf(':', idx1 + 1);
+        let nome;
+        let tipo;
+        let valor;
         if (idx2 === -1) {
           // nome:valor (copiavel por padrao)
-          return { nome: s.slice(0, idx1).trim(), tipo: 'copiavel', valor: s.slice(idx1 + 1).trim() };
+          nome = s.slice(0, idx1).trim();
+          tipo = 'copiavel';
+          valor = s.slice(idx1 + 1).trim();
+        } else {
+          // nome:tipo:valor
+          nome = s.slice(0, idx1).trim();
+          tipo = s.slice(idx1 + 1, idx2).trim().toLowerCase();
+          valor = s.slice(idx2 + 1).trim();
         }
-        // nome:tipo:valor
-        return {
-          nome: s.slice(0, idx1).trim(),
-          tipo: s.slice(idx1 + 1, idx2).trim().toLowerCase(),
-          valor: s.slice(idx2 + 1).trim(),
-        };
-      })
-      .filter((c) => c.nome && c.valor)
-      .map((c) => {
+        if (!nome || !valor) return null;
         // Normaliza tipo
-        const tipo = ['link', 'url'].includes(c.tipo) ? 'link' : 'copiavel';
-        let valor = c.valor;
+        const tipoFinal = ['link', 'url'].includes(tipo) ? 'link' : 'copiavel';
+        let valorFinal = valor;
         // Valida link: normaliza para https:// se nao tiver protocolo
-        if (tipo === 'link') {
-          if (!/^https?:\/\//i.test(valor)) valor = 'https://' + valor;
-          // Valida URL
-          try { new URL(valor); } catch { return null; }
+        if (tipoFinal === 'link') {
+          if (!/^https?:\/\//i.test(valorFinal)) valorFinal = 'https://' + valorFinal;
+          try {
+            new URL(valorFinal);
+          } catch {
+            if (!linkInvalido) linkInvalido = { nome };
+            return null;
+          }
         }
-        return { nome: c.nome, tipo, valor };
+        return { nome, tipo: tipoFinal, valor: valorFinal };
       })
       .filter(Boolean);
 
-    // Valida: links precisam ser URL valida
-    const linkInvalido = copiaveis.find((c) => c.tipo === 'link' && !/^https?:\/\/.+/i.test(c.valor));
     if (linkInvalido) {
       return interaction.reply({ content: `❌ O link \`${linkInvalido.nome}\` não é uma URL válida. Use formato: https://...`, flags: MessageFlags.Ephemeral });
+    }
+
+    // O Discord limita a 5 botoes por linha: limita a criacao p/ nao haver itens "fantasma"
+    // (criar mais de 5 criaria itens sem botao proprio, confundindo o painel).
+    const COPIAVEIS_MAX = 5;
+    if (copiaveis.length > COPIAVEIS_MAX) {
+      return interaction.reply({
+        content: `❌ Máximo de **${COPIAVEIS_MAX}** conteúdos copiáveis por comando (limite do Discord).`,
+        flags: MessageFlags.Ephemeral,
+      });
     }
 
     const cmd = custom.criar(nome, { descricao, mensagem, ephemeral, copiaveis });
