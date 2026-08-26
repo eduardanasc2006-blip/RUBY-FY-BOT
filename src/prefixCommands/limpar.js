@@ -13,7 +13,7 @@ module.exports = {
 
     const qtd = parseInt(args[0], 10);
     if (isNaN(qtd) || qtd < 1 || qtd > 100) {
-      return message.reply('❌ Use: `!limpar <1-100>` — ex: `!limpar 20`');
+      return message.reply('❌ Use: **!limpar <1-100>** — ex: **!limpar 20**');
     }
 
     try {

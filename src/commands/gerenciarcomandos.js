@@ -1,6 +1,7 @@
 const { PermissionFlagsBits, SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { isAdmin } = require('../prefixCommands/settaxa');
 const custom = require('../utils/customCommands');
+const { registrarTodos, excluirUm } = require('../utils/customSync');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -21,12 +22,13 @@ module.exports = {
     const nome = interaction.options.getString('nome');
 
     if (acao === 'listar') {
+      await registrarTodos(interaction.client); // garante que todos os salvos estejam ativos no Discord
       const lista = Object.values(custom.listar());
       if (!lista.length) {
-        return interaction.reply({ content: '📋 Nenhum comando personalizado criado ainda. Use `/criarcomando`.', flags: MessageFlags.Ephemeral });
+        return interaction.reply({ content: '📋 Nenhum comando personalizado criado ainda. Use /criarcomando.', flags: MessageFlags.Ephemeral });
       }
       const texto = lista.map((c) =>
-        `\`/${c.nome}\` — ${c.descricao}` + (c.copiaveis.length ? ` 📋 ${c.copiaveis.length} copiável(is)` : '')
+        `/${c.nome}` + (c.descricao ? ` — ${c.descricao}` : '') + (c.copiaveis.length ? ` 📋 ${c.copiaveis.length} copiável(is)` : '')
       ).join('\n');
       return interaction.reply({ content: `**Comandos personalizados (${lista.length}):**\n${texto}`, flags: MessageFlags.Ephemeral });
     }
@@ -34,8 +36,15 @@ module.exports = {
     if (acao === 'excluir') {
       if (!nome) return interaction.reply({ content: '❌ Informe o nome do comando para excluir.', flags: MessageFlags.Ephemeral });
       const ok = custom.excluir(nome);
+      if (ok) {
+        try {
+          await excluirUm(interaction.client, nome);
+        } catch (error) {
+          console.error('[gerenciarcomandos] Falha ao remover do Discord:', error?.message || error);
+        }
+      }
       return interaction.reply({
-        content: ok ? `✅ Comando \`/${nome}\` excluído.` : `❌ Comando \`/${nome}\` não encontrado.`,
+        content: ok ? `✅ Comando /${nome} excluído.` : `❌ Comando /${nome} não encontrado.`,
         flags: MessageFlags.Ephemeral,
       });
     }

@@ -11,7 +11,7 @@ module.exports = {
     const reais = parseFloat(String(args[0]).replace(',', '.'));
 
     if (!args[0] || isNaN(reais) || reais <= 0) {
-      return message.reply('❌ Use: `!reais <valor>` — exemplo: `!reais 10` ou `!reais 7,50`');
+      return message.reply('❌ Use: **!reais <valor>** — exemplo: **!reais 10** ou **!reais 7,50**');
     }
 
     const minimo = rates.TIER1_PRICE_PER_100;

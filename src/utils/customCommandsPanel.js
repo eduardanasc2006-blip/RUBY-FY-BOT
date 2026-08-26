@@ -9,7 +9,7 @@ function buildResposta(cmd) {
   let descricao = cmd.mensagem || '';
   const copiaveisLista = (cmd.copiaveis || []).filter((c) => c.tipo !== 'link');
   if (copiaveisLista.length > 0) {
-    descricao += (descricao ? '\n\n' : '') + copiaveisLista.map((c) => `**${c.nome}:** \`${c.valor}\``).join('\n');
+    descricao += (descricao ? '\n\n' : '') + copiaveisLista.map((c) => `**${c.nome}:** ${c.valor}`).join('\n');
   }
 
   // Sempre usa embed (mais bonito)

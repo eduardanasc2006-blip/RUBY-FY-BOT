@@ -11,7 +11,7 @@ module.exports = {
     const robux = parseInt(args[0], 10);
 
     if (!args[0] || isNaN(robux) || robux < 1) {
-      return message.reply('❌ Use: `!robux <quantidade>` — exemplo: `!robux 500`');
+      return message.reply('❌ Use: **!robux <quantidade>** — exemplo: **!robux 500**');
     }
 
     if (robux < rates.MIN_ROBUX) {

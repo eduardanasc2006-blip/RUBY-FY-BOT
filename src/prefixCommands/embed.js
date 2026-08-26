@@ -45,11 +45,11 @@ module.exports = {
 
     if (!texto && !temAnexo) {
       return message.reply(
-        '❌ Use: `!embed título | descrição | cor` — ou anexe uma foto!\n' +
+        '❌ Use: **!embed título | descrição | cor** — ou anexe uma foto!\n' +
         'Cores: lilas, roxo, azul, verde, amarelo, vermelho, rosa, ou #hex\n' +
         'Exemplos:\n' +
-        '`!embed Promoção ☁️ | 500 Robux por R$ 19,00! | lilas`\n' +
-        '`!embed Novidade ☁️ | Chegou MM2 novo!` (anexando uma foto)'
+        '**!embed Promoção ☁️ | 500 Robux por R$ 19,00! | lilas**\n' +
+        '**!embed Novidade ☁️ | Chegou MM2 novo!** (anexando uma foto)'
       );
     }
 
@@ -57,7 +57,7 @@ module.exports = {
     const [titulo, descricao, corNome, imagemLink] = partes;
 
     if (!titulo || !descricao) {
-      return message.reply('❌ Precisa de pelo menos **título** e **descrição**, separados por `|`');
+      return message.reply('❌ Precisa de pelo menos **título** e **descrição**, separados por **|**');
     }
 
     const embed = new EmbedBuilder()

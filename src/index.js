@@ -73,6 +73,18 @@ function atualizarStatus() {
 client.once(Events.ClientReady, () => {
   atualizarStatus();
   console.log(`✅ Bot online como ${client.user.tag}`);
+
+  // Garante que os comandos personalizados salvos estejam registrados no Discord
+  const { registrarTodos } = require('./utils/customSync');
+  registrarTodos(client).then((res) => {
+    const ok = res.filter((r) => r.ok).length;
+    const falha = res.length - ok;
+    if (falha > 0) {
+      console.log(`[CustomSync] ${ok} comando(s) verificado(s), ${falha} com falha.`);
+    }
+  }).catch((error) => {
+    console.error('[CustomSync] Erro ao sincronizar comandos no boot:', error?.message || error);
+  });
 });
 
 // Evita que o bot morra por erros não tratados (ex: interação expirada após restart)
@@ -178,7 +190,7 @@ client.on('interactionCreate', async (interaction) => {
     const respostaPrivada = (payload) => interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
 
     if (isNaN(numero) || numero <= 0) {
-      return respostaPrivada({ content: '❌ Valor inválido. Tente novamente com um número, ex: `500` ou `10,50`.' });
+      return respostaPrivada({ content: '❌ Valor inválido. Tente novamente com um número, ex: **500** ou **10,50**.' });
     }
 
     if (acao === 'robux') {
@@ -314,7 +326,7 @@ client.on('interactionCreate', async (interaction) => {
 
       if (isNaN(numero) || numero <= 0) {
         return interaction.reply({
-          content: '❌ Valor inválido. Tente novamente com um número, ex: `3,50` ou `30`.',
+          content: '❌ Valor inválido. Tente novamente com um número, ex: **3,50** ou **30**.',
           flags: MessageFlags.Ephemeral,
         });
       }
@@ -355,7 +367,7 @@ client.on('interactionCreate', async (interaction) => {
       // formatos: ajuda:cat:<pagina> | ajuda:nav:prev:<pagina> | ajuda:nav:home:<pagina>
       const pagina = partes.length >= 3 ? partes[partes.length - 1] : partes[1];
       const admin = interaction.guild ? isAdmin(interaction.member, interaction.user.id) : false;
-      const pag = (pagina === 'admin' || pagina === 'painel') && !admin ? 'inicio' : pagina;
+      const pag = (pagina === 'admin' || pagina === 'painel' || pagina === 'personalizados') && !admin ? 'inicio' : pagina;
       return interaction.update(buildAjuda(pag, admin));
     }
   } catch (error) {
@@ -704,9 +716,8 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       const item = cmd.copiaveis[idx];
-      // Resposta ephemeral com o valor isolado em code block (facil de selecionar e copiar)
       return interaction.reply({
-        content: `📋 **${item.nome}:**\n\`\`\`\n${item.valor}\n\`\`\`\n*Selecione o valor acima para copiar.*`,
+        content: `📋 **${item.nome}:**\n**${item.valor}**\n_Selecione o valor acima para copiar._`,
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -733,7 +744,7 @@ client.on('interactionCreate', async (interaction) => {
 
       // So o dono do painel pode usar
       if (interaction.user.id !== donoId) {
-        return interaction.reply({ content: '🔒 Este painel não é seu. Use `!embed` para criar o seu.', flags: MessageFlags.Ephemeral });
+        return interaction.reply({ content: '🔒 Este painel não é seu. Use **!embed** para criar o seu.', flags: MessageFlags.Ephemeral });
       }
       if (!isAdmin(interaction.member, interaction.user.id)) {
         return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
