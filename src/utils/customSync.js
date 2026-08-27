@@ -5,7 +5,7 @@ const custom = require('./customCommands');
 const RESERVADOS = new Set([
   'ajuda', 'backup', 'canalavisos', 'configestoque', 'configtaxa', 'criarcomando',
   'embed', 'estoque', 'gamepass', 'gerenciarcomandos', 'limpar', 'painelcategoria',
-  'painelestoque', 'reais', 'robux', 'rolegive', 'settaxa', 'tabela', 'taxa',
+  'painel', 'painelestoque', 'reais', 'robux', 'rolegive', 'settaxa', 'tabela', 'taxa',
 ]);
 
 function eReservado(nome) {

@@ -1,4 +1,3 @@
-const { EmbedBuilder } = require('discord.js');
 const { buildAjuda } = require('../utils/ajudaPanel');
 const { isAdmin } = require('./settaxa');
 

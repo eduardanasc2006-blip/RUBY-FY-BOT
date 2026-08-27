@@ -28,9 +28,10 @@ function limparSessao(userId) {
 
 // Monta a embed de preview a partir do estado
 function buildEmbed(estado) {
+  const fields = estado.fields || [];
   const temConteudo = !!(
     estado.titulo || estado.descricao || estado.autor || estado.rodape ||
-    estado.imagem || estado.thumbnail || estado.fields.length
+    estado.imagem || estado.thumbnail || fields.length
   );
   // Embed totalmente vazia é rejeitada pela API do Discord ("empty embed").
   // Retorna null nesse caso para que o painel não quebre ao abrir/previewar.
@@ -43,14 +44,14 @@ function buildEmbed(estado) {
   if (estado.thumbnail) embed.setThumbnail(estado.thumbnail);
   if (estado.autor) embed.setAuthor({ name: estado.autor });
   if (estado.rodape) embed.setFooter({ text: estado.rodape });
-  if (estado.fields.length > 0) embed.addFields(estado.fields);
+  if (fields.length > 0) embed.addFields(fields);
 
   // O Discord rejeita embed sem description (erro embeds[i].description).
   // Quando so ha imagem/thumbnail (sem titulo/descricao/autor/rodape/fields),
   // adiciona uma descricao invisivel para o embed nao ser enviado vazio.
   const temTexto =
     !!estado.titulo || !!estado.descricao || !!estado.autor || !!estado.rodape ||
-    estado.fields.length > 0;
+    fields.length > 0;
   if (!temTexto) embed.setDescription('\u200b');
   return embed;
 }

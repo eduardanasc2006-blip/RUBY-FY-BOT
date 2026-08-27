@@ -1,4 +1,4 @@
-const { PermissionFlagsBits, SlashCommandBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
 const { isAdmin } = require('../prefixCommands/settaxa');
 const { resolverCor } = require('../prefixCommands/embed');
 

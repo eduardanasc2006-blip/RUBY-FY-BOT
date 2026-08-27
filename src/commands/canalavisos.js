@@ -1,4 +1,4 @@
-const { PermissionFlagsBits, SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { isAdmin } = require('../prefixCommands/settaxa');
 const { definir } = require('../utils/avisos');
 

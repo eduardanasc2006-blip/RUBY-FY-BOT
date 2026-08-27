@@ -1,4 +1,4 @@
-const { PermissionFlagsBits, SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { isAdmin } = require('../prefixCommands/settaxa');
 const custom = require('../utils/customCommands');
 const { registrarUm } = require('../utils/customSync');
@@ -8,7 +8,7 @@ const { registrarUm } = require('../utils/customSync');
 const COMANDOS_RESERVADOS = [
   'ajuda', 'backup', 'canalavisos', 'configestoque', 'configtaxa', 'criarcomando',
   'embed', 'estoque', 'gamepass', 'gerenciarcomandos', 'limpar', 'painelcategoria',
-  'painelestoque', 'reais', 'robux', 'rolegive', 'settaxa', 'tabela', 'taxa',
+  'painel', 'painelestoque', 'reais', 'robux', 'rolegive', 'settaxa', 'tabela', 'taxa',
 ];
 
 module.exports = {

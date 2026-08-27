@@ -1,5 +1,4 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
-const { PermissionFlagsBits } = require('discord.js');
 const { publicarOuAtualizar } = require('../utils/estoquePanelStore');
 const { isAdmin } = require('../prefixCommands/settaxa');
 
