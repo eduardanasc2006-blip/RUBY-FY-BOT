@@ -41,4 +41,13 @@ function gamepassPrice(robuxDesejados) {
   return Math.ceil((robuxDesejados * 100) / recebidoPct);
 }
 
-module.exports = { robuxToReais, reaisToRobux, gamepassPrice, formatBRL, formatRobux };
+// Inverso: dado o valor em Reais que voce quer lucrar de FATO (ja com a taxa
+// do Roblox descontada), descobre quanto cobrar no Game Pass em Robux.
+// lucroBrl = gamepassRobux -> reais (o que voce recebe) * (1 - GAMEPASS_FEE).
+// Logo: gamepassRobux = lucroBrl convertido para Robux usando as taxas de venda.
+function lucroEmGamepass(lucroBrl) {
+  const robuxBruto = reaisToRobux(lucroBrl); // Robux que voce realmente recebe
+  return gamepassPrice(robuxBruto);          // valor "cheio" a cobrar no Game Pass
+}
+
+module.exports = { robuxToReais, reaisToRobux, gamepassPrice, lucroEmGamepass, formatBRL, formatRobux };
