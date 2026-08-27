@@ -60,7 +60,12 @@ module.exports = {
         let nome;
         let tipo;
         let valor;
-        if (idx2 === -1) {
+        if (idx1 === -1) {
+          // Apenas o valor (sem nome:tipo:): rotulo generico, valor = a string inteira
+          nome = 'Copiar';
+          tipo = 'copiavel';
+          valor = s;
+        } else if (idx2 === -1) {
           // nome:valor (copiavel por padrao)
           nome = s.slice(0, idx1).trim();
           tipo = 'copiavel';
