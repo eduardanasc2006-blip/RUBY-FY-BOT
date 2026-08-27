@@ -27,6 +27,9 @@ try {
     commands.push({
       name: cmd.nome.toLowerCase(),
       description: (cmd.descricao || 'Comando personalizado').slice(0, 100),
+      // Tambem aqui: so Guild Install, senao aparece duplicado no seletor.
+      integration_types: [0],
+      contexts: [0, 1, 2],
     });
   }
 } catch (error) {

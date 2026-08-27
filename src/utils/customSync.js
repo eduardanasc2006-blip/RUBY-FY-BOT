@@ -21,11 +21,16 @@ async function registrarUm(client, nome, descricao) {
   await client.application.commands.fetch();
   const existente = client.application.commands.cache.find((c) => c.name === nomeLower);
 
-  // Comando com mesmo nome ja existe: manda em branco no corpo (0 comandos) nao
-  // apaga - apenas atualiza a descricao quando preciso.
+  // Apenas Guild Install: registrar tambem como User Install faz o Discord mostrar
+  // CADA comando duplicado no seletor. Contextos aceito: guild + DMs privadas.
+  const opts = { integration_types: [0], contexts: [0, 1, 2] };
+
+  // Comando com mesmo nome ja existe: atualiza descricao/instalacao se preciso.
   if (existente) {
-    if (existente.description !== (descricao || 'Comando personalizado')) {
-      return existente.edit({ description: descricao || 'Comando personalizado' });
+    const descAlvo = descricao || 'Comando personalizado';
+    const it = existente.integration_types || [];
+    if (existente.description !== descAlvo || it.length !== 1 || it[0] !== 0) {
+      return existente.edit({ description: descAlvo, ...opts });
     }
     return existente;
   }
@@ -33,6 +38,7 @@ async function registrarUm(client, nome, descricao) {
   return client.application.commands.create({
     name: nomeLower,
     description: (descricao || 'Comando personalizado').slice(0, 100),
+    ...opts,
   });
 }
 

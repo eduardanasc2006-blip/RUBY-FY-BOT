@@ -5,12 +5,10 @@ const { resolverCor } = require('../prefixCommands/embed');
 function buildResposta(cmd) {
   const payload = {};
 
-  // Monta a descricao: mensagem + valores copiaveis listados
+  // Monta a descricao: apenas a mensagem do comando.
+  // Os valores copiaveis nao entram aqui para nao duplicarem: cada um aparece
+  // uma unica vez como botao (abaixo), onde o usuario clica para copiar.
   let descricao = cmd.mensagem || '';
-  const copiaveisLista = (cmd.copiaveis || []).filter((c) => c.tipo !== 'link');
-  if (copiaveisLista.length > 0) {
-    descricao += (descricao ? '\n\n' : '') + copiaveisLista.map((c) => c.valor).join('\n');
-  }
 
   // Sempre usa embed (mais bonito)
   const embed = new EmbedBuilder()
