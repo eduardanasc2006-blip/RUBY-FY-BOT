@@ -33,11 +33,13 @@ function buildResposta(cmd) {
             .setStyle(ButtonStyle.Link)
         );
       } else {
-        // Botao copiavel: handler mostra o valor em ephemeral
+        // Botao copiavel: rotulo mostra o proprio item (o valor) a ser copiado,
+        // em vez de usar o nome salvo (que podia vir truncado/errado)
+        const itemRotulo = (c.valor || c.nome || 'Copiar').slice(0, 80);
         row.addComponents(
           new ButtonBuilder()
             .setCustomId(`custom:copy:${cmd.nome.toLowerCase()}:${i}`)
-            .setLabel(`📋 ${c.nome}`)
+            .setLabel(`📋 ${itemRotulo}`)
             .setStyle(ButtonStyle.Secondary)
         );
       }
