@@ -2,7 +2,6 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const estoque = require('../utils/estoque');
-const { adminMenu } = require('../utils/estoquePanel');
 const { formatBRL } = require('../utils/robuxConverter');
 const { isAdmin } = require('./settaxa');
 const { autoDelete } = require('../utils/autoDelete');
@@ -78,10 +77,10 @@ module.exports = {
       return message.reply('🔒 Somente administradores podem usar este comando.');
     }
 
-    // Sem argumentos: abre o painel editavel do estoque (igual ao !configestoque),
-    // para o admin ajustar categorias/produtos. Para fixar um painel use `!painelcategoria <id>`.
+    // Sem argumentos: abre o seletor visual de categorias para o admin escolher
+    // qual fixar no canal (sem precisar digitar o id). Para editar o estoque use !configestoque.
     if (args.length === 0) {
-      return message.reply({ ...adminMenu(), allowedMentions: { repliedUser: false } });
+      return message.reply({ ...construirPainelSelecao(), allowedMentions: { repliedUser: false } });
     }
 
     const catId = (args[0] || '').toLowerCase().trim();

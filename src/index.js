@@ -241,7 +241,7 @@ client.on('interactionCreate', async (interaction) => {
 // ----- Painel de configuração de taxas (somente admin, sempre privado) -----
 
 const { buildConfigPanel } = require('./utils/configPanel');
-const { refreshSavedPanel } = require('./utils/panelStore');
+const { publishOrUpdatePanel, refreshSavedPanel } = require('./utils/panelStore');
 const { isAdmin } = require('./prefixCommands/settaxa');
 
 const MODAIS_CFG = {
@@ -384,8 +384,9 @@ client.on('interactionCreate', async (interaction) => {
 
 const estoqueDb = require('./utils/estoque');
 const estoquePanel = require('./utils/estoquePanel');
-const { refreshPainelEstoque } = require('./utils/estoquePanelStore');
+const { publicarOuAtualizar, refreshPainelEstoque } = require('./utils/estoquePanelStore');
 const painelCategoria = require('./prefixCommands/painelcategoria');
+const { buildPainelCentral } = require('./utils/painelCenter');
 const { avisar } = require('./utils/avisos');
 
 client.on('interactionCreate', async (interaction) => {
@@ -409,6 +410,53 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.update(payload); // edita a mesma mensagem privada
       }
       return interaction.reply({ ...payload, flags: MessageFlags.Ephemeral }); // primeira resposta privada
+    }
+
+    // ----- gerenciamento central de paineis (!painel / /painel) -----
+    if (interaction.isButton() && interaction.customId.startsWith('painelcenter:')) {
+      if (!interaction.guild || !isAdmin(interaction.member, interaction.user.id)) {
+        return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+      }
+      const alvo = interaction.customId.split(':')[1];
+
+      if (alvo === 'conversao') {
+        const { atualizado } = await publishOrUpdatePanel(interaction.channel);
+        await interaction.update(buildPainelCentral());
+        return interaction.followUp({
+          content: atualizado
+            ? '✅ Painel de conversão **atualizado** no canal atual.'
+            : '✅ Painel de conversão **publicado** no canal atual.',
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
+      if (alvo === 'estoque') {
+        const { atualizado } = await publicarOuAtualizar(interaction.channel);
+        await interaction.update(buildPainelCentral());
+        return interaction.followUp({
+          content: atualizado
+            ? '✅ Painel de estoque **atualizado** no canal atual.'
+            : '✅ Painel de estoque **publicado** no canal atual.',
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
+      if (alvo === 'cat') {
+        const catId = interaction.customId.split(':')[2];
+        const embed = painelCategoria.buildCategoria(catId);
+        if (!embed) {
+          return interaction.reply({ content: `❌ Categoria **${catId}** não encontrada.`, flags: MessageFlags.Ephemeral });
+        }
+        const msg = await interaction.channel.send({ embeds: [embed] });
+        painelCategoria.salvar(msg.id, catId, interaction.channel.id);
+        await interaction.update(buildPainelCentral());
+        return interaction.followUp({
+          content: `✅ Painel da categoria **${catId}** publicado no canal atual.`,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
+      return interaction.reply({ content: '❌ Ação desconhecida.', flags: MessageFlags.Ephemeral });
     }
 
     // ----- fixar painel de categoria (selecao visual do !painelcategoria) -----
