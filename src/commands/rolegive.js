@@ -24,7 +24,17 @@ module.exports = {
       return interaction.reply({ content: '❌ Esse cargo é gerenciado por um bot/integração e não pode ser dado manualmente.', flags: MessageFlags.Ephemeral });
     }
 
-    if (cargo.position >= interaction.guild.members.me.roles.highest.position) {
+    // O membro do bot pode não estar no cache (null) logo após entrar no servidor.
+    // Nesse caso, busca explicitamente. Nenhum problema aqui quebra o comando.
+    let posicaoBot = -1;
+    try {
+      const botMembro =
+        interaction.guild.members.me ??
+        (await interaction.guild.members.fetch(interaction.client.user.id).catch(() => null));
+      posicaoBot = botMembro ? botMembro.roles.highest.position : -1;
+    } catch {}
+
+    if (posicaoBot >= 0 && cargo.position >= posicaoBot) {
       return interaction.reply({ content: '❌ Esse cargo está acima do meu cargo mais alto. Suba meu cargo na hierarquia do servidor.', flags: MessageFlags.Ephemeral });
     }
 
