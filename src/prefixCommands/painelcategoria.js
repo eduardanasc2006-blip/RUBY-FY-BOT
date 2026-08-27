@@ -5,6 +5,7 @@ const estoque = require('../utils/estoque');
 const { adminMenu } = require('../utils/estoquePanel');
 const { formatBRL } = require('../utils/robuxConverter');
 const { isAdmin } = require('./settaxa');
+const { autoDelete } = require('../utils/autoDelete');
 
 const FILE = path.join(__dirname, '..', '..', 'data', 'painel_categoria.json');
 
@@ -99,10 +100,8 @@ module.exports = {
 
     // Confirmação some depois de 5 segundos para não poluir o canal
     const confirmacao = await message.reply(`✅ Painel da categoria **${catId}** fixado no canal.`);
-    setTimeout(() => {
-      confirmacao.delete().catch(() => {});
-      message.delete().catch(() => {});
-    }, 5000);
+    autoDelete(confirmacao, 5000);
+    autoDelete(message, 5000);
   },
 
   // Chamado pela index ao alterar o estoque
