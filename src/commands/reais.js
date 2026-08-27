@@ -9,10 +9,10 @@ module.exports = {
     .addNumberOption((option) =>
       option
         .setName('valor')
-        .setDescription(`Valor em Reais (R$) — mínimo ${rates.TIER1_PRICE_PER_100.toFixed(2).replace('.', ',')}`)
+        .setDescription('Valor em Reais (R$)')
         .setRequired(true)
-        .setMinValue(rates.TIER1_PRICE_PER_100)
-        .setMaxValue(10000)
+        // Sem setMinValue fixo: o mínimo muda junto com a taxa (!settaxa).
+        // A validação dinâmica fica no execute abaixo, sempre lendo a taxa atual.
     ),
 
   async execute(interaction) {
