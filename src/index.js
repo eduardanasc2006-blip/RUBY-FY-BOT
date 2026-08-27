@@ -850,7 +850,11 @@ client.on('interactionCreate', async (interaction) => {
           allowedMentions: estado.cargos.length ? { roles: estado.cargos } : { parse: [] },
         });
         limparSessao(donoId);
-        return interaction.update({ content: '✅ Embed enviada!', embeds: [], components: [] });
+        // Substitui o painel pela confirmação e some sozinho depois de 4s
+        const confirmacao = await interaction.update({ content: '✅ Embed enviada!', embeds: [], components: [] });
+        const { autoDelete } = require('./utils/autoDelete');
+        autoDelete(confirmacao, 4000);
+        return;
       }
 
       if (acao === 'cancelar') {

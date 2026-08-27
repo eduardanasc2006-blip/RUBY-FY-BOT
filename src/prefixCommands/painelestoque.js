@@ -1,5 +1,6 @@
 const { publicarOuAtualizar } = require('../utils/estoquePanelStore');
 const { isAdmin } = require('./settaxa');
+const { autoDelete } = require('../utils/autoDelete');
 
 module.exports = {
   name: 'painelestoque',
@@ -20,7 +21,7 @@ module.exports = {
         ? '✅ Painel de estoque **atualizado**.'
         : '✅ Painel de estoque publicado! Qualquer pessoa pode clicar nas categorias — cada um vê a lista de forma privada.'
     );
-    setTimeout(() => confirmacao.delete().catch(() => {}), 4000);
+    autoDelete(confirmacao, 4000);
     return;
   },
 };

@@ -1,5 +1,6 @@
 const { PermissionFlagsBits } = require('discord.js');
 const { publishOrUpdatePanel } = require('../utils/panelStore');
+const { autoDelete } = require('../utils/autoDelete');
 
 module.exports = {
   name: 'tabela',
@@ -30,7 +31,7 @@ module.exports = {
         ? '✅ Painel de conversão **atualizado** com as taxas atuais.'
         : '✅ Painel de conversão publicado! Qualquer pessoa pode usar os botões.'
     );
-    setTimeout(() => confirmacao.delete().catch(() => {}), 5000);
+    autoDelete(confirmacao, 5000);
     return;
   },
 };

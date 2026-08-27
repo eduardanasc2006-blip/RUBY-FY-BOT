@@ -1,4 +1,5 @@
 const { isAdmin } = require('./settaxa');
+const { autoDelete } = require('../utils/autoDelete');
 
 module.exports = {
   name: 'limpar',
@@ -38,7 +39,7 @@ module.exports = {
       // +1 para incluir a mensagem do comando
       const apagadas = await message.channel.bulkDelete(qtd + 1, true);
       const aviso = await message.channel.send(`🧹 ${apagadas.size - 1} mensagens apagadas.`);
-      setTimeout(() => aviso.delete().catch(() => {}), 4000);
+      autoDelete(aviso, 4000);
     } catch (error) {
       console.error('[Limpar]', error);
       // Mensagens com mais de 14 dias quebram o bulkDelete inteiro. Remove as
@@ -51,7 +52,7 @@ module.exports = {
         // Desconta a mensagem do proprio comando, quando presente
         const contagem = removidas - 1;
         const aviso = await message.channel.send(`🧹 ${contagem} mensagens recentes apagadas.`);
-        setTimeout(() => aviso.delete().catch(() => {}), 4000);
+        autoDelete(aviso, 4000);
       } catch (e2) {
         console.error('[Limpar] fallback', e2);
         return message.reply('❌ Não consegui apagar. Mensagens com mais de 14 dias não podem ser removidas em massa.');
