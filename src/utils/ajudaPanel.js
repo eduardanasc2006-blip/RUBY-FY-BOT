@@ -116,35 +116,51 @@ const PAGINAS = {
       '*Mostra os produtos por categoria (MM2, FTF etc).*',
       'Clique na categoria para ver itens, preços e disponibilidade.',
       '',
-      '**!estoque <nome>**',
+      '**!estoque <nome>**  •  **/estoque produto: <nome>**',
       '*Busca um produto específico.*',
-      'Exemplo: !estoque icewing',
+      'Exemplo: !estoque icewing  ou  /estoque produto: icewing',
       '',
       '*Produtos gerenciados pela administração.*',
     ].join('\n'),
   }),
 
-  comandos: () => {
-    // Mostra apenas os comandos personalizados criados por /criarcomando.
-    const lista = Object.values(customCom.listar());
-    const linhas = [];
-    if (lista.length === 0) {
-      linhas.push('Nenhum comando personalizado criado ainda.'.repeat(1));
-      linhas.push('');
-      linhas.push('Use **/criarcomando** para criar o seu comando.');
-      linhas.push('');
-      linhas.push('Com /criarcomando você define nome, descrição, mensagem e conteúdos copiáveis.');
-      linhas.push('Com /gerenciarcomandos você lista ou exclui os já criados.');
-    } else {
-      for (const c of lista) {
-        const extras = c.copiaveis && c.copiaveis.length ? `  •  📋 ${c.copiaveis.length} copiável(is)` : '';
-        linhas.push(`**/${c.nome}**${extras}`);
-        if (c.descricao) linhas.push(`> ${c.descricao}`);
-        linhas.push('');
+comandos: () => {
+      // Lista completa de comandos, agrupada por categoria. Cada linha mostra
+      // apenas os prefixos (! e/ou /) que de fato existem para aquele comando.
+      const grupos = [];
+      let grupoAtual = null;
+      for (const c of COMANDOS) {
+        if (c.grupo !== grupoAtual) {
+          grupoAtual = c.grupo;
+          grupos.push({ titulo: c.grupo, itens: [] });
+        }
+        grupos[grupos.length - 1].itens.push(c);
       }
-    }
-    return { titulo: '🧩 Comandos Personalizados', descricao: linhas.join('\n') };
-  },
+
+      const linhas = [];
+      for (const g of grupos) {
+        const itensVisiveis = g.itens.filter((c) => isAdminAtual || !c.admin);
+        if (!itensVisiveis.length) continue;
+        linhas.push(`**${g.titulo}**`);
+        for (const c of itensVisiveis) {
+          const usos = [];
+          if (c.pre) usos.push(`!${c.cmd}`);
+          if (c.slash) usos.push(`/${c.cmd}`);
+          if (c.admin && !isAdminAtual) usos[usos.length - 1] = `${usos[usos.length - 1]} _(admin)_`;
+          linhas.push(`> ${usos.join('  •  ')} — ${c.desc}`, '');
+        }
+      }
+
+      const pers = Object.values(customCom.listar());
+      if (pers.length) {
+        linhas.push('**🧩 Seus comandos personalizados**', '');
+        for (const c of pers) {
+          linhas.push(`> **/${c.nome}**${c.descricao ? ` — ${c.descricao}` : ''}`, '');
+        }
+      }
+
+      return { titulo: '📖 Lista Completa de Comandos', descricao: linhas.join('\n').slice(0, 4096) };
+    },
 
   personalizados: () => {
     const lista = Object.values(customCom.listar());

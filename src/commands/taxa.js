@@ -24,7 +24,7 @@ module.exports = {
         },
         {
           name: '🎮 Game Pass',
-          value: `${taxa}% de desconto`,
+          value: `Roblox desconta ${taxa}% — você recebe ${100 - taxa}%`,
         }
       );
 

@@ -419,25 +419,17 @@ client.on('interactionCreate', async (interaction) => {
       }
       const alvo = interaction.customId.split(':')[1];
 
-      if (alvo === 'conversao') {
-        const { atualizado } = await publishOrUpdatePanel(interaction.channel);
-        await interaction.update(buildPainelCentral());
-        return interaction.followUp({
-          content: atualizado
-            ? '✅ Painel de conversão **atualizado** no canal atual.'
-            : '✅ Painel de conversão **publicado** no canal atual.',
-          flags: MessageFlags.Ephemeral,
-        });
-      }
-
-      if (alvo === 'estoque') {
-        const { atualizado } = await publicarOuAtualizar(interaction.channel);
-        await interaction.update(buildPainelCentral());
-        return interaction.followUp({
-          content: atualizado
-            ? '✅ Painel de estoque **atualizado** no canal atual.'
-            : '✅ Painel de estoque **publicado** no canal atual.',
-          flags: MessageFlags.Ephemeral,
+      if (alvo === 'conversao' || alvo === 'estoque') {
+        // Escolha de canal antes de publicar (sistema comum de seleção de canal).
+        const selId = `painelcenter:selcanal:${alvo}`;
+        const canais = linhaSelecaoCanalDe(interaction.guild, selId, interaction.channel.id, `📣 Onde publicar o painel de ${alvo}?`);
+        if (!canais.canais.length) {
+          return interaction.reply({ content: '❌ Não encontrei nenhum canal de texto em que eu possa publicar.', flags: MessageFlags.Ephemeral });
+        }
+        return interaction.update({
+          content: `🗂️ **Onde deseja publicar o painel de ${alvo === 'conversao' ? 'conversão' : 'estoque'}?**\n_Selecione um canal ou use **📌 Canal atual**._`,
+          embeds: [],
+          components: [canais.row, canais.botoes],
         });
       }
 
@@ -463,6 +455,51 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       return interaction.reply({ content: '❌ Ação desconhecida.', flags: MessageFlags.Ephemeral });
+    }
+
+    // ----- escolha de canal do gerenciador central de paineis -----
+    if ((interaction.isStringSelectMenu() || interaction.isButton()) && interaction.customId.startsWith('painelcenter:selcanal:')) {
+      if (!interaction.guild || !isAdmin(interaction.member, interaction.user.id)) {
+        return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+      }
+      const partes = interaction.customId.split(':');
+      const tipo = partes[2];
+
+      if (interaction.isButton() && partes[3] === 'cancelar') {
+        return interaction.update(buildPainelCentral());
+      }
+
+      let canal = null;
+      if (interaction.isStringSelectMenu()) {
+        canal = interaction.guild?.channels.cache.get(interaction.values[0]) || null;
+      } else if (partes[3] === 'atual') {
+        canal = interaction.channel;
+      }
+      if (!canal) {
+        return interaction.update(buildPainelCentral());
+      }
+
+      if (tipo === 'conversao') {
+        const { atualizado } = await publishOrUpdatePanel(canal);
+        const embedNovo = new EmbedBuilder()
+          .setColor(0xbeb6ff)
+          .setDescription(atualizado
+            ? `✅ Painel de conversão **atualizado** em <#${canal.id}>.`
+            : `✅ Painel de conversão **publicado** em <#${canal.id}>! Qualquer pessoa pode usar os botões.`);
+        return interaction.update({ embeds: [embedNovo], components: [] });
+      }
+
+      if (tipo === 'estoque') {
+        const { atualizado } = await publicarOuAtualizar(canal);
+        const embedNovo = new EmbedBuilder()
+          .setColor(0xbeb6ff)
+          .setDescription(atualizado
+            ? `✅ Painel de estoque **atualizado** em <#${canal.id}>.`
+            : `✅ Painel de estoque **publicado** em <#${canal.id}>! Qualquer pessoa pode clicar nas categorias — cada um vê de forma privada.`);
+        return interaction.update({ embeds: [embedNovo], components: [] });
+      }
+
+      return interaction.update({ content: '❌ Tipo desconhecido.', embeds: [], components: [] });
     }
 
     // ----- fixar painel de categoria (selecao visual do !painelcategoria) -----
@@ -835,7 +872,8 @@ client.on('interactionCreate', async (interaction) => {
 
 // ----- Painel visual de embed -----
 
-const { getSessao, limparSessao, buildEmbed, buildPainel } = require('./utils/embedPainel');
+const { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview } = require('./utils/embedPainel');
+const { linhaSelecaoCanalDe, resolverSelecaoCanal } = require('./utils/channelPicker');
 
 client.on('interactionCreate', async (interaction) => {
   try {
@@ -856,6 +894,8 @@ client.on('interactionCreate', async (interaction) => {
 
       // Abre modal para editar um campo
       const abrirModal = (campo, titulo, label, multiline = false) => {
+        const atual = estado[campo] || '';
+        const valorStr = multiline ? String(atual).slice(0, 4000) : String(atual).slice(0, 1024);
         const modal = new ModalBuilder()
           .setCustomId(`embedmodal:${campo}:${donoId}`)
           .setTitle(titulo)
@@ -866,7 +906,7 @@ client.on('interactionCreate', async (interaction) => {
                 .setLabel(label)
                 .setStyle(multiline ? TextInputStyle.Paragraph : TextInputStyle.Short)
                 .setRequired(campo !== 'imagem' && campo !== 'thumbnail' && campo !== 'autor' && campo !== 'rodape' && campo !== 'textofora' && campo !== 'fields' && campo !== 'cargos')
-                .setValue(estado[campo] || '')
+                .setValue(valorStr)
             )
           );
         return interaction.showModal(modal);
@@ -888,27 +928,32 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       if (acao === 'preview') {
-        return interaction.reply({ ...buildPainel(donoId), flags: MessageFlags.Ephemeral });
+        // Preview real: mostra apenas a embed final (sem o editor) com opções
+        // de voltar a editar, enviar ou cancelar.
+        return interaction.reply({ ...buildPreview(donoId), flags: MessageFlags.Ephemeral });
+      }
+
+      if (acao === 'voltar') {
+        return interaction.update(buildPainel(donoId));
       }
 
       if (acao === 'enviar') {
         if (!estado.titulo && !estado.descricao) {
           return interaction.reply({ content: '❌ Preencha pelo menos o **título** ou a **descrição** antes de enviar.', flags: MessageFlags.Ephemeral });
         }
-        const embed = buildEmbed(estado);
-        const mencoes = estado.cargos.map((c) => `<@&${c}>`).join(' ');
-        const conteudo = [estado.textoFora, mencoes].filter(Boolean).join(' ') || null;
-        await interaction.channel.send({
-          content: conteudo,
-          embeds: [embed],
-          allowedMentions: estado.cargos.length ? { roles: estado.cargos } : { parse: [] },
+        if (!interaction.guild) {
+          return interaction.reply({ content: '❌ Não dá para publicar no servidor pela DM. Use o comando no servidor.', flags: MessageFlags.Ephemeral });
+        }
+        // Escolha de canal antes de publicar (sistema comum de seleção de canal).
+        const canais = linhaSelecaoCanalDe(interaction.guild, `embedcanal:${donoId}`, interaction.channel.id, '📣 Escolha o canal para publicar…');
+        if (!canais.canais.length) {
+          return interaction.reply({ content: '❌ Não encontrei nenhum canal de texto em que eu possa publicar.', flags: MessageFlags.Ephemeral });
+        }
+        return interaction.update({
+          content: '🗂️ **Onde deseja publicar a embed?**\n_Selecione um canal abaixo ou use **📌 Canal atual**._',
+          embeds: [new EmbedBuilder().setColor(0xbeb6ff).setDescription('👁️ Esta é a embed que será enviada:') , buildEmbed(estado)].filter(Boolean),
+          components: [canais.row, canais.botoes],
         });
-        limparSessao(donoId);
-        // Substitui o painel pela confirmação e some sozinho depois de 4s
-        const confirmacao = await interaction.update({ content: '✅ Embed enviada!', embeds: [], components: [] });
-        const { autoDelete } = require('./utils/autoDelete');
-        autoDelete(confirmacao, 4000);
-        return;
       }
 
       if (acao === 'cancelar') {
@@ -951,21 +996,82 @@ client.on('interactionCreate', async (interaction) => {
           ? valor.split(',').map((s) => s.trim()).filter((s) => /^\d+$/.test(s))
           : [];
       } else if (campo === 'fields') {
-        // Formato: "Titulo | valor" por linha
-        estado.fields = valor
-          .split('\n')
-          .map((l) => l.trim())
-          .filter(Boolean)
-          .map((l) => {
-            const [name, ...v] = l.split('|');
-            return { name: name.trim(), value: v.join('|').trim() || '\u200b', inline: true };
-          })
-          .slice(0, 25);
+        // Formato: "Titulo | valor" por linha (robusto: ignora linhas invalidas,
+        // trunca para os limites da API e nunca deixa name/value vazios).
+        const { camposValidos } = require('./utils/embedPainel');
+        estado.fields = camposValidos(
+          valor
+            .split('\n')
+            .map((l) => l.trim())
+            .filter(Boolean)
+            .map((l) => {
+              const [name, ...v] = l.split('|');
+              return { name: name.trim(), value: v.join('|').trim(), inline: true };
+            })
+        );
+      } else if (campo === 'imagem' || campo === 'thumbnail') {
+        const url = valor || null;
+        if (url && !url.startsWith('http')) {
+          return interaction.reply({
+            content: '❌ O link da **imagem** deve começar com `http(s)://`. Deixe vazio para remover.',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+        estado[campo] = url;
       } else {
         estado[campo] = valor || null;
       }
 
       return interaction.update(buildPainel(donoId));
+    }
+
+    // Seleção de canal para publicar a embed (fluxo do botão "Enviar")
+    if ((interaction.isStringSelectMenu() || interaction.isButton()) && interaction.customId.startsWith('embedcanal:')) {
+      const partes = interaction.customId.split(':');
+      const donoId = partes[1];
+
+      if (interaction.user.id !== donoId) {
+        return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
+      }
+      if (!isAdmin(interaction.member, interaction.user.id)) {
+        return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+      }
+
+      if (interaction.isButton() && partes[2] === 'cancelar') {
+        return interaction.reply({ content: '❌ Envio cancelado.', flags: MessageFlags.Ephemeral });
+      }
+
+      // Canais: seleção (select) ou botão "canal atual"
+      let canal = null;
+      if (interaction.isStringSelectMenu()) {
+        canal = interaction.guild?.channels.cache.get(interaction.values[0]) || null;
+      } else if (partes[2] === 'atual') {
+        canal = interaction.channel;
+      }
+      if (!canal) {
+        return interaction.reply({ content: '❌ Canal não encontrado.', flags: MessageFlags.Ephemeral });
+      }
+
+      const estado = getSessao(donoId);
+      const embed = buildEmbed(estado);
+      const mencoes = estado.cargos.map((c) => `<@&${c}>`).join(' ');
+      const conteudo = [estado.textoFora, mencoes].filter(Boolean).join(' ') || null;
+      try {
+        await canal.send({
+          content: conteudo,
+          embeds: [embed],
+          allowedMentions: estado.cargos.length ? { roles: estado.cargos } : { parse: [] },
+        });
+      } catch (sendError) {
+        console.error('[Embed] Falha ao enviar no canal:', sendError?.message || sendError);
+        return interaction.reply({ content: `❌ Não consegui enviar em <#${canal.id}>. Verifique minha permissão nesse canal.`, flags: MessageFlags.Ephemeral });
+      }
+      limparSessao(donoId);
+      return interaction.update({
+        content: `✅ Embed enviada em <#${canal.id}>!`,
+        embeds: [],
+        components: [],
+      });
     }
   } catch (error) {
     console.error('[Embed painel] Erro:', error);

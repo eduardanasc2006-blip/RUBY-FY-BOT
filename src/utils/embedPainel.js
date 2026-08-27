@@ -26,9 +26,24 @@ function limparSessao(userId) {
   sessoes.delete(userId);
 }
 
+// Normaliza um campo solto para os limites da API do Discord e evita
+// name/value vazios que fazem o Discord rejeitar a embed.
+function camposValidos(fields) {
+  if (!Array.isArray(fields)) return [];
+  const validos = [];
+  for (const f of fields) {
+    if (!f) continue;
+    const name = String(f.name || '').trim().slice(0, 256);
+    const value = String(f.value || '').trim().slice(0, 1024);
+    if (!name || !value) continue; // field sem nome/valor é inválido na API
+    validos.push({ name, value: value || '\u200b', inline: !!f.inline });
+  }
+  return validos.slice(0, 25);
+}
+
 // Monta a embed de preview a partir do estado
 function buildEmbed(estado) {
-  const fields = estado.fields || [];
+  const fields = camposValidos(estado.fields);
   const temConteudo = !!(
     estado.titulo || estado.descricao || estado.autor || estado.rodape ||
     estado.imagem || estado.thumbnail || fields.length
@@ -38,12 +53,12 @@ function buildEmbed(estado) {
   if (!temConteudo) return null;
 
   const embed = new EmbedBuilder().setColor(resolverCor(estado.cor));
-  if (estado.titulo) embed.setTitle(estado.titulo);
-  if (estado.descricao) embed.setDescription(estado.descricao);
+  if (estado.titulo) embed.setTitle(String(estado.titulo).slice(0, 256));
+  if (estado.descricao) embed.setDescription(String(estado.descricao).slice(0, 4096));
   if (estado.imagem) embed.setImage(estado.imagem);
   if (estado.thumbnail) embed.setThumbnail(estado.thumbnail);
-  if (estado.autor) embed.setAuthor({ name: estado.autor });
-  if (estado.rodape) embed.setFooter({ text: estado.rodape });
+  if (estado.autor) embed.setAuthor({ name: String(estado.autor).slice(0, 256) });
+  if (estado.rodape) embed.setFooter({ text: String(estado.rodape).slice(0, 2048) });
   if (fields.length > 0) embed.addFields(fields);
 
   // O Discord rejeita embed sem description (erro embeds[i].description).
@@ -110,4 +125,31 @@ function buildPainel(userId) {
   };
 }
 
-module.exports = { getSessao, limparSessao, buildEmbed, buildPainel };
+// Preview da embed final: mostra apenas o que será publicado (sem o painel de
+// edição) com botões de voltar/editar, enviar e cancelar.
+function buildPreview(userId) {
+  const estado = getSessao(userId);
+  const embed = buildEmbed(estado);
+
+  if (!embed) {
+    return {
+      content: '⚠️ **Nada para pré-visualizar.** Preencha pelo menos o **título** ou a **descrição**.',
+      embeds: [],
+      components: [],
+    };
+  }
+
+  const botoes = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`embedpainel:voltar:${userId}`).setLabel('✏️ Voltar a editar').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`embedpainel:enviar:${userId}`).setLabel('✅ Enviar').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`embedpainel:cancelar:${userId}`).setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
+  );
+
+  return {
+    content: estado.textoFora || null,
+    embeds: [embed],
+    components: [botoes],
+  };
+}
+
+module.exports = { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview, camposValidos };
