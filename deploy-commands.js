@@ -8,14 +8,18 @@ if (!process.env.DISCORD_TOKEN || !process.env.CLIENT_ID) {
   process.exit(1);
 }
 
+// Comandos públicos (não admin): disponíveis também como "User Install" ([1]).
+// É isso que permite usá-los na DM (/, não só !). Contextos: 0 guild, 1 DM,
+// 2 grupos. Comandos admin ficam só no servidor (Guild Install) por segurança.
+const PUBLICOS = new Set([
+  'ajuda', 'estoque', 'gamepass', 'reais', 'robux', 'taxa',
+]);
+
 const commands = [];
 const commandsPath = path.join(__dirname, 'src', 'commands');
 for (const file of fs.readdirSync(commandsPath).filter((f) => f.endsWith('.js'))) {
   const cmd = require(path.join(commandsPath, file)).data.toJSON();
-  // Apenas Guild Install (0). Habilitar tambem User Install (1) faz o servidor
-  // mostrar CADA comando DUPLICADO no seletor. Mantemos so o install no servidor.
-  cmd.integration_types = [0];
-  // 0 = Guild, 1 = Bot DM, 2 = DMs/grupos privados
+  cmd.integration_types = PUBLICOS.has(cmd.name) ? [0, 1] : [0];
   cmd.contexts = [0, 1, 2];
   commands.push(cmd);
 }
@@ -27,7 +31,7 @@ try {
     commands.push({
       name: cmd.nome.toLowerCase(),
       description: (cmd.descricao || 'Comando personalizado').slice(0, 100),
-      // Tambem aqui: so Guild Install, senao aparece duplicado no seletor.
+      // Comando personalizado: só no servidor, para não expor na DM.
       integration_types: [0],
       contexts: [0, 1, 2],
     });
