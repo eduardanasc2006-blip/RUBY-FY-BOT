@@ -65,7 +65,7 @@ for (const file of fs.readdirSync(prefixPath).filter((f) => f.endsWith('.js'))) 
 // Status do bot com a taxa atual (atualiza sozinho quando muda via !settaxa/!configtaxa)
 function atualizarStatus() {
   client.user.setActivity(
-    `☁️ Finix.Yin • ${formatBRL(rates.TIER1_PRICE_PER_100)} / 100 Robux • !ajuda`,
+    `☁️ Conversor de valores & estoque • criado por Finix.Yin • use !ajuda`,
     { type: 3 } // 3 = Watching
   );
 }
