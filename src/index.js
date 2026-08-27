@@ -441,6 +441,12 @@ client.on('interactionCreate', async (interaction) => {
         });
       }
 
+      if (alvo === 'criarcategoria') {
+        const selecao = painelCategoria.construirPainelSelecao();
+        await interaction.update({ embeds: selecao.embeds, components: selecao.components });
+        return;
+      }
+
       if (alvo === 'cat') {
         const catId = interaction.customId.split(':')[2];
         const embed = painelCategoria.buildCategoria(catId);

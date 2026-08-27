@@ -125,24 +125,25 @@ const PAGINAS = {
   }),
 
   comandos: () => {
-    // Página com TODOS os comandos (slash e prefixo), grupo por grupo
-    const porGrupo = {};
-    for (const c of COMANDOS) {
-      if (c.admin && !isAdminAtual) continue;
-      (porGrupo[c.grupo] = porGrupo[c.grupo] || []).push(c);
-    }
+    // Mostra apenas os comandos personalizados criados por /criarcomando.
+    const lista = Object.values(customCom.listar());
     const linhas = [];
-    for (const grupo of Object.keys(porGrupo)) {
-      linhas.push(`**${grupo}**`, '');
-      for (const c of porGrupo[grupo]) {
-        const usoS = c.slash ? `**${c.slash}**` : null;
-        const usoP = c.pre ? `**${c.pre}**` : null;
-        linhas.push([usoS, usoP].filter(Boolean).join('  '));
-        linhas.push(`> ${c.desc}`);
+    if (lista.length === 0) {
+      linhas.push('Nenhum comando personalizado criado ainda.'.repeat(1));
+      linhas.push('');
+      linhas.push('Use **/criarcomando** para criar o seu comando.');
+      linhas.push('');
+      linhas.push('Com /criarcomando você define nome, descrição, mensagem e conteúdos copiáveis.');
+      linhas.push('Com /gerenciarcomandos você lista ou exclui os já criados.');
+    } else {
+      for (const c of lista) {
+        const extras = c.copiaveis && c.copiaveis.length ? `  •  📋 ${c.copiaveis.length} copiável(is)` : '';
+        linhas.push(`**/${c.nome}**${extras}`);
+        if (c.descricao) linhas.push(`> ${c.descricao}`);
         linhas.push('');
       }
     }
-    return { titulo: '✨ Todos os Comandos', descricao: linhas.join('\n') };
+    return { titulo: '🧩 Comandos Personalizados', descricao: linhas.join('\n') };
   },
 
   personalizados: () => {

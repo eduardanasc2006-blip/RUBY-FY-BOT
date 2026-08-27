@@ -57,12 +57,16 @@ function buildPainelCentral() {
   const linha1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('painelcenter:conversao')
-      .setLabel('🟣 Painel de conversão')
+      .setLabel('🟣 Conversão')
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
       .setCustomId('painelcenter:estoque')
-      .setLabel('📦 Painel de estoque')
-      .setStyle(ButtonStyle.Primary)
+      .setLabel('📦 Estoque')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId('painelcenter:criarcategoria')
+      .setLabel('🎯 Criar painel de categoria')
+      .setStyle(ButtonStyle.Success)
   );
   componentes.push(linha1);
 
