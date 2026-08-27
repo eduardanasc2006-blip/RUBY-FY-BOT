@@ -1,5 +1,4 @@
 const {
-  PermissionFlagsBits,
   SlashCommandBuilder,
   ActionRowBuilder,
   StringSelectMenuBuilder,
@@ -7,7 +6,7 @@ const {
 } = require('discord.js');
 const { isAdmin } = require('../prefixCommands/settaxa');
 const custom = require('../utils/customCommands');
-const { registrarTodos, excluirUm } = require('../utils/customSync');
+const { registrarTodos } = require('../utils/customSync');
 
 // Menu com os comandos salvos para o admin escolher sem digitar o nome.
 function menuExcluir() {
@@ -43,8 +42,7 @@ module.exports = {
     .addStringOption((o) => o.setName('acao').setDescription('O que fazer').setRequired(true).addChoices(
       { name: 'listar', value: 'listar' },
       { name: 'excluir', value: 'excluir' }
-    ))
-    .addStringOption((o) => o.setName('nome').setDescription('Nome do comando (para excluir)').setRequired(false)),
+    )),
 
   async execute(interaction) {
     if (!interaction.guild || !isAdmin(interaction.member, interaction.user.id)) {
@@ -52,7 +50,6 @@ module.exports = {
     }
 
     const acao = interaction.options.getString('acao');
-    const nome = interaction.options.getString('nome');
 
     if (acao === 'listar') {
       // Sincroniza antes de listar para garantir que todos os salvos estejam ativos.
@@ -76,25 +73,10 @@ module.exports = {
     }
 
     if (acao === 'excluir') {
-      // Sem nome: mostra uma caixinha (select) com os comandos salvos, para
-      // o admin escolher sem precisar digitar.
-      if (!nome) {
-        const menu = menuExcluir();
-        return interaction.reply({ content: menu.content, components: menu.components, flags: MessageFlags.Ephemeral });
-      }
-      // Remover do Discord (comando global) pode demorar: usa defer para nao dar timeout de 3s.
-      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-      const ok = custom.excluir(nome);
-      if (ok) {
-        try {
-          await excluirUm(interaction.client, nome);
-        } catch (error) {
-          console.error('[gerenciarcomandos] Falha ao remover do Discord:', error?.message || error);
-        }
-      }
-      return interaction.editReply(
-        ok ? '✅ Comando /' + nome + ' excluído.' : '❌ Comando /' + nome + ' não encontrado.'
-      );
+      // Sempre abre a caixinha (select) com os comandos salvos, para o admin
+      // escolher qual excluir sem precisar digitar o nome.
+      const menu = menuExcluir();
+      return interaction.reply({ content: menu.content, components: menu.components, flags: MessageFlags.Ephemeral });
     }
   },
 };
