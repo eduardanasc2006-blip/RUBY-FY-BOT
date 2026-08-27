@@ -734,9 +734,9 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       const item = cmd.copiaveis[idx];
-      // Resposta ephemeral com o valor em texto puro (sem code block/backticks)
+      // Resposta ephemeral com o valor em texto puro (sem rotulo/backticks)
       return interaction.reply({
-        content: `**${item.nome}:** ${item.valor}`,
+        content: item.valor,
         flags: MessageFlags.Ephemeral,
       });
     }
