@@ -5,31 +5,60 @@ const COR = 0xbeb6ff;
 const ORDEM = ['inicio', 'conversor', 'estoque', 'comandos', 'painel', 'admin'];
 const ORDEM_VISIVEL = ['inicio', 'conversor', 'estoque', 'comandos', 'painel'];
 
-// Lista central de comandos (prefixo e slash) para o menu de ajuda
+// Lista central de comandos (prefixo e slash) para o menu de ajuda.
+// É gerada dinamicamente a partir dos arquivos reais em src/commands e
+// src/prefixCommands, então nunca fica desatualizada e sempre mostra o `!`
+// e/ou o `/` que de fato existirem para cada comando.
+const fs = require('node:fs');
+const path = require('node:path');
+
+function carregarComandos() {
+  // Nomes vêm do nome dos arquivos (cada comando = um arquivo), evitando
+  // require aqui para não gerar dependência circular com src/prefixCommands.
+  const slashDir = path.join(__dirname, '..', 'commands');
+  const prefixDir = path.join(__dirname, '..', 'prefixCommands');
+  const slashPorNome = {};
+  for (const f of fs.readdirSync(slashDir).filter((x) => x.endsWith('.js'))) {
+    slashPorNome[path.basename(f, '.js')] = '/';
+  }
+  const prefixPorNome = {};
+  for (const f of fs.readdirSync(prefixDir).filter((x) => x.endsWith('.js'))) {
+    prefixPorNome[path.basename(f, '.js')] = '!';
+  }
+  // help e menu são aliases do comando de prefixo ajuda.
+  const aliasPorNome = { help: '!', menu: '!' };
+  return { slashPorNome, prefixPorNome, aliasPorNome };
+}
+
+const { slashPorNome, prefixPorNome, aliasPorNome } = carregarComandos();
+
 const COMANDOS = [
-  { grupo: '🏠 Ajuda', cmd: 'ajuda', pre: '!ajuda', slash: '/ajuda', desc: 'Abre este menu de ajuda.', admin: false },
-  { grupo: '🏠 Ajuda', cmd: 'help', pre: '!help', slash: null, desc: 'Alias do menu de ajuda.', admin: false },
-  { grupo: '🏠 Ajuda', cmd: 'menu', pre: '!menu', slash: null, desc: 'Alias do menu de ajuda.', admin: false },
-  { grupo: '🎮 Conversor', cmd: 'robux', pre: '!robux 500', slash: '/robux', desc: 'Converte Robux em reais.', admin: false },
-  { grupo: '🎮 Conversor', cmd: 'reais', pre: '!reais 10', slash: '/reais', desc: 'Converte reais em Robux.', admin: false },
-  { grupo: '🎮 Conversor', cmd: 'gamepass', pre: '!gamepass 1000', slash: '/gamepass', desc: 'Calcula o valor do Game Pass.', admin: false },
-  { grupo: '🎮 Conversor', cmd: 'taxa', pre: '!taxa', slash: '/taxa', desc: 'Mostra as taxas atuais.', admin: false },
-  { grupo: '📦 Estoque', cmd: 'estoque', pre: '!estoque', slash: '/estoque', desc: 'Mostra produtos e preços.', admin: false },
-  { grupo: '📦 Estoque', cmd: 'estoque', pre: '!estoque <nome>', slash: null, desc: 'Busca um produto específico.', admin: false },
-  { grupo: '📊 Painéis', cmd: 'tabela', pre: '!tabela', slash: '/tabela', desc: 'Publica o painel de conversão.', admin: false },
-  { grupo: '📊 Painéis', cmd: 'painelestoque', pre: '!painelestoque', slash: '/painelestoque', desc: 'Fixa o painel de estoque.', admin: false },
-  { grupo: '📊 Painéis', cmd: 'painelcategoria', pre: '!painelcategoria <id>', slash: '/painelcategoria', desc: 'Fixa produtos de uma categoria.', admin: false },
-  { grupo: '🛠️ Administração', cmd: 'configtaxa', pre: '!configtaxa', slash: '/configtaxa', desc: 'Painel visual das taxas.', admin: true },
-  { grupo: '🛠️ Administração', cmd: 'settaxa', pre: '!settaxa 100 3,50', slash: null, desc: 'Altera a taxa de uma faixa.', admin: true },
-  { grupo: '🛠️ Administração', cmd: 'configestoque', pre: '!configestoque', slash: '/configestoque', desc: 'Gerencia produtos e quantidades.', admin: true },
-  { grupo: '🛠️ Administração', cmd: 'embed', pre: '!embed', slash: '/embed', desc: 'Cria uma embed no canal.', admin: true },
-  { grupo: '🛠️ Administração', cmd: 'backup', pre: '!backup', slash: '/backup', desc: 'Backup de taxas e estoque na DM.', admin: true },
-  { grupo: '🛠️ Administração', cmd: 'canalavisos', pre: '!canalavisos', slash: '/canalavisos', desc: 'Canal de avisos de estoque.', admin: true },
-  { grupo: '🛠️ Administração', cmd: 'limpar', pre: '!limpar 20', slash: '/limpar', desc: 'Apaga mensagens do canal.', admin: true },
-  { grupo: '🛠️ Administração', cmd: 'rolegive', pre: null, slash: '/rolegive', desc: 'Dá um cargo a um membro.', admin: true },
-  { grupo: '✨ Comandos personalizados', cmd: 'criarcomando', pre: null, slash: '/criarcomando', desc: 'Cria um comando personalizado.', admin: true },
-  { grupo: '✨ Comandos personalizados', cmd: 'gerenciarcomandos', pre: null, slash: '/gerenciarcomandos', desc: 'Lista, edita ou exclui personalizados.', admin: true },
-];
+  { grupo: '🏠 Ajuda', cmd: 'ajuda', desc: 'Abre este menu de ajuda.', admin: false },
+  { grupo: '🏠 Ajuda', cmd: 'help', desc: 'Alias do menu de ajuda (!help / !menu).', admin: false },
+  { grupo: '🎮 Conversor', cmd: 'robux', desc: 'Converte Robux em reais.', admin: false },
+  { grupo: '🎮 Conversor', cmd: 'reais', desc: 'Converte reais em Robux.', admin: false },
+  { grupo: '🎮 Conversor', cmd: 'gamepass', desc: 'Calcula o valor do Game Pass.', admin: false },
+  { grupo: '🎮 Conversor', cmd: 'taxa', desc: 'Mostra as taxas atuais.', admin: false },
+  { grupo: '📦 Estoque', cmd: 'estoque', desc: 'Mostra produtos e preços (ou busca: !estoque <nome>).', admin: false },
+  { grupo: '📊 Painéis', cmd: 'tabela', desc: 'Publica o painel de conversão.', admin: false },
+  { grupo: '📊 Painéis', cmd: 'painelestoque', desc: 'Fixa o painel de estoque.', admin: false },
+  { grupo: '📊 Painéis', cmd: 'painelcategoria', desc: 'Sem arg: painel editável do estoque. Com <id>: fixa a categoria.', admin: false },
+  { grupo: '🛠️ Administração', cmd: 'configtaxa', desc: 'Painel visual das taxas.', admin: true },
+  { grupo: '🛠️ Administração', cmd: 'settaxa', desc: 'Altera a taxa (ex: !settaxa 100 3,50).', admin: true },
+  { grupo: '🛠️ Administração', cmd: 'configestoque', desc: 'Gerencia produtos e quantidades.', admin: true },
+  { grupo: '🛠️ Administração', cmd: 'embed', desc: 'Cria uma embed no canal.', admin: true },
+  { grupo: '🛠️ Administração', cmd: 'backup', desc: 'Backup de taxas e estoque na DM.', admin: true },
+  { grupo: '🛠️ Administração', cmd: 'canalavisos', desc: 'Canal de avisos de estoque.', admin: true },
+  { grupo: '🛠️ Administração', cmd: 'limpar', desc: 'Apaga mensagens do canal.', admin: true },
+  { grupo: '🛠️ Administração', cmd: 'rolegive', desc: 'Dá um cargo a um membro.', admin: true },
+  { grupo: '✨ Comandos personalizados', cmd: 'criarcomando', desc: 'Cria um comando personalizado.', admin: true },
+  { grupo: '✨ Comandos personalizados', cmd: 'gerenciarcomandos', desc: 'Lista, edita ou exclui personalizados.', admin: true },
+].map((c) => {
+  const pre = prefixPorNome[c.cmd] ? '!' + c.cmd : null;
+  const aliasPre = !pre && aliasPorNome[c.cmd] ? '!' + c.cmd : null;
+  const slash = slashPorNome[c.cmd] ? '/' + c.cmd : null;
+  return { ...c, pre: pre || aliasPre, slash };
+});
 
 // Comandos personalizados criados pelo dono (adicionados dinamicamente)
 const customCom = require('./customCommands');
