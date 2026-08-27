@@ -47,12 +47,9 @@ function buildEmbed(estado) {
   if (fields.length > 0) embed.addFields(fields);
 
   // O Discord rejeita embed sem description (erro embeds[i].description).
-  // Quando so ha imagem/thumbnail (sem titulo/descricao/autor/rodape/fields),
-  // adiciona uma descricao invisivel para o embed nao ser enviado vazio.
-  const temTexto =
-    !!estado.titulo || !!estado.descricao || !!estado.autor || !!estado.rodape ||
-    fields.length > 0;
-  if (!temTexto) embed.setDescription('\u200b');
+  // Garante uma descricao invisivel (espaco) sempre que nao houver uma real,
+  // para o envio nunca falhar com "description required".
+  if (!estado.descricao) embed.setDescription('\u200b');
   return embed;
 }
 
