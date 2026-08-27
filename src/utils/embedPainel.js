@@ -44,6 +44,14 @@ function buildEmbed(estado) {
   if (estado.autor) embed.setAuthor({ name: estado.autor });
   if (estado.rodape) embed.setFooter({ text: estado.rodape });
   if (estado.fields.length > 0) embed.addFields(estado.fields);
+
+  // O Discord rejeita embed sem description (erro embeds[i].description).
+  // Quando so ha imagem/thumbnail (sem titulo/descricao/autor/rodape/fields),
+  // adiciona uma descricao invisivel para o embed nao ser enviado vazio.
+  const temTexto =
+    !!estado.titulo || !!estado.descricao || !!estado.autor || !!estado.rodape ||
+    estado.fields.length > 0;
+  if (!temTexto) embed.setDescription('\u200b');
   return embed;
 }
 
