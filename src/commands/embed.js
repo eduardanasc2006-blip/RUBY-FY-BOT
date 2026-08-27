@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, MessageFlags, EmbedBuilder } = require('discord.js');
+const { comandoPode } = require('../utils/permissions');
 const { isAdmin } = require('../prefixCommands/settaxa');
 const { resolverCor } = require('../prefixCommands/embed');
 
@@ -13,7 +14,7 @@ module.exports = {
     .addStringOption((o) => o.setName('link_imagem').setDescription('Link da imagem (alternativa)').setRequired(false)),
 
   async execute(interaction) {
-    if (!isAdmin(interaction.member, interaction.user.id)) {
+    if (!comandoPode(interaction.member, interaction.user.id, 'embed')) {
       return interaction.reply({ content: '🔒 Somente administradores podem usar este comando.', flags: MessageFlags.Ephemeral });
     }
 

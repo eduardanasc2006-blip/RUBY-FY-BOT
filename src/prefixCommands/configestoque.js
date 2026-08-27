@@ -1,4 +1,5 @@
 const { adminMenu } = require('../utils/estoquePanel');
+const { comandoPode } = require('../utils/permissions');
 const { isAdmin } = require('./settaxa');
 
 module.exports = {
@@ -7,7 +8,7 @@ module.exports = {
   usage: '!configestoque',
 
   async execute(message) {
-    if (!message.guild || !isAdmin(message.member, message.author.id)) {
+    if (!message.guild || !comandoPode(message.member, message.author.id, 'configestoque')) {
       return message.reply('🔒 Somente administradores podem configurar o estoque.');
     }
     return message.reply({ ...adminMenu(), allowedMentions: { repliedUser: false } });

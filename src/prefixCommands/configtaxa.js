@@ -1,4 +1,5 @@
 const { buildConfigPanel } = require('../utils/configPanel');
+const { comandoPode } = require('../utils/permissions');
 const { isAdmin } = require('./settaxa');
 
 module.exports = {
@@ -11,7 +12,7 @@ module.exports = {
       return message.reply('🔒 Este comando só pode ser usado no servidor.');
     }
 
-    if (!isAdmin(message.member, message.author.id)) {
+    if (!comandoPode(message.member, message.author.id, 'configtaxa')) {
       return message.reply('🔒 Somente administradores podem configurar as taxas.');
     }
 

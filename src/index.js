@@ -274,7 +274,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.isButton() && interaction.customId.startsWith('cfg:')) {
       const acao = interaction.customId.split(':')[1];
 
-      if (!isAdmin(interaction.member, interaction.user.id)) {
+      if (!permitido(interaction)) {
         return interaction.reply({
           content: '🔒 Somente administradores podem configurar as taxas.',
           flags: MessageFlags.Ephemeral,
@@ -314,7 +314,7 @@ client.on('interactionCreate', async (interaction) => {
       const config = MODAIS_CFG[acao];
       if (!config) return;
 
-      if (!isAdmin(interaction.member, interaction.user.id)) {
+      if (!permitido(interaction)) {
         return interaction.reply({
           content: '🔒 Somente administradores podem configurar as taxas.',
           flags: MessageFlags.Ephemeral,
@@ -366,7 +366,7 @@ client.on('interactionCreate', async (interaction) => {
       const partes = interaction.customId.split(':');
       // formatos: ajuda:cat:<pagina> | ajuda:nav:prev:<pagina> | ajuda:nav:home:<pagina>
       const pagina = partes.length >= 3 ? partes[partes.length - 1] : partes[1];
-      const admin = interaction.guild ? isAdmin(interaction.member, interaction.user.id) : false;
+      const admin = interaction.guild ? permitido(interaction) : false;
       const pag = (pagina === 'admin' || pagina === 'painel' || pagina === 'personalizados') && !admin ? 'inicio' : pagina;
       return interaction.update(buildAjuda(pag, admin));
     }
@@ -385,8 +385,10 @@ client.on('interactionCreate', async (interaction) => {
 const estoqueDb = require('./utils/estoque');
 const estoquePanel = require('./utils/estoquePanel');
 const { publicarOuAtualizar, refreshPainelEstoque } = require('./utils/estoquePanelStore');
+const { montarConfirmacao } = require('./utils/confirm');
 const painelCategoria = require('./prefixCommands/painelcategoria');
-const { buildPainelCentral } = require('./utils/painelCenter');
+const painelCenter = require('./utils/painelCenter');
+const { buildPainelCentral } = painelCenter;
 const { avisar } = require('./utils/avisos');
 
 client.on('interactionCreate', async (interaction) => {
@@ -414,7 +416,7 @@ client.on('interactionCreate', async (interaction) => {
 
     // ----- gerenciamento central de paineis (!painel / /painel) -----
     if (interaction.isButton() && interaction.customId.startsWith('painelcenter:')) {
-      if (!interaction.guild || !isAdmin(interaction.member, interaction.user.id)) {
+      if (!interaction.guild || !permitido(interaction)) {
         return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
       }
       const alvo = interaction.customId.split(':')[1];
@@ -454,12 +456,77 @@ client.on('interactionCreate', async (interaction) => {
         });
       }
 
+      // ----- remover painel fixo (com confirmação) -----
+      if (alvo === 'remconversao' || alvo === 'remestoque') {
+        const nome = alvo === 'remconversao' ? 'de conversão' : 'de estoque';
+        return interaction.update(
+          montarConfirmacao(
+            `🗑️ **Remover o painel fixo ${nome}?**\n\n_A mensagem fixada será apagada e o registro removido._`,
+            `painelcenter:${alvo}-confirm`,
+            'painelcenter:remcancel'
+          )
+        );
+      }
+      if (alvo === 'remcancel') {
+        return interaction.update(buildPainelCentral());
+      }
+      if (alvo === 'remconversao-confirm' || alvo === 'remestoque-confirm') {
+        const ref = alvo.startsWith('remconversao') ? painelCenter.readConversao() : painelCenter.readEstoque();
+        if (ref) {
+          try {
+            const canal = await client.channels.fetch(ref.channelId);
+            const msg = await canal.messages.fetch(ref.messageId);
+            await msg.delete().catch(() => {});
+          } catch {}
+        }
+        if (alvo.startsWith('remconversao')) painelCenter.salvarConversao(null);
+        else painelCenter.salvarEstoque(null);
+        await interaction.update(buildPainelCentral());
+        return interaction.followUp({
+          content: `✅ Painel fixo ${alvo.startsWith('remconversao') ? 'de conversão' : 'de estoque'} removido.`,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+      if (alvo === 'remcategoria') {
+        const [, , msgId, catId] = interaction.customId.split(':');
+        return interaction.update(
+          montarConfirmacao(
+            `🗑️ **Remover o painel fixo da categoria **${catId}**?**\n\n_A mensagem fixada será apagada e o registro removido._`,
+            `painelcenter:remcategoria-confirm:${msgId}:${catId}`,
+            'painelcenter:remcancel'
+          )
+        );
+      }
+      if (alvo === 'remcategoria-confirm') {
+        const [, , msgId, catId] = interaction.customId.split(':');
+        const cats = painelCenter.readCategorias();
+        const info = cats[msgId];
+        if (info && typeof info === 'object' && info.canal) {
+          try {
+            const canal = await client.channels.fetch(info.canal || info.channelId);
+            const msg = await canal.messages.fetch(msgId);
+            await msg.delete().catch(() => {});
+          } catch {}
+        }
+        delete cats[msgId];
+        const fsX = require('node:fs');
+        const pathX = require('node:path');
+        const CATEGORIA_FILE = pathX.join(__dirname, '..', 'data', 'painel_categoria.json');
+        fsX.mkdirSync(pathX.dirname(CATEGORIA_FILE), { recursive: true });
+        fsX.writeFileSync(CATEGORIA_FILE, JSON.stringify(cats, null, 2));
+        await interaction.update(buildPainelCentral());
+        return interaction.followUp({
+          content: `✅ Painel fixo da categoria **${catId}** removido.`,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+
       return interaction.reply({ content: '❌ Ação desconhecida.', flags: MessageFlags.Ephemeral });
     }
 
     // ----- escolha de canal do gerenciador central de paineis -----
     if ((interaction.isStringSelectMenu() || interaction.isButton()) && interaction.customId.startsWith('painelcenter:selcanal:')) {
-      if (!interaction.guild || !isAdmin(interaction.member, interaction.user.id)) {
+      if (!interaction.guild || !permitido(interaction)) {
         return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
       }
       const partes = interaction.customId.split(':');
@@ -504,10 +571,14 @@ client.on('interactionCreate', async (interaction) => {
 
     // ----- fixar painel de categoria (selecao visual do !painelcategoria) -----
     if (interaction.isButton() && interaction.customId.startsWith('painelcat:')) {
-      if (!isAdmin(interaction.member, interaction.user.id)) {
+      if (!permitido(interaction)) {
         return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
       }
       const catId = interaction.customId.split(':')[1];
+      // Seletor de categorias agora também dá acesso ao gerenciamento (editar emoji/descrição/reordenar)
+      if (catId === 'gercat') {
+        return interaction.update(estoquePanel.adminGerenciarCategorias());
+      }
       if (!interaction.channel) {
         return interaction.reply({ content: '❌ Não consegui identificar o canal.', flags: MessageFlags.Ephemeral });
       }
@@ -522,7 +593,7 @@ client.on('interactionCreate', async (interaction) => {
 
     // ----- admin: estadm:* -----
     if (interaction.isButton() && interaction.customId.startsWith('estadm:')) {
-      if (!isAdmin(interaction.member, interaction.user.id)) {
+      if (!permitido(interaction)) {
         return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
       }
       const partes = interaction.customId.split(':');
@@ -553,6 +624,12 @@ client.on('interactionCreate', async (interaction) => {
           ),
           new ActionRowBuilder().addComponents(
             new TextInputBuilder().setCustomId('qtd').setLabel('Quantidade (deixe vazio = sem controle)').setStyle(TextInputStyle.Short).setRequired(false)
+          ),
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('descricao').setLabel('Descrição (opcional, ex: entrega imediata)').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(100)
+          ),
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('imagem').setLabel('Link da imagem (opcional, começa com http)').setStyle(TextInputStyle.Short).setRequired(false)
           )
         );
         return interaction.showModal(modal);
@@ -594,11 +671,28 @@ client.on('interactionCreate', async (interaction) => {
       }
       if (acao === 'remover3') {
         const [, , catId, prodId] = partes;
+        const p = estoqueDb.produto(catId, prodId);
+        if (!p) return interaction.update({ content: '❌ Produto não encontrado.', embeds: [], components: [] });
+        return interaction.update(
+          montarConfirmacao(
+            `🗑️ **Confirmar exclusão do produto**\n\n${p.nome} — ${formatBRL(p.valor)}?\n\n_Os painéis fixos serão atualizados._`,
+            `estadm:remover-confirm:${catId}:${p.id}`,
+            `estadm:remover-cancel:${catId}:${p.id}`
+          )
+        );
+      }
+      if (acao === 'remover-cancel') {
+        const [, , catId, prodId] = partes;
+        return interaction.update(estoquePanel.adminProdDetalhe(catId, prodId));
+      }
+      if (acao === 'remover-confirm') {
+        const [, , catId, prodId] = partes;
+        const p = estoqueDb.produto(catId, prodId);
         const ok = estoqueDb.removeProduto(catId, prodId);
         if (ok) refreshPainelEstoque(client).catch(() => {});
         painelCategoria.refresh(client).catch(() => {});
         return interaction.update({
-          content: ok ? '🗑️ Produto removido.' : '❌ Produto não encontrado.',
+          content: ok ? `🗑️ Produto **${p?.nome || ''}** removido.` : '❌ Produto não encontrado.',
           embeds: [],
           components: [
             new ActionRowBuilder().addComponents(
@@ -614,12 +708,23 @@ client.on('interactionCreate', async (interaction) => {
         const catId = partes[2];
         const cat = estoqueDb.categoria(catId);
         if (!cat) return interaction.update({ content: '❌ Categoria não encontrada.', embeds: [], components: [] });
+        return interaction.update(
+          montarConfirmacao(
+            `🗑️ **Confirmar exclusão da categoria**\n\n${cat.nome} (${cat.produtos.length} produto(s))?\n\n_Os painéis fixos serão atualizados._`,
+            `estadm:remcat-confirm:${catId}`,
+            `estadm:menu`
+          )
+        );
+      }
+      if (acao === 'remcat-confirm') {
+        const catId = partes[2];
+        const cat = estoqueDb.categoria(catId);
         const ok = estoqueDb.removeCategoria(catId);
         if (ok) refreshPainelEstoque(client).catch(() => {});
         painelCategoria.refresh(client).catch(() => {});
         return interaction.update({
           content: ok
-            ? `🗑️ Categoria **${cat.nome}** removida (com ${cat.produtos.length} produto(s)).`
+            ? `🗑️ Categoria **${cat?.nome || ''}** removida (com ${cat?.produtos?.length || 0} produto(s)).`
             : '❌ Categoria não encontrada.',
           embeds: [],
           components: [
@@ -699,12 +804,83 @@ client.on('interactionCreate', async (interaction) => {
         );
         return interaction.showModal(modal);
       }
+
+      // ----- gerenciar categorias (emoji, descrição, reordenar) -----
+      if (acao === 'gercat') return interaction.update(estoquePanel.adminGerenciarCategorias());
+      if (acao === 'gercat2') return interaction.update(estoquePanel.adminGerCatDetalhe(partes[2]));
+
+      if (acao === 'catemoji') {
+        const catId = partes[2];
+        const modal = new ModalBuilder().setCustomId(`estmodal:catemoji:${catId}`).setTitle('Emoji da categoria').addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('emoji').setLabel('Emoji (ex: 🗡️)').setStyle(TextInputStyle.Short).setRequired(true)
+          )
+        );
+        return interaction.showModal(modal);
+      }
+      if (acao === 'catdesc') {
+        const catId = partes[2];
+        const modal = new ModalBuilder().setCustomId(`estmodal:catdesc:${catId}`).setTitle('Descrição da categoria').addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('descricao').setLabel('Descrição (limitada a 100 caracteres)').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(100)
+          )
+        );
+        return interaction.showModal(modal);
+      }
+      if (acao === 'catsubir') {
+        const catId = partes[2];
+        estoqueDb.moverCategoria(catId, -1);
+        painelCategoria.refresh(client).catch(() => {});
+        return interaction.update(estoquePanel.adminGerCatDetalhe(catId));
+      }
+      if (acao === 'catdescer') {
+        const catId = partes[2];
+        estoqueDb.moverCategoria(catId, 1);
+        painelCategoria.refresh(client).catch(() => {});
+        return interaction.update(estoquePanel.adminGerCatDetalhe(catId));
+      }
+
+      // ----- info do produto (descrição, imagem, preço) -----
+      if (acao === 'prodinfo') return interaction.update(estoquePanel.adminEscolherCategoria('prodinfo2'));
+      if (acao === 'prodinfo2') return interaction.update(estoquePanel.adminEscolherProduto('prodinfo3', partes[2]));
+      if (acao === 'prodinfo3') {
+        const [, , catId, prodId] = partes;
+        return interaction.update(estoquePanel.adminProdDetalhe(catId, prodId));
+      }
+
+      if (acao === 'proddtl-desc') {
+        const [, , catId, prodId] = partes;
+        const modal = new ModalBuilder().setCustomId(`estmodal:proddtl-desc:${catId}:${prodId}`).setTitle('Descrição do produto').addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('descricao').setLabel('Descrição (deixe vazio para remover)').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(100)
+          )
+        );
+        return interaction.showModal(modal);
+      }
+      if (acao === 'proddtl-img') {
+        const [, , catId, prodId] = partes;
+        const modal = new ModalBuilder().setCustomId(`estmodal:proddtl-img:${catId}:${prodId}`).setTitle('Imagem do produto').addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('imagem').setLabel('Link da imagem (deixe vazio para remover)').setStyle(TextInputStyle.Short).setRequired(false)
+          )
+        );
+        return interaction.showModal(modal);
+      }
+      if (acao === 'proddtl-valor') {
+        const [, , catId, prodId] = partes;
+        const modal = new ModalBuilder().setCustomId(`estmodal:proddtl-valor:${catId}:${prodId}`).setTitle('Preço do produto').addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder().setCustomId('valor').setLabel('Valor em R$ (ex: 15,00)').setStyle(TextInputStyle.Short).setRequired(true)
+          )
+        );
+        return interaction.showModal(modal);
+      }
       return;
     }
 
     // ----- modais do estoque -----
     if (interaction.isModalSubmit() && interaction.customId.startsWith('estmodal:')) {
-      if (!isAdmin(interaction.member, interaction.user.id)) {
+      if (!permitido(interaction)) {
         return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
       }
       const partes = interaction.customId.split(':');
@@ -745,7 +921,12 @@ client.on('interactionCreate', async (interaction) => {
           return voltarMenu('❌ Quantidade inválida.');
         }
 
-        const p = estoqueDb.addProduto(catId, { nome, valor, controlarQtd, quantidade });
+        const descricao = (interaction.fields.getTextInputValue('descricao') || '').trim();
+        const imagem = (interaction.fields.getTextInputValue('imagem') || '').trim();
+        if (imagem && !imagem.startsWith('http')) {
+          return voltarMenu('❌ Link de imagem inválido. Use um link começando com http.');
+        }
+        const p = estoqueDb.addProduto(catId, { nome, valor, controlarQtd, quantidade, descricao, imagem });
         if (p) refreshPainelEstoque(client).catch(() => {});
         painelCategoria.refresh(client).catch(() => {});
         return voltarMenu(
@@ -797,6 +978,67 @@ client.on('interactionCreate', async (interaction) => {
           cat ? `✅ Categoria renomeada para **${novoNome}**` : '❌ Categoria não encontrada.'
         );
       }
+
+      if (acao === 'catemoji') {
+        const catId = partes[2];
+        const emoji = interaction.fields.getTextInputValue('emoji').trim();
+        const cat = estoqueDb.setEmojiCategoria(catId, emoji);
+        if (cat) refreshPainelEstoque(client).catch(() => {});
+        painelCategoria.refresh(client).catch(() => {});
+        return voltarMenu(
+          cat ? `✅ Emoji da categoria **${cat.nome}** definido para ${emoji || 'nenhum'}.` : '❌ Categoria não encontrada.'
+        );
+      }
+
+      if (acao === 'catdesc') {
+        const catId = partes[2];
+        const descricao = (interaction.fields.getTextInputValue('descricao') || '').trim();
+        const cat = estoqueDb.setDescricaoCategoria(catId, descricao);
+        if (cat) refreshPainelEstoque(client).catch(() => {});
+        painelCategoria.refresh(client).catch(() => {});
+        return voltarMenu(
+          cat ? `✅ Descrição de **${cat.nome}** ${descricao ? `definida: _${descricao}_` : 'removida'}.` : '❌ Categoria não encontrada.'
+        );
+      }
+
+      if (acao === 'proddtl-desc') {
+        const [, , catId, prodId] = partes;
+        const descricao = (interaction.fields.getTextInputValue('descricao') || '').trim();
+        const p = estoqueDb.setDescricaoProduto(catId, prodId, descricao);
+        if (p) refreshPainelEstoque(client).catch(() => {});
+        painelCategoria.refresh(client).catch(() => {});
+        return voltarMenu(
+          p ? `✅ Descrição de **${p.nome}** ${descricao ? `definida: _${descricao}_` : 'removida'}.` : '❌ Produto não encontrado.'
+        );
+      }
+
+      if (acao === 'proddtl-img') {
+        const [, , catId, prodId] = partes;
+        const imagem = (interaction.fields.getTextInputValue('imagem') || '').trim();
+        if (imagem && !imagem.startsWith('http')) {
+          return voltarMenu('❌ Link de imagem inválido. Use um link começando com http.');
+        }
+        const p = estoqueDb.setImagemProduto(catId, prodId, imagem);
+        if (p) refreshPainelEstoque(client).catch(() => {});
+        painelCategoria.refresh(client).catch(() => {});
+        return voltarMenu(
+          p ? `✅ Imagem de **${p.nome}** ${imagem ? 'atualizada.' : 'removida.'}` : '❌ Produto não encontrado.'
+        );
+      }
+
+      if (acao === 'proddtl-valor') {
+        const [, , catId, prodId] = partes;
+        const valor = parseFloat(interaction.fields.getTextInputValue('valor').trim().replace(/\./g, '').replace(',', '.'));
+        if (isNaN(valor) || valor <= 0) {
+          return voltarMenu('❌ Valor inválido.');
+        }
+        const p = estoqueDb.setValor(catId, prodId, valor);
+        if (p) refreshPainelEstoque(client).catch(() => {});
+        painelCategoria.refresh(client).catch(() => {});
+        return voltarMenu(
+          p ? `✅ Preço de **${p.nome}** atualizado para ${formatBRL(valor)}.` : '❌ Produto não encontrado.'
+        );
+      }
       return;
     }
   } catch (error) {
@@ -845,8 +1087,21 @@ client.on('interactionCreate', async (interaction) => {
   try {
     if (interaction.isAnySelectMenu && interaction.isAnySelectMenu() && interaction.customId === 'gerencmd:excluir') {
       const custom = require('./utils/customCommands');
-      const { excluirUm } = require('./utils/customSync');
       const nome = interaction.values[0];
+      return interaction.update(
+        montarConfirmacao(
+          `🗑️ **Confirmar exclusão do comando_**/**${nome}**?`,
+          `gerencmd:confirm:${nome}`,
+          'gerencmd:cancel'
+        )
+      );
+    }
+
+    // Confirmação de exclusão do comando personalizado
+    if (interaction.isButton() && interaction.customId.startsWith('gerencmd:confirm:')) {
+      const custom = require('./utils/customCommands');
+      const { excluirUm } = require('./utils/customSync');
+      const nome = (interaction.customId.split(':')[2] || '').trim();
       const ok = custom.excluir(nome);
       if (ok) {
         try {
@@ -860,6 +1115,12 @@ client.on('interactionCreate', async (interaction) => {
         components: [],
       });
     }
+    if (interaction.isButton() && interaction.customId === 'gerencmd:cancel') {
+      return interaction.update({
+        content: '✅ Exclusão cancelada.',
+        components: [],
+      });
+    }
   } catch (error) {
     console.error('[Excluir custom]', error);
     try {
@@ -870,6 +1131,99 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
+// ----- Permissões por cargo (!permissoes / /permissoes) -----
+const { buildPermissionsPanel, buildGrupoPanel, buildRemoverPanel } = require('./utils/permissionsPanel');
+const { setCargo, eDono, comandoPode } = require('./utils/permissions');
+
+// Mapeia o customId de uma interação para o comando que ela representa,
+// permitindo que o sistema de permissões por cargo restrinja botões/menus.
+function comandoDoCustomId(interaction) {
+  const id = interaction.customId || '';
+  if (id.startsWith('estadm:') || id.startsWith('estmodal:')) return 'configestoque';
+  if (id.startsWith('estfixo:')) return 'estoque';
+  if (id.startsWith('painelcenter:')) return 'painel';
+  if (id.startsWith('painelcat:')) return 'painelcategoria';
+  if (id.startsWith('cfg:') || id.startsWith('cfgmodal:')) return 'configtaxa';
+  if (id.startsWith('embedpainel:') || id.startsWith('embedmodal:') || id.startsWith('embedcanal:')) return 'embed';
+  if (id.startsWith('gerencmd:')) return 'gerenciarcomandos';
+  if (id.startsWith('custom:copy:')) return 'criarcomando';
+  return null;
+}
+function permitido(interaction) {
+  const cmd = comandoDoCustomId(interaction);
+  if (!cmd) return true;
+  return comandoPode(interaction.member, interaction.user.id, cmd);
+}
+
+
+client.on('interactionCreate', async (interaction) => {
+  try {
+    if (interaction.isButton() && interaction.customId.startsWith('perm:')) {
+      const partes = interaction.customId.split(':');
+      const acao = partes[1];
+      const donoId = partes[partes.length - 1];
+
+      if (interaction.user.id !== donoId) {
+        return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
+      }
+      if (!isAdmin(interaction.member, interaction.user.id) && !eDono(interaction.user.id)) {
+        return interaction.reply({ content: '🔒 Somente administradores podem gerenciar permissões.', flags: MessageFlags.Ephemeral });
+      }
+      if (!interaction.guild) {
+        return interaction.reply({ content: '🔒 Isso só funciona no servidor.', flags: MessageFlags.Ephemeral });
+      }
+
+      if (acao === 'voltar') {
+        return interaction.update(buildPermissionsPanel(interaction.guild, donoId));
+      }
+
+      if (acao === 'grupo') {
+        const grupoId = partes[2];
+        return interaction.update(buildGrupoPanel(interaction.guild, grupoId, donoId));
+      }
+
+      if (acao === 'remover') {
+        const grupoId = partes[2];
+        return interaction.update(buildRemoverPanel(interaction.guild, grupoId, donoId));
+      }
+
+      if (acao === 'remover2') {
+        const grupoId = partes[2];
+        const roleId = partes[3];
+        setCargo(grupoId, roleId, false);
+        return interaction.update(buildGrupoPanel(interaction.guild, grupoId, donoId));
+      }
+
+      return interaction.reply({ content: '❌ Ação desconhecida.', flags: MessageFlags.Ephemeral });
+    }
+
+    // Seletor de cargos para adicionar ao grupo
+    if (interaction.isRoleSelectMenu() && interaction.customId.startsWith('perm:cargos:')) {
+      const partes = interaction.customId.split(':');
+      const grupoId = partes[2];
+      const donoId = partes[3];
+
+      if (interaction.user.id !== donoId) {
+        return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
+      }
+      if (!isAdmin(interaction.member, interaction.user.id) && !eDono(interaction.user.id)) {
+        return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+      }
+
+      for (const roleId of interaction.values) {
+        setCargo(grupoId, roleId, true);
+      }
+      return interaction.update(buildGrupoPanel(interaction.guild, grupoId, donoId));
+    }
+  } catch (error) {
+    console.error('[Permissões] Erro:', error?.message || error);
+    try {
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: '❌ Ocorreu um erro.', flags: MessageFlags.Ephemeral });
+      }
+    } catch {}
+  }
+});
 // ----- Painel visual de embed -----
 
 const { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview } = require('./utils/embedPainel');
@@ -886,7 +1240,7 @@ client.on('interactionCreate', async (interaction) => {
       if (interaction.user.id !== donoId) {
         return interaction.reply({ content: '🔒 Este painel não é seu. Use `!embed` para criar o seu.', flags: MessageFlags.Ephemeral });
       }
-      if (!isAdmin(interaction.member, interaction.user.id)) {
+      if (!permitido(interaction)) {
         return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
       }
 
@@ -969,7 +1323,7 @@ client.on('interactionCreate', async (interaction) => {
       if (interaction.user.id !== donoId) {
         return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
       }
-      if (!isAdmin(interaction.member, interaction.user.id)) {
+      if (!permitido(interaction)) {
         return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
       }
       const estado = getSessao(donoId);
@@ -1033,7 +1387,7 @@ client.on('interactionCreate', async (interaction) => {
       if (interaction.user.id !== donoId) {
         return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
       }
-      if (!isAdmin(interaction.member, interaction.user.id)) {
+      if (!permitido(interaction)) {
         return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
       }
 

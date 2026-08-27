@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+const { comandoPode } = require('../utils/permissions');
 const path = require('node:path');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const estoque = require('../utils/estoque');
@@ -21,47 +22,66 @@ function salvar(msgId, catId, channelId) {
 function buildCategoria(catId) {
   const cat = estoque.categoria(catId);
   if (!cat) return null;
+  const emoji = cat.emoji ? `${cat.emoji} ` : '📦 ';
   const linhas = cat.produtos
     .filter((p) => p.ativo)
     .map((p) => {
       const qtd = p.controlarQtd ? `${p.quantidade}x` : '';
-      return qtd ? `${qtd} **${p.nome}** — ${formatBRL(p.valor)}` : `**${p.nome}** — ${formatBRL(p.valor)}`;
+      const desc = p.descricao ? ` — _${p.descricao}_` : '';
+      return `${qtd ? qtd + ' ' : ''}**${p.nome}** — ${formatBRL(p.valor)}${desc}`;
     });
 
   return new EmbedBuilder()
     .setColor(0xbeb6ff)
-    .setTitle(`📦 ${cat.nome}`)
-    .setDescription(linhas.length ? linhas.join('\n') : 'Nenhum produto disponível.')
+    .setTitle(`${emoji}${cat.nome}`)
+    .setDescription(
+      `${cat.descricao ? `*${cat.descricao}*\n\n` : ''}${linhas.length ? linhas.join('\n') : 'Nenhum produto disponível.'}`
+    )
     .setFooter({ text: '*valor por unidade*' });
 }
 
 // Painel visual para o admin escolher qual categoria fixar no canal
 function construirPainelSelecao() {
   const cats = estoque.categorias();
-  const descricaoCats = cats.map((c) => `**${c.id}** — ${c.produtos.length} produto(s)`).join('\n');
+  const emojiDe = (c) => (c.emoji ? `${c.emoji} ` : '📦 ');
+  const descricaoCats = cats
+    .map((c) => `${emojiDe(c)}**${c.nome}** — ${c.produtos.length} produto(s)${c.descricao ? ` — _${c.descricao}_` : ''}`)
+    .join('\n');
   const embed = new EmbedBuilder()
     .setColor(0xbeb6ff)
     .setTitle('📌 Fixar painel de categoria')
     .setDescription(
       'Escolha a categoria para fixar no canal com os produtos:\n\n' +
-      (cats.length ? descricaoCats : 'Nenhuma categoria cadastrada.')
+      (cats.length ? descricaoCats : 'Nenhuma categoria cadastrada.') +
+      '\n\n_Agora com **🏷️ Gerenciar categorias** para editar emoji, descrição e reordenar._'
     );
 
   // Agrupa em linhas de ate 5 botoes
   const linhas = [];
   let linha = new ActionRowBuilder();
   cats.forEach((c, i) => {
-    if (i > 0 && i % 5 === 0) {
+    if (i > 0 && i % 4 === 0) {
       linhas.push(linha);
       linha = new ActionRowBuilder();
     }
     linha.addComponents(
       new ButtonBuilder()
         .setCustomId(`painelcat:${c.id}`)
-        .setLabel(c.id.slice(0, 80))
+        .setLabel(`${emojiDe(c)} ${c.nome.slice(0, 12)}`)
         .setStyle(ButtonStyle.Primary)
     );
   });
+  if (linha.components.length < 5) {
+    // Reserva o último espaço da linha para o gerenciamento
+    if (linha.components.length) {
+      linha.addComponents(
+        new ButtonBuilder()
+          .setCustomId('painelcat:gercat')
+          .setLabel('🏷️ Gerenciar')
+          .setStyle(ButtonStyle.Secondary)
+      );
+    }
+  }
   if (linha.components.length) linhas.push(linha);
 
   return { embeds: [embed], components: linhas };
@@ -73,7 +93,7 @@ module.exports = {
   usage: '!painelcategoria <categoria>',
 
   async execute(message, args) {
-    if (!message.guild || !isAdmin(message.member, message.author.id)) {
+    if (!message.guild || !comandoPode(message.member, message.author.id, 'painelcategoria')) {
       return message.reply('🔒 Somente administradores podem usar este comando.');
     }
 

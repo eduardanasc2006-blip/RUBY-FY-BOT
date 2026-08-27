@@ -1,4 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
+const { comandoPode } = require('../utils/permissions');
 const { buildPainelCentral, privar } = require('../utils/painelCenter');
 const { isAdmin } = require('../prefixCommands/settaxa');
 
@@ -8,7 +9,7 @@ module.exports = {
     .setDescription('Abre o gerenciador central de painéis (admin)'),
 
   async execute(interaction) {
-    if (!interaction.guild || !isAdmin(interaction.member, interaction.user.id)) {
+    if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'painel')) {
       return interaction.reply(privar('🔒 Somente administradores podem usar este comando.'));
     }
     return interaction.reply(buildPainelCentral());

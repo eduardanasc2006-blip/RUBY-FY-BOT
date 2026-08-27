@@ -52,6 +52,7 @@ const COMANDOS = [
   { grupo: '🛠️ Administração', cmd: 'canalavisos', desc: 'Canal de avisos de estoque.', admin: true },
   { grupo: '🛠️ Administração', cmd: 'limpar', desc: 'Apaga mensagens do canal.', admin: true },
   { grupo: '🛠️ Administração', cmd: 'rolegive', desc: 'Dá um cargo a um membro.', admin: true },
+  { grupo: '🛠️ Administração', cmd: 'permissoes', desc: 'Gerencia permissões por cargo (estoque, taxas, painéis etc).', admin: true },
   { grupo: '✨ Comandos personalizados', cmd: 'criarcomando', desc: 'Cria um comando personalizado.', admin: true },
   { grupo: '✨ Comandos personalizados', cmd: 'gerenciarcomandos', desc: 'Lista, edita ou exclui personalizados.', admin: true },
 ].map((c) => {

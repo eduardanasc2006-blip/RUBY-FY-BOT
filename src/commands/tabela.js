@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, MessageFlags, PermissionFlagsBits } = require('discord.js');
+const { comandoPode } = require('../utils/permissions');
 const { publishOrUpdatePanel } = require('../utils/panelStore');
 const { isAdmin } = require('../prefixCommands/settaxa');
 
@@ -20,7 +21,7 @@ module.exports = {
     ),
 
   async execute(interaction) {
-    if (!interaction.guild || !isAdmin(interaction.member, interaction.user.id)) {
+    if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'tabela')) {
       return interaction.reply({
         content: '🔒 Somente administradores podem publicar o painel de conversão.',
         flags: MessageFlags.Ephemeral,

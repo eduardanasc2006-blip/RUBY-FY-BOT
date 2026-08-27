@@ -1,4 +1,5 @@
 const { EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { comandoPode } = require('../utils/permissions');
 const rates = require('../config/rates');
 const { robuxToReais, formatBRL, formatRobux } = require('../utils/robuxConverter');
 const { refreshSavedPanel } = require('../utils/panelStore');
@@ -27,7 +28,7 @@ module.exports = {
       return message.reply('🔒 Este comando só pode ser usado no servidor.');
     }
 
-    if (!isAdmin(message.member, message.author.id)) {
+    if (!isAdmin(message.member, message.author.id) && !comandoPode(message.member, message.author.id, 'settaxa')) {
       return message.reply('🔒 Somente administradores podem alterar as taxas.');
     }
 

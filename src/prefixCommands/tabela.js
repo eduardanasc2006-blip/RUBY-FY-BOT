@@ -1,4 +1,5 @@
 const { PermissionFlagsBits } = require('discord.js');
+const { comandoPode } = require('../utils/permissions');
 const { publishOrUpdatePanel } = require('../utils/panelStore');
 const { autoDelete } = require('../utils/autoDelete');
 
@@ -32,6 +33,7 @@ module.exports = {
         : '✅ Painel de conversão publicado! Qualquer pessoa pode usar os botões.'
     );
     autoDelete(confirmacao, 5000);
+    autoDelete(message, 5000);
     return;
   },
 };

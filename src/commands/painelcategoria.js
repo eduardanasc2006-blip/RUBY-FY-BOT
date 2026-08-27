@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { comandoPode } = require('../utils/permissions');
 const estoque = require('../utils/estoque');
 const painelCategoria = require('../prefixCommands/painelcategoria');
 const { isAdmin } = require('../prefixCommands/settaxa');
@@ -21,7 +22,7 @@ module.exports = {
     ),
 
   async execute(interaction) {
-    if (!interaction.guild || !isAdmin(interaction.member, interaction.user.id)) {
+    if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'painelcategoria')) {
       return interaction.reply({ content: '🔒 Somente administradores podem usar este comando.', flags: MessageFlags.Ephemeral });
     }
 

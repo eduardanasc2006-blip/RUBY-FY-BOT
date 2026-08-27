@@ -86,6 +86,37 @@ function buildPainelCentral() {
     if (linha2.components.length) componentes.push(linha2);
   }
 
+  // Botões para remover painel fixo (com confirmação no handler).
+  // Cada um usa um customId próprio; se não houver nada para remover, esta linha some.
+  const linhaRemover = new ActionRowBuilder();
+  if (conv) {
+    linhaRemover.addComponents(
+      new ButtonBuilder()
+        .setCustomId('painelcenter:remconversao')
+        .setLabel('🛑 Remover conversão')
+        .setStyle(ButtonStyle.Danger)
+    );
+  }
+  if (est) {
+    linhaRemover.addComponents(
+      new ButtonBuilder()
+        .setCustomId('painelcenter:remestoque')
+        .setLabel('🛑 Remover estoque')
+        .setStyle(ButtonStyle.Danger)
+    );
+  }
+  for (const [msgId, info] of categorias) {
+    if (linhaRemover.components.length === 5) break;
+    const catId = typeof info === 'string' ? info : info.catId;
+    linhaRemover.addComponents(
+      new ButtonBuilder()
+        .setCustomId(`painelcenter:remcategoria:${msgId}:${catId}`)
+        .setLabel(`🛑 Cat. ${catId.slice(0, 15)}`)
+        .setStyle(ButtonStyle.Danger)
+    );
+  }
+  if (linhaRemover.components.length) componentes.push(linhaRemover);
+
   return { embeds: [embed], components: componentes };
 }
 

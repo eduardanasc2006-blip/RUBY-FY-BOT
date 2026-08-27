@@ -37,7 +37,7 @@ const estoque = {
     const cat = estoque.categoria(catId);
     return cat ? cat.produtos.find((p) => p.id === prodId) : null;
   },
-  addProduto(catId, { nome, valor, controlarQtd, quantidade }) {
+  addProduto(catId, { nome, valor, controlarQtd, quantidade, descricao, imagem }) {
     const cat = estoque.categoria(catId);
     if (!cat) return null;
     const id = slug(nome);
@@ -48,6 +48,8 @@ const estoque = {
       valor,
       controlarQtd: !!controlarQtd,
       quantidade: controlarQtd ? Math.max(0, Math.floor(quantidade || 0)) : null,
+      descricao: descricao || null,
+      imagem: imagem || null,
       ativo: true,
     };
     cat.produtos.push(prod);
@@ -72,6 +74,20 @@ const estoque = {
     const p = estoque.produto(catId, prodId);
     if (!p) return null;
     p.nome = nome;
+    salvar();
+    return p;
+  },
+  setDescricaoProduto(catId, prodId, descricao) {
+    const p = estoque.produto(catId, prodId);
+    if (!p) return null;
+    p.descricao = descricao || null;
+    salvar();
+    return p;
+  },
+  setImagemProduto(catId, prodId, imagem) {
+    const p = estoque.produto(catId, prodId);
+    if (!p) return null;
+    p.imagem = imagem || null;
     salvar();
     return p;
   },
@@ -104,6 +120,31 @@ const estoque = {
     cat.nome = novoNome;
     salvar();
     return cat;
+  },
+  setEmojiCategoria(catId, emoji) {
+    const cat = estoque.categoria(catId);
+    if (!cat) return null;
+    cat.emoji = emoji || null;
+    salvar();
+    return cat;
+  },
+  setDescricaoCategoria(catId, descricao) {
+    const cat = estoque.categoria(catId);
+    if (!cat) return null;
+    cat.descricao = descricao || null;
+    salvar();
+    return cat;
+  },
+  // Move a categoria uma posição: delta = -1 (sobe) ou +1 (desce)
+  moverCategoria(catId, delta) {
+    const i = dados.categorias.findIndex((c) => c.id === catId);
+    if (i === -1) return false;
+    const j = i + delta;
+    if (j < 0 || j >= dados.categorias.length) return false;
+    const [cat] = dados.categorias.splice(i, 1);
+    dados.categorias.splice(j, 0, cat);
+    salvar();
+    return true;
   },
 
   // ----- status de exibição -----

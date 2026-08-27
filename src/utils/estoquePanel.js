@@ -15,6 +15,10 @@ const btn = (id, label, style = ButtonStyle.Secondary, emoji) => {
 
 // ----- VISÃO PÚBLICA (!estoque / painel fixo) ----------
 
+function emojiDa(c) {
+  return c.emoji || '📦';
+}
+
 function publicoCategorias() {
   const cats = estoque.categorias();
   const embed = new EmbedBuilder()
@@ -29,7 +33,7 @@ function publicoCategorias() {
 
   const linhas = cats.slice(0, 5).map((c) => {
     const total = c.produtos.filter((p) => p.ativo).length;
-    return btn(`estfixo:cat:${c.id}`, `${c.nome} (${total})`, ButtonStyle.Primary);
+    return btn(`estfixo:cat:${c.id}`, `${emojiDa(c)} ${c.nome} (${total})`, ButtonStyle.Primary);
   });
   return { embeds: [embed], components: linhas.length ? [row(...linhas)] : [] };
 }
@@ -42,13 +46,21 @@ function publicoProdutos(catId) {
     const s = estoque.status(p);
     const qtd =
       p.controlarQtd && p.quantidade > 1 ? `\n📦 ${p.quantidade} unidades` : '';
-    return `${s.emoji} **${p.nome}**\n💵 ${formatBRL(p.valor)}\n${s.texto}${qtd}`;
+    const desc = p.descricao ? `\n_${p.descricao}_` : '';
+    return `${s.emoji} **${p.nome}**\n💵 ${formatBRL(p.valor)}\n${s.texto}${qtd}${desc}`;
   });
 
   const embed = new EmbedBuilder()
     .setColor(COR)
-    .setTitle(`📦 ${cat.nome}`)
-    .setDescription(linhas.length ? linhas.join('\n\n') : 'Nenhum produto nesta categoria.');
+    .setTitle(`${emojiDa(cat)} ${cat.nome}`)
+    .setDescription(
+      `${cat.descricao ? `*${cat.descricao}*\n\n` : ''}${linhas.length ? linhas.join('\n\n') : 'Nenhum produto nesta categoria.'}`
+    );
+
+  // Mostra a imagem do produto quando a categoria tem um único produto com imagem
+  if (cat.produtos.length === 1 && cat.produtos[0].imagem) {
+    embed.setImage(cat.produtos[0].imagem);
+  }
 
   return {
     embeds: [embed],
@@ -74,19 +86,100 @@ function adminMenu() {
       row(
         btn('estadm:addcat', '➕ Categoria', ButtonStyle.Primary),
         btn('estadm:addprod', '📦 Produto', ButtonStyle.Primary),
-        btn('estadm:lista', '📋 Ver estoque', ButtonStyle.Secondary)
+        btn('estadm:lista', '📋 Ver estoque', ButtonStyle.Secondary),
+        btn('estadm:gercat', '🏷️ Gerenciar categorias', ButtonStyle.Secondary)
       ),
       row(
         btn('estadm:qtd', '🔢 Quantidade', ButtonStyle.Secondary),
         btn('estadm:vender', '➖ Vender (−1)', ButtonStyle.Primary),
         btn('estadm:toggle', '👁️ Ativar/Desativar', ButtonStyle.Secondary),
-        btn('estadm:remover', '🗑️ Remover produto', ButtonStyle.Danger)
+        btn('estadm:remover', '🗑️ Remover produto', ButtonStyle.Danger),
+        btn('estadm:prodinfo', '📝 Info do produto', ButtonStyle.Secondary)
       ),
       row(
         btn('estadm:nome', '✏️ Editar nome', ButtonStyle.Secondary),
         btn('estadm:rencat', '✏️ Renomear categoria', ButtonStyle.Secondary),
         btn('estadm:remcat', '🗑️ Remover categoria', ButtonStyle.Danger)
       ),
+    ],
+  };
+}
+
+// Tela de gerenciamento de categorias (emoji, descrição, reordenar, renomear)
+function adminGerenciarCategorias() {
+  const cats = estoque.categorias();
+  if (!cats.length) {
+    return {
+      content: '📦 Nenhuma categoria cadastrada. Crie uma primeiro com **➕ Categoria**.',
+      embeds: [],
+      components: [row(btn('estadm:menu', '⬅️ Voltar'))],
+    };
+  }
+  const blocos = cats.map((c, i) => {
+    const desc = c.descricao ? ` — _${c.descricao}_` : '';
+    return `${emojiDa(c)} **${c.nome}** (${c.produtos.length} itens)${
+      i === 0 || i === cats.length - 1 ? '' : ''
+    }${desc}`;
+  });
+  const embed = new EmbedBuilder()
+    .setColor(COR)
+    .setTitle('🏷️ Gerenciar Categorias')
+    .setDescription(
+      `Use os botões para editar. As setas mudam a ordem (aparecem no menu público).\n\n${blocos.join('\n')}`
+    );
+
+  // Escolher categoria para gerenciar
+  const linhas = [];
+  for (let i = 0; i < cats.length; i++) {
+    if (i % 3 === 0) linhas.push(new ActionRowBuilder());
+    linhas[linhas.length - 1].addComponents(
+      new ButtonBuilder()
+        .setCustomId(`estadm:gercat2:${cats[i].id}`)
+        .setLabel(`${cats[i].nome.slice(0, 25)}`)
+        .setStyle(ButtonStyle.Primary)
+    );
+  }
+  if (linhas.length) {
+    linhas[linhas.length - 1].addComponents(
+      btn('estadm:menu', '⬅️ Voltar', ButtonStyle.Secondary)
+    );
+  } else {
+    linhas.push(row(btn('estadm:menu', '⬅️ Voltar')));
+  }
+  return { embeds: [embed], components: linhas };
+}
+
+// Tela de uma categoria específica (editar emoji/descrição/reordenar/renomear/remover)
+function adminGerCatDetalhe(catId) {
+  const cat = estoque.categoria(catId);
+  if (!cat) return { content: '❌ Categoria não encontrada.', embeds: [], components: [] };
+  const i = estoque.categorias().findIndex((c) => c.id === catId);
+  const total = estoque.categorias().length;
+
+  const embed = new EmbedBuilder()
+    .setColor(COR)
+    .setTitle(`${emojiDa(cat)} ${cat.nome}`)
+    .setDescription(
+      `**Posição:** ${i + 1} de ${total}\n` +
+      `**Emoji:** ${emojiDa(cat)}\n` +
+      `**Descrição:** ${cat.descricao ? `_${cat.descricao}_` : '*nenhuma*'}\n\n` +
+      `Escolha uma ação para a categoria:`
+    );
+
+  return {
+    embeds: [embed],
+    components: [
+      row(
+        btn(`estadm:catemoji:${cat.id}`, '😀 Emoji', ButtonStyle.Secondary),
+        btn(`estadm:catdesc:${cat.id}`, '📝 Descrição', ButtonStyle.Secondary),
+        btn(`estadm:rencat:${cat.id}`, '✏️ Renomear', ButtonStyle.Secondary)
+      ),
+      row(
+        btn(`estadm:catsubir:${cat.id}`, '⬆️ Subir', ButtonStyle.Primary),
+        btn(`estadm:catdescer:${cat.id}`, '⬇️ Descer', ButtonStyle.Primary),
+        btn(`estadm:remcat:${cat.id}`, '🗑️ Remover', ButtonStyle.Danger)
+      ),
+      row(btn('estadm:gercat', '⬅️ Voltar', ButtonStyle.Secondary)),
     ],
   };
 }
@@ -103,7 +196,7 @@ function adminEscolherCategoria(acao) {
   }
   const embed = new EmbedBuilder().setColor(COR).setTitle('⚙️ Escolha a categoria');
   const linhas = cats.slice(0, 5).map((c) =>
-    btn(`estadm:${acao}:${c.id}`, c.nome, ButtonStyle.Primary)
+    btn(`estadm:${acao}:${c.id}`, `${emojiDa(c)} ${c.nome}`, ButtonStyle.Primary)
   );
   return {
     embeds: [embed],
@@ -134,6 +227,40 @@ function adminEscolherProduto(acao, catId) {
   };
 }
 
+// Detalhes de um produto (editar descrição/imagem/valor)
+function adminProdDetalhe(catId, prodId) {
+  const cat = estoque.categoria(catId);
+  const p = estoque.produto(catId, prodId);
+  if (!cat || !p) {
+    return { content: '❌ Produto não encontrado.', embeds: [], components: [row(btn('estadm:menu', '⬅️ Voltar'))] };
+  }
+  const s = estoque.status(p);
+  const embed = new EmbedBuilder()
+    .setColor(COR)
+    .setTitle(`📦 ${p.nome}`)
+    .setDescription(
+      `**Categoria:** ${emojiDa(cat)} ${cat.nome}\n` +
+      `**Preço:** ${formatBRL(p.valor)}\n` +
+      `**Status:** ${s.emoji} ${s.texto}\n` +
+      `**Quantidade:** ${p.controlarQtd ? (p.quantidade ?? 0) : 'sem controle'}\n` +
+      `**Descrição:** ${p.descricao ? `_${p.descricao}_` : '*nenhuma*'}\n` +
+      `**Imagem:** ${p.imagem ? '[link](' + p.imagem + ')' : '*nenhuma*'}`
+    );
+  if (p.imagem) embed.setImage(p.imagem);
+
+  return {
+    embeds: [embed],
+    components: [
+      row(
+        btn(`estadm:proddtl-desc:${catId}:${p.id}`, '📝 Descrição', ButtonStyle.Secondary),
+        btn(`estadm:proddtl-img:${catId}:${p.id}`, '🖼️ Imagem', ButtonStyle.Secondary),
+        btn(`estadm:proddtl-valor:${catId}:${p.id}`, '💵 Preço', ButtonStyle.Secondary)
+      ),
+      row(btn('estadm:menu', '⬅️ Voltar ao menu', ButtonStyle.Secondary)),
+    ],
+  };
+}
+
 // Visão admin completa (com tudo, mesmo inativos)
 function adminLista() {
   const cats = estoque.categorias();
@@ -142,16 +269,17 @@ function adminLista() {
       .map((p) => {
         const s = estoque.status(p);
         const qtd = p.controlarQtd ? ` • 📦 ${p.quantidade}` : '';
-        return `${s.emoji} **${p.nome}** — ${formatBRL(p.valor)}${qtd}`;
+        const desc = p.descricao ? `\n_${p.descricao}_` : '';
+        return `${s.emoji} **${p.nome}** — ${formatBRL(p.valor)}${qtd}${desc}`;
       })
       .join('\n');
-    return `**${c.nome}**\n${prods || '_vazia_'}`;
+    return `${emojiDa(c)} **${c.nome}**${c.descricao ? ` — _${c.descricao}_` : ''}\n${prods || '_vazia_'}`;
   });
 
   const embed = new EmbedBuilder()
     .setColor(COR)
     .setTitle('📋 Estoque completo (admin)')
-    .setDescription(blocos.length ? blocos.join('\n\n') : 'Nenhum produto cadastrado.');
+    .setDescription(blocos.length ? blocos.join('\n\n').slice(0, 4096) : 'Nenhum produto cadastrado.');
 
   return {
     embeds: [embed],
@@ -163,6 +291,9 @@ module.exports = {
   publicoCategorias,
   publicoProdutos,
   adminMenu,
+  adminGerenciarCategorias,
+  adminGerCatDetalhe,
+  adminProdDetalhe,
   adminEscolherCategoria,
   adminEscolherProduto,
   adminLista,

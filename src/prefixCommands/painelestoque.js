@@ -1,4 +1,5 @@
 const { publicarOuAtualizar } = require('../utils/estoquePanelStore');
+const { comandoPode } = require('../utils/permissions');
 const { isAdmin } = require('./settaxa');
 const { autoDelete } = require('../utils/autoDelete');
 
@@ -8,7 +9,7 @@ module.exports = {
   usage: '!painelestoque',
 
   async execute(message, args) {
-    if (!message.guild || !isAdmin(message.member, message.author.id)) {
+    if (!message.guild || !comandoPode(message.member, message.author.id, 'painelestoque')) {
       return message.reply('🔒 Somente administradores podem publicar o painel de estoque.');
     }
 
@@ -22,6 +23,7 @@ module.exports = {
         : '✅ Painel de estoque publicado! Qualquer pessoa pode clicar nas categorias — cada um vê a lista de forma privada.'
     );
     autoDelete(confirmacao, 4000);
+    autoDelete(message, 5000);
     return;
   },
 };

@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, MessageFlags, PermissionFlagsBits } = require('discord.js');
+const { comandoPode } = require('../utils/permissions');
 const { publicarOuAtualizar } = require('../utils/estoquePanelStore');
 const { isAdmin } = require('../prefixCommands/settaxa');
 
@@ -20,7 +21,7 @@ module.exports = {
     ),
 
   async execute(interaction) {
-    if (!interaction.guild || !isAdmin(interaction.member, interaction.user.id)) {
+    if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'painelestoque')) {
       return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
     }
 

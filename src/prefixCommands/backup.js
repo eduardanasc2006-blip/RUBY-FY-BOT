@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+const { comandoPode } = require('../utils/permissions');
 const path = require('node:path');
 const { AttachmentBuilder } = require('discord.js');
 const { isAdmin } = require('./settaxa');
@@ -9,7 +10,7 @@ module.exports = {
   usage: '!backup',
 
   async execute(message) {
-    if (!message.guild || !isAdmin(message.member, message.author.id)) {
+    if (!message.guild || !comandoPode(message.member, message.author.id, 'backup')) {
       return message.reply('🔒 Somente administradores podem usar este comando.');
     }
 

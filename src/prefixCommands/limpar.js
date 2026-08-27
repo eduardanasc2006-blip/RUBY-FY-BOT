@@ -1,4 +1,5 @@
 const { isAdmin } = require('./settaxa');
+const { comandoPode } = require('../utils/permissions');
 const { autoDelete } = require('../utils/autoDelete');
 
 module.exports = {
@@ -8,7 +9,7 @@ module.exports = {
   usage: '!limpar <quantidade>',
 
   async execute(message, args) {
-    if (!message.guild || !isAdmin(message.member, message.author.id)) {
+    if (!message.guild || !comandoPode(message.member, message.author.id, 'limpar')) {
       return message.reply('🔒 Somente administradores podem usar este comando.');
     }
 

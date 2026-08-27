@@ -5,6 +5,7 @@ const {
   MessageFlags,
 } = require('discord.js');
 const { isAdmin } = require('../prefixCommands/settaxa');
+const { comandoPode } = require('../utils/permissions');
 const custom = require('../utils/customCommands');
 const { registrarTodos } = require('../utils/customSync');
 
@@ -45,7 +46,7 @@ module.exports = {
     )),
 
   async execute(interaction) {
-    if (!interaction.guild || !isAdmin(interaction.member, interaction.user.id)) {
+    if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'gerenciarcomandos')) {
       return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
     }
 

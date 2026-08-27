@@ -37,6 +37,13 @@ Para alterar, edite apenas o `rates.js` — todo o bot se ajusta automaticamente
 
    Comandos globais podem levar até 1 hora para aparecer no Discord.
 
+
+    **Usar o bot na DM?** Os comandos públicos (/ajuda, /estoque, /gamepass, /reais, /robux, /taxa) são registrados como **User Install** — funcionam no canal e também na **DM** do bot. Para isso:
+    - Rode `npm run deploy` depois de atualizar o código (é isso que permite os / na DM).
+    - No Developer Portal → **General** → **Installation** → marque também **User Install** (sem isso os / não aparecem na DM).
+    - O app precisa ter DM habilitada: **Bot** → **Public Bot** ligado e **Allow Direct Messages** ligado.
+
+
 4. Inicie o bot: `npm start`
 
 ## Discloud

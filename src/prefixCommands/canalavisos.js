@@ -1,4 +1,5 @@
 const { definir, carregar } = require('../utils/avisos');
+const { comandoPode } = require('../utils/permissions');
 const { isAdmin } = require('./settaxa');
 
 module.exports = {
@@ -7,7 +8,7 @@ module.exports = {
   usage: '!canalavisos #canal',
 
   async execute(message) {
-    if (!message.guild || !isAdmin(message.member, message.author.id)) {
+    if (!message.guild || !comandoPode(message.member, message.author.id, 'canalavisos')) {
       return message.reply('🔒 Somente administradores podem usar este comando.');
     }
 

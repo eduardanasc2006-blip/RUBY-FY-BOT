@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
+const { comandoPode } = require('../utils/permissions');
 const { isAdmin } = require('./settaxa');
 
 // Cores disponíveis por nome + aceita hex (#rrggbb)
@@ -28,7 +29,7 @@ module.exports = {
   usage: '!embed título | descrição | [cor] | [imagem]',
 
   async execute(message, args) {
-    if (!message.guild || !isAdmin(message.member, message.author.id)) {
+    if (!message.guild || !comandoPode(message.member, message.author.id, 'embed')) {
       return message.reply('🔒 Somente administradores podem usar este comando.');
     }
 
