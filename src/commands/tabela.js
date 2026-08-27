@@ -1,5 +1,6 @@
-const { PermissionFlagsBits, SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { publishOrUpdatePanel } = require('../utils/panelStore');
+const { isAdmin } = require('../prefixCommands/settaxa');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -7,12 +8,7 @@ module.exports = {
     .setDescription('Publica (ou atualiza) o painel de conversão no canal'),
 
   async execute(interaction) {
-    const ids = (process.env.ADMIN_IDS || '').split(',').map((s) => s.trim()).filter(Boolean);
-    const autorizado =
-      interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ||
-      ids.includes(interaction.user.id);
-
-    if (!autorizado) {
+    if (!interaction.guild || !isAdmin(interaction.member, interaction.user.id)) {
       return interaction.reply({
         content: '🔒 Somente administradores podem publicar o painel de conversão.',
         flags: MessageFlags.Ephemeral,

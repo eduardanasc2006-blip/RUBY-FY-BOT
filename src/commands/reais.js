@@ -9,9 +9,10 @@ module.exports = {
     .addNumberOption((option) =>
       option
         .setName('valor')
-        .setDescription('Valor em Reais (R$)')
+        .setDescription(`Valor em Reais (R$) — mínimo ${rates.TIER1_PRICE_PER_100.toFixed(2).replace('.', ',')}`)
         .setRequired(true)
-        .setMinValue(0.01)
+        .setMinValue(rates.TIER1_PRICE_PER_100)
+        .setMaxValue(10000)
     ),
 
   async execute(interaction) {
