@@ -15,7 +15,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('criarcomando')
     .setDescription('Cria um comando personalizado (admin)')
-    .addStringOption((o) => o.setName('nome').setDescription('Nome do comando (sem espaços)').setRequired(true))
+    .addStringOption((o) => o.setName('nome').setDescription('Nome do comando (pode usar espaço; vira - no /)').setRequired(true))
     .addStringOption((o) => o.setName('descricao').setDescription('Descrição do comando').setRequired(true))
     .addStringOption((o) => o.setName('mensagem').setDescription('Mensagem de resposta').setRequired(true))
     .addBooleanOption((o) => o.setName('ephemeral').setDescription('Resposta privada (ephemeral)? Padrão: sim').setRequired(false))
@@ -32,16 +32,21 @@ module.exports = {
     const ephemeral = interaction.options.getBoolean('ephemeral') ?? true;
     const copiaveisBruto = interaction.options.getString('copiaveis') || '';
 
-    if (!/^[a-z0-9_-]+$/i.test(nome)) {
-      return interaction.reply({ content: '❌ Nome inválido. Use apenas letras, números, `-` ou `_` (sem espaços).', flags: MessageFlags.Ephemeral });
+    // O nome informado pode ter espacos; o Discord nao aceita espaco em comandos /,
+    // entao geramos um slug com hifen no lugar dos espacos (ex: "Ruby Fisk" -> ruby-fisk).
+    const nomeSlug = nome.toLowerCase().replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+
+    if (!nomeSlug) return interaction.reply({ content: '❌ Informe um nome para o comando.', flags: MessageFlags.Ephemeral });
+    if (!/^[a-z0-9_-]+$/i.test(nomeSlug)) {
+      return interaction.reply({ content: '❌ Nome inválido. Use letras, números, espaço, `-` ou `_`.', flags: MessageFlags.Ephemeral });
     }
-    if (nome.length > 32) {
+    if (nomeSlug.length > 32) {
       return interaction.reply({ content: '❌ O nome deve ter no máximo 32 caracteres (limite do Discord).', flags: MessageFlags.Ephemeral });
     }
-    if (COMANDOS_RESERVADOS.includes(nome.toLowerCase())) {
+    if (COMANDOS_RESERVADOS.includes(nomeSlug)) {
       return interaction.reply({ content: `❌ O nome **${nome}** é um comando padrão do bot. Escolha outro nome.`, flags: MessageFlags.Ephemeral });
     }
-    if (custom.existe(nome)) {
+    if (custom.existe(nomeSlug)) {
       return interaction.reply({ content: `❌ O comando \`${nome}\` já existe. Use \`/gerenciarcomandos\` para editar.`, flags: MessageFlags.Ephemeral });
     }
 
@@ -108,14 +113,14 @@ module.exports = {
       });
     }
 
-    const cmd = custom.criar(nome, { descricao, mensagem, ephemeral, copiaveis });
+    const cmd = custom.criar(nomeSlug, { nome, descricao, mensagem, ephemeral, copiaveis });
     if (!cmd) {
       return interaction.reply({ content: '❌ Não consegui criar o comando.', flags: MessageFlags.Ephemeral });
     }
 
     // Registra o comando no Discord para que o /nome apareca e responda.
     try {
-      await registrarUm(interaction.client, nome, descricao);
+      await registrarUm(interaction.client, nomeSlug, descricao);
     } catch (error) {
       console.error('[criarcomando] Falha ao registrar no Discord:', error?.message || error);
       return interaction.reply({
