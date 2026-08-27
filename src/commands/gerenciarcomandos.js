@@ -1,7 +1,40 @@
-const { PermissionFlagsBits, SlashCommandBuilder, MessageFlags } = require('discord.js');
+const {
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+  ActionRowBuilder,
+  StringSelectMenuBuilder,
+  MessageFlags,
+} = require('discord.js');
 const { isAdmin } = require('../prefixCommands/settaxa');
 const custom = require('../utils/customCommands');
 const { registrarTodos, excluirUm } = require('../utils/customSync');
+
+// Menu com os comandos salvos para o admin escolher sem digitar o nome.
+function menuExcluir() {
+  const lista = Object.values(custom.listar());
+  if (!lista.length) {
+    return {
+      content: '📋 Nenhum comando personalizado criado ainda. Use /criarcomando.',
+      components: [],
+    };
+  }
+  const select = new StringSelectMenuBuilder()
+    .setCustomId('gerencmd:excluir')
+    .setPlaceholder('Escolha o comando para excluir…')
+    .setMinValues(1)
+    .setMaxValues(1)
+    .addOptions(
+      lista.slice(0, 25).map((c) => ({
+        label: '/' + c.nome,
+        description: (c.descricao || (c.mensagem ? 'Resposta personalizada' : 'Sem descrição')).slice(0, 100),
+        value: c.nome.toLowerCase(),
+      }))
+    );
+  return {
+    content: '🗑️ **Excluir comando personalizado** — selecione abaixo qual apagar:',
+    components: [new ActionRowBuilder().addComponents(select)],
+  };
+}
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -43,8 +76,11 @@ module.exports = {
     }
 
     if (acao === 'excluir') {
+      // Sem nome: mostra uma caixinha (select) com os comandos salvos, para
+      // o admin escolher sem precisar digitar.
       if (!nome) {
-        return interaction.reply({ content: '❌ Informe o nome do comando para excluir.', flags: MessageFlags.Ephemeral });
+        const menu = menuExcluir();
+        return interaction.reply({ content: menu.content, components: menu.components, flags: MessageFlags.Ephemeral });
       }
       // Remover do Discord (comando global) pode demorar: usa defer para nao dar timeout de 3s.
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });

@@ -749,6 +749,35 @@ client.on('interactionCreate', async (interaction) => {
     } catch {}
   }
 });
+// ----- Excluir comando personalizado via caixinha (select) do /gerenciarcomandos -----
+client.on('interactionCreate', async (interaction) => {
+  try {
+    if (interaction.isAnySelectMenu && interaction.isAnySelectMenu() && interaction.customId === 'gerencmd:excluir') {
+      const custom = require('./utils/customCommands');
+      const { excluirUm } = require('./utils/customSync');
+      const nome = interaction.values[0];
+      const ok = custom.excluir(nome);
+      if (ok) {
+        try {
+          await excluirUm(interaction.client, nome);
+        } catch (error) {
+          console.error('[gerenciarcomandos] Falha ao remover do Discord:', error?.message || error);
+        }
+      }
+      return interaction.update({
+        content: ok ? '✅ Comando /' + nome + ' excluído.' : '❌ Comando /' + nome + ' não encontrado.',
+        components: [],
+      });
+    }
+  } catch (error) {
+    console.error('[Excluir custom]', error);
+    try {
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: '❌ Erro ao excluir.', flags: MessageFlags.Ephemeral });
+      }
+    } catch {}
+  }
+});
 
 // ----- Painel visual de embed -----
 
