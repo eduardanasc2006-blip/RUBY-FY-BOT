@@ -24,23 +24,20 @@ module.exports = {
     const anexo = interaction.options.getAttachment('imagem');
     const link = interaction.options.getString('link_imagem');
 
-    // Sem título e sem descrição: abre o editor visual (mesmo comportamento do !embed sem args).
-    // Isso vale também em DM (User Install), onde montar uma embed e enviar para um canal
-    // do servidor é feito pela seleção de canal dentro do editor.
-    if ((!titulo || !titulo.trim()) && (!descricao || !descricao.trim())) {
+    // Sem título E/OU sem descrição: abre o mesmo editor visual do !embed sem args.
+    // Assim o /embed nunca monta uma embed inválida (o Discord exige description
+    // ou fields) e reutiliza todo o editor (título, descrição, cor, imagem,
+    // thumbnail, autor, rodapé, fields, preview, voltar, enviar, cancelar).
+    // Com anexo/link, o editor já vem com a imagem pré-preenchida.
+    if (!titulo || !titulo.trim() || !descricao || !descricao.trim()) {
       const { buildPainel, getSessao, buildEmbed, limparSessao } = require('../utils/embedPainel');
       const sessao = getSessao(interaction.user.id);
       if (cor) sessao.cor = cor;
       if (anexo && anexo.contentType?.startsWith('image/')) sessao.imagem = anexo.url;
       else if (link && link.startsWith('http')) sessao.imagem = link;
-      if (interaction.guild) {
-        return interaction.reply({ ...buildPainel(interaction.user.id), flags: MessageFlags.Ephemeral });
-      }
-      // Em DM não dá para publicar no servidor; avisa para usar no servidor ou usa o editor com envio direto.
-      return interaction.reply({
-        content: '⚠️ O editor **precisa ser usado no servidor** (ou use `/embed titulo:… descricao:…` na DM).',
-        flags: MessageFlags.Ephemeral,
-      });
+      // Mesmo editor visual do !embed sem args. Em DM o envio funciona quando o
+      // bot está no servidor e o editor oferece o seletor de canal.
+      return interaction.reply({ ...buildPainel(interaction.user.id), flags: MessageFlags.Ephemeral });
     }
 
     const embed = new EmbedBuilder()

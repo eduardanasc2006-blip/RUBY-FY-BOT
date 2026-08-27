@@ -1,4 +1,3 @@
-const { PermissionFlagsBits } = require('discord.js');
 const { comandoPode } = require('../utils/permissions');
 const { publishOrUpdatePanel } = require('../utils/panelStore');
 const { autoDelete } = require('../utils/autoDelete');
@@ -13,12 +12,8 @@ module.exports = {
       return message.reply('🔒 O painel de conversão só pode ser publicado no servidor.');
     }
 
-    const ids = (process.env.ADMIN_IDS || '').split(',').map((s) => s.trim()).filter(Boolean);
-    const autorizado =
-      message.member?.permissions.has(PermissionFlagsBits.Administrator) ||
-      ids.includes(message.author.id);
-
-    if (!autorizado) {
+    // Mesma permissão do /tabela: owner, Administrator ou cargo com permissão no grupo de Taxas.
+    if (!comandoPode(message.member, message.author.id, 'tabela')) {
       return message.reply('🔒 Somente administradores podem publicar o painel de conversão.');
     }
 
