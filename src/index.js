@@ -734,9 +734,9 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       const item = cmd.copiaveis[idx];
-      // Resposta ephemeral com o valor isolado em code block (facil de selecionar e copiar)
+      // Resposta ephemeral com o valor em texto puro (sem code block/backticks)
       return interaction.reply({
-        content: `📋 **${item.nome}:**\n\`\`\`\n${item.valor}\n\`\`\`\n*Selecione o valor acima para copiar.*`,
+        content: `**${item.nome}:** ${item.valor}`,
         flags: MessageFlags.Ephemeral,
       });
     }
