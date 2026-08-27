@@ -37,13 +37,13 @@ function buildCategoria(catId) {
 // Painel visual para o admin escolher qual categoria fixar no canal
 function construirPainelSelecao() {
   const cats = estoque.categorias();
+  const descricaoCats = cats.map((c) => `**${c.id}** — ${c.produtos.length} produto(s)`).join('\n');
   const embed = new EmbedBuilder()
     .setColor(0xbeb6ff)
     .setTitle('📌 Fixar painel de categoria')
     .setDescription(
       'Escolha a categoria para fixar no canal com os produtos:\n\n' +
-      cats.map((c) => `**${c.id}** — ${c.produtos.length} produto(s)`).join('\n') ||
-      'Nenhuma categoria cadastrada.'
+      (cats.length ? descricaoCats : 'Nenhuma categoria cadastrada.')
     );
 
   // Agrupa em linhas de ate 5 botoes
