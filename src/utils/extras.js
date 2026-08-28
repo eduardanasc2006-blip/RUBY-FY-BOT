@@ -148,74 +148,76 @@ function registrar(client) {
       } catch {}
     }
   });
+
+  // ---------- /lock ----------
+  client.on('interactionCreate', async (interaction) => {
+    try {
+      if (interaction.isButton() && interaction.customId.startsWith('lockconf:')) {
+        const partes = interaction.customId.split(':');
+        if (!pode(interaction, 'lock')) return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+        if (partes[1] === 'cancelar') return interaction.reply({ content: '❌ Cancelado.', flags: MessageFlags.Ephemeral });
+        if (partes[1] !== 'confirmar') return;
+        const canalLock = interaction.guild.channels.cache.get(partes[2]);
+        if (!canalLock) return interaction.reply({ content: '❌ Canal não encontrado.', flags: MessageFlags.Ephemeral });
+        // So guarda o backup se ainda nao houver estado salvo: um segundo /lock
+        // no mesmo canal (sem desbloquear) nao pode sobescrever o estado original..
+        if (!estadoSalvo(canalLock.id)) {
+          const estadoAnt = capturarEstado(canalLock);
+          guardarEstado(canalLock.id, estadoAnt);
+        }
+        try {
+          await canalLock.permissionOverwrites.edit(canalLock.guild.roles.everyone.id, { SendMessages: false });
+        } catch (e) {
+          console.error('[Lock] Falha:', e?.message || e);
+          return interaction.reply({ content: '❌ Não consegui bloquear o canal.', flags: MessageFlags.Ephemeral });
+        }
+        return interaction.update({ content: `🔒 Canal bloqueado: ${canalLock}.`, embeds: [], components: [] });
+      }
+    } catch (error) {
+      console.error('[Lock] Erro:', error);
+      try {
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: '❌ Ocorreu um erro.', flags: MessageFlags.Ephemeral });
+        }
+      } catch {}
+    }
+  });
+
+  // ---------- /unlock ----------
+  client.on('interactionCreate', async (interaction) => {
+    try {
+      if (interaction.isButton() && interaction.customId.startsWith('unlockconf:')) {
+        const partes = interaction.customId.split(':');
+        if (!pode(interaction, 'unlock')) return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+        if (partes[1] === 'cancelar') return interaction.reply({ content: '❌ Cancelado.', flags: MessageFlags.Ephemeral });
+        if (partes[1] !== 'confirmar') return;
+        const canalUnlock = interaction.guild.channels.cache.get(partes[2]);
+        if (!canalUnlock) return interaction.reply({ content: '❌ Canal não encontrado.', flags: MessageFlags.Ephemeral });
+        const estadoLock = estadoSalvo(canalUnlock.id);
+        try {
+          if (estadoLock) {
+            await canalUnlock.permissionOverwrites.edit(canalUnlock.guild.roles.everyone.id
+              , { SendMessages: estadoLock.allow ? true : estadoLock.deny ? false : null });
+          } else {
+            const overwrite2 = canalUnlock.permissionOverwrites.cache.get(canalUnlock.guild.roles.everyone.id);
+            if (overwrite2) await overwrite2.delete('unlock pelo admin').catch(() => {});
+          }
+          guardarEstado(canalUnlock.id, null);
+        } catch (e) {
+          console.error('[Unlock] Falha:', e?.message || e);
+          return interaction.reply({ content: '❌ Não consegui desbloquear o canal.', flags: MessageFlags.Ephemeral });
+        }
+        return interaction.update({ content: `🔓 Canal desbloqueado: ${canalUnlock}.`, embeds: [], components: [] });
+      }
+    } catch (error) {
+      console.error('[Unlock] Erro:', error);
+      try {
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({ content: '❌ Ocorreu um erro.', flags: MessageFlags.Ephemeral });
+        }
+      } catch {}
+    }
+  });
 }
 
-// ---------- /lock ----------
-client.on('interactionCreate', async (interaction) => {
-  try {
-    if (interaction.isButton() && interaction.customId.startsWith('lockconf:')) {
-      const partes = interaction.customId.split(':');
-      if (!pode(interaction, 'lock')) return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
-      if (partes[1] === 'cancelar') return interaction.reply({ content: '❌ Cancelado.', flags: MessageFlags.Ephemeral });
-      if (partes[1] !== 'confirmar') return;
-      const canalLock = interaction.guild.channels.cache.get(partes[2]);
-      if (!canalLock) return interaction.reply({ content: '❌ Canal não encontrado.', flags: MessageFlags.Ephemeral });
-      const estadoAnt = capturarEstado(canalLock);
-      guardarEstado(canalLock.id, estadoAnt);
-      try {
-        await canalLock.permissionOverwrites.edit(canalLock.guild.roles.everyone.id, { SendMessages: false });
-      } catch (e) {
-        console.error('[Lock] Falha:', e?.message || e);
-        return interaction.reply({ content: '❌ Não consegui bloquear o canal.', flags: MessageFlags.Ephemeral });
-      }
-      return interaction.update({ content: `🔒 Canal bloqueado: ${canalLock}.`, embeds: [], components: [] });
-    }
-  } catch (error) {
-    console.error('[Lock] Erro:', error);
-    try {
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: '❌ Ocorreu um erro.', flags: MessageFlags.Ephemeral });
-      }
-    } catch {}
-  }
-});
-
-// ---------- /unlock ----------
-client.on('interactionCreate', async (interaction) => {
-  try {
-    if (interaction.isButton() && interaction.customId.startsWith('unlockconf:')) {
-      const partes = interaction.customId.split(':');
-      if (!pode(interaction, 'unlock')) return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
-      if (partes[1] === 'cancelar') return interaction.reply({ content: '❌ Cancelado.', flags: MessageFlags.Ephemeral });
-      if (partes[1] !== 'confirmar') return;
-      const canalUnlock = interaction.guild.channels.cache.get(partes[2]);
-      if (!canalUnlock) return interaction.reply({ content: '❌ Canal não encontrado.', flags: MessageFlags.Ephemeral });
-      const estadoLock = estadoSalvo(canalUnlock.id);
-      try {
-        if (estadoLock) {
-          await canalUnlock.permissionOverwrites.edit(canalUnlock.guild.roles.everyone.id
-            , { SendMessages: estadoLock.allow ? true : estadoLock.deny ? false : null });
-        } else {
-          const overwrite2 = canalUnlock.permissionOverwrites.cache.get(canalUnlock.guild.roles.everyone.id);
-          if (overwrite2) await overwrite2.delete('unlock pelo admin').catch(() => {});
-        }
-        guardarEstado(canalUnlock.id, null);
-      } catch (e) {
-        console.error('[Unlock] Falha:', e?.message || e);
-        return interaction.reply({ content: '❌ Não consegui desbloquear o canal.', flags: MessageFlags.Ephemeral });
-      }
-      return interaction.update({ content: `🔓 Canal desbloqueado: ${canalUnlock}.`, embeds: [], components: [] });
-    }
-  } catch (error) {
-    console.error('[Unlock] Erro:', error);
-    try {
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: '❌ Ocorreu um erro.', flags: MessageFlags.Ephemeral });
-      }
-    } catch {}
-  }
-});
-
 module.exports = { registrar };
-
-

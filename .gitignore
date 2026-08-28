@@ -1,3 +1,4 @@
 node_modules/
 .env
 data/
+.github/workflows/build-zip.yml

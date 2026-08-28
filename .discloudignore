@@ -1,0 +1,14 @@
+# Arquivos que não devem ir para a Discloud (sintaxe simples: nomes exatos)
+# Reduz o tamanho do upload e impede dados desnecessários/sensíveis.
+
+.git
+.vscode
+.idea
+.DS_Store
+node_modules
+data
+tests
+.github
+RUBY-FY-BOT-v1.4.zip
+.env.example
+package-lock.json

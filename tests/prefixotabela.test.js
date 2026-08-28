@@ -1,5 +1,5 @@
 const path = require("node:path");
-const proj = "/workspace/project";
+const proj = __dirname + "/..";
 const canalA = { id: "111", name: "geral", isTextBased: () => true, permissionsFor: () => ({ has: () => true }) };
 const canalB = { id: "222", name: "vendas", isTextBased: () => true, permissionsFor: () => ({ has: () => true }) };
 let captured = null;
