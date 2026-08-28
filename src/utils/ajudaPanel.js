@@ -128,7 +128,7 @@ const PAGINAS = {
  ].join('\n'),
  }),
 
-comandos: () => {
+comandos: (isAdminDaPagina = false) => {
  // Lista completa de comandos, agrupada por categoria. Cada linha mostra
  // apenas os prefixos (! e/ou /) que de fato existem para aquele comando.
  const grupos = [];
@@ -143,7 +143,7 @@ comandos: () => {
 
  const linhas = [];
  for (const g of grupos) {
- const itensVisiveis = g.itens.filter((c) => isAdminAtual || !c.admin);
+ const itensVisiveis = g.itens.filter((c) => isAdminDaPagina || !c.admin);
  if (!itensVisiveis.length) continue;
  linhas.push(`**${g.titulo}**`);
  for (const c of itensVisiveis) {
@@ -243,17 +243,11 @@ comandos: () => {
  }),
 };
 
-// Flag usada na página "comandos" para esconder comandos de administração
-let isAdminAtual = false;
-
 function buildAjuda(pagina = 'inicio', isAdmin = false) {
  let pag = PAGINAS[pagina] ? pagina : 'inicio';
  if ((pag === 'admin' || pag === 'painel' || pag === 'personalizados') && !isAdmin) pag = 'inicio';
 
- // Flag usada pela página "comandos" para ocultar itens de administração
- isAdminAtual = !!isAdmin;
-
- const dados = PAGINAS[pag]();
+ const dados = PAGINAS[pag](isAdmin);
  const embed = new EmbedBuilder()
  .setColor(COR)
  .setTitle(dados.titulo)
