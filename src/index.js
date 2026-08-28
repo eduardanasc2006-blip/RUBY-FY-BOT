@@ -43,6 +43,11 @@ const client = new Client({
   partials: [Partials.Channel],
 });
 
+// O bot registra um listener de interactionCreate por feature (painéis, lock/unlock,
+// mensagem, perm, etc.) — mais do que o limite padrão de 10 do Node》。
+// Aumenta o limite para evitar o MaxListenersExceededWarning no boot。
+client.setMaxListeners(25);
+
 // Slash commands (/)
 client.commands = new Collection();
 const commandsPath = path.join(__dirname, 'commands');
