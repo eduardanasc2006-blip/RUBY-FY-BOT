@@ -19,3 +19,5 @@
 - v1.1 = primeiro release construído direto do `git ls-files` do main (70 arquivos, zip completo p/ Discloud). Assets sem `.env`, `data/`, `node_modules`.
 - Publicar release: criar tag `ruby-fy-bot-vX.Y`, upload do zip via `https://uploads.github.com/.../releases/{id}/assets?name=...`.
 - Repo público → links `github.com/.../releases/download/...` funcionam sem auth.
+- ⚠️ O token atual (`ghp_...`) **não tem permissão para criar/editar releases** (403 "Resource not accessible by integration" — fine-grained sem permissão Contents/Releases). Push de tags funciona; source zip automático da tag fica disponível em `github.com/<user>/<repo>/archive/refs/tags/<tag>.zip`. Para subir asset p/ release, usar token com permissão de Releases.
+- v1.2 (tag `ruby-fy-bot-v1.2`, HEAD main) — source zip disponível via codeload; asset custom não subido por limitação de token.
