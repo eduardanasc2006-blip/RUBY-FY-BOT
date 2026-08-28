@@ -32,6 +32,7 @@ Para alterar, edite apenas o `rates.js` — todo o bot se ajusta automaticamente
 
    `DISCORD_TOKEN` = token do seu bot
    `CLIENT_ID` = ID do aplicativo
+   `ADMIN_IDS` = (opcional) IDs de usuários administradores, separados por vírgula
 
 3. Registre os comandos (só precisa rodar quando criar ou alterar comandos): `npm run deploy`
 
