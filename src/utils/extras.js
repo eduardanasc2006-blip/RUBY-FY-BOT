@@ -159,8 +159,12 @@ function registrar(client) {
         if (partes[1] !== 'confirmar') return;
         const canalLock = interaction.guild.channels.cache.get(partes[2]);
         if (!canalLock) return interaction.reply({ content: '❌ Canal não encontrado.', flags: MessageFlags.Ephemeral });
-        const estadoAnt = capturarEstado(canalLock);
-        guardarEstado(canalLock.id, estadoAnt);
+        // So guarda o backup se ainda nao houver estado salvo: um segundo /lock
+        // no mesmo canal (sem desbloquear) nao pode sobescrever o estado original..
+        if (!estadoSalvo(canalLock.id)) {
+          const estadoAnt = capturarEstado(canalLock);
+          guardarEstado(canalLock.id, estadoAnt);
+        }
         try {
           await canalLock.permissionOverwrites.edit(canalLock.guild.roles.everyone.id, { SendMessages: false });
         } catch (e) {
