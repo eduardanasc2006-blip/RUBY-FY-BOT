@@ -69,219 +69,147 @@ const COMANDOS = [
 const customCom = require('./customCommands');
 
 const PAGINAS = {
- inicio: () => ({
- titulo: 'RUBY FY BOT',
- descricao: [
- 'Conversor de Robux + Estoque de produtos',
- '',
- 'Conversor',
- 'Calcular Robux ↔ Reais, Game Pass e taxas',
- '',
- 'Estoque',
- 'Ver produtos, preços e disponibilidade',
- '',
- 'Painéis',
- 'Painéis fixos de conversão e estoque',
- '',
- 'Todos os comandos',
- 'Veja a lista completa com / e !',
- '',
- 'Administração',
- 'Comandos para administradores',
- '',
- 'Clique numa categoria ou use as setas',
- ].join('\n'),
- }),
+  inicio: () => ({
+    titulo: '☁️ RUBY FY BOT — AJUDA',
+    descricao: [
+      '*Olá! Escolha abaixo o que você deseja consultar.*',
+      '',
+      '☁️ **CONVERSOR**',
+      '*Ferramentas para calcular valores de Robux.*',
+      '',
+      '☁️ **ESTOQUE**',
+      '*Veja os produtos disponíveis e seus valores.*',
+      '',
+      '☁️ **ADMINISTRAÇÃO**',
+      '*Configurações disponíveis para administradores.*',
+      '',
+      '━━━━━━━━━━━━━━━━━━',
+    ].join('\n'),
+  }),
 
- conversor: () => ({
- titulo: 'Conversor de Robux',
- descricao: [
- '!robux <quantidade> — /robux',
- 'Descubra quanto custa X Robux em reais.',
- 'Exemplo: !robux 500 → R$ 19,00',
- '',
- '!reais <valor> — /reais',
- 'Descubra quantos Robux você consegue com X reais.',
- 'Exemplo: !reais 10 → 263 Robux',
- '',
- '!gamepass <robux> — /gamepass',
- 'Quanto cobrar no Game Pass para receber X Robux.',
- 'Exemplo: !gamepass 1000 → crie por 1.429 Robux',
- '',
- '!taxa — /taxa',
- 'Veja as taxas atuais de conversão.',
- ].join('\n'),
- }),
+  conversor: () => ({
+    titulo: '☁️ CONVERSOR',
+    descricao: [
+      '*Escolha uma opção abaixo.*',
+      '',
+      '➜ **!robux <qtd>**',
+      '*Descubra quanto custa determinada quantidade de Robux.*',
+      '',
+      '➜ **!reais <valor>**',
+      '*Descubra quantos Robux correspondem a determinado valor.*',
+      '',
+      '➜ **!gamepass <robux>**',
+      '*Descubra quanto cobrar no Game Pass para receber a quantidade desejada.*',
+      '',
+      '➜ **!taxa**',
+      '*Consulte as taxas atuais.*',
+    ].join('\n'),
+  }),
 
- estoque: () => ({
- titulo: 'Estoque de Produtos',
- descricao: [
- '!estoque — /estoque',
- 'Mostra os produtos por categoria (MM2, FTF etc).',
- 'Clique na categoria para ver itens, preços e disponibilidade.',
- '',
- '!estoque <nome> — /estoque produto: <nome>',
- 'Busca um produto específico.',
- 'Exemplo: !estoque icewing ou /estoque produto: icewing',
- '',
- 'Produtos gerenciados pela administração.',
- ].join('\n'),
- }),
+  estoque: () => ({
+    titulo: '☁️ ESTOQUE',
+    descricao: [
+      '*Consulte os produtos disponíveis e seus valores.*',
+      '',
+      '➜ **!estoque**',
+      '*Abra o painel de estoque e escolha uma categoria.*',
+    ].join('\n'),
+  }),
 
-comandos: (isAdminDaPagina = false) => {
- // Lista completa de comandos, agrupada por categoria. Cada linha mostra
- // apenas os prefixos (! e/ou /) que de fato existem para aquele comando.
- const grupos = [];
- let grupoAtual = null;
- for (const c of COMANDOS) {
- if (c.grupo !== grupoAtual) {
- grupoAtual = c.grupo;
- grupos.push({ titulo: c.grupo, itens: [] });
- }
- grupos[grupos.length - 1].itens.push(c);
- }
 
- const linhas = [];
- for (const g of grupos) {
- const itensVisiveis = g.itens.filter((c) => isAdminDaPagina || !c.admin);
- if (!itensVisiveis.length) continue;
- linhas.push(`**${g.titulo}**`);
- for (const c of itensVisiveis) {
- const usos = [];
- if (c.pre) usos.push(`!${c.cmd}`);
- if (c.slash) usos.push(`/${c.cmd}`);
- linhas.push(`> ${usos.join(' — ')} — ${c.desc}`,'');
- }
- }
+  personalizados: () => {
+    const lista = Object.values(customCom.listar());
+    const linhas = [];
+    if (lista.length === 0) {
+      linhas.push('*Nenhum comando personalizado criado ainda.*', '');
+      linhas.push('Use **/criarcomando** para criar o seu comando.', '');
+      linhas.push('Com **/criarcomando** você define nome, descrição, mensagem e conteúdos copiáveis.', '');
+      linhas.push('Com **/gerenciarcomandos** você lista ou exclui os já criados.');
+    } else {
+      for (const c of lista) {
+        const extras = c.copiaveis && c.copiaveis.length ? ` — 📋 ${c.copiaveis.length} copiável(is)` : '';
+        linhas.push(`➜ **/${c.nome}**${extras}`);
+        if (c.descricao) linhas.push(`> *${c.descricao}*`);
+        linhas.push('');
+      }
+    }
+    return { titulo: '☁️ COMANDOS PERSONALIZADOS', descricao: linhas.join('\n') };
+  },
 
- const pers = Object.values(customCom.listar());
- if (pers.length) {
- linhas.push('Seus comandos personalizados', '');
- for (const c of pers) {
- linhas.push(`> **/${c.nome}**${c.descricao ? ` — ${c.descricao}` : ''}`, '');
- }
- }
+  painel: () => ({
+    titulo: '☁️ PAINÉIS FIXOS',
+    descricao: [
+      '➜ **!painel** — *Gerenciador central: mostra e publica/atualiza os painéis fixos.*',
+      '',
+      '➜ **!tabela** — *Publica o painel de conversão com botões no canal.*',
+      '',
+      '➜ **!painelestoque** — *Publica o painel fixo de estoque (atualiza sozinho.*',
+      '',
+      '➜ **!painelcategoria <id>** — *Fixar a categoria: sem id abre o seletor; com <id> fixa direto.*',
+      '',
+      'Os painéis atualizam automaticamente quando algo muda.',
+    ].join('\n'),
+  }),
 
- return { titulo: 'Lista Completa de Comandos', descricao: linhas.join('\n').slice(0, 4096) };
- },
-
- personalizados: () => {
- const lista = Object.values(customCom.listar());
- const linhas = [];
- if (lista.length === 0) {
- linhas.push('Nenhum comando personalizado criado ainda.'.repeat(1));
- linhas.push('');
- linhas.push('Use /criarcomando para criar o seu comando.');
- linhas.push('');
- linhas.push('Com /criarcomando você define nome, descrição, mensagem e conteúdos copiáveis.');
- linhas.push('Com /gerenciarcomandos você lista ou exclui os já criados.');
- } else {
- for (const c of lista) {
- const extras = c.copiaveis && c.copiaveis.length ? ` — 📋 ${c.copiaveis.length} copiável(is)` : '';
- linhas.push(`**/${c.nome}**${extras}`);
- if (c.descricao) linhas.push(`> ${c.descricao}`);
- linhas.push('');
- }
- }
- return { titulo: 'Comandos Personalizados', descricao: linhas.join('\n') };
- },
-
- painel: () => ({
- titulo: 'Painéis Fixos',
- descricao: [
- '!painel — /painel',
- 'Gerenciador central: mostra e publica/atualiza os painéis fixos.',
- '',
- '!tabela — /tabela',
- 'Publica o painel de conversão com botões no canal.',
- '',
- '!painelestoque — /painelestoque',
- 'Publica o painel fixo de estoque (atualiza sozinho).',
- '',
- '!painelcategoria <id> — /painelcategoria',
- 'Fixar a categoria: sem id abre o seletor; com <id> fixa direto.',
- '',
- 'Os painéis atualizam automaticamente quando algo muda.',
- ].join('\n'),
- }),
-
- admin: () => ({
- titulo: 'Administração',
- descricao: [
- 'Somente administradores autorizados.',
- '',
- '!settaxa 100 <valor>',
- 'Taxa de 100 a 999 Robux. Ex: !settaxa 100 3,50',
- '',
- '!settaxa 1000 <valor>',
- 'Taxa de 1.000+ Robux. Ex: !settaxa 1000 34,99',
- '',
- '!configtaxa — /configtaxa',
- 'Painel visual para mudar as taxas.',
- '',
- '!configestoque — /configestoque',
- 'Gerencia o estoque: produtos, quantidades, vender (−1).',
- '',
- '!embed — /embed',
- 'Cria uma embed personalizada no canal.',
- '',
- '!backup — /backup',
- 'Backup das taxas e estoque na sua DM.',
- '',
- '!canalavisos — /canalavisos',
- 'Canal de avisos quando um produto esgota.',
- '',
- '!limpar <1-100> — /limpar',
- 'Apaga mensagens do canal. Ex: !limpar 20',
- '',
- '!rolegive <@cargo> <@usuario> — /rolegive',
- 'Dá um cargo a um membro. Ex: !rolegive @VIP @usuario',
- '',
- '/criarcomando — /gerenciarcomandos',
- 'Cria e gerencia comandos personalizados.',
- ].join('\n'),
- }),
+  admin: () => ({
+    titulo: '☁️ ADMINISTRAÇÃO',
+    descricao: [
+      '🔒 *Área exclusiva para administradores autorizados.*',
+      '',
+      '➜ **!tabela**',
+      '*Abre ou atualiza o painel de conversão.*',
+      '',
+      '➜ **!settaxa 100 <valor>**',
+      '*Altera a taxa de 100 a 999 Robux.*',
+      '',
+      '➜ **!settaxa 1000 <valor>**',
+      '*Altera a taxa de 1.000 Robux ou mais.*',
+      '',
+      '➜ **!configtaxa**',
+      '*Abre o painel visual de configuração das taxas.*',
+      '',
+      '➜ **!configestoque**',
+      '*Gerencia categorias, produtos, valores e estoque.*',
+    ].join('\n'),
+  }),
 };
 
 function buildAjuda(pagina = 'inicio', isAdmin = false) {
- let pag = PAGINAS[pagina] ? pagina : 'inicio';
- if ((pag === 'admin' || pag === 'painel' || pag === 'personalizados') && !isAdmin) pag = 'inicio';
+  let pag = PAGINAS[pagina] ? pagina : 'inicio';
+  if ((pag === 'admin' || pag === 'painel' || pag === 'personalizados') && !isAdmin) pag = 'inicio';
 
- const dados = PAGINAS[pag](isAdmin);
- const embed = new EmbedBuilder()
- .setColor(COR)
- .setTitle(dados.titulo)
- .setDescription(dados.descricao)
- .setFooter({ text: 'RUBY FY BOT — !ajuda' });
+  const dados = PAGINAS[pag](isAdmin);
+  const embed = new EmbedBuilder()
+    .setColor(COR)
+    .setTitle(dados.titulo)
+    .setDescription(dados.descricao)
+    .setFooter({ text: 'RUBY FY BOT — !ajuda' });
 
- // Navegação respeitando a visibilidade da página para o usuário
- const listaIds = isAdmin ? ORDEM : ORDEM_VISIVEL;
- // Página "personalizados" não está na lista: navega como se fosse "comandos"
- const navId = pag === 'personalizados' ? 'comandos' : pag;
- const idx = listaIds.indexOf(navId);
- const anterior = listaIds[(idx - 1 + listaIds.length) % listaIds.length];
- const proximo = listaIds[(idx + 1) % listaIds.length];
+  const rows = [];
 
- // Custom ids únicos por página para nunca duplicar com os botões de categoria
- const nav = new ActionRowBuilder().addComponents(
- new ButtonBuilder().setCustomId(`ajuda:nav:prev:${anterior}`).setEmoji('◀️').setStyle(ButtonStyle.Secondary),
- new ButtonBuilder().setCustomId('ajuda:nav:home:inicio').setEmoji('🏠').setStyle(ButtonStyle.Secondary),
- new ButtonBuilder().setCustomId(`ajuda:nav:next:${proximo}`).setEmoji('▶️').setStyle(ButtonStyle.Secondary)
- );
+  if (pag === 'inicio') {
+    const categorias = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('ajuda:cat:conversor').setEmoji('🎮').setLabel('Conversor').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('ajuda:cat:estoque').setEmoji('📦').setLabel('Estoque').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('ajuda:cat:admin').setEmoji('⚙️').setLabel('Administração').setStyle(ButtonStyle.Danger)
+    );
+    rows.push(categorias);
 
- const cats = new ActionRowBuilder().addComponents(
- new ButtonBuilder().setCustomId('ajuda:cat:conversor').setLabel('Conversor').setStyle(ButtonStyle.Primary),
- new ButtonBuilder().setCustomId('ajuda:cat:estoque').setLabel('Estoque').setStyle(ButtonStyle.Primary)
- );
- if (isAdmin) {
- cats.addComponents(
- new ButtonBuilder().setCustomId('ajuda:cat:personalizados').setLabel('Comandos').setStyle(ButtonStyle.Success),
- new ButtonBuilder().setCustomId('ajuda:cat:painel').setLabel('Painel').setStyle(ButtonStyle.Secondary),
- new ButtonBuilder().setCustomId('ajuda:cat:admin').setLabel('Admin').setStyle(ButtonStyle.Danger)
- );
- }
+    if (isAdmin) {
+      const extras = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('ajuda:cat:personalizados').setEmoji('📋').setLabel('Comandos').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('ajuda:cat:painel').setEmoji('🖼️').setLabel('Painel').setStyle(ButtonStyle.Secondary),
+      );
+      rows.push(extras);
+    }
+  } else {
+    const voltar = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId('ajuda:nav:home:inicio').setEmoji('⬅️').setLabel('Voltar').setStyle(ButtonStyle.Secondary)
+    );
+    rows.push(voltar);
+  }
 
- return { embeds: [embed], components: [cats, nav] };
+  return { embeds: [embed], components: rows };
 }
 
 module.exports = { buildAjuda };
