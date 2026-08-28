@@ -1151,6 +1151,9 @@ function comandoDoCustomId(interaction) {
   if (id.startsWith('painelcat:')) return 'painelcategoria';
   if (id.startsWith('cfg:') || id.startsWith('cfgmodal:')) return 'configtaxa';
   if (id.startsWith('embedpainel:') || id.startsWith('embedmodal:') || id.startsWith('embedcanal:')) return 'embed';
+  if (id.startsWith('msgpainel:') || id.startsWith('msgmodal:') || id.startsWith('msgcanal:')) return 'mensagem';
+  if (id.startsWith('lockconf:')) return 'lock';
+  if (id.startsWith('unlockconf:')) return 'unlock';
   if (id.startsWith('gerencmd:')) return 'gerenciarcomandos';
   if (id.startsWith('custom:copy:')) return 'criarcomando';
   return null;
@@ -1234,6 +1237,7 @@ client.on('interactionCreate', async (interaction) => {
 
 const { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview, urlValida } = require('./utils/embedPainel');
 const { linhaSelecaoCanalDe, resolverSelecaoCanal } = require('./utils/channelPicker');
+const extrasHandlers = require('./utils/extras');
 
 client.on('interactionCreate', async (interaction) => {
   try {
@@ -1469,4 +1473,5 @@ client.on(Events.MessageCreate, async (message) => {
   }
 });
 
+extrasHandlers.registrar(client);
 client.login(process.env.DISCORD_TOKEN);

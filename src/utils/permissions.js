@@ -29,13 +29,13 @@ const GRUPOS = [
     id: 'embed',
     nome: '✨ Embed',
     descricao: 'Criar e publicar embeds e mensagens.',
-    comandos: ['embed'],
+    comandos: ['embed', 'mensagem'],
   },
   {
     id: 'moderacao',
     nome: '🛡️ Moderação',
     descricao: 'Apagar mensagens e gerenciar canais.',
-    comandos: ['limpar', 'canalavisos'],
+    comandos: ['limpar', 'canalavisos', 'lock', 'unlock'],
   },
   {
     id: 'cargos',
