@@ -1,0 +1,48 @@
+name: Gerar ZIP para Discloud
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Montar ZIP sem wrapper (raiz limpa para Discloud)
+        shell: bash
+        run: |
+          mkdir -p dist_discloud
+          # copia os arquivos do projeto (sem meta/internos)
+          rsync -a --exclude='.git' --exclude='node_modules' --exclude='.env' --exclude='data' --exclude='tests' --exclude='.github' --exclude='dist_discloud' ./ dist_discloud/
+          cd dist_discloud
+          # remove arquivos que a Discloud recomenda nao enviar
+          rm -f .gitignore .discloudignore package-lock.json RUBY-FY-BOT-v1.4.zip
+          # gera o zip com os arquivos NA RAIZ (sem pasta wrapper)
+          zip -r ../RUBY-FY-BOT-v1.4.zip . -x "*.git*" -x "node_modules/*"
+
+      - name: Publicar Artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: RUBY-FY-BOT-v1.4-limpo
+          path: RUBY-FY-BOT-v1.4.zip
+          if-no-files-found: error
+
+      - name: Criar Release (somente manual)
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: zip-v1.4
+          name: "ZIP para Discloud — v1.4"
+          body: |
+            ZIP pronto para upload na Discloud: **sem pasta wrapper**, `package.json` na raiz.
+            Baixe o arquivo `RUBY-FY-BOT-v1.4.zip` abaixo e suba na Discloud (ou use a integração GitHub direto).
+          files: RUBY-FY-BOT-v1.4.zip
+          generate_release_notes: false
