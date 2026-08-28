@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
+const { camposValidos } = require('../utils/embedPainel');
 const { comandoPode } = require('../utils/permissions');
 const { isAdmin } = require('../prefixCommands/settaxa');
 const custom = require('../utils/customCommands');
@@ -20,6 +21,15 @@ module.exports = {
     .addStringOption((o) => o.setName('descricao').setDescription('Descrição do comando').setRequired(true))
     .addStringOption((o) => o.setName('mensagem').setDescription('Mensagem de resposta').setRequired(true))
     .addBooleanOption((o) => o.setName('ephemeral').setDescription('Resposta privada (ephemeral)? Padrão: sim').setRequired(false))
+    .addStringOption((o) => o.setName('titulo').setDescription('Título da embed (opcional)').setRequired(false))
+    .addStringOption((o) => o.setName('cor').setDescription('Cor: lilas, roxo, azul, verde, rosa, ou #hex (opcional)').setRequired(false))
+    .addStringOption((o) => o.setName('imagem').setDescription('URL da imagem da embed (opcional; anexo não funciona no slash)').setRequired(false))
+    .addStringOption((o) => o.setName('field_nome').setDescription('Nome do 1º campo (opcional)').setRequired(false))
+    .addStringOption((o) => o.setName('field_valor').setDescription('Valor do 1º campo (opcional)').setRequired(false))
+    .addBooleanOption((o) => o.setName('field_inline').setDescription('1º campo em linha? (padrão: sim)').setRequired(false))
+    .addStringOption((o) => o.setName('field2_nome').setDescription('Nome do 2º campo (opcional)').setRequired(false))
+    .addStringOption((o) => o.setName('field2_valor').setDescription('Valor do 2º campo (opcional)').setRequired(false))
+    .addBooleanOption((o) => o.setName('field2_inline').setDescription('2º campo em linha?').setRequired(false))
     .addStringOption((o) => o.setName('copiaveis').setDescription('Itens: nome:tipo:valor; — tipo: copiavel ou link').setRequired(false)),
 
   async execute(interaction) {
@@ -32,6 +42,14 @@ module.exports = {
     const mensagem = interaction.options.getString('mensagem').trim();
     const ephemeral = interaction.options.getBoolean('ephemeral') ?? true;
     const copiaveisBruto = interaction.options.getString('copiaveis') || '';
+    const tituloEmbed = (interaction.options.getString('titulo') || '' ).trim() || null;
+    const corEmbed = (interaction.options.getString('cor') || '' ).trim() || null;
+    const imagemEmbed = (interaction.options.getString('imagem') || '' ).trim() || null;
+    const fieldsBrutos = [
+      { name: interaction.options.getString('field_nome'), value: interaction.options.getString('field_valor'), inline: interaction.options.getBoolean('field_inline') ?? true },
+      { name: interaction.options.getString('field2_nome'), value: interaction.options.getString('field2_valor'), inline: interaction.options.getBoolean('field2_inline') ?? true },
+    ].filter((f) => f.name || f.value);
+    const fieldsEmbed = camposValidos(fieldsBrutos);
 
     // O nome informado pode ter espacos; o Discord nao aceita espaco em comandos /,
     // entao geramos um slug com hifen no lugar dos espacos (ex: "Ruby Fisk" -> ruby-fisk).
@@ -114,7 +132,10 @@ module.exports = {
       });
     }
 
-    const cmd = custom.criar(nomeSlug, { nome, descricao, mensagem, ephemeral, copiaveis });
+    const embed = (tituloEmbed || corEmbed || imagemEmbed || fieldsEmbed.length)
+      ? { titulo: tituloEmbed, descricao: descricao, cor: corEmbed, imagem: imagemEmbed, fields: fieldsEmbed }
+      : null;
+    const cmd = custom.criar(nomeSlug, { nome, descricao, mensagem, ephemeral, copiaveis, embed });
     if (!cmd) {
       return interaction.reply({ content: '❌ Não consegui criar o comando.', flags: MessageFlags.Ephemeral });
     }

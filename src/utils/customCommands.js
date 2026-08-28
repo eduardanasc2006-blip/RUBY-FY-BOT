@@ -27,7 +27,13 @@ const custom = {
       nome,
       descricao: dados.descricao || '',
       mensagem: dados.mensagem || '',
-      embed: dados.embed || null, // { titulo, descricao, cor, imagem }
+      embed: (dados.embed || null) && {
+        titulo: (dados.embed?.titulo || '').trim() || null,
+        descricao: (dados.embed?.descricao || '').trim() || null,
+        cor: (dados.embed?.cor || '').trim() || null,
+        imagem: (dados.embed?.imagem || '').trim() || null,
+        fields: Array.isArray(dados.embed?.fields) ? dados.embed.fields : [],
+      },
       ephemeral: !!dados.ephemeral,
       // itens: [{ nome, tipo: 'copiavel'|'link', valor }]
       copiaveis: (dados.copiaveis || []).map((c) => ({

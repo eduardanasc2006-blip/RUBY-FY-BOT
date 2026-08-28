@@ -1,5 +1,6 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const { resolverCor } = require('../prefixCommands/embed');
+const { camposValidos } = require('./embedPainel');
 
 // Monta a resposta de um comando customizado (com embed, mensagem e botoes copiaveis)
 function buildResposta(cmd) {
@@ -16,6 +17,10 @@ function buildResposta(cmd) {
     .setTitle(cmd.embed?.titulo || cmd.descricao || cmd.nome)
     .setDescription(cmd.embed?.descricao || descricao);
   if (cmd.embed?.imagem) embed.setImage(cmd.embed.imagem);
+  const fields = camposValidos(cmd.embed?.fields);
+  if (fields.length > 0) embed.addFields(fields);
+
+  if (!embed.data.title && !embed.data.description) embed.setDescription((cmd.embed?.descricao || descricao));
   payload.embeds = [embed];
 
   // Botoes: copiaveis (handler) + links (ButtonStyle.Link nativo)
