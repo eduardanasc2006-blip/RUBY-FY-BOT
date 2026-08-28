@@ -29,12 +29,19 @@ module.exports = {
     // ou fields) e reutiliza todo o editor (título, descrição, cor, imagem,
     // thumbnail, autor, rodapé, fields, preview, voltar, enviar, cancelar).
     // Com anexo/link, o editor já vem com a imagem pré-preenchida.
+    // Se um dos dois campos (título ou descrição) vier informado, o /embed
+    // pré-preenche ele no editor visual e mantém todos os demais campos disponíveis
+    // pelos botões do editor; se nenhum vier, abre o editor vazio (igual ao !embed).
+    // Assim nunca perde o que o usuário já digitou nem monta embed inválida.
+
     if (!titulo || !titulo.trim() || !descricao || !descricao.trim()) {
-      const { buildPainel, getSessao, buildEmbed, limparSessao } = require('../utils/embedPainel');
+      const { buildPainel, getSessao } = require('../utils/embedPainel');
       const sessao = getSessao(interaction.user.id);
       if (cor) sessao.cor = cor;
       if (anexo && anexo.contentType?.startsWith('image/')) sessao.imagem = anexo.url;
       else if (link && link.startsWith('http')) sessao.imagem = link;
+      if (titulo && titulo.trim()) sessao.titulo = titulo.trim();
+      if (descricao && descricao.trim()) sessao.descricao = descricao.trim();
       // Mesmo editor visual do !embed sem args. Em DM o envio funciona quando o
       // bot está no servidor e o editor oferece o seletor de canal.
       return interaction.reply({ ...buildPainel(interaction.user.id), flags: MessageFlags.Ephemeral });
