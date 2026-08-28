@@ -1,4 +1,4 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, RoleSelectMenuBuilder } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, RoleSelectMenuBuilder, StringSelectMenuBuilder } = require('discord.js');
 const { resolverCor } = require('../prefixCommands/embed');
 
 // Estado temporario da embed sendo montada (por usuario)
@@ -173,4 +173,59 @@ function buildPreview(userId) {
   };
 }
 
-module.exports = { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview, camposValidos, urlValida };
+// Tela visual de fields: lista os fields atuais com preview formatado e
+// oferece editar (select nativo), adicionar, limpar e voltar ao editor.
+
+function buildFieldsPainel(userId) {
+  const estado = getSessao(userId);
+  const fields = camposValidos(estado.fields);
+
+  // Preview formatado de cada field (mesmo visual que sera publicado)
+  const linhas = fields.length
+    ? fields.map((f, i) => `**${i + 1}.** ${f.name} — ${f.value}${f.inline ? ' *(em linha)*' : ''}`)
+    : ['*(nenhum field ainda)*'];
+ 
+
+  const embedResumo = new EmbedBuilder()
+    .setColor(0xbeb6ff)
+    .setTitle('➕ Fields da embed')
+    .setDescription([
+      `**${fields.length}** field(s) configurado(s).`,
+      '',
+      ...linhas,
+      '',
+      'Escolha no menu abaixo para **editar** um field, ou use os botões.',
+    ].join('\n')
+  );
+
+  const select = new StringSelectMenuBuilder()
+    .setCustomId(`embedpainel:fieldsel:${userId}`)
+    .setPlaceholder(fields.length ? '✏️ Escolha um field para editar…' : 'Nenhum field ainda')
+    .setMinValues(1)
+    .setMaxValues(1)
+    .addOptions(
+      fields.length
+        ? fields.map((f, i) => ({
+            label: `Field ${i + 1}: ${f.name.slice(0, 80)}`,
+            value: String(i),
+            description: (f.value || '').slice(0, 80) || '—',
+          }))
+        : [{ label: 'Nenhum field', value: '-1', description: 'Use ➕ Adicionar' }]
+    );
+
+  const linha1 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`embedpainel:fieldsadd:${userId}`).setLabel('➕ Adicionar').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`embedpainel:fieldsclear:${userId}`).setLabel('🧹 Limpar').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(`embedpainel:voltar:${userId}`).setLabel('⬅ Voltar ao editor').setStyle(ButtonStyle.Secondary)
+  );
+
+  const linha2 = new ActionRowBuilder().addComponents(select);
+
+  return {
+    content: null,
+    embeds: [embedResumo],
+    components: [linha1, linha2],
+  };
+}
+
+module.exports = { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview, buildFieldsPainel, camposValidos, urlValida };

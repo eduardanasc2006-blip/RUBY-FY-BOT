@@ -1240,7 +1240,7 @@ client.on('interactionCreate', async (interaction) => {
 });
 // ----- Painel visual de embed -----
 
-const { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview, urlValida } = require('./utils/embedPainel');
+const { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview, buildFieldsPainel, urlValida } = require('./utils/embedPainel');
 const { linhaSelecaoCanalDe, resolverSelecaoCanal } = require('./utils/channelPicker');
 const extrasHandlers = require('./utils/extras');
 
@@ -1290,7 +1290,46 @@ client.on('interactionCreate', async (interaction) => {
       if (acao === 'autor') return abrirModal('autor', '👤 Autor', 'Nome do autor (opcional)');
       if (acao === 'rodape') return abrirModal('rodape', '📝 Rodapé', 'Texto do rodapé (opcional)');
       if (acao === 'textofora') return abrirModal('textofora', '💬 Texto fora', 'Mensagem fora da embed (opcional)');
-      if (acao === 'fields') return abrirModal('fields', '➕ Adicionar Field', 'Título | valor (um por linha)');
+      if (acao === 'fields') return interaction.update(buildFieldsPainel(donoId));
+        if (acao === 'fieldsadd') {
+          const modal = new ModalBuilder()
+            .setCustomId(`embedmodal:fieldnew:${donoId}`)
+            .setTitle('➕ Novo Field')
+            .addComponents(
+              new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                  .setCustomId('fname')
+                  .setLabel('Nome do campo')
+                  .setStyle(TextInputStyle.Short)
+                  .setRequired(true)
+                  .setMaxLength(256)
+                  .setPlaceholder('Ex: Preço')
+              ),
+              new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                  .setCustomId('fvalue')
+                  .setLabel('Valor do campo')
+                  .setStyle(TextInputStyle.Short)
+                  .setRequired(true)
+                  .setMaxLength(1024)
+                  .setPlaceholder('Ex: R$ 10,00')
+              ),
+              new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                  .setCustomId('finline')
+                  .setLabel('Em linha? (sim ou não)')
+                  .setStyle(TextInputStyle.Short)
+                  .setRequired(false)
+                  .setMaxLength(3)
+                  .setValue('sim')
+              )
+            );
+          return interaction.showModal(modal);
+        }
+        if (acao === 'fieldsclear') {
+          estado.fields = [];
+          return interaction.update(buildFieldsPainel(donoId));
+        }
       if (acao === 'cargos') {
         // Botao legado: nao faz nada (a selecao agora e pelo menu nativo abaixo)
         return interaction.reply({ content: '👥 Use o **menu de seleção de cargos** abaixo dos botões para escolher.', flags: MessageFlags.Ephemeral });
@@ -1346,6 +1385,59 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.update(buildPainel(donoId));
     }
 
+    // Select menu para editar um field da embed
+    if (interaction.isStringSelectMenu() && interaction.customId.startsWith('embedpainel:fieldsel:')) {
+      const donoId = interaction.customId.split(':')[2];
+      if (interaction.user.id !== donoId) {
+
+        return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
+      }
+      if (!permitido(interaction)) {
+
+        return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+      }
+      const estado = getSessao(donoId);
+      const idx = parseInt(interaction.values[0], 10);
+      if (Number.isNaN(idx) || idx < 0 || idx >= (estado.fields || []).length) {
+
+        return interaction.reply({ content: '❌ Field inválido.', flags: MessageFlags.Ephemeral });
+      }
+      const f = estado.fields[idx];
+      const modal = new ModalBuilder()
+        .setCustomId(`embedmodal:fieldedit:${donoId}:${idx}`)
+        .setTitle(`✏️ Editar Field ${idx + 1}`)
+        .addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId('fname')
+              .setLabel('Nome do campo')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMaxLength(256)
+              .setValue(String(f.name || '').slice(0, 256))
+          ),
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId('fvalue')
+              .setLabel('Valor do campo')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMaxLength(1024)
+              .setValue(String(f.value || '').slice(0, 1024))
+          ),
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId('finline')
+              .setLabel('Em linha? (sim ou não)')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(false)
+              .setMaxLength(3)
+              .setValue(f.inline ? 'sim' : 'não')
+          )
+        );
+      return interaction.showModal(modal);
+    }
+
     // Modais do painel de embed
     if (interaction.isModalSubmit() && interaction.customId.startsWith('embedmodal:')) {
       const partes = interaction.customId.split(':');
@@ -1354,6 +1446,27 @@ client.on('interactionCreate', async (interaction) => {
 
       if (interaction.user.id !== donoId) {
         return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
+      }
+// Modais visuais de fields (sem o separador "|": campos separados Nome/Valor/Em linha)
+      if (campo === 'fieldnew' || campo === 'fieldedit') {
+        const estado = getSessao(donoId);
+        const fname = (interaction.fields.getTextInputValue('fname') || '').trim();
+        const fvalue = (interaction.fields.getTextInputValue('fvalue') || '').trim();
+        const finline = (interaction.fields.getTextInputValue('finline') || 'sim').trim().toLowerCase();
+        if (!fname || !fvalue) {
+          return interaction.reply({ content: '❌ Preencha o **nome** e o **valor** do campo.', flags: MessageFlags.Ephemeral });
+        }
+        const novo = { name: fname.slice(0, 256), value: fvalue.slice(0, 1024), inline: !['não','nao','false','0','off'].includes(finline) };
+        if (campo === 'fieldnew') {
+          estado.fields = [...(estado.fields || []), novo];
+        } else {
+          const idxEdit = parseInt(partes[3], 10);
+          if (Number.isNaN(idxEdit) || idxEdit < 0 || idxEdit >= (estado.fields || []).length) {
+            return interaction.reply({ content: '❌ Field inválido.', flags: MessageFlags.Ephemeral });
+          }
+          estado.fields[idxEdit] = novo;
+        }
+        return interaction.update(buildFieldsPainel(donoId));
       }
 
       const estado = getSessao(donoId);
