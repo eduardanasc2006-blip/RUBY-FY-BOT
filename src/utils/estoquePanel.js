@@ -105,48 +105,48 @@ function adminMenu() {
   };
 }
 
-// Tela de gerenciamento de categorias (emoji, descrição, reordenar, renomear)
-function adminGerenciarCategorias() {
+const POR_PAGINA_GERCAT = 9;
+
+function adminGerenciarCategorias(pag =  0) {
   const cats = estoque.categorias();
   if (!cats.length) {
-    return {
-      content: '📦 Nenhuma categoria cadastrada. Crie uma primeiro com **➕ Categoria**.',
-      embeds: [],
-      components: [row(btn('estadm:menu', '⬅️ Voltar'))],
-    };
+    return { content: '📦 Nenhuma categoria cadastrada. Crie uma primeiro com **➕ Categoria**.', embeds: [], components: [row(btn('estadm:menu', '⬅️ Voltar'))] };
   }
-  const blocos = cats.map((c, i) => {
+  const totalPaginas = Math.max(1, Math.ceil(cats.length / POR_PAGINA_GERCAT));
+  const paginaAtual = numeroPagina(pag, totalPaginas);
+  const visiveis = cats.slice(paginaAtual * POR_PAGINA_GERCAT, (paginaAtual +  1) * POR_PAGINA_GERCAT);
+
+  const blocos = visiveis.map((c) => {
     const desc = c.descricao ? ` — _${c.descricao}_` : '';
-    return `${emojiDa(c)} **${c.nome}** (${c.produtos.length} itens)${
-      i === 0 || i === cats.length - 1 ? '' : ''
-    }${desc}`;
+    return `${emojiDa(c)} **${c.nome}** (${c.produtos.length} itens)${desc}`;
   });
   const embed = new EmbedBuilder()
     .setColor(COR)
-    .setTitle('🏷️ Gerenciar Categorias')
-    .setDescription(
-      `Use os botões para editar. As setas mudam a ordem (aparecem no menu público).\n\n${blocos.join('\n')}`
-    );
+    .setTitle(cats.length > POR_PAGINA_GERCAT ? `🏷️ Gerenciar Categorias (${paginaAtual +  1}/${totalPaginas})` : '🏷️ Gerenciar Categorias')
+    .setDescription(`Use os botões para editar. As setas mudam a ordem (aparecem no menu público.\n\n${blocos.join('\n')}`);
 
-  // Escolher categoria para gerenciar
   const linhas = [];
-  for (let i = 0; i < cats.length; i++) {
-    if (i % 3 === 0) linhas.push(new ActionRowBuilder());
-    linhas[linhas.length - 1].addComponents(
-      new ButtonBuilder()
-        .setCustomId(`estadm:gercat2:${cats[i].id}`)
-        .setLabel(`${cats[i].nome.slice(0, 25)}`)
-        .setStyle(ButtonStyle.Primary)
+  for (let i =  0; i < visiveis.length; i++) {
+    if (i % 3 ===  0) linhas.push(new ActionRowBuilder());
+    linhas[linhas.length -  1].addComponents(
+      new ButtonBuilder().setCustomId(`estadm:gercat2:${visiveis[i].id}`).setLabel(`${visiveis[i].nome.slice(0,  25)}`).setStyle(ButtonStyle.Primary)
     );
   }
-  if (linhas.length) {
-    linhas[linhas.length - 1].addComponents(
-      btn('estadm:menu', '⬅️ Voltar', ButtonStyle.Secondary)
-    );
-  } else {
-    linhas.push(row(btn('estadm:menu', '⬅️ Voltar')));
-  }
+  if (linhas.length) linhas[linhas.length -  1].addComponents(btn('estadm:menu', '⬅️ Voltar', ButtonStyle.Secondary));
+  else linhas.push(row(btn('estadm:menu', '⬅️ Voltar')));
+
+  const navComps = [];
+  if (paginaAtual >  0) navComps.push(btn(`estadm:gercatpag:${paginaAtual -  1}`, '◀️ Anterior', ButtonStyle.Primary));
+  if (paginaAtual < totalPaginas -  1) navComps.push(btn(`estadm:gercatpag:${paginaAtual +  1}`, 'Próxima ▶️', ButtonStyle.Primary));
+  if (navComps.length) linhas.push(row(...navComps));
+
   return { embeds: [embed], components: linhas };
+}
+
+function numeroPagina(pag, total) {
+  if (typeof pag !== 'number' || !Number.isFinite(pag)) return 0;
+  if (total <=  1) return  0;
+  return Math.min(Math.max(0, Math.floor(pag)), total -  1);
 }
 
 // Tela de uma categoria específica (editar emoji/descrição/reordenar/renomear/remover)

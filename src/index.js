@@ -574,8 +574,13 @@ client.on('interactionCreate', async (interaction) => {
       if (!permitido(interaction)) {
         return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
       }
-      const catId = interaction.customId.split(':')[1];
+      const partes = interaction.customId.split(':');
+      const catId = partes[1];
       // Seletor de categorias agora também dá acesso ao gerenciamento (editar emoji/descrição/reordenar)
+
+      if (catId === 'pag') {
+        return interaction.update(painelCategoria.construirPainelSelecao(parseInt(partes[2])));
+      }
       if (catId === 'gercat') {
         return interaction.update(estoquePanel.adminGerenciarCategorias());
       }
@@ -601,6 +606,7 @@ client.on('interactionCreate', async (interaction) => {
 
       if (acao === 'menu') return interaction.update(estoquePanel.adminMenu());
       if (acao === 'lista') return interaction.update(estoquePanel.adminLista());
+      if (acao === 'gercatpag') return interaction.update(estoquePanel.adminGerenciarCategorias(parseInt(partes[2])));
 
       if (acao === 'addcat') {
         const modal = new ModalBuilder().setCustomId('estmodal:addcat').setTitle('Nova categoria').addComponents(

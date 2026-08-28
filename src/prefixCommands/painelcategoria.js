@@ -41,25 +41,30 @@ function buildCategoria(catId) {
 }
 
 // Painel visual para o admin escolher qual categoria fixar no canal
-function construirPainelSelecao() {
+function construirPainelSelecao(pag = 0) {
   const cats = estoque.categorias();
+  const POR_PAGINA = 8;
+  const totalPaginas = Math.max(1, Math.ceil(cats.length / POR_PAGINA));
+  const paginaAtual = numeroPagina(pag, totalPaginas);
+  const visiveis = cats.slice(paginaAtual * POR_PAGINA, (paginaAtual + 1) * POR_PAGINA);
+
   const emojiDe = (c) => (c.emoji ? `${c.emoji} ` : '📦 ');
-  const descricaoCats = cats
+  const descricaoCats = visiveis
     .map((c) => `${emojiDe(c)}**${c.nome}** — ${c.produtos.length} produto(s)${c.descricao ? ` — _${c.descricao}_` : ''}`)
     .join('\n');
   const embed = new EmbedBuilder()
     .setColor(0xbeb6ff)
-    .setTitle('📌 Fixar painel de categoria')
+    .setTitle(cats.length > POR_PAGINA ? `📌 Fixar painel de categoria (${paginaAtual + 1}/${totalPaginas})` : '📌 Fixar painel de categoria')
     .setDescription(
       'Escolha a categoria para fixar no canal com os produtos:\n\n' +
       (cats.length ? descricaoCats : 'Nenhuma categoria cadastrada.') +
       '\n\n_Agora com **🏷️ Gerenciar categorias** para editar emoji, descrição e reordenar._'
     );
 
-  // Agrupa em linhas de ate 5 botoes
+  // Agrupa em linhas de ate 4 botoes (max 2 linhas por página)
   const linhas = [];
   let linha = new ActionRowBuilder();
-  cats.forEach((c, i) => {
+  visiveis.forEach((c, i) => {
     if (i > 0 && i % 4 === 0) {
       linhas.push(linha);
       linha = new ActionRowBuilder();
@@ -71,24 +76,28 @@ function construirPainelSelecao() {
         .setStyle(ButtonStyle.Primary)
     );
   });
-  // "Gerenciar categorias" sempre disponível: mesmo sem categorias,, permite criar/editar.
-
-  const botaoGer = new ButtonBuilder()
-    .setCustomId('painelcat:gercat')
-    .setLabel(cats.length ? '🏷️ Gerenciar' : '🏷️ Gerenciar categorias')
-    .setStyle(ButtonStyle.Secondary);
-
-  if (linha.components.length < 5) {
-    linha.addComponents(botaoGer);
-  } else {
-    // Linha cheia: cai para uma linha propria quando ha muitas categorias.
-
-    linhas.push(new ActionRowBuilder().addComponents(botaoGer));
-  }
   if (linha.components.length) linhas.push(linha);
+
+  // Botão "Gerenciar" sempre disponível(mesmo sem categorias,e mesmo com paginação).
+  const navComps = [];
+  if (paginaAtual >   0) navComps.push(new ButtonBuilder().setCustomId(`painelcat:pag:${paginaAtual -   1}`).setLabel("◀️ Anterior").setStyle(ButtonStyle.Primary));
+  navComps.push(
+    new ButtonBuilder().setCustomId('painelcat:gercat')
+      .setLabel(cats.length ? '🏷️ Gerenciar' : '🏷️ Gerenciar categorias')
+      .setStyle(ButtonStyle.Secondary)
+  );
+  if (paginaAtual < totalPaginas -  1) navComps.push(new ButtonBuilder().setCustomId(`painelcat:pag:${paginaAtual +  1}`).setLabel('Próxima ▶️').setStyle(ButtonStyle.Secondary));
+  if (navComps.length) linhas.push(new ActionRowBuilder().addComponents(...navComps));
 
   return { embeds: [embed], components: linhas };
 }
+
+function numeroPagina(pag, total) {
+  if (typeof pag !== 'number' || !Number.isFinite(pag)) return 0;
+  if (total <= 1) return 0;
+  return Math.min(Math.max(0, Math.floor(pag)), total -  1);
+}
+
 
 module.exports = {
   name: 'painelcategoria',
