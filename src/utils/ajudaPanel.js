@@ -2,8 +2,11 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('
 
 const COR = 0xbeb6ff;
 // Páginas sempre visíveis + admin (só aparecem para admin)
-const ORDEM = ['inicio', 'conversor', 'estoque', 'comandos', 'painel', 'admin'];
-const ORDEM_VISIVEL = ['inicio', 'conversor', 'estoque', 'comandos', 'painel'];
+const ORDEM = ['inicio', 'conversor', 'estoque', 'personalizados', 'painel', 'admin'];
+const ORDEM_VISIVEL = ['inicio', 'conversor', 'estoque', 'personalizados', 'painel'];
+// Categorias entre as quais se navega com as setas (a home fica de fora.)
+const CATEGORIAS_PUBLICAS = ['conversor', 'estoque'];
+const CATEGORIAS_ADMIN = ['personalizados', 'painel', 'admin'];
 
 // Lista central de comandos (prefixo e slash) para o menu de ajuda.
 // É gerada dinamicamente a partir dos arquivos reais em src/commands e
@@ -159,6 +162,15 @@ const PAGINAS = {
       '➜ **!tabela**',
       '*Abre ou atualiza o painel de conversão.*',
       '',
+      '➜ **!painel**',
+      '*Gerenciador central dos painéis fixos.*',
+      '',
+      '➜ **!painelestoque**',
+      '*Fixa o painel de estoque.*',
+      '',
+      '➜ **!painelcategoria <id>**',
+      '*Fixar categoria: sem id abre seletor; com id fixa direto.*',
+      '',
       '➜ **!settaxa 100 <valor>**',
       '*Altera a taxa de 100 a 999 Robux.*',
       '',
@@ -170,6 +182,42 @@ const PAGINAS = {
       '',
       '➜ **!configestoque**',
       '*Gerencia categorias, produtos, valores e estoque.*',
+      '',
+      '➜ **!estoque <nome>**',
+      '*Mostra produtos, preços e busca.*',
+      '',
+      '➜ **!embed**',
+      '*Cria uma embed no canal.*',
+      '',
+      '➜ **!backup**',
+      '*Backup das taxas e estoque na DM.*',
+      '',
+      '➜ **!canalavisos**',
+      '*Canal de avisos quando um produto esgota.*',
+      '',
+      '➜ **!limpar <1-100>**',
+      '*Apaga mensagens do canal.*',
+      '',
+      '➜ **!mensagem**',
+      '*Publica uma mensagem simples em qualquer canal.*',
+      '',
+      '➜ **!lock**',
+      '*Bloqueia um canal para membros comuns.*',
+      '',
+      '➜ **!unlock**',
+      '*Desbloqueia um canal restaurando permissões.*',
+      '',
+      '➜ **!rolegive <@cargo> <@usuario>**',
+      '*Dá um cargo a um membro.*',
+      '',
+      '➜ **!permissoes**',
+      '*Gerencia permissões por cargo.*',
+      '',
+      '➜ **/criarcomando**',
+      '*Cria um comando personalizado.*',
+      '',
+      '➜ **/gerenciarcomandos**',
+      '*Lista, edita ou exclui personalizados.*',
     ].join('\n'),
   }),
 };
@@ -203,10 +251,18 @@ function buildAjuda(pagina = 'inicio', isAdmin = false) {
       rows.push(extras);
     }
   } else {
-    const voltar = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('ajuda:nav:home:inicio').setEmoji('⬅️').setLabel('Voltar').setStyle(ButtonStyle.Secondary)
+    // Navegação entre categorias com setas: ◀️ Anterior | 🏠 Início | Próxima ▶️
+    // Catálogo de navegação: admin anda por todas; público só pelas públicas.
+    const cats = isAdmin ? [...CATEGORIAS_PUBLICAS, ...CATEGORIAS_ADMIN] : CATEGORIAS_PUBLICAS;
+    const idx = cats.indexOf(pag);
+    const prev = idx > 0 ? cats[idx - 1] : cats[cats.length - 1];
+    const next = idx < cats.length - 1 ? cats[idx + 1] : cats[0];
+    const nav = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`ajuda:nav:prev:${prev}`).setEmoji('◀️').setLabel('Anterior').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('ajuda:nav:home:inicio').setEmoji('🏠').setLabel('Início').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`ajuda:nav:next:${next}`).setEmoji('▶️').setLabel('Próxima').setStyle(ButtonStyle.Primary),
     );
-    rows.push(voltar);
+    rows.push(nav);
   }
 
   return { embeds: [embed], components: rows };
