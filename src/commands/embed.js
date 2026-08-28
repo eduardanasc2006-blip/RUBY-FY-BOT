@@ -1,7 +1,6 @@
-const { SlashCommandBuilder, MessageFlags, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { comandoPode } = require('../utils/permissions');
 const { isAdmin } = require('../prefixCommands/settaxa');
-const { resolverCor } = require('../prefixCommands/embed');
 const { camposValidos, getSessao, buildPainel } = require('../utils/embedPainel');
 
 module.exports = {
@@ -23,119 +22,58 @@ module.exports = {
 
   async execute(interaction) {
     if (!comandoPode(interaction.member, interaction.user.id, 'embed')) {
+
       return interaction.reply({ content: '🔒 Somente administradores podem usar este comando.', flags: MessageFlags.Ephemeral });
     }
+
 
     const titulo = interaction.options.getString('titulo');
     const descricao = interaction.options.getString('descricao');
     const cor = interaction.options.getString('cor');
     const anexo = interaction.options.getAttachment('imagem');
     const link = interaction.options.getString('link_imagem');
-    const canalOpcao = interaction.options.getChannel('canal');
+
 
     // Coleta os fields (até 2 via slash; o editor visual suporta até 25)e valida
+
     const fieldsBrutos = [
       { name: interaction.options.getString('field_nome'), value: interaction.options.getString('field_valor'), inline: interaction.options.getBoolean('field_inline') ?? true },
       { name: interaction.options.getString('field2_nome'), value: interaction.options.getString('field2_valor'), inline: interaction.options.getBoolean('field2_inline') ?? true },
     ];
     const fields = camposValidos(fieldsBrutos.filter((f) => f.name || f.value));
 
+
     // Anexo (upload) tem prioridade sobre link
     let imagem = null;
     if (anexo && anexo.contentType?.startsWith('image/')) imagem = anexo.url;
 
-
-
     else if (link && link.startsWith('http')) imagem = link;
 
-    // Publica direto quando houver conteúdo suficiente: fields OU titulo+descricao.
 
-    // Caso contrário (campo solto ou vazio), abre o editor visual pre-preenchido
+    // ------------------------------------------------------------------
+    // Fluxo com revisão (recomendado): qualquer conteúdo vindo pelo slash
+    // (título, descrição, imagem/link ou fields) pré-preenche a sessão e
+    // abre o editor visual ("caixinha") para o usuário revisar/editar —
+    // incluindo os fields já preenchidos e a imagem — e só então "Enviar"
+    // (que abre o seletor de canal antes de publicar).
+    // Isso garante que fields e imagem por link nunca se percam e o usuário
+    // sempre ve o preview antes de publicar.
+    // ------------------------------------------------------------------
+    const temAlgo = !!(titulo && titulo.trim() || descricao && descricao.trim() || imagem || fields.length);
 
-
-
-    const temConteudoDireto = !!(fields.length || (titulo && titulo.trim() && descricao && descricao.trim()));
-
-    if (!temConteudoDireto) {
-
-      // Pre-preenche o editor visual com o que veio (imagem, titulo, descricao, cor)
-
+    if (temAlgo) {
 
       const sessao = getSessao(interaction.user.id);
-      if (cor) sessao.cor = cor;
-
+      if (cor && cor.trim()) sessao.cor = cor.trim();
       if (imagem) sessao.imagem = imagem;
-
       if (titulo && titulo.trim()) sessao.titulo = titulo.trim();
-
-      if (descricao && descricao.trim()) sessao.descricao= descricao.trim();
-
+      if (descricao && descricao.trim()) sessao.descricao = descricao.trim();
+      if (fields.length) sessao.fields = fields;
       return interaction.reply({ ...buildPainel(interaction.user.id), flags: MessageFlags.Ephemeral });
     }
 
 
-
-    // Monta a embed final (mesma logica do buildEmbed do editor: valida tamanhos e
-
-
-    // garante descricao invisivel quando nao houver, para nunca falhar na API).
-
-
-    const embed = new EmbedBuilder()
-      .setColor(resolverCor(cor));
-    if (titulo) embed.setTitle(titulo.slice(0, 256));
-    if (descricao) embed.setDescription(descricao.slice(0, 4096));
-    if (imagem) embed.setImage(imagem);
-    if (fields.length) embed.addFields(fields);
-    if (!descricao) embed.setDescription('\u200b');
-
-    // Canal: o informado, senao o atual; valida se é canal de texto com permissao
-
-
-
-    let canal = canalOpcao || interaction.channel;
-    if (canal && interaction.guild && !(canal.isTextBased() && !canal.isThread() && canal.permissionsFor(interaction.guild.members.me)?.has(PermissionFlagsBits.SendMessages))) {
-
-
-      return interaction.reply({ content: `❌ Não posso publicar em <#${canal.id}> (precisa ser um canal de texto com permissão de envio para mim.`, flags: MessageFlags.Ephemeral });
-    }
-
-
-
-    // Sem guild (DM: envia na DM do próprio usuário)
-
-    if (!interaction.guild || !canal) {
-
-
-
-      try {
-        await interaction.user.send({ embeds: [embed] });
-
-      } catch {
-        return interaction.reply({ content: '❌ Não consegui te enviar a embed na DM.', flags: MessageFlags.Ephemeral });
-
-      }
-      return interaction.reply({ content: '📩 Embed enviada na sua DM)', flags: MessageFlags.Ephemeral });
-
-    }
-
-
-
-    // Publica no canal escolhido com mensagem efêmera confirmando
-
-    try {
-      await canal.send({ embeds: [embed] });
-
-    } catch (sendError) {
-      console.error('[Embed] Falha ao enviar no canal:', sendError?.message || sendError);
-      return interaction.reply({ content: `❌ Não consegui enviar em <#${canal.id}>. Verifique minha permissão nesse canal.`, flags: MessageFlags.Ephemeral });
-
-    }
-
-
-
-
-    return interaction.reply({ content: `✅ Embed publicada em <#${canal.id}>)`, flags: MessageFlags.Ephemeral });
-
+    // Nada veio:(ou só canal): abre o editor vazio (igual ao !embed)
+    return interaction.reply({ ...buildPainel(interaction.user.id), flags: MessageFlags.Ephemeral });
   },
 };
