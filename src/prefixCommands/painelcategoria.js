@@ -71,16 +71,19 @@ function construirPainelSelecao() {
         .setStyle(ButtonStyle.Primary)
     );
   });
+  // "Gerenciar categorias" sempre disponível: mesmo sem categorias,, permite criar/editar.
+
+  const botaoGer = new ButtonBuilder()
+    .setCustomId('painelcat:gercat')
+    .setLabel(cats.length ? '🏷️ Gerenciar' : '🏷️ Gerenciar categorias')
+    .setStyle(ButtonStyle.Secondary);
+
   if (linha.components.length < 5) {
-    // Reserva o último espaço da linha para o gerenciamento
-    if (linha.components.length) {
-      linha.addComponents(
-        new ButtonBuilder()
-          .setCustomId('painelcat:gercat')
-          .setLabel('🏷️ Gerenciar')
-          .setStyle(ButtonStyle.Secondary)
-      );
-    }
+    linha.addComponents(botaoGer);
+  } else {
+    // Linha cheia: cai para uma linha propria quando ha muitas categorias.
+
+    linhas.push(new ActionRowBuilder().addComponents(botaoGer));
   }
   if (linha.components.length) linhas.push(linha);
 
@@ -114,11 +117,18 @@ module.exports = {
       return message.reply(`❌ Categoria \`${catId}\` não encontrada.`);
     }
 
-    const msg = await message.channel.send({ embeds: [embed] });
-    salvar(msg.id, catId, message.channel.id);
+    // Suporte canal: !painelcategoria <id> [#canal] — fixa no canal mencionado, ou no atual.
+    const canalAlvo = message.mentions?.channels?.first() || message.channel;
+    if (!canalAlvo.isTextBased() || !canalAlvo.permissionsFor(message.guild.members.me)?.has('SendMessages')) {
+
+      return message.reply(`❌ Não posso publicar em ${canalAlvo} (precisa ser um canal de texto com permissão de envio para mim).`);
+    }
+
+    const msg = await canalAlvo.send({ embeds: [embed] });
+    salvar(msg.id, catId, canalAlvo.id);
 
     // Confirmação some depois de 5 segundos para não poluir o canal
-    const confirmacao = await message.reply(`✅ Painel da categoria **${catId}** fixado no canal.`);
+    const confirmacao = await message.reply(`✅ Painel da categoria **${catId}** fixado em ${canalAlvo}.`);
     autoDelete(confirmacao, 5000);
     autoDelete(message, 5000);
   },

@@ -26,6 +26,24 @@ function limparSessao(userId) {
   sessoes.delete(userId);
 }
 
+// Valida uma URL de imagem/thumbnail do jeito que o Discord aceita.
+// O Discord só aceita http(s):// e rejeita qualquer outra forma (inclusive
+// "http:x.com" e domínios sem protocolo). Usamos a API URL nativa, que cobre
+// esses casos,e conferimos o protocolo explicitamente para nao deixar passar
+// "http:abc" (que o construtor URL interpreta como protocolo "http:").
+function urlValida(url) {
+  if (typeof url !== 'string') return false;
+  const u = url.trim();
+  if (!u) return false;
+  if (!/^https?:\/\/.+/i.test(u)) return false;
+  try {
+    const parsed = new URL(u);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 // Normaliza um campo solto para os limites da API do Discord e evita
 // name/value vazios que fazem o Discord rejeitar a embed.
 function camposValidos(fields) {
@@ -84,6 +102,7 @@ function buildPainel(userId) {
         estado.cor ? `🎨 Cor: ${estado.cor}` : '🎨 Cor: lilas (padrão)',
         estado.imagem ? `🖼️ Imagem: ✅ ${estado.imagem.slice(0, 60)}` : '🖼️ Imagem: *(nenhuma — **anexe a foto** e rode **!embed** para usar upload)*',
         estado.thumbnail ? '🔳 Thumbnail: ✅' : '🔳 Thumbnail: *(nenhuma)*',
+        estado.fields.length ? `➕ Fields: ✅ ${estado.fields.length} field(s) — **Preview** para ver` : '➕ Fields: *(nenhuma)*',
         estado.cargos.length ? `👥 Cargos: ${estado.cargos.map((c) => `<@&${c}>`).join(' ')}` : '👥 Cargos: *(nenhum)*',
       ].join('\n')
     );
@@ -146,10 +165,12 @@ function buildPreview(userId) {
   );
 
   return {
-    content: estado.textoFora || null,
+    content:
+      '👁️ **Prévia — é exatamente assim que a embed será publicada**' +
+      (estado.textoFora ? `\n\n${estado.textoFora}` : ''),
     embeds: [embed],
     components: [botoes],
   };
 }
 
-module.exports = { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview, camposValidos };
+module.exports = { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview, camposValidos, urlValida };

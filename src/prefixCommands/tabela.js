@@ -17,9 +17,10 @@ module.exports = {
       return message.reply('🔒 Somente administradores podem publicar o painel de conversão.');
     }
 
-    // Se o usuario pedir "nova", ignora a referencia antiga e publica um painel novo
+    // Suporte canal: !tabela [nova] [#canal] — publica no canal mencionado, ou no atual.
+    const canalAlvo = message.mentions?.channels?.first() || message.channel;
     const forcarNovo = args[0] === 'nova' || args[0] === 'novo';
-    const { atualizado } = await publishOrUpdatePanel(message.channel, forcarNovo);
+    const { atualizado } = await publishOrUpdatePanel(canalAlvo, forcarNovo);
 
     // Confirma um sume apos alguns segundos para nao poluir o canal
     const confirmacao = await message.reply(

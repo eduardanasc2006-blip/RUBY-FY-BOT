@@ -13,8 +13,10 @@ module.exports = {
       return message.reply('🔒 Somente administradores podem publicar o painel de estoque.');
     }
 
+    // Suporte canal: !painelestoque [nova] [#canal] — publica no canal mencionado, ou no atual.
+    const canalAlvo = message.mentions?.channels?.first() || message.channel;
     const forcarNovo = args[0] === 'nova' || args[0] === 'novo';
-    const { atualizado } = await publicarOuAtualizar(message.channel, forcarNovo);
+    const { atualizado } = await publicarOuAtualizar(canalAlvo, forcarNovo);
 
     // Confirma um sume apos 4 segundos para nao poluir o canal
     const confirmacao = await message.reply(

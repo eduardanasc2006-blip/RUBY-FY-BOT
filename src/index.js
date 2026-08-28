@@ -1226,7 +1226,7 @@ client.on('interactionCreate', async (interaction) => {
 });
 // ----- Painel visual de embed -----
 
-const { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview } = require('./utils/embedPainel');
+const { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview, urlValida } = require('./utils/embedPainel');
 const { linhaSelecaoCanalDe, resolverSelecaoCanal } = require('./utils/channelPicker');
 
 client.on('interactionCreate', async (interaction) => {
@@ -1353,21 +1353,29 @@ client.on('interactionCreate', async (interaction) => {
         // Formato: "Titulo | valor" por linha (robusto: ignora linhas invalidas,
         // trunca para os limites da API e nunca deixa name/value vazios).
         const { camposValidos } = require('./utils/embedPainel');
-        estado.fields = camposValidos(
-          valor
-            .split('\n')
-            .map((l) => l.trim())
-            .filter(Boolean)
-            .map((l) => {
-              const [name, ...v] = l.split('|');
-              return { name: name.trim(), value: v.join('|').trim(), inline: true };
-            })
-        );
+        const parseados = valor
+          .split('\n')
+          .map((l) => l.trim())
+          .filter(Boolean)
+          .map((l) => {
+            const [name, ...v] = l.split('|');
+            return { name: name.trim(), value: v.join('|').trim(), inline: true };
+          });
+        const fields = camposValidos(parseados);
+        estado.fields = fields;
+        if (!fields.length) {
+          return interaction.reply({
+            content: '❌ Nenhum field válido. Use o formato: `Título | valor` por linha.',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+        return interaction.update(buildPainel(donoId));
       } else if (campo === 'imagem' || campo === 'thumbnail') {
         const url = valor || null;
-        if (url && !url.startsWith('http')) {
+        if (url && !urlValida(url)) {
+
           return interaction.reply({
-            content: '❌ O link da **imagem** deve começar com `http(s)://`. Deixe vazio para remover.',
+            content: `❌ Link de **${campo === 'imagem' ? 'imagem' : 'thumbnail'}** inválido. Use um link completo começando com \`http(s)://\` (ex: \`https://...png\`). Deixe vazio para remover.`,
             flags: MessageFlags.Ephemeral,
           });
         }
