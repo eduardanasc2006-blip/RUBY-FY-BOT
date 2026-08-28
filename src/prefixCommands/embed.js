@@ -1,6 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
 const { comandoPode } = require('../utils/permissions');
-const { isAdmin } = require('./settaxa');
 
 // Cores disponíveis por nome + aceita hex (#rrggbb)
 const CORES = {
@@ -26,7 +24,7 @@ function resolverCor(entrada) {
 module.exports = {
   name: 'embed',
   description: 'Cria uma embed personalizada no canal (restrito a administradores)',
-  usage: '!embed título | descrição | [cor] | [imagem]',
+  usage: '!embed [título | descrição | cor | imagem] — abre o editor visual (fields separados no botão ➕ Fields)',
 
   async execute(message, args) {
     if (!message.guild || !comandoPode(message.member, message.author.id, 'embed')) {
@@ -45,48 +43,34 @@ module.exports = {
       return message.reply({ ...buildPainel(message.author.id), allowedMentions: { repliedUser: false } });
     }
 
-    // Com argumentos: modo rapido (antigo)
-    const texto = args.join(' ');
+    // Com argumentos: preenche a sessao e abre o editor visual (mesmo fluxo do /embed)
+    const { buildPainel, getSessao } = require('../utils/embedPainel');
+    const sessao = getSessao(message.author.id);
+    const texto = args.join(' ').trim();
     const anexo = message.attachments?.first();
     const temAnexo = anexo && anexo.contentType?.startsWith('image/');
 
     if (!texto && !temAnexo) {
       return message.reply(
-        '❌ Use: `!embed título | descrição | cor` — ou anexe uma foto!\n' +
+        'Uso: !embed título | descrição | cor | imagem — ou anexe uma foto!\n' +
         'Cores: lilas, roxo, azul, verde, amarelo, vermelho, rosa, ou #hex\n' +
-        'Exemplos:\n' +
-        '`!embed Promoção ☁️ | 500 Robux por R$ 19,00! | lilas`\n' +
-        '`!embed Novidade ☁️ | Chegou MM2 novo!` (anexando uma foto)'
+        'Exemplos: !embed Promoção | 500 Robux por R$ 19,00 | lilas'
       );
     }
 
     const partes = texto ? texto.split('|').map((s) => s.trim()) : [];
     const [titulo, descricao, corNome, imagemLink] = partes;
 
-    if (!titulo || !descricao) {
-      return message.reply('❌ Precisa de pelo menos **título** e **descrição**, separados por `|`');
-    }
-    if (titulo.length > 256) {
-      return message.reply('❌ O **título** deve ter no máximo 256 caracteres.');
-    }
-    if (descricao.length > 4096) {
-      return message.reply('❌ A **descrição** deve ter no máximo 4096 caracteres.');
-    }
+    if (titulo) sessao.titulo = titulo;
+    if (descricao) sessao.descricao = descricao;
+    if (corNome) sessao.cor = corNome;
+    if (imagemLink && imagemLink.startsWith('http')) sessao.imagem = imagemLink;
+    if (temAnexo) sessao.imagem = anexo.url;
 
-    const embed = new EmbedBuilder()
-      .setColor(resolverCor(corNome))
-      .setTitle(titulo)
-      .setDescription(descricao);
+    // Abre o editor visual: o usuario pode revisar, adicionar fields separados e enviar
+    return message.reply({ ...buildPainel(message.author.id), allowedMentions: { repliedUser: false } });
 
-    // Imagem por anexo (upload) tem prioridade sobre link
-    if (temAnexo) {
-      embed.setImage(anexo.url);
-    } else if (imagemLink && imagemLink.startsWith('http')) {
-      embed.setImage(imagemLink);
-    }
 
-    await message.channel.send({ embeds: [embed] });
-    return message.delete().catch(() => {});
   },
 
   resolverCor,
