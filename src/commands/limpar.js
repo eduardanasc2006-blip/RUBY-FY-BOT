@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { comandoPode } = require('../utils/permissions');
-const { isAdmin } = require('../prefixCommands/settaxa');
 
 module.exports = {
   data: new SlashCommandBuilder()

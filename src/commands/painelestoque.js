@@ -34,10 +34,11 @@ module.exports = {
         flags: MessageFlags.Ephemeral,
       });
     }
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const { atualizado } = await publicarOuAtualizar(canal, forcarNovo);
 
-    return interaction.reply({
+    return interaction.editReply({
       content: atualizado
         ? `✅ Painel de estoque **atualizado** em <#${canal.id}>.`
         : `✅ Painel de estoque **publicado** em <#${canal.id}>! Qualquer pessoa pode clicar nas categorias — cada um vê a lista de forma privada.`,

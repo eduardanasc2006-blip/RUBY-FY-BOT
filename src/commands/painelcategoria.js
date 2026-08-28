@@ -48,10 +48,11 @@ module.exports = {
         flags: MessageFlags.Ephemeral,
       });
     }
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const msg = await canal.send({ embeds: [embed] });
     painelCategoria.salvar(msg.id, catId, canal.id);
 
-    return interaction.reply({ content: `✅ Painel da categoria **${catId}** fixado em <#${canal.id}>.`, flags: MessageFlags.Ephemeral });
+    return interaction.editReply({ content: `✅ Painel da categoria **${catId}** fixado em <#${canal.id}>.` });
   },
 };

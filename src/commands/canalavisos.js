@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { comandoPode } = require('../utils/permissions');
-const { isAdmin } = require('../prefixCommands/settaxa');
 const { definir } = require('../utils/avisos');
 
 module.exports = {
@@ -20,6 +19,9 @@ module.exports = {
     }
 
     const canal = interaction.options.getChannel('canal') || interaction.channel;
+    if (!canal || !canal.isTextBased() || !canal.isSendable?.()) {
+      return interaction.reply({ content: `❌ ${canal ? 'Este canal não é de texto.' : 'Canal inválido.'} Use um canal de texto.`, flags: MessageFlags.Ephemeral });
+    }
     definir(canal.id);
     return interaction.reply({ content: `✅ Avisos de estoque serão enviados em ${canal}.`, flags: MessageFlags.Ephemeral });
   },

@@ -57,7 +57,10 @@ module.exports = {
       );
     } catch {}
 
-    const painelAtualizado = await refreshSavedPanel(interaction.client);
+    let painelAtualizado = false;
+    try {
+      painelAtualizado = await refreshSavedPanel(interaction.client);
+    } catch {}
 
     const exemploQtd = faixaValor === '100' ? 100 : 1000;
     const embed = {

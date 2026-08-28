@@ -38,10 +38,11 @@ module.exports = {
         flags: MessageFlags.Ephemeral,
       });
     }
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const { atualizado } = await publishOrUpdatePanel(canal, forcarNovo);
 
-    return interaction.reply({
+    return interaction.editReply({
       content: atualizado
         ? `✅ Painel de conversão **atualizado** em <#${canal.id}> com as taxas atuais.`
         : `✅ Painel de conversão **publicado** em <#${canal.id}>! Qualquer pessoa pode usar os botões.`,
