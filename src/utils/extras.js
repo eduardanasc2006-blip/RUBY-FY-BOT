@@ -126,11 +126,10 @@ function registrar(client) {
           return interaction.reply({ content: '❌ Canal não encontrado ou sem permissão de envio para mim.', flags: MessageFlags.Ephemeral });
        }
         const estado = getSessao(donoId);
-        const embed = buildEmbed(estado);
         const conteudo = estado.mensagem || null;
+        const arquivos = estado.imagem ? [{ attachment: estado.imagem }] : [];
         try {
-            if (embed) await canal.send({ content: conteudo, embeds: [embed], allowedMentions: { parse: [] } });
-            else await canal.send({ content: conteudo, allowedMentions: { parse: [] } });
+            await canal.send({ content: conteudo, files: arquivos, allowedMentions: { parse: [] } });
           } catch (e) {
             console.error('[Mensagem] Falha ao publicar:', e?.message || e);
             return interaction.reply({ content: `❌ Não consegui publicar em <#${canal.id}>. Verifique minhas permissões no canal.`, flags: MessageFlags.Ephemeral });

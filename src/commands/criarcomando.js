@@ -23,7 +23,8 @@ module.exports = {
     .addBooleanOption((o) => o.setName('ephemeral').setDescription('Resposta privada (ephemeral)? Padrão: sim').setRequired(false))
     .addStringOption((o) => o.setName('titulo').setDescription('Título da embed (opcional)').setRequired(false))
     .addStringOption((o) => o.setName('cor').setDescription('Cor: lilas, roxo, azul, verde, rosa, ou #hex (opcional)').setRequired(false))
-    .addStringOption((o) => o.setName('imagem').setDescription('URL da imagem da embed (opcional; anexo não funciona no slash)').setRequired(false))
+    .addStringOption((o) => o.setName('imagem').setDescription('URL da imagem da embed (opcional)').setRequired(false))
+    .addAttachmentOption((o) => o.setName('imagem_anexo').setDescription('Ou anexe a imagem aqui (opcional; tem prioridade sobre a URL)').setRequired(false))
     .addStringOption((o) => o.setName('field_nome').setDescription('Nome do 1º campo (opcional)').setRequired(false))
     .addStringOption((o) => o.setName('field_valor').setDescription('Valor do 1º campo (opcional)').setRequired(false))
     .addBooleanOption((o) => o.setName('field_inline').setDescription('1º campo em linha? (padrão: sim)').setRequired(false))
@@ -44,7 +45,8 @@ module.exports = {
     const copiaveisBruto = interaction.options.getString('copiaveis') || '';
     const tituloEmbed = (interaction.options.getString('titulo') || '' ).trim() || null;
     const corEmbed = (interaction.options.getString('cor') || '' ).trim() || null;
-    const imagemEmbed = (interaction.options.getString('imagem') || '' ).trim() || null;
+    const anexoImg = interaction.options.getAttachment('imagem_anexo');
+    const imagemEmbed = ((anexoImg && anexoImg.contentType && anexoImg.contentType.startsWith('image/')) ? anexoImg.url : (interaction.options.getString('imagem') || '').trim()) || null;
     const fieldsBrutos = [
       { name: interaction.options.getString('field_nome'), value: interaction.options.getString('field_valor'), inline: interaction.options.getBoolean('field_inline') ?? true },
       { name: interaction.options.getString('field2_nome'), value: interaction.options.getString('field2_valor'), inline: interaction.options.getBoolean('field2_inline') ?? true },
