@@ -1,5 +1,5 @@
 const { comandoPode } = require('../utils/permissions');
-const { getSessao, buildPainel } = require('../utils/mensagemPainel');
+const { getSessao, buildEscolhaPainel } = require('../utils/mensagemPainel');
 
 module.exports = {
   name: 'mensagem',
@@ -23,6 +23,6 @@ module.exports = {
 
 
 
-    return message.reply(buildPainel(message.author.id));
+    return message.reply(buildEscolhaPainel(message.author.id));
   },
 };

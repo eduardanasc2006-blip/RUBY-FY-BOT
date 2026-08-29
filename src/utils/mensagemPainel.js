@@ -3,7 +3,7 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('
 const sessoes = new Map();
 
 function getSessao(userId) {
-  if (!sessoes.has(userId)) sessoes.set(userId, { mensagem: null, imagem: null });
+  if (!sessoes.has(userId)) sessoes.set(userId, { mensagem: null, imagem: null, tipo: 'normal' });
   return sessoes.get(userId);
 }
 
@@ -16,15 +16,35 @@ function buildEmbed(estado) {
   if (!estado.mensagem && !estado.imagem) return null;
   const embed = new EmbedBuilder().setColor(0xbeb6ff);
   if (estado.imagem) embed.setImage(estado.imagem);
+  embed.setDescription(estado.mensagem || " ");
   return embed;
 }
 
-// Painel de edicao da mensagem
-function buildPainel(userId) {
-  const estado = getSessao(userId);
+function buildEscolhaPainel(userId) {
   const resumo = new EmbedBuilder()
     .setColor(0xbeb6ff)
-    .setTitle('📨 Publicar mensagem')
+    .setTitle('📨 Publicar no canal')
+    .setDescription('Escolha o **tipo** da publicação:');
+
+  const botoes = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`msgescolha:normal:${userId}`).setLabel('💬 Mensagem normal').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`msgescolha:embed:${userId}`).setLabel('✨ Embed (editor completo)').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`msgescolha:cancelar:${userId}`).setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
+  );
+
+  return {
+    embeds: [resumo],
+    components: [botoes],
+  };
+}
+
+// Painel de edicao da mensagem
+function buildPainel(userId, tipo = 'normal') {
+  const estado = getSessao(userId);
+  const titulo = tipo === 'embed' ? '📨 Publicar embed' : '📨 Publicar mensagem';
+  const resumo = new EmbedBuilder()
+    .setColor(0xbeb6ff)
+    .setTitle(titulo)
     .setDescription(
       [
         estado.mensagem ? `📝 Mensagem: ${estado.mensagem.slice(0, 80)}${estado.mensagem.length > 80 ? '…' : ''}` : '📝 Mensagem: *(vazia)*',
@@ -66,9 +86,9 @@ function buildPreview(userId) {
 
   return {
     content: estado.mensagem || null,
-    embeds: estado.imagem ? [new EmbedBuilder().setColor(0xbeb6ff).setImage(estado.imagem)] : [],
+    embeds: estado.imagem ? [new EmbedBuilder().setColor(0xbeb6ff).setDescription(estado.mensagem || ' ').setImage(estado.imagem)] : [],
     components: [botoes],
   };
 }
 
-module.exports = { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview };
+module.exports = { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview, buildEscolhaPainel };
