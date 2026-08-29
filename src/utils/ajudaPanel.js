@@ -239,12 +239,12 @@ function buildAjuda(pagina = 'inicio', isAdmin = false) {
     const categorias = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId('ajuda:cat:conversor').setEmoji('🎮').setLabel('Conversor').setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId('ajuda:cat:estoque').setEmoji('📦').setLabel('Estoque').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId('ajuda:cat:admin').setEmoji('⚙️').setLabel('Administração').setStyle(ButtonStyle.Danger)
     );
     rows.push(categorias);
 
     if (isAdmin) {
       const extras = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('ajuda:cat:admin').setEmoji('⚙️').setLabel('Administração').setStyle(ButtonStyle.Danger),
         new ButtonBuilder().setCustomId('ajuda:cat:personalizados').setEmoji('📋').setLabel('Comandos').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId('ajuda:cat:painel').setEmoji('🖼️').setLabel('Painel').setStyle(ButtonStyle.Secondary),
       );
