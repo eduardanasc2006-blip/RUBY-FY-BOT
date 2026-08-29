@@ -59,8 +59,8 @@ function registrar(client) {
 
         if (acao === 'mensagem') return abrirModal('mensagem', '📝 Mensagem', 'Texto da mensagem', true);
         if (acao === 'imagem') return abrirModal('imagem', '🖼️ Imagem', 'URL da imagem (ou vazio para remover)');
-        if (acao === 'preview') return interaction.update(buildPreview(donoId));
-        if (acao === 'voltar') return interaction.update(buildPainel(donoId));
+        if (acao === 'preview') return interaction.update(buildPreview(donoId, interaction.guildId));
+        if (acao === 'voltar') return interaction.update(buildPainel(donoId, interaction.guildId));
         if (acao === 'publicar') {
           if (!estado.mensagem && !estado.imagem) {
 
@@ -103,7 +103,7 @@ function registrar(client) {
         } else {
           estado.mensagem = valor || null;
         }
-          return interaction.update(buildPainel(donoId));
+          return interaction.update(buildPainel(donoId, interaction.guildId));
       }
 
       // ---------- Selecao de canal da mensagem ----------

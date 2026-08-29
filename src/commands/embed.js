@@ -69,11 +69,11 @@ module.exports = {
       if (titulo && titulo.trim()) sessao.titulo = titulo.trim();
       if (descricao && descricao.trim()) sessao.descricao = descricao.trim();
       if (fields.length) sessao.fields = fields;
-      return interaction.reply({ ...buildPainel(interaction.user.id), flags: MessageFlags.Ephemeral });
+      return interaction.reply({ ...buildPainel(interaction.user.id, interaction.guildId), flags: MessageFlags.Ephemeral });
     }
 
 
     // Nada veio:(ou só canal): abre o editor vazio (igual ao !embed)
-    return interaction.reply({ ...buildPainel(interaction.user.id), flags: MessageFlags.Ephemeral });
+    return interaction.reply({ ...buildPainel(interaction.user.id, interaction.guildId), flags: MessageFlags.Ephemeral });
   },
 };

@@ -40,7 +40,7 @@ module.exports = {
         const sessao = getSessao(message.author.id);
         sessao.imagem = anexoImg.url;
       }
-      return message.reply({ ...buildPainel(message.author.id), allowedMentions: { repliedUser: false } });
+      return message.reply({ ...buildPainel(message.author.id, message.guild?message.guild.id:""), allowedMentions: { repliedUser: false } });
     }
 
     // Com argumentos: preenche a sessao e abre o editor visual (mesmo fluxo do /embed)
@@ -68,7 +68,7 @@ module.exports = {
     if (temAnexo) sessao.imagem = anexo.url;
 
     // Abre o editor visual: o usuario pode revisar, adicionar fields separados e enviar
-    return message.reply({ ...buildPainel(message.author.id), allowedMentions: { repliedUser: false } });
+    return message.reply({ ...buildPainel(message.author.id, message.guild?message.guild.id:""), allowedMentions: { repliedUser: false } });
 
 
   },

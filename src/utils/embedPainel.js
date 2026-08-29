@@ -17,6 +17,9 @@ function getSessao(userId) {
       fields: [],
       textoFora: null,
       cargos: [],
+      botoes: [],
+      paginas: [],
+      _modoPagina: false,
     });
   }
   return sessoes.get(userId);
@@ -24,6 +27,45 @@ function getSessao(userId) {
 
 function limparSessao(userId) {
   sessoes.delete(userId);
+}
+
+// ---- Botões de ação (publicados junto da mensagem/embed)) ----
+// Normaliza os botões respeitando os limites do Discord: até 5 botões por
+// linha e 10 botões no total por mensagem.
+
+function botoesEmLinhas(botoes, guildId = '', emPreview = false) {
+
+  if (!Array.isArray(botoes) || !botoes.length) return [];
+
+  const norm = botoes
+    .filter((b) => b && (b.rotulo || b.emoji))
+    .slice(0, 10)
+    .map((b) => ({
+      rotulo: String(b.rotulo || '').slice(0, 80),
+      emoji:b.emoji || null,
+      acao:b.acao === 'privado' ? 'privado' : 'link',
+      valor: String(b.valor || '').trim(),
+    }));
+
+  const linhas = [];
+  for (let i =  0; i < norm.length; i +=  5) {
+    const linha = new ActionRowBuilder();
+    for (const b of norm.slice(i, i +  5)) {
+      const btn = new ButtonBuilder()
+        .setStyle(b.acao === 'privado' ? ButtonStyle.Secondary : ButtonStyle.Link)
+        .setLabel(b.rotulo);
+      if (b.emoji) btn.setEmoji(b.emoji);
+      if (b.acao === 'privado') {
+        const customId = guildId ? `cttopen:${guildId}:${b.valor}` : '';
+        if (customId) btn.setCustomId(customId);
+        else btn.setDisabled(true).setLabel(`${b.rotulo} 🔒`); // emoji: lock
+      } else {
+        btn.setURL(b.valor.startsWith('http') ? b.valor : 'https://discord.com');
+      }
+      linha.addComponents(btn);
+    }
+    linhas.push(linha);
+  }
 }
 
 // Valida uma URL de imagem/thumbnail do jeito que o Discord aceita.
@@ -87,7 +129,7 @@ function buildEmbed(estado) {
 }
 
 // Painel de edicao
-function buildPainel(userId) {
+function buildPainel(userId, guildId = '') {
   const estado = getSessao(userId);
   const embed = buildEmbed(estado);
 
@@ -140,13 +182,13 @@ function buildPainel(userId) {
   return {
     content: estado.textoFora || null,
     embeds: embed ? [resumo, embed] : [resumo],
-    components: [linha1, linha2, linha3, linha4],
+    components: [linha1, linha2, linha3, linha4, ...botoesEmLinhas(estado.botoes, guildId)]
   };
 }
 
 // Preview da embed final: mostra apenas o que será publicado (sem o painel de
 // edição) com botões de voltar/editar, enviar e cancelar.
-function buildPreview(userId) {
+function buildPreview(userId, guildId = '', emPreview = true) {
   const estado = getSessao(userId);
   const embed = buildEmbed(estado);
 
@@ -168,6 +210,98 @@ function buildPreview(userId) {
     content:
       '👁️ **Prévia — é exatamente assim que a embed será publicada**' +
       (estado.textoFora ? `\n\n${estado.textoFora}` : ''),
+    embeds: [embed],
+    components: [botoes, ...botoesEmLinhas(estado.botoes, guildId, emPreview)]
+  };
+}
+
+// ---- Conteúdo privado (páginas) do botão "privado" ----
+// Cada página é um mini-embed que abre de forma éfemera (só quem clicou vê).
+
+function paginasValidas(paginas) {
+  if (!Array.isArray(paginas)) return [];
+  const validas = [];
+  for (const p of paginas) {
+    if (!p) continue;
+    const titulo = String(p.titulo || '').trim().slice(0, 256);
+    const descricao = String(p.descricao || '').trim().slice(0, 4096);
+    const imagem = urlValida(p.imagem) ? String(p.imagem).trim() : null;
+    const thumbnail = urlValida(p.thumbnail) ? String(p.thumbnail).trim() : null;
+    const fields = camposValidos(p.fields);
+    const temConteudo = !!(titulo || descricao || imagem || thumbnail || fields.length);
+    if (!temConteudo) continue;
+    validas.push({ titulo, descricao, imagem, thumbnail, fields });
+  }
+  return validas.slice(0, 25);
+}
+
+function buildPaginaPainel(userId, pageNumber) {
+  const estado = getSessao(userId);
+  const paginas = paginasValidas(estado.paginas);
+  const index = Math.min(Math.max(pageNumber,0), Math.max(paginas.length -1,0));
+  const pagina = paginas[index];
+
+  if (!pagina) return { content: '⚠️ Página vazia.', embeds: [], components: [] };
+
+  const embed = new EmbedBuilder().setColor(resolverCor(estado.cor));
+  if (pagina.titulo) embed.setTitle(pagina.titulo);
+  if (pagina.descricao) embed.setDescription(pagina.descricao);
+  if (pagina.imagem) embed.setImage(pagina.imagem);
+  if (pagina.thumbnail) embed.setThumbnail(pagina.thumbnail);
+  if (pagina.fields.length) embed.addFields(pagina.fields);
+  if (!pagina.descricao) embed.setDescription('\u200b');
+
+  const temPaginas = paginas.length > 1;
+  const voltar = new ButtonBuilder()
+    .setStyle(ButtonStyle.Secondary)
+    .setLabel('⬅ Voltar')
+    .setCustomId(`cttpag:${userId}:${index - 1}`)
+    .setDisabled(index === 0);
+  const avancar = new ButtonBuilder()
+    .setStyle(ButtonStyle.Secondary)
+    .setLabel('Avançar ➡')
+    .setCustomId(`cttpag:${userId}:${index + 1}`)
+    .setDisabled(index === paginas.length - 1);
+  const fechar = new ButtonBuilder()
+    .setStyle(ButtonStyle.Danger)
+    .setLabel('❌ Fechar')
+    .setCustomId(`cttclose:${userId}`);
+
+  const botoes = temPaginas ? new ActionRowBuilder().addComponents(voltar, avancar, fechar) : new ActionRowBuilder().addComponents(fechar);
+
+  return {
+    content: null,
+    embeds: [embed],
+    components: [botoes],
+  };
+}
+
+function buildPaginasPainel(userId) {
+  const estado = getSessao(userId);
+  const paginas = paginasValidas(estado.paginas);
+  const linhas = paginas.length
+    ? paginas.map((p, i) => `**Página ${i + 1}** — ${p.titulo || p.descricao.slice(0, 40)}`)
+    : ['*(nenhuma página ainda)*'];
+
+  const embed = new EmbedBuilder()
+    .setColor(0xbeb6ff)
+    .setTitle('📚 Conteúdo privado (páginas)')
+    .setDescription([
+      `**${paginas.length}** página(s) configurada(s.`,
+      '',
+      ...linhas,
+      '',
+      'Os botões **privados** da embed abrem este conteúdo só para quem clicar.',
+    ].join('\n'));
+
+  const botoes = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`embedpainel:pagadd:${userId}`).setLabel('➕ Adicionar página').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`embedpainel:paglimpar:${userId}`).setLabel('🧹 Limpar páginas').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId(`embedpainel:voltar:${userId}`).setLabel('⬅ Voltar ao editor').setStyle(ButtonStyle.Secondary)
+  );
+
+  return {
+    content: null,
     embeds: [embed],
     components: [botoes],
   };
@@ -228,4 +362,4 @@ function buildFieldsPainel(userId) {
   };
 }
 
-module.exports = { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview, buildFieldsPainel, camposValidos, urlValida };
+module.exports = { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview, buildFieldsPainel, botoesEmLinhas, paginasValidas, buildPaginaPainel, buildPaginasPainel, camposValidos, urlValida };
