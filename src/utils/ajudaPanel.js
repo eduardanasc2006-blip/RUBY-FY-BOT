@@ -126,7 +126,7 @@ const PAGINAS = {
     if (lista.length === 0) {
       linhas.push('*Nenhum comando personalizado criado ainda.*', '');
       linhas.push('Use **/criarcomando** para criar o seu comando.', '');
-      linhas.push('Com **/criarcomando** você define nome, descrição, mensagem e conteúdos copiáveis.', '');
+      linhas.push('Com **/criarcomando** você define nome, descrição, mensagem, imagem (URL **ou anexo**) e conteúdos copiáveis.', '');
       linhas.push('Com **/gerenciarcomandos** você lista ou exclui os já criados.');
     } else {
       for (const c of lista) {
@@ -214,7 +214,7 @@ const PAGINAS = {
       '*Gerencia permissões por cargo.*',
       '',
       '➜ **/criarcomando**',
-      '*Cria um comando personalizado.*',
+      '*Cria um comando personalizado — aceita imagem por URL **ou anexo**.*',
       '',
       '➜ **/gerenciarcomandos**',
       '*Lista, edita ou exclui personalizados.*',
