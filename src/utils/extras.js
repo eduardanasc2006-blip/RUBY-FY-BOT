@@ -14,7 +14,7 @@ const {
 const { comandoPode } = require('./permissions');
 const { linhaSelecaoCanalDe, resolverSelecaoCanal } = require('./channelPicker');
 const { urlValida } = require('./embedPainel');
-const { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview } = require('./mensagemPainel');
+const { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview, buildEscolhaPainel } = require('./mensagemPainel');
 const { capturarEstado, guardarEstado, estadoSalvo } = require('./channelLock');
 
 
@@ -26,6 +26,41 @@ function pode(interaction, cmd) {
 function registrar(client) {
   client.on('interactionCreate', async (interaction) => {
     try {
+      // ---------- Escolha embed vs mensagem normal ----------
+      if (interaction.isButton() && interaction.customId.startsWith('msgescolha:')) {
+        const partes = interaction.customId.split(':');
+        const donoId = partes[2];
+        if (interaction.user.id !== donoId) {
+
+          return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
+        }
+        if (!pode(interaction, 'mensagem')) {
+          return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+        }
+        const estado = getSessao(donoId);
+        if (partes[1] === 'normal') {
+          if (!estado.mensagem && !estado.imagem) {
+
+            return interaction.reply({ content: '❌ Escreva uma mensagem ou envie uma foto junto do !mensagem primeiro.', flags: MessageFlags.Ephemeral });
+          }
+          return interaction.update(buildPainel(donoId, 'normal'));
+        }
+        if (partes[1] === 'embed') {
+          estado.tipo = 'embed';
+          const eb = require('./embedPainel');
+          const sessaoEmbed = eb.getSessao(donoId);
+          if (estado.mensagem) sessaoEmbed.descricao = estado.mensagem;
+          if (estado.imagem) sessaoEmbed.imagem = estado.imagem;
+
+          return interaction.update(eb.buildPainel(donoId, interaction.guildId));
+        }
+        if (partes[1] === 'cancelar') {
+          limparSessao(donoId);
+          return interaction.update({ content: '❌ Cancelado.', embeds: [], components: [] });
+        }
+        return;
+      }
+
       // ---------- Painel de edicao da mensagem ----------
       if (interaction.isButton() && interaction.customId.startsWith('msgpainel:')) {
         const partes = interaction.customId.split(':');
@@ -55,6 +90,7 @@ function registrar(client) {
                   .setValue(atual)
                 )
               );
+        return interaction.showModal(modal);
         };
 
         if (acao === 'mensagem') return abrirModal('mensagem', '📝 Mensagem', 'Texto da mensagem', true);
