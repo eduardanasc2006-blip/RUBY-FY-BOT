@@ -6,7 +6,7 @@ function escolherVencedores(participantes, qtd) {
   const pool = [...participantes];
   const sorteados = [];
   while (sorteados.length < qtd && pool.length) {
-    sorteados.push(pool.splice(Math.floor(Math.random() * pool.length), )[0]);
+    sorteados.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
   }
   return sorteados;
 }
@@ -14,30 +14,36 @@ function escolherVencedores(participantes, qtd) {
 function montarEmbed(sorteio) {
   const embed = new EmbedBuilder()
     .setColor(COR)
-    .setTitle('🎉 Sorteio: ' + (sorteio.premio || 'Sorteio'))
-    .setDescription(sorteio.descricao || 'Participe para concorrer!')
-    .setFooter({ text: sorteio.encerrado ? 'Sorteio encerrado' : 'Sorteio ativo' })
-    .setTimestamp(new Date(sorteio.fimEm));
+    .setTitle('🎉 SORTEIO')
+    .setDescription(sorteio.descricao || 'Participe para concorrer!');
   if (sorteio.imagem) embed.setImage(sorteio.imagem);
+  const vencedores = (sorteio.vencedores && sorteio.vencedores.length)
+    ? sorteio.vencedores.map((u) => '<@' + u + '>').join(', ')
+    : (sorteio.encerrado ? 'Nenhum' : 'Aguardando');
   embed.addFields(
     { name: '🎁 Prêmio', value: sorteio.premio || '—', inline: true },
-    { name: '👥 Participantes', value: String(sorteio.participantes.length), inline: true },
-    { name: '🏆 Vencedores', value: sorteio.vencedores.length ? sorteio.vencedores.map((u) => '<@' + u + '>').join(', ') : (sorteio.qtdVencedores ? String(sorteio.qtdVencedores) : '1'), inline: true }
+    { name: '⏰ Término', value: (sorteio.fimEm ? '<t:' + Math.floor(new Date(sorteio.fimEm).getTime() / 1000) + ':R>' : '—'), inline: true },
+    { name: '🏆 Vencedores', value: vencedores, inline: true },
+    { name: '👥 Participantes', value: String(Array.isArray(sorteio.participantes) ? sorteio.participantes.length : 0), inline: true }
   );
+  embed.setFooter({ text: sorteio.encerrado ? 'Sorteio encerrado' : 'Sorteio ativo · clique em 🎟 Participar' })
+    .setTimestamp(sorteio.fimEm ? new Date(sorteio.fimEm) : new Date());
   return { embed };
 }
 
-function montarComponentes(sorteio, uid, guildId, id) {
+function montarComponentes(sorteio, donoId, guildId, id) {
   const bts = [];
   if (!sorteio.encerrado) {
     bts.push(new ButtonBuilder().setCustomId('sorteio:participar:' + guildId + ':' + id).setLabel('🎟 Participar').setStyle(ButtonStyle.Primary));
-    bts.push(new ButtonBuilder().setCustomId('sorteio:refazer:' + uid + ':' + guildId + ':' + id).setLabel('🔁 Refazer').setStyle(ButtonStyle.Secondary));
+  } else {
+    bts.push(new ButtonBuilder().setCustomId('sorteio:sortear:' + donoId + ':' + guildId + ':' + id).setLabel('🔁 Sortear novamente').setStyle(ButtonStyle.Secondary));
   }
-  bts.push(new ButtonBuilder().setCustomId('sorteio:encerrar:' + uid + ':' + guildId + ':' + id).setLabel('🏁 Encerrar').setStyle(ButtonStyle.Danger));
-  const rows = [];
-  rows.push(new ActionRowBuilder().addComponents(bts.splice(0, 5)));
-  if (bts.length) rows.push(new ActionRowBuilder().addComponents(bts.splice(0, 5)));
-  return rows;
+  bts.push(new ButtonBuilder().setCustomId('sorteio:encerrar:' + donoId + ':' + guildId + ':' + id).setLabel('🏁 Encerrar').setStyle(ButtonStyle.Danger));
+  const linhas = [];
+  for (let i =  0; i < bts.length; i += 5) {
+    linhas.push(new ActionRowBuilder().addComponents(bts.slice(i, i + 5)));
+  }
+  return linhas;
 }
 
 async function renderizar(client, guildId, id, sorteio, canalId, donoId, isReagendado) {
@@ -67,7 +73,15 @@ function reagendar(client, guildId, id, sorteio) {
    const fimEm = new Date(sorteio.fimEm).getTime();
    const agora = Date.now();
    const restante = fimEm - agora;
-   if (restante > 5000) {
+   if (restante <= 0) {
+    setTimeout(() => {
+      encerrar(client, guildId, id);
+    }, 1000);
+  } else if (restante <=  5000) {
+    setTimeout(() => {
+      encerrar(client, guildId, id);
+    }, restante);
+  } else {
 
 
 
@@ -82,19 +96,50 @@ async function encerrar(client, guildId, id) {
    const sorteio = store.obter(guildId, id);
    if (!sorteio || sorteio.encerrado) return;
    sorteio.encerrado = true;
-   sorteio.vencedores = sorteio.vencedores.length ? sorteio.vencedores : escolherVencedores(sorteio.participantes, sorteio.qtdVencedores || 1);
+   sorteio.vencedores = (sorteio.vencedores && sorteio.vencedores.length) ? sorteio.vencedores : escolherVencedores((sorteio.participantes || []), sorteio.qtdVencedores || 1);
    store.salvarSorteio(guildId, id, sorteio);
-   const canal = await client.channels.fetch(sorteio.canalId.catch(() => null));
+   const canal = await client.channels.fetch(sorteio.canalId).catch(() => null);
    if (canal && canal.isTextBased() && sorteio.msgId) {  
-    const m = await canal.messages.fetch(sorteio.msgId.catch(() => null));
+    const m = await canal.messages.fetch(sorteio.msgId).catch(() => null);
     if (m) {
       const { embed } = montarEmbed(sorteio);
       await m.edit({ embeds: [embed], components: montarComponentes(sorteio, sorteio.criadorId, guildId, id) });
     }
    }
    if (canal && canal.isTextBased()) {  
-     await canal.send({ content: '🏁 **Sorteio encerrado!** Vencedor(es): ' + (sorteio.vencedores.length ? sorteio.vencedores.map((u) => '<@' + u + '>').join(', ') : 'Nenhum') });
+     await canal.send({ content: '🏁 **Sorteio encerrado!** ' + ((sorteio.vencedores && sorteio.vencedores.length) ? 'Vencedor(es): ' + sorteio.vencedores.map((u) => '<@' + u + '>').join(', ') : 'Nenhum vencedor desta vez.') });
    }
 }
 
-module.exports = { montarEmbed, montarComponentes, escolherVencedores, renderizar, encerrar, reagendar };
+async function sortearNovamente(client, guildId, id, callerId) {
+  const store = require('./sorteioStore');
+  const sorteio = store.obter(guildId, id);
+  if (!sorteio || !sorteio.encerrado || !(sorteio.participantes || []).length) return null;
+  sorteio.vencedores = escolherVencedores((sorteio.participantes || []), sorteio.qtdVencedores || 1);
+  store.salvarSorteio(guildId, id, sorteio);
+  const canal = await client.channels.fetch(sorteio.canalId).catch(() => null);
+  if (canal && canal.isTextBased() && sorteio.msgId) {
+    const m = await canal.messages.fetch(sorteio.msgId).catch(() => null);
+    if (m) {
+      const { embed } = montarEmbed(sorteio);
+      await m.edit({ embeds: [embed], components: montarComponentes(sorteio, sorteio.criadorId, guildId, id) });
+    }
+  }
+  return sorteio;
+}
+
+function reagendarTodos(client) {
+  const store = require('./sorteioStore');
+  const tudo = store.carregar();
+  for (const guildId of Object.keys(tudo)) {
+    const sorteios = tudo[guildId] || {};
+    for (const id of Object.keys(sorteios)) {
+      const s = sorteios[id];
+      if (s && !s.encerrado) {
+        reagendar(client, guildId, id, s);
+      }
+    }
+  }
+}
+
+module.exports = { montarEmbed, montarComponentes, escolherVencedores, renderizar, encerrar, reagendar, sortearNovamente, reagendarTodos };

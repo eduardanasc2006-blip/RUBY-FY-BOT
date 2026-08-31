@@ -1965,4 +1965,6 @@ const customEditHandlers = require('./utils/customEditHandler');
 customEditHandlers.registrar(client);
 const sorteioHandlers = require('./utils/sorteioHandlers');
 sorteioHandlers.registrar(client);
+const sorteioRenderBoot = require('./utils/sorteioRender');
+sorteioRenderBoot.reagendarTodos(client);
 client.login(process.env.DISCORD_TOKEN);

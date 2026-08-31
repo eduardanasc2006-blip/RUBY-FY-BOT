@@ -31,18 +31,18 @@ function obter(guildId, id) {
 
 function salvarSorteio(guildId, id, sorteio) {
   const tudo = carregar();
-　 if (!tudo[guildId]) tudo[guildId] = {};
-　 tudo[guildId][id] = sorteio;
+  if (!tudo[guildId]) tudo[guildId] = {};
+  tudo[guildId][id] = sorteio;
 
   salvar(tudo);
 }
 
 function remover(guildId, id) {
-　 const tudo = carregar();
-　 if (tudo[guildId]) {
+  const tudo = carregar();
+  if (tudo[guildId]) {
     delete tudo[guildId][id];
     salvar(tudo);
-　 }
+  }
 }
 
 module.exports = { carregar, obterGuild, obter, salvarSorteio, remover };

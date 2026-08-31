@@ -2,7 +2,7 @@ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('
 
 const COR = 0xbeb6ff;
 
-function buildSorteioPainel(guildId, uid, canaisAlvo) {
+function buildSorteioPainel(guildId, uid, canaisAlvo, cargoAlvo) {
   const embed = new EmbedBuilder()
     .setColor(COR)
     .setTitle('🎉 Sorteios')
@@ -11,10 +11,11 @@ function buildSorteioPainel(guildId, uid, canaisAlvo) {
       '',
       '➜ Clique em **✨ Criar sorteio** para começar.',
       '',
-      canaisAlvo ? '➜ O sorteio será publicado em <#' + canaisAlvo + '>.' : '➜ Escolha o canal no modal de criação.',
+      canaisAlvo ? '➜ O sorteio será publicado em <#' + canaisAlvo + '>.' : '➜ O sorteio será publicado no canal do comando.',
+      cargoAlvo ? '➜ Cargo obrigatório: <@&' + cargoAlvo + '>.' : ''
     ].join('\n'));
   const bts = [];
-   bts.push(new ButtonBuilder().setCustomId('sorteio:criar:' + guildId + ':' + uid).setLabel('✨ Criar sorteio').setStyle(ButtonStyle.Primary));
+   bts.push(new ButtonBuilder().setCustomId('sorteio:criar:' + guildId + ':' + uid + ':' + (canaisAlvo || 'none') + ':' + (cargoAlvo || 'none')).setLabel('✨ Criar sorteio').setStyle(ButtonStyle.Primary));
   return { embeds: [embed], components: [new ActionRowBuilder().addComponents(bts)] };
 }
 
