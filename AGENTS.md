@@ -10,6 +10,11 @@
 - `tests/ajudadm.test.js` cobre o menu de ajuda na DM: público não vê botões de admin; `buildAjuda(page, isAdmin)` — NAO mostrar `ajuda:cat:admin` para `isAdmin=false` (fix de 2026-08-29: o botão de Administração aparecia para todos e ao clicar voltava mudo para a home — parecia quebrado na DM).
 - `data/` nunca deve conter `estoque.json` criado por teste — testes de `painelcategoria`/`painelestoque` recriam via `addCategoria`/publica; limpar depois (`rm -f data/estoque.json`).
 
+## Limites da API do Discord (componentes)
+- **ActionRow**: máx 5 componentes por linha e máx 5 linhas por mensagem — violação devolve `DiscordAPIError 50035 components[N].components[BASE_TYPE_BAD_LENGTH]`.
+- Painel do embed (`buildPainel` in `src/utils/embedPainel.js`): 4 linhas fixas — linha1 (4: Título/Descrição/Cor/Imagem), linha2 (5: Thumbnail/Autor/Rodapé/Fields/**Cancelar**), linha3 (5: Texto fora/Botões/Salvar/Preview/Enviar), linha4 (menu de cargos) — botões customizados entram com **no máx 1 linha** (`.slice(0, 1)`), pois o total tem que ficar ≤5 linhas.
+- Layout histórico: em 2026-08-31 a linha3 tinha 6 botões (causou o 50035 em produção às 10:06); fix em `6baf26d` redistribuiu Cancelar para a linha2 e limitou customizados a 1 linha.
+
 ## Deploy / Discord
 - `deploy-commands.js` redefine os comandos GLOBAIS do app — ao rodar, **remove comandos custom** (`pix`, `pagamento` — gerados via `/criarcomando` e armazenados em `data/comandos_custom.json` **no host do Discloud**, não no repo). Eles voltam quando o bot reinicia no host `RUBY-FY-BOT` (Discloud ID `RUBY-FY-BOT`).
 - Para o bot aparecer na DM, os usuários precisam instalar o app via **User Install**: `https://discord.com/oauth2/authorize?client_id=1509146932478476389&scope=applications.commands&integration_type=1`.
