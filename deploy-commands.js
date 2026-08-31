@@ -12,7 +12,7 @@ if (!process.env.DISCORD_TOKEN || !process.env.CLIENT_ID) {
 // É isso que permite usá-los na DM (/, não só !). Contextos: 0 guild, 1 DM,
 // 2 grupos. Comandos admin ficam só no servidor (Guild Install) por segurança.
 const PUBLICOS = new Set([
-  'ajuda', 'estoque', 'gamepass', 'reais', 'robux', 'taxa',
+  'ajuda', 'estoque', 'gamepass', 'reais', 'robux', 'taxa', 'calc',
 ]);
 
 const commands = [];

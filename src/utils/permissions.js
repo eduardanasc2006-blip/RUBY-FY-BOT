@@ -55,7 +55,13 @@ const GRUPOS = [
     descricao: 'Gerar e baixar backups das taxas e estoque.',
     comandos: ['backup'],
   },
-];
+  {
+    id: 'sorteio',
+    nome: '🎉 Sorteios',
+    descricao: 'Criar e gerenciar sorteios no servidor.',
+    comandos: ['sorteio'],
+  },
+  ];
 
 let dados = { grupos: {} };
 try {

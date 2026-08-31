@@ -62,6 +62,8 @@ const COMANDOS = [
 { grupo: 'Administração', cmd: 'setwelcome', desc: 'Personaliza a mensagem de boas-vindas do servidor.', admin: true },
 { grupo: 'Ajuda', cmd: 'ping', desc: 'Testa a latência do bot.', admin: false },
 { grupo: 'Ajuda', cmd: 'info', desc: 'Mostra informações básicas do bot.', admin: false },
+{ grupo: 'Ajuda', cmd: 'calc', desc: 'Calculadora: faça cálculos simples (+, -, *, /, %, parênteses).', admin: false },
+{ grupo: 'Administração', cmd: 'sorteio', desc: 'Cria um sorteio com prêmio, duração, vencedores e canal opcional.', admin: true },
  { grupo: 'Administração', cmd: 'permissoes', desc: 'Gerencia permissões por cargo.', admin: true },
  { grupo: 'Comandos personalizados', cmd: 'criarcomando', desc: 'Cria um comando personalizado.', admin: true },
  { grupo: 'Comandos personalizados', cmd: 'gerenciarcomandos', desc: 'Lista, edita ou exclui personalizados.', admin: true },

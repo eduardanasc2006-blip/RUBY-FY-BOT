@@ -19,15 +19,20 @@ function botoesPorLinha(botoes, max = 5) {
   return out;
 }
 
+function nomeCategoria(c) {
+  return c ? c.nome : 'Sem categoria';
+}
+
 function buildModelosPainel(guildId, uid) {
-  const porCat = {};
-  for (const ach of modelos.listar(guildId)) {
-    const cat = ach.categoria || 'outros';
-    if (!porCat[cat]) porCat[cat] = [];
-    porCat[cat].push(ach);
+  const cats = modelos.listarCategorias(guildId);
+  const todos = modelos.listarTodos(guildId);
+  const sem = modelos.listar(guildId, null);
+  const linhasDesc = [];
+  for (const c of cats) {
+    const qtd = modelos.listar(guildId, c.id).length;
+    linhasDesc.push(`${c.nome} — **${qtd}** modelo(s)`);
   }
-  const cats = modelos.CATEGORIAS_PADRAO;
-  const linhasDesc = cats.map((ch) => `${ch.nome} — **${(porCat[ch.id] || []).length}** modelo(s)`);
+  linhasDesc.push(`Sem categoria — **${sem.length}** modelo(s)`);
   const embed = new EmbedBuilder()
     .setColor(COR)
     .setTitle('💾 Modelos de Embed')
@@ -36,30 +41,49 @@ function buildModelosPainel(guildId, uid) {
       '',
       ...linhasDesc,
       '',
-      'Use **💾 Salvar modelo** dentro do editor de `!embed` depois de montar a embed;',
+      `**${todos.length}** modelo(s) no total.`,
+      '',
+      'Use **💾 Salvar modelo** dentro do editor de `!embed` depois de montar a embed.',
     ].join(NL));
-  const botoes = cats.map((ch) => new ButtonBuilder()
-    .setCustomId(`modelos:cat:${guildId}:${uid}:${ch.id}`)
-    .setLabel(ch.nome.split(' ').slice(1).join(' '))
-    .setStyle(ButtonStyle.Primary))
+  const botoes = [];
+  for (const c of cats) {
+    botoes.push(new ButtonBuilder()
+      .setCustomId(`modelos:cat:${guildId}:${uid}:${c.id}`)
+      .setLabel(c.nome)
+      .setStyle(ButtonStyle.Primary));
+  }
+  botoes.push(new ButtonBuilder()
+    .setCustomId(`modelos:cat:${guildId}:${uid}:sem`)
+    .setLabel('Sem categoria')
+    .setStyle(ButtonStyle.Secondary));
+  botoes.push(new ButtonBuilder()
+    .setCustomId(`modelos:novacat:${guildId}:${uid}`)
+    .setLabel('➕ Nova categoria')
+    .setStyle(ButtonStyle.Success));
   return { embeds: [embed], components: botoesPorLinha(botoes) };
 }
 
 function buildCategoriaPainel(guildId, catId, uid) {
-  const lista = modelos.listar(guildId).filter((m) => (m.categoria || 'outros') === catId);
-  const cat = modelos.CATEGORIAS_PADRAO.find((c) => c.id === catId);
+  const ehSem = catId === 'sem' || catId === 'null' || !catId;
+  let cat = null;
+  if (!ehSem) cat = modelos.obterCategoria(guildId, catId)
+  const lista = ehSem ? modelos.listar(guildId, null) : modelos.listar(guildId, catId)
   const embed = new EmbedBuilder()
     .setColor(COR)
-    .setTitle(cat ? cat.nome : '✨ Outros')
+    .setTitle(ehSem ? '🗂 Sem categoria' : cat ? cat.nome : 'Categoria')
     .setDescription(lista.length
       ? lista.map((m, i) => `**${i + 1}.** ${m.nome}` ).join(NL)
       : '*(Nenhum modelo nesta categoria ainda.)*');
   const botoes = [];
   for (const m of lista) {
-    botoes.push(new ButtonBuilder().setCustomId(`modelos:ver:${guildId}:${uid}:${m.id}`).setLabel('👁️ Ver').setStyle(ButtonStyle.Secondary));
+    botoes.push(new ButtonBuilder().setCustomId(`modelos:ver:${guildId}:${uid}:${m.id}`).setLabel('👁 Ver').setStyle(ButtonStyle.Secondary));
     botoes.push(new ButtonBuilder().setCustomId(`modelos:usar:${guildId}:${uid}:${m.id}`).setLabel('📋 Usar').setStyle(ButtonStyle.Primary));
-    botoes.push(new ButtonBuilder().setCustomId(`modelos:editar:${guildId}:${uid}:${m.id}`).setLabel('✏️ Editar').setStyle(ButtonStyle.Secondary));
-    botoes.push(new ButtonBuilder().setCustomId(`modelos:excluir:${guildId}:${uid}:${m.id}`).setLabel('🗑️ Excluir').setStyle(ButtonStyle.Danger));
+    botoes.push(new ButtonBuilder().setCustomId(`modelos:editar:${guildId}:${uid}:${m.id}`).setLabel('✏ Editar').setStyle(ButtonStyle.Secondary));
+    botoes.push(new ButtonBuilder().setCustomId(`modelos:excluir:${guildId}:${uid}:${m.id}`).setLabel('🗑 Excluir').setStyle(ButtonStyle.Danger));
+  }
+  if (!ehSem && cat) {
+    botoes.push(new ButtonBuilder().setCustomId(`modelos:catedit:${guildId}:${uid}:${cat.id}`).setLabel('✏ Renomear').setStyle(ButtonStyle.Secondary));
+    botoes.push(new ButtonBuilder().setCustomId(`modelos:catexcluir:${guildId}:${uid}:${cat.id}`).setLabel('🗑 Excluir cat.').setStyle(ButtonStyle.Danger));
   }
   botoes.push(new ButtonBuilder().setCustomId(`modelos:voltar:${guildId}:${uid}`).setLabel('⬅ Voltar').setStyle(ButtonStyle.Secondary));
   return { embeds: [embed], components: botoesPorLinha(botoes, 4) };

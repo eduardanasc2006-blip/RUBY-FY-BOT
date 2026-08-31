@@ -1246,6 +1246,7 @@ const { buildBotoesPainel, buildBotaoModal, buildBotaoPrivadoPainel } = require(
 const { buildModelosPainel, buildCategoriaPainel } = require('./utils/modelosPainel');
 const modelosStore = require('./utils/embedModelos');
 const welcomeStore = require('./utils/welcomeStore');
+const { interpolar, interpolarEmbed } = require('./utils/interpolar');
 const cttStore = require('./utils/cttStore');
 const { linhaSelecaoCanalDe, resolverSelecaoCanal } = require('./utils/channelPicker');
 const extrasHandlers = require('./utils/extras');
@@ -1386,7 +1387,7 @@ client.on('interactionCreate', async (interaction) => {
             new ActionRowBuilder().addComponents(
               new TextInputBuilder()
                 .setCustomId('mcategoria')
-                .setLabel('Categoria (boasvindas, loja, suporte, avisos, pagamentos, pedidos, outros)')
+                .setLabel('Categoria da guild (e.g.: Boas-vindas, Loja)')
                 .setStyle(TextInputStyle.Short)
                 .setRequired(false)
                 .setMaxLength(24)
@@ -1795,6 +1796,45 @@ client.on('interactionCreate', async (interaction) => {
     const mId = partes[4];
     if (acao === 'voltar') return interaction.update(buildModelosPainel(guildId, uid));
     if (acao === 'cat') return interaction.update(buildCategoriaPainel(guildId, mId, uid));
+    if (acao === 'novacat') {
+      const modalNova = new ModalBuilder()
+        .setCustomId(`modeloscat:nova:${guildId}:${uid}`)
+        .setTitle('➕ Nova categoria')
+        .addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId('cname')
+              .setLabel('Nome da categoria')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMaxLength(24)
+          )
+        );
+      return interaction.showModal(modalNova);
+    }
+    if (acao === 'catedit') {
+      const cat = modelosStore.obterCategoria(guildId, mId);
+      if (!cat) return interaction.reply({ content: '❌ Categoria não encontrada.', flags: MessageFlags.Ephemeral });
+      const modalEdit = new ModalBuilder()
+        .setCustomId(`modeloscat:edit:${guildId}:${uid}:${mId}`)
+        .setTitle('✏️ Renomear categoria')
+        .addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId('cname')
+              .setLabel('Nome da categoria')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMaxLength(24)
+              .setValue(String(cat.nome || '').slice(0, 24))
+          )
+        );
+      return interaction.showModal(modalEdit);
+    }
+    if (acao === 'catexcluir') {
+      const res2 = modelosStore.excluirCategoria(guildId, mId);
+      return interaction.update({ content: res2.ok ? '🗑️ Categoria excluída. Modelos movidos para **Sem categoria**.' : '❌ ' + (res2.msg || 'Erro.'), embeds: [], components: [] });
+    }
     const modelo = modelosStore.obter(guildId, mId);
     if (!modelo) return interaction.reply({ content: '❌ Modelo não encontrado.', flags: MessageFlags.Ephemeral });
     if (acao === 'ver') {
@@ -1827,7 +1867,7 @@ client.on('interactionCreate', async (interaction) => {
           new ActionRowBuilder().addComponents(
             new TextInputBuilder()
               .setCustomId('mcategoria')
-              .setLabel('Categoria (boasvindas, loja, suporte, avisos, pagamentos, pedidos, outros)')
+              .setLabel('Categoria da guild (e.g.: Boas-vindas, Loja)')
               .setStyle(TextInputStyle.Short)
               .setRequired(false)
               .setMaxLength(24)
@@ -1852,6 +1892,33 @@ client.on('interactionCreate', async (interaction) => {
 
   } catch (error) {
     console.error('[modelos] Erro:', error);
+  }
+});
+
+// ----- Modais de categorias de modelos -----
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isModalSubmit() || !interaction.customId.startsWith('modeloscat:')) return;
+  try {
+    const partes = interaction.customId.split(':');
+    const modo = partes[1];
+    const guildId = partes[2];
+    const uid = partes[3];
+    if (interaction.user.id !== uid) return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
+    const nome = (interaction.fields.getTextInputValue('cname') || '' ).trim();
+    if (!nome) return interaction.reply({ content: '❌ Informe um nome para a categoria.', flags: MessageFlags.Ephemeral });
+    if (modo === 'nova') {
+      const res = modelosStore.criarCategoria(guildId, nome);
+      if (!res.ok) return interaction.reply({ content: '❌ ' + (res.msg || 'Erro ao criar.'), flags: MessageFlags.Ephemeral });
+      return interaction.update(buildModelosPainel(guildId, uid));
+    }
+    if (modo === 'edit') {
+      const catId = partes[4];
+      const res = modelosStore.editarCategoria(guildId, catId, nome)
+      if (!res.ok) return interaction.reply({ content: '❌ ' + (res.msg || 'Erro ao renomear.'), flags: MessageFlags.Ephemeral });
+      return interaction.update(buildCategoriaPainel(guildId, catId, uid));
+    }
+  } catch (error) {
+    console.error('[modeloscat] Erro:', error);
   }
 });
 
@@ -1882,8 +1949,11 @@ client.on(Events.GuildMemberAdd, async (member) => {
     if (!conf) return;
     const canal = await client.channels.fetch(conf.canalId).catch(() => null);
     if (!canal || !canal.isTextBased() || !canal.permissionOverwrites) return;
+    const vars = { user: '<@' + member.id + '>', server: member.guild.name };
     const embed = buildEmbed(conf.embed);
-    await canal.send({ embeds: embed ? [embed] : [], content: null });
+    if (embed) interpolarEmbed(embed, vars);
+    const content = interpolar(conf.content || null, vars);
+    await canal.send({ embeds: embed ? [embed] : [], content });
   } catch (error) {
     console.error('[Welcome] Erro:', error);
   }
@@ -1891,4 +1961,6 @@ client.on(Events.GuildMemberAdd, async (member) => {
 
 
 extrasHandlers.registrar(client);
+const sorteioHandlers = require('./utils/sorteioHandlers');
+sorteioHandlers.registrar(client);
 client.login(process.env.DISCORD_TOKEN);
