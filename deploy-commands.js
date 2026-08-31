@@ -16,22 +16,32 @@ const PUBLICOS = new Set([
 ]);
 
 const commands = [];
+const nomesNativos = new Set();
 const commandsPath = path.join(__dirname, 'src', 'commands');
 for (const file of fs.readdirSync(commandsPath).filter((f) => f.endsWith('.js'))) {
   const cmd = require(path.join(commandsPath, file)).data.toJSON();
   cmd.integration_types = PUBLICOS.has(cmd.name) ? [0, 1] : [0];
   cmd.contexts = [0, 1, 2];
   commands.push(cmd);
+  nomesNativos.add(cmd.name.toLowerCase());
 }
 
-// Inclui tambem os comandos personalizados salvos, para que o deploy nao os apague.
+// Inclui também os comandos personalizados salvos, para que o deploy não os apague.
+
+// Personalizados que colidem com um comando nativo (ou que estejam duplicados) são
+// ignorados aqui: o comando nativo já garante o /nome no seletor, e registrar o
+// duplicado outra vez faz o Discord mostrar DOIS comandos com o mesmo nome.
 try {
   const custom = require('./src/utils/customCommands');
+  const vistos = new Set();
   for (const cmd of Object.values(custom.listar())) {
+    const nome = cmd.nome.toLowerCase();
+    if (nomesNativos.has(nome) || vistos.has(nome)) continue;
+    vistos.add(nome);
     commands.push({
-      name: cmd.nome.toLowerCase(),
+      name: nome,
       description: (cmd.descricao || 'Comando personalizado').slice(0, 100),
-      // Comando personalizado: só no servidor, para não expor na DM.
+      // Comando personalizado: só no servidor, para não expor na DM..
       integration_types: [0],
       contexts: [0, 1, 2],
     });

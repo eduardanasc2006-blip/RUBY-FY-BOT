@@ -3,9 +3,11 @@ const custom = require('./customCommands');
 // Nomes que pertencem a comandos nativos do bot. Comandos personalizados nunca
 // devem criar/editar/excluir algo com esses nomes para nao interferir no bot.
 const RESERVADOS = new Set([
-  'ajuda', 'backup', 'canalavisos', 'configestoque', 'configtaxa', 'criarcomando',
-  'embed', 'estoque', 'gamepass', 'gerenciarcomandos', 'limpar', 'painelcategoria',
-  'painel', 'painelestoque', 'reais', 'robux', 'rolegive', 'settaxa', 'tabela', 'taxa',
+  'ajuda', 'backup', 'calc', 'canalavisos', 'configestoque', 'configtaxa', 'criarcomando',
+  'embed', 'estoque', 'gamepass', 'gerenciarcomandos', 'info', 'limpar', 'lock',
+  'mensagem', 'modelos', 'painel', 'painelcategoria', 'painelestoque', 'permissoes',
+  'ping', 'reais', 'robux', 'rolegive', 'settaxa', 'setwelcome', 'sorteio', 'tabela',
+  'taxa', 'testwelcome', 'unlock',
 ]);
 
 function eReservado(nome) {

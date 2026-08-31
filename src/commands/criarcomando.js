@@ -8,9 +8,11 @@ const { registrarUm } = require('../utils/customSync');
 // Nomes de comandos nativos do bot (nao podem ser usado por comandos personalizados,
 // senao o comando nativo sempre "vence" e o personalizado fica sem funcionar)
 const COMANDOS_RESERVADOS = [
-  'ajuda', 'backup', 'canalavisos', 'configestoque', 'configtaxa', 'criarcomando',
-  'embed', 'estoque', 'gamepass', 'gerenciarcomandos', 'limpar', 'painelcategoria',
-  'painel', 'painelestoque', 'reais', 'robux', 'rolegive', 'settaxa', 'tabela', 'taxa',
+  'ajuda', 'backup', 'calc', 'canalavisos', 'configestoque', 'configtaxa', 'criarcomando',
+  'embed', 'estoque', 'gamepass', 'gerenciarcomandos', 'info', 'limpar', 'lock',
+  'mensagem', 'modelos', 'painel', 'painelcategoria', 'painelestoque', 'permissoes',
+  'ping', 'reais', 'robux', 'rolegive', 'settaxa', 'setwelcome', 'sorteio', 'tabela',
+  'taxa', 'testwelcome', 'unlock',
 ];
 
 module.exports = {
