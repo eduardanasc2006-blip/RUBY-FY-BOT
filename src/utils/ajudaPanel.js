@@ -237,7 +237,7 @@ const PAGINAS = {
       '*Envia a mensagem de boas-vindas neste canal para testar.*',
       '',
       '➜ **!sorteio**',
-      '*Cria um sorteio com prêmio, duração, vencedores e canal opcional.*',
+      '*Cria um sorteio com prêmio, duração (min/horas/dias), vencedores, canal e cargo opcionais.*',
       '',
       '➜ **/criarcomando**',
       '*Cria um comando personalizado — aceita imagem por URL **ou anexo**.*',
