@@ -70,8 +70,12 @@ async function renderizar(client, guildId, id, sorteio, canalId, donoId, isReage
 }
 
 function reagendar(client, guildId, id, sorteio) {
-   const fimEm = new Date(sorteio.fimEm).getTime();
-   const agora = Date.now();
+  const fimEm = new Date(sorteio.fimEm).getTime();
+  if (!Number.isFinite(fimEm) || fimEm <= 0) {
+    console.warn("[Sorteio] fimEm inválido — sorteio ignorado no reagendamento.", guildId, id);
+    return;
+  }
+  const agora = Date.now();
    const restante = fimEm - agora;
    if (restante <= 0) {
     setTimeout(() => {
@@ -106,9 +110,9 @@ async function encerrar(client, guildId, id) {
       await m.edit({ embeds: [embed], components: montarComponentes(sorteio, sorteio.criadorId, guildId, id) });
     }
    }
-   if (canal && canal.isTextBased()) {  
-     await canal.send({ content: '🏁 **Sorteio encerrado!** ' + ((sorteio.vencedores && sorteio.vencedores.length) ? 'Vencedor(es): ' + sorteio.vencedores.map((u) => '<@' + u + '>').join(', ') : 'Nenhum vencedor desta vez.') });
-   }
+   if (canal && canal.isTextBased()) {
+    await canal.send({ content: '🏁 **Sorteio encerrado!** ' + ((sorteio.vencedores && sorteio.vencedores.length) ? 'Vencedor(es): ' + sorteio.vencedores.map((u) => '<@' + u + '>').join(', ') : 'Nenhum vencedor desta vez.'), allowedMentions: { users: (sorteio.vencedores || []) } });
+  }
 }
 
 async function sortearNovamente(client, guildId, id, callerId) {

@@ -1,4 +1,4 @@
-const { Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, StringSelectMenuBuilder, MessageFlags } = require('discord.js');
+const { Events, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } = require('discord.js');
 const sorteioStore = require('./sorteioStore');
 const sorteioRender = require('./sorteioRender');
 const { comandoPode } = require('./permissions');
@@ -69,11 +69,7 @@ function registrar(client) {
                 new TextInputBuilder().setCustomId('duracao').setLabel('Duração (número)').setPlaceholder('Ex: 30').setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(10)
               ),
               new ActionRowBuilder().addComponents(
-                new StringSelectMenuBuilder().setCustomId('unidade').setPlaceholder('Unidade de tempo').addOptions(
-                  { label: 'Minutos', value: 'minutos' },
-                  { label: 'Horas', value: 'horas' },
-                  { label: 'Dias', value: 'dias' }
-                )
+                new TextInputBuilder().setCustomId('unidade').setLabel('Unidade de tempo').setPlaceholder('minutos, horas ou dias').setValue('horas').setStyle(TextInputStyle.Short).setRequired(true)
               ),
               new ActionRowBuilder().addComponents(
                 new TextInputBuilder().setCustomId('vencedores').setLabel('Vencedores').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(10)
@@ -137,6 +133,13 @@ function registrar(client) {
       }
     } catch (error) {
       console.error('[Sorteio] Erro:', error);
+      try {
+        if (interaction.replied || interaction.deferred) {
+          await interaction.followUp({ content: '❌ Erro ao processar esta ação no sorteio.', flags: MessageFlags.Ephemeral });
+        } else {
+          await interaction.reply({ content: '❌ Erro ao processar esta ação no sorteio.', flags: MessageFlags.Ephemeral });
+        }
+      } catch (e) { /* interação pode já ter expirado */ }
     }
   });
 }
