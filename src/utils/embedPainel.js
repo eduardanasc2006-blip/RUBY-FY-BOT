@@ -76,7 +76,7 @@ function botoesEmLinhas(botoes, guildId = '', emPreview = false) {
       }
       linha.addComponents(btn);
     }
-    linhas.push(linha);
+    if (linha.components.length > 0) linhas.push(linha);
   }
 }
 

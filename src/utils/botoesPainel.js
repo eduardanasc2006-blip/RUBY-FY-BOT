@@ -209,7 +209,6 @@ function buildBotaoPrivadoPainel(userId, idx) {
     if (pagina.thumbnail) prevEmbed.setThumbnail(pagina.thumbnail);
     if (pagina.fields.length) prevEmbed.addFields(pagina.fields);
     if (!pagina.descricao) prevEmbed.setDescription('\u200b');
-    linhas.push(new ActionRowBuilder());
     return { embeds: [embedInfo, prevEmbed], components: linhas };
   }
 
