@@ -175,7 +175,8 @@ function buildPainel(userId, guildId = '') {
     new ButtonBuilder().setCustomId(`embedpainel:thumbnail:${userId}`).setLabel('🔳 Thumbnail').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(`embedpainel:autor:${userId}`).setLabel('👤 Autor').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(`embedpainel:rodape:${userId}`).setLabel('📝 Rodapé').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`embedpainel:fields:${userId}`).setLabel('➕ Fields').setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder().setCustomId(`embedpainel:fields:${userId}`).setLabel('➕ Fields').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`embedpainel:cancelar:${userId}`).setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
   );
 
   const linha3 = new ActionRowBuilder().addComponents(
@@ -183,8 +184,7 @@ function buildPainel(userId, guildId = '') {
     new ButtonBuilder().setCustomId(`embedpainel:botoes:${userId}`).setLabel('🔘 Botões').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(`embedpainel:salvar:${userId}`).setLabel('💾 Salvar modelo').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(`embedpainel:preview:${userId}`).setLabel('👁️ Preview').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`embedpainel:enviar:${userId}`).setLabel('✅ Enviar').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId(`embedpainel:cancelar:${userId}`).setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
+    new ButtonBuilder().setCustomId(`embedpainel:enviar:${userId}`).setLabel('✅ Enviar').setStyle(ButtonStyle.Success)
   );
 
   // Menu de selecao de cargos (nativo do Discord)
@@ -199,7 +199,7 @@ function buildPainel(userId, guildId = '') {
   return {
     content: estado.textoFora || null,
     embeds: embed ? [resumo, embed] : [resumo],
-    components: [linha1, linha2, linha3, linha4, ...botoesEmLinhas(estado.botoes, guildId)]
+    components: [linha1, linha2, linha3, linha4, ...botoesEmLinhas(estado.botoes, guildId).slice(0, 1)]
   };
 }
 
