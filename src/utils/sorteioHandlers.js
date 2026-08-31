@@ -40,7 +40,35 @@ function registrar(client) {
         return interaction.reply({ content: '✅ Sorteio criado!', flags: MessageFlags.Ephemeral });
       }
 
-      if (interaction.isButton() && interaction.customId.startsWith('sorteio:participar:')) {
+      if (interaction.isButton() && interaction.customId.startsWith('sorteio:criar:')) {
+          const [, , guildId, uid] = interaction.customId.split(':');
+          if (interaction.user.id !== uid) {
+            return interaction.reply({ content: '❌ Só quem abriu o painel pode criar o sorteio.', flags: MessageFlags.Ephemeral });
+          }
+          const modal = new ModalBuilder()
+            .setCustomId('sorteio:modal:criar:' + guildId)
+            .setTitle('🎉 Criar Sorteio')
+            .addComponents(
+              new ActionRowBuilder().addComponents(
+                new TextInputBuilder().setCustomId('premio').setLabel('Prêmio do sorteio').setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(100)
+              ),
+              new ActionRowBuilder().addComponents(
+                new TextInputBuilder().setCustomId('descricao').setLabel('Descrição (opcional; máx.)').setStyle(TextInputStyle.Paragraph).setRequired(false).setMaxLength(4000)
+              ),
+              new ActionRowBuilder().addComponents(
+                new TextInputBuilder().setCustomId('duracao').setLabel('Duração em horas').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(10)
+              ),
+              new ActionRowBuilder().addComponents(
+                new TextInputBuilder().setCustomId('vencedores').setLabel('Vencedores').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(10)
+              ),
+              new ActionRowBuilder().addComponents(
+                new TextInputBuilder().setCustomId('canal').setLabel('Canal').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(30)
+              )
+            );
+          return interaction.showModal(modal);
+        }
+
+        if (interaction.isButton() && interaction.customId.startsWith('sorteio:participar:')) {
         const [, , guildId, id] = interaction.customId.split(':');
         const sorteio = sorteioStore.obter(guildId, id);
         if (!sorteio || sorteio.encerrado) {
