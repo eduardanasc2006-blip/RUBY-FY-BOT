@@ -29,7 +29,7 @@ const GRUPOS = [
     id: 'embed',
     nome: '✨ Embed',
     descricao: 'Criar e publicar embeds e mensagens.',
-    comandos: ['embed', 'mensagem'],
+    comandos: ['embed', 'mensagem', 'modelos', 'setwelcome'],
   },
   {
     id: 'moderacao',

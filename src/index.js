@@ -1159,6 +1159,7 @@ function comandoDoCustomId(interaction) {
   if (id.startsWith('msgpainel:') || id.startsWith('msgmodal:') || id.startsWith('msgcanal:')) return 'mensagem';
   if (id.startsWith('lockconf:')) return 'lock';
   if (id.startsWith('unlockconf:')) return 'unlock';
+  if (id.startsWith('modelos:')) return 'embed';
   if (id.startsWith('gerencmd:')) return 'gerenciarcomandos';
   if (id.startsWith('custom:copy:')) return 'criarcomando';
   return null;
@@ -1240,7 +1241,12 @@ client.on('interactionCreate', async (interaction) => {
 });
 // ----- Painel visual de embed -----
 
-const { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview, buildFieldsPainel, urlValida } = require('./utils/embedPainel');
+const { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview, buildFieldsPainel, buildConteudoPrivado, urlValida, botoesEmLinhas } = require('./utils/embedPainel');
+const { buildBotoesPainel, buildBotaoModal, buildBotaoPrivadoPainel } = require('./utils/botoesPainel');
+const { buildModelosPainel, buildCategoriaPainel } = require('./utils/modelosPainel');
+const modelosStore = require('./utils/embedModelos');
+const welcomeStore = require('./utils/welcomeStore');
+const cttStore = require('./utils/cttStore');
 const { linhaSelecaoCanalDe, resolverSelecaoCanal } = require('./utils/channelPicker');
 const extrasHandlers = require('./utils/extras');
 
@@ -1281,6 +1287,52 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.showModal(modal);
       };
 
+      const abrirPaginaModal = (idx, pi = -1) => {
+        const atual = pi >= 0 ? (estado.botoes[idx].paginas[pi] || {}) : {};
+        const modalPag = new ModalBuilder()
+          .setCustomId(pi >= 0 ? `embedmodal:botpagedit:${donoId}:${idx}:${pi}` : `embedmodal:botpagnew:${donoId}:${idx}`)
+          .setTitle(pi >= 0 ? `✏️ Editar pagina ${pi + 1}` : '➕ Nova pagina do botao privado')
+          .addComponents(
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('ptitulo')
+                .setLabel('Titulo da pagina (opcional)')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(false)
+                .setMaxLength(256)
+                .setValue(String(atual.titulo || '').slice(0, 256))
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('pdescricao')
+                .setLabel('Descricao da pagina (opcional)')
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(false)
+                .setMaxLength(4000)
+                .setValue(String(atual.descricao || '').slice(0, 4000))
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('pimagem')
+                .setLabel('Link da imagem (opcional)')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(false)
+                .setMaxLength(1024)
+                .setValue(String(atual.imagem || '').slice(0, 1024))
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('pthumb')
+                .setLabel('Link do thumbnail (opcional)')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(false)
+                .setMaxLength(1024)
+                .setValue(String(atual.thumbnail || '').slice(0, 1024))
+            )
+        );
+        return interaction.showModal(modalPag);
+      };
+
       if (acao === 'titulo') return abrirModal('titulo', '📝 Título', 'Título da embed');
       if (acao === 'descricao') return abrirModal('descricao', '📄 Descrição', 'Texto da embed', true);
       if (acao === 'cor') return abrirModal('cor', '🎨 Cor', 'Nome ou #hex (ex: lilas ou #beb6ff)');
@@ -1290,6 +1342,60 @@ client.on('interactionCreate', async (interaction) => {
       if (acao === 'autor') return abrirModal('autor', '👤 Autor', 'Nome do autor (opcional)');
       if (acao === 'rodape') return abrirModal('rodape', '📝 Rodapé', 'Texto do rodapé (opcional)');
       if (acao === 'textofora') return abrirModal('textofora', '💬 Texto fora', 'Mensagem fora da embed (opcional)');
+      if (acao === 'botoes') return interaction.update(buildBotoesPainel(donoId, interaction.guildId));
+      if (acao === 'botaoadd') return interaction.showModal(buildBotaoModal(donoId));
+      if (acao === 'botaoed') {
+        const bts = Array.isArray(estado.botoes) ? estado.botoes : [];
+        if (!bts.length) return interaction.reply({ content: '❌ Nenhum botão para editar.', flags: MessageFlags.Ephemeral });
+        return interaction.showModal(buildBotaoModal(donoId, 0));
+      }
+      if (acao === 'botaorem') {
+        const bts = Array.isArray(estado.botoes) ? estado.botoes : [];
+        if (!bts.length) return interaction.reply({ content: '❌ Nenhum botão para remover.', flags: MessageFlags.Ephemeral });
+        bts.pop();
+        estado.botoes = bts;
+        return interaction.update(buildBotoesPainel(donoId, interaction.guildId));
+      }
+      if (acao === 'botpagadd') return abrirPaginaModal(Number(partes[3]));
+      if (acao === 'botpaglimpar') {
+        const bts = Array.isArray(estado.botoes) ? estado.botoes : [];
+        const bi = Number(partes[3]);
+        if (!bts[bi]) return interaction.reply({ content: '❌ Botão inválido.', flags: MessageFlags.Ephemeral });
+        bts[bi].paginas = [];
+        return interaction.update(buildBotaoPrivadoPainel(donoId, bi));
+      }
+
+
+      if (acao === 'salvar') {
+        if (!interaction.guild) {
+          return interaction.reply({ content: '❌ Só funciona no servidor.', flags: MessageFlags.Ephemeral });
+        }
+        const modalSalvar = new ModalBuilder()
+          .setCustomId(`embedmodal:salvar:${donoId}`)
+          .setTitle('💾 Salvar modelo')
+          .addComponents(
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('mnome')
+                .setLabel('Nome do modelo')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true)
+                .setMaxLength(80)
+                .setPlaceholder('Ex: Promoção de 500 Robux')
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('mcategoria')
+                .setLabel('Categoria (boasvindas, loja, suporte, avisos, pagamentos, pedidos, outros)')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(false)
+                .setMaxLength(24)
+                .setValue('outros')
+            )
+          );
+        return interaction.showModal(modalSalvar);
+      }
+
       if (acao === 'fields') return interaction.update(buildFieldsPainel(donoId));
         if (acao === 'fieldsadd') {
           const modal = new ModalBuilder()
@@ -1346,11 +1452,17 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       if (acao === 'enviar') {
-        if (!estado.titulo && !estado.descricao) {
-          return interaction.reply({ content: '❌ Preencha pelo menos o **título** ou a **descrição** antes de enviar.', flags: MessageFlags.Ephemeral });
+        if (!buildEmbed(estado)) {
+          return interaction.reply({ content: '❌ Preencha algo válido antes de enviar: **descrição**, **fields**, **imagem**, **thumbnail**, **rodapé**, **autor** ou **botões**. O **título** é opcional.', flags: MessageFlags.Ephemeral });
         }
         if (!interaction.guild) {
           return interaction.reply({ content: '❌ Não dá para publicar no servidor pela DM. Use o comando no servidor.', flags: MessageFlags.Ephemeral });
+        }
+        if (estado._modoWelcome) {
+          const canalWelcome = estado._canalWelcome || interaction.channel.id;
+          welcomeStore.salvar(interaction.guildId, { canalId: canalWelcome, embed: JSON.parse(JSON.stringify({ ...estado, _modoWelcome: undefined, _canalWelcome: undefined })) });
+          limparSessao(donoId);
+          return interaction.update({ content: `✅ Mensagem de boas-vindas salva! Ela sera enviada no canal <#${canalWelcome}> quando novos membros entrarem.`, embeds: [], components: [] });
         }
         // Escolha de canal antes de publicar (sistema comum de seleção de canal).
         const canais = linhaSelecaoCanalDe(interaction.guild, `embedcanal:${donoId}`, interaction.channel.id, '📣 Escolha o canal para publicar…');
@@ -1447,6 +1559,83 @@ client.on('interactionCreate', async (interaction) => {
       if (interaction.user.id !== donoId) {
         return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
       }
+      // ---- Modais dos botões do editor ----
+      if (campo === 'botaosave') {
+        const estado = getSessao(donoId);
+        const botoes = Array.isArray(estado.botoes) ? estado.botoes : [];
+        const rotulo = (interaction.fields.getTextInputValue('rotulo') || '').trim();
+        const emoji = (interaction.fields.getTextInputValue('emoji') || '' ).trim() || null;
+        const estilo = (interaction.fields.getTextInputValue('estilo') || '' ).trim().toLowerCase();
+        const acao = ((interaction.fields.getTextInputValue('acao') || '' ).trim().toLowerCase() === 'privado') ? 'privado' : 'link';
+        const valor = (interaction.fields.getTextInputValue('valor') || '' ).trim();
+        if (!rotulo) return interaction.reply({ content: '❌ Informe o **nome** do botão.', flags: MessageFlags.Ephemeral });
+        const estilosValidos = ['primario','secundario','sucesso','perigo','link','primary','secondary','success','danger'];
+        const estiloNorm = estilosValidos.includes(estilo) ? estilo : (acao === 'privado' ? 'secundario' : 'link');
+        const novo = { rotulo: rotulo.slice(0, 80), emoji, estilo: estiloNorm, acao, valor: valor.slice(0, 4000) };
+        const idx = partes[3];
+        if (idx !== undefined && Number.isInteger(Number(idx))) {
+          const i = Number(idx);
+          if (i < 0 || i >= botoes.length) return interaction.reply({ content: '❌ Botão inválido.', flags: MessageFlags.Ephemeral });
+          if (acao === 'privado' && !Array.isArray(botoes[i].paginas)) botoes[i].paginas = [];
+          botoes[i] = { ...botoes[i], ...novo };
+        } else {
+          if (acao === 'privado') novo.paginas = [];
+          botoes.push(novo);
+        }
+        estado.botoes = botoes;
+        return interaction.update(buildBotoesPainel(donoId, interaction.guildId));
+      }
+
+      if (campo === 'botpagnew' || campo === 'botpagedit') {
+
+        const estado = getSessao(donoId);
+        const botoes = Array.isArray(estado.botoes) ? estado.botoes : [];
+        const i = Number(partes[3]);
+        if (!botoes[i]) return interaction.reply({ content: '❌ Botão inválido.', flags: MessageFlags.Ephemeral });
+        if (!Array.isArray(botoes[i].paginas)) botoes[i].paginas = [];
+        const tituloP = (interaction.fields.getTextInputValue('ptitulo') || '' ).trim();
+        const descricaoP = (interaction.fields.getTextInputValue('pdescricao') || '' ).trim();
+        const imagemP = (interaction.fields.getTextInputValue('pimagem') || '' ).trim();
+        const thumbP = (interaction.fields.getTextInputValue('pthumb') || '' ).trim();
+        if (!tituloP && !descricaoP && !imagemP && !thumbP) {
+          return interaction.reply({ content: '❌ Preencha ao menos um campo da página.', flags: MessageFlags.Ephemeral });
+        }
+        const pagina = { titulo: tituloP || null, descricao: descricaoP || null, imagem: imagemP || null, thumbnail: thumbP || null, fields: [] };
+        if (campo === 'botpagnew') {
+          botoes[i].paginas.push(pagina);
+        } else {
+          const pi = Number(partes[4]);
+          if (Number.isNaN(pi) || pi < 0 || pi >= botoes[i].paginas.length) {
+            return interaction.reply({ content: '❌ Página inválida.', flags: MessageFlags.Ephemeral });
+          }
+          botoes[i].paginas[pi] = pagina;
+        }
+        return interaction.update(buildBotaoPrivadoPainel(donoId, i));
+      }
+
+      if (campo === 'salvar') {
+        if (!interaction.guildId) return interaction.reply({ content: '❌ Só funciona no servidor.', flags: MessageFlags.Ephemeral });
+        const nomeM = (interaction.fields.getTextInputValue('mnome') || '' ).trim();
+        const catM = (interaction.fields.getTextInputValue('mcategoria') || '' ).trim().toLowerCase();
+        const sessao = getSessao(donoId);
+        const dadosModelo = JSON.parse(JSON.stringify({ ...sessao, botoes: sessao.botoes || [], fields: sessao.fields || [], cargos: sessao.cargos || [], paginas: undefined }));
+        const res = modelosStore.criar(interaction.guildId, { nome: nomeM, categoria: catM, dados: dadosModelo });
+        if (!res.ok) return interaction.reply({ content: '❌ ' + (res.msg || 'Erro ao salvar.'), flags: MessageFlags.Ephemeral });
+        return interaction.update({ content: '💾 Modelo **' + res.modelo.nome + '** salvo! Use `!modelos` para ver e usar.', embeds: [], components: [] });
+      }
+
+      if (campo === 'modeloed') {
+        if (!interaction.guildId) return interaction.reply({ content: '❌ Só funciona no servidor.', flags: MessageFlags.Ephemeral });
+        const mid = partes[2] || partes[3];
+        const m = modelosStore.obter(interaction.guildId, mid);
+        if (!m) return interaction.reply({ content: '❌ Modelo não encontrado.', flags: MessageFlags.Ephemeral });
+        const nomeM = (interaction.fields.getTextInputValue('mnome') || '' ).trim();
+        const catM = (interaction.fields.getTextInputValue('mcategoria') || '' ).trim().toLowerCase();
+        const res = modelosStore.atualizar(interaction.guildId, mid, { nome: nomeM, categoria: catM });
+        if (!res.ok) return interaction.reply({ content: '❌ ' + (res.msg || 'Erro.'), flags: MessageFlags.Ephemeral });
+        return interaction.update({ content: '✅ Modelo **' + res.modelo.nome + '** atualizado.', embeds: [], components: [] });
+      }
+
 // Modais visuais de fields (sem o separador "|": campos separados Nome/Valor/Em linha)
       if (campo === 'fieldnew' || campo === 'fieldedit') {
         const estado = getSessao(donoId);
@@ -1550,6 +1739,7 @@ client.on('interactionCreate', async (interaction) => {
         await canal.send({
           content: conteudo,
           embeds: [embed],
+          components: (linhasBotoes = botoesEmLinhas(estado.botoes, interaction.guildId || '', true)).length ? linhasBotoes : [],
           allowedMentions: estado.cargos.length ? { roles: estado.cargos } : { parse: [] },
         });
       } catch (sendError) {
@@ -1573,6 +1763,99 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
+
+// ----- Botões de conteúdo privado (cttopen) -----
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isButton() || !interaction.customId.startsWith('cttopen:')) return;
+  try {
+    const [,, guildId, token] = interaction.customId.split(':');
+    if (!guildId || !token) return;
+    if (interaction.guild && interaction.guild.id !== guildId) return;
+    const dados = cttStore.obter(token);
+    if (!dados) return interaction.reply({ content: '❌ Conteúdo expirado ou inválido.', flags: MessageFlags.Ephemeral });
+    const conteudoPrivado = buildConteudoPrivado(dados.paginas || [], Number(dados.paginaIdx || 0), interaction.user.id, guildId, token);
+    if (conteudoPrivado) return interaction.reply(conteudoPrivado);
+  } catch (error) {
+    console.error('[cttopen] Erro:', error);
+  }
+});
+
+
+
+// ----- Painel de modelos de embed (!modelos ///modelos) -----
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isButton() || !interaction.customId.startsWith('modelos:')) return;
+  try {
+    const partes = interaction.customId.split(':');
+    const acao = partes[1];
+    const guildId = partes[2];
+    const uid = partes[3];
+    if (!interaction.guild || interaction.guild.id !== guildId) return;
+    if (interaction.user.id !== uid) return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
+    const mId = partes[4];
+    if (acao === 'voltar') return interaction.update(buildModelosPainel(guildId, uid));
+    if (acao === 'cat') return interaction.update(buildCategoriaPainel(guildId, mId, uid));
+    const modelo = modelosStore.obter(guildId, mId);
+    if (!modelo) return interaction.reply({ content: '❌ Modelo não encontrado.', flags: MessageFlags.Ephemeral });
+    if (acao === 'ver') {
+      const dados = modelo.dados || {};
+      const embedVer = buildEmbed(JSON.parse(JSON.stringify(dados)));
+      return interaction.reply({ embeds: embedVer ? [embedVer] : [], content: embedVer ? null : '⚠️ Modelo sem conteúdo visível.', components: [], flags: MessageFlags.Ephemeral });
+    }
+    if (acao === 'usar') {
+      const sessao = getSessao(uid);
+      const carregado = JSON.parse(JSON.stringify(modelo.dados || {}));
+      carregado.botoes = Array.isArray(carregado.botoes) ? carregado.botoes : [];
+      carregado.fields = Array.isArray(carregado.fields) ? carregado.fields : [];
+      Object.assign(sessao, carregado);
+      return interaction.update(buildPainel(uid));
+    }
+    if (acao === 'editar') {
+      const modalEd = new ModalBuilder()
+        .setCustomId(`embedmodal:modeloed:${mId}:${guildId}:${uid}`)
+        .setTitle('✏️ Editar modelo')
+        .addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId('mnome')
+              .setLabel('Nome do modelo')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMaxLength(80)
+              .setValue(String(modelo.nome || '').slice(0, 80))
+          ),
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId('mcategoria')
+              .setLabel('Categoria (boasvindas, loja, suporte, avisos, pagamentos, pedidos, outros)')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(false)
+              .setMaxLength(24)
+              .setValue(String(modelo.categoria || 'outros'))
+          ),
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId('mdesc')
+              .setLabel('Descrição interna (opcional)')
+              .setStyle(TextInputStyle.Paragraph)
+              .setRequired(false)
+              .setMaxLength(1024)
+              .setValue(String(modelo.descricao || '').slice(0, 1024))
+          ),
+        );
+      return interaction.showModal(modalEd);
+    }
+    if (acao === 'excluir') {
+      modelosStore.excluir(guildId, mId);
+      return interaction.update({ content: `🗑️ Modelo **${modelo.nome}** excluído.`, embeds: [], components: [] });
+    }
+
+  } catch (error) {
+    console.error('[modelos] Erro:', error);
+  }
+});
+
+
 // Responde comandos de prefixo
 client.on(Events.MessageCreate, async (message) => {
   if (message.author.bot || !message.content.startsWith(PREFIX)) return;
@@ -1590,6 +1873,22 @@ client.on(Events.MessageCreate, async (message) => {
     await message.reply('❌ Ocorreu um erro ao executar este comando.');
   }
 });
+
+
+// ----- Boas-vindas ao entrar no servidor -----
+client.on(Events.GuildMemberAdd, async (member) => {
+  try {
+    const conf = welcomeStore.obter(member.guild.id);
+    if (!conf) return;
+    const canal = await client.channels.fetch(conf.canalId).catch(() => null);
+    if (!canal || !canal.isTextBased() || !canal.permissionOverwrites) return;
+    const embed = buildEmbed(conf.embed);
+    await canal.send({ embeds: embed ? [embed] : [], content: null });
+  } catch (error) {
+    console.error('[Welcome] Erro:', error);
+  }
+});
+
 
 extrasHandlers.registrar(client);
 client.login(process.env.DISCORD_TOKEN);

@@ -1,4 +1,5 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, RoleSelectMenuBuilder, StringSelectMenuBuilder } = require('discord.js');
+const { tokenBotao, registrar } = require('./cttStore');
 const { resolverCor } = require('../prefixCommands/embed');
 
 // Estado temporario da embed sendo montada (por usuario)
@@ -56,9 +57,20 @@ function botoesEmLinhas(botoes, guildId = '', emPreview = false) {
         .setLabel(b.rotulo);
       if (b.emoji) btn.setEmoji(b.emoji);
       if (b.acao === 'privado') {
-        const customId = guildId ? `cttopen:${guildId}:${b.valor}` : '';
-        if (customId) btn.setCustomId(customId);
-        else btn.setDisabled(true).setLabel(`${b.rotulo} 🔒`); // emoji: lock
+        // Token persistente por guild: registra o conteudo privado no cttStore
+        // e o botao abre-o (ephemeral) so para quem clicar.
+
+        // Sem guild (ex: DM) nao da para montar botao privado util: desabilita.
+
+        if (!guildId) {
+          btn.setDisabled(true).setLabel(`${b.rotulo} 🔒`);
+        } else {
+          const idxGlobal = b._idx ?? 0;
+          const token = tokenBotao(guildId, b, idxGlobal);
+          const payload = { rotulo: b.rotulo || null, paginas: b.paginas || [] };
+          registrar(guildId, token, payload);
+          btn.setCustomId(`cttopen:${guildId}:${token}`);
+        }
       } else {
         btn.setURL(b.valor.startsWith('http') ? b.valor : 'https://discord.com');
       }
@@ -144,6 +156,8 @@ function buildPainel(userId, guildId = '') {
         estado.cor ? `🎨 Cor: ${estado.cor}` : '🎨 Cor: lilas (padrão)',
         estado.imagem ? `🖼️ Imagem: ✅ ${estado.imagem.slice(0, 60)}` : '🖼️ Imagem: *(nenhuma — **anexe a foto** e rode **!embed** para usar upload)*',
         estado.thumbnail ? '🔳 Thumbnail: ✅' : '🔳 Thumbnail: *(nenhuma)*',
+        estado.botoes?.length ? `🔘 Botões: ✅ ${estado.botoes.length} configurado(s) — **Botões** para gerenciar` : '🔘 Botões: *(nenhum — use **🔘 Botões**)*',
+        '💾 **Salvar modelo** guarda esta embed como modelo deste servidor.',
         estado.fields.length ? `➕ Fields: ✅ ${estado.fields.length} field(s) — **Preview** para ver` : '➕ Fields: *(nenhuma)*',
         estado.cargos.length ? `👥 Cargos: ${estado.cargos.map((c) => `<@&${c}>`).join(' ')}` : '👥 Cargos: *(nenhum)*',
       ].join('\n')
@@ -165,6 +179,8 @@ function buildPainel(userId, guildId = '') {
 
   const linha3 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId(`embedpainel:textofora:${userId}`).setLabel('💬 Texto fora').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`embedpainel:botoes:${userId}`).setLabel('🔘 Botões').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId(`embedpainel:salvar:${userId}`).setLabel('💾 Salvar modelo').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(`embedpainel:preview:${userId}`).setLabel('👁️ Preview').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId(`embedpainel:enviar:${userId}`).setLabel('✅ Enviar').setStyle(ButtonStyle.Success),
     new ButtonBuilder().setCustomId(`embedpainel:cancelar:${userId}`).setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
@@ -194,7 +210,7 @@ function buildPreview(userId, guildId = '', emPreview = true) {
 
   if (!embed) {
     return {
-      content: '⚠️ **Nada para pré-visualizar.** Preencha pelo menos o **título** ou a **descrição**.',
+      content: '⚠️ **Nada para pré-visualizar.** Preencha algo válido: **descrição**, **fields**, **imagem**, **thumbnail**, **rodapé**, **autor** ou **botões**. O **título** é opcional.',
       embeds: [],
       components: [],
     };
@@ -217,6 +233,52 @@ function buildPreview(userId, guildId = '', emPreview = true) {
 
 // ---- Conteúdo privado (páginas) do botão "privado" ----
 // Cada página é um mini-embed que abre de forma éfemera (só quem clicou vê).
+// buildConteudoPrivado é o renderizador compartilhado: usado tanto pelo fluxo
+// de edição (dono) quando pelo clique do botão privado (qualquer usuário),
+// evitando duplicação do visual e da paginação.
+
+function buildConteudoPrivado(paginasBrutas, idxPagina = 0, autorId = '', guildId = '', token = '') {
+  const paginas = paginasValidas(paginasBrutas);
+  if (!paginas.length) {
+    return {
+      content: '🔒 Este botão ainda não tem conteúdo configurado.',
+      embeds: [],
+      components: [],
+      flags: 1 << 6,
+    };
+  }
+  const index = Math.min(Math.max(Number(idxPagina) || 0, 0), Math.max(paginas.length - 1, 0));
+  const pagina = paginas[index];
+
+  const embed = new EmbedBuilder().setColor(resolverCor(null));
+  if (pagina.titulo) embed.setTitle(pagina.titulo);
+  if (pagina.descricao) embed.setDescription(pagina.descricao);
+  if (pagina.imagem) embed.setImage(pagina.imagem);
+  if (pagina.thumbnail) embed.setThumbnail(pagina.thumbnail);
+  if (pagina.fields.length) embed.addFields(pagina.fields);
+  if (!pagina.descricao) embed.setDescription('\u200b');
+
+  const temPaginas = paginas.length > 1;
+  const linha = new ActionRowBuilder();
+  if (temPaginas) {
+    linha.addComponents(
+      new ButtonBuilder().setStyle(ButtonStyle.Secondary).setLabel('⬅ Voltar').setCustomId(`cttopen:${guildId}:${token}:pag:${index - 1}`).setDisabled(index === 0),
+      new ButtonBuilder().setStyle(ButtonStyle.Secondary).setLabel(`Página ${index + 1}/${paginas.length}`).setCustomId(`cttopen:${guildId}:${token}:pag:${index + 1}`).setDisabled(index === paginas.length - 1),
+      new ButtonBuilder().setStyle(ButtonStyle.Danger).setLabel('❌ Fechar').setCustomId(`cttopen:${guildId}:${token}:fechar`),
+    );
+  } else {
+    linha.addComponents(
+      new ButtonBuilder().setStyle(ButtonStyle.Danger).setLabel('❌ Fechar').setCustomId(`cttopen:${guildId}:${token}:fechar`),
+    );
+  }
+  if (autorId) {
+    linha.addComponents(
+      new ButtonBuilder().setStyle(ButtonStyle.Secondary).setLabel('✏️ Editar páginas').setCustomId(`cttopen:${guildId}:${token}:editar:${autorId}`),
+    );
+  }
+
+  return { content: null, embeds: [embed], components: [linha], flags: 1 << 6 };
+}
 
 function paginasValidas(paginas) {
   if (!Array.isArray(paginas)) return [];
@@ -246,10 +308,7 @@ function buildPaginaPainel(userId, pageNumber) {
   const embed = new EmbedBuilder().setColor(resolverCor(estado.cor));
   if (pagina.titulo) embed.setTitle(pagina.titulo);
   if (pagina.descricao) embed.setDescription(pagina.descricao);
-  if (pagina.imagem) embed.setImage(pagina.imagem);
-  if (pagina.thumbnail) embed.setThumbnail(pagina.thumbnail);
-  if (pagina.fields.length) embed.addFields(pagina.fields);
-  if (!pagina.descricao) embed.setDescription('\u200b');
+  if (pagina.imagem) embed.setImage(pagina.imagem);  if (pagina.thumbnail) embed.setThumbnail(pagina.thumbnail);  if (pagina.fields.length) embed.addFields(pagina.fields);  if (!pagina.descricao) embed.setDescription('\u200b');
 
   const temPaginas = paginas.length > 1;
   const voltar = new ButtonBuilder()
@@ -362,4 +421,4 @@ function buildFieldsPainel(userId) {
   };
 }
 
-module.exports = { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview, buildFieldsPainel, botoesEmLinhas, paginasValidas, buildPaginaPainel, buildPaginasPainel, camposValidos, urlValida };
+module.exports = { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview, buildFieldsPainel, botoesEmLinhas, paginasValidas, buildPaginaPainel, buildPaginasPainel, buildConteudoPrivado, camposValidos, urlValida };
