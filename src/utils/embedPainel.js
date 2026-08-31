@@ -78,6 +78,7 @@ function botoesEmLinhas(botoes, guildId = '', emPreview = false) {
     }
     if (linha.components.length > 0) linhas.push(linha);
   }
+  return linhas;
 }
 
 // Valida uma URL de imagem/thumbnail do jeito que o Discord aceita.
