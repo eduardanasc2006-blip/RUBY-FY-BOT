@@ -1,4 +1,3 @@
-const { EmbedBuilder } = require('discord.js');
 const { calcular } = require('../utils/calculadora');
 
 module.exports = {
@@ -13,12 +12,8 @@ module.exports = {
     }
 
     const res = calcular(expr);
-    const embed = new EmbedBuilder()
-      .setColor(0xbeb6ff)
-      .setTitle('🧮 Calculadora')
-      .setDescription(res.erro
-        ? `➜ **Erro:** ${res.erro}`
-        : `➜ **Resultado:** \`${expr}\` = **${res.valor}**`);
-    return message.reply({ embeds: [embed] });
+    return message.reply(res.erro
+      ? `➜ **Erro:** ${res.erro}`
+      : `➜ **Resultado:** \`${expr}\` = **${res.valor}**`);
   },
 };

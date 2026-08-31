@@ -634,13 +634,13 @@ client.on('interactionCreate', async (interaction) => {
             new TextInputBuilder().setCustomId('valor').setLabel('Valor em R$ (ex: 15,00)').setStyle(TextInputStyle.Short).setRequired(true)
           ),
           new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('qtd').setLabel('Quantidade (deixe vazio = sem controle)').setStyle(TextInputStyle.Short).setRequired(false)
+            new TextInputBuilder().setCustomId('qtd').setLabel('Quantidade (vazio = sem controle)').setStyle(TextInputStyle.Short).setRequired(false)
           ),
           new ActionRowBuilder().addComponents(
             new TextInputBuilder().setCustomId('descricao').setLabel('Descrição (opcional, ex: entrega imediata)').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(100)
           ),
           new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('imagem').setLabel('Link da imagem (opcional, começa com http)').setStyle(TextInputStyle.Short).setRequired(false)
+            new TextInputBuilder().setCustomId('imagem').setLabel('Link da imagem (opcional; com http)').setStyle(TextInputStyle.Short).setRequired(false)
           )
         );
         return interaction.showModal(modal);
@@ -833,7 +833,7 @@ client.on('interactionCreate', async (interaction) => {
         const catId = partes[2];
         const modal = new ModalBuilder().setCustomId(`estmodal:catdesc:${catId}`).setTitle('Descrição da categoria').addComponents(
           new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('descricao').setLabel('Descrição (limitada a 100 caracteres)').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(100)
+            new TextInputBuilder().setCustomId('descricao').setLabel('Descrição (máx. 100 caracteres)').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(100)
           )
         );
         return interaction.showModal(modal);
@@ -872,7 +872,7 @@ client.on('interactionCreate', async (interaction) => {
         const [, , catId, prodId] = partes;
         const modal = new ModalBuilder().setCustomId(`estmodal:proddtl-img:${catId}:${prodId}`).setTitle('Imagem do produto').addComponents(
           new ActionRowBuilder().addComponents(
-            new TextInputBuilder().setCustomId('imagem').setLabel('Link da imagem (deixe vazio para remover)').setStyle(TextInputStyle.Short).setRequired(false)
+            new TextInputBuilder().setCustomId('imagem').setLabel('Link da imagem (vazio = remove)').setStyle(TextInputStyle.Short).setRequired(false)
           )
         );
         return interaction.showModal(modal);
@@ -1961,6 +1961,8 @@ client.on(Events.GuildMemberAdd, async (member) => {
 
 
 extrasHandlers.registrar(client);
+const customEditHandlers = require('./utils/customEditHandler');
+customEditHandlers.registrar(client);
 const sorteioHandlers = require('./utils/sorteioHandlers');
 sorteioHandlers.registrar(client);
 client.login(process.env.DISCORD_TOKEN);

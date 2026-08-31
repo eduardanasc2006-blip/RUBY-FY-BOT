@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const { calcular } = require('../utils/calculadora');
 
 module.exports = {
@@ -10,12 +10,8 @@ module.exports = {
   async execute(interaction) {
     const expr = interaction.options.getString('expressao') || '';
     const res = calcular(expr);
-    const embed = new EmbedBuilder()
-      .setColor(0xbeb6ff)
-      .setTitle('🧮 Calculadora')
-      .setDescription(res.erro
-        ? `➜ **Erro:** ${res.erro}`
-        : `➜ **Resultado:** \`${expr}\` = **${res.valor}**`);
-    return interaction.reply({ embeds: [embed] });
+    return interaction.reply(res.erro
+      ? `➜ **Erro:** ${res.erro}`
+      : `➜ **Resultado:** \`${expr}\` = **${res.valor}**`);
   },
 };

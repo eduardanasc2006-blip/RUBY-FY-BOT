@@ -39,11 +39,22 @@ function registrar(client) {
         }
         const estado = getSessao(donoId);
         if (partes[1] === 'normal') {
-          if (!estado.mensagem && !estado.imagem) {
-
-            return interaction.reply({ content: '❌ Escreva uma mensagem ou envie uma foto junto do !mensagem primeiro.', flags: MessageFlags.Ephemeral });
-          }
-          return interaction.update(buildPainel(donoId, 'normal'));
+          // Abre o modal de edicao direto: o usuario pode digitar a mensagem agora
+          const modal = new ModalBuilder()
+            .setCustomId(`msgmodal:mensagem:${donoId}`)
+            .setTitle('📝 Mensagem')
+            .addComponents(
+              new ActionRowBuilder().addComponents(
+                new TextInputBuilder()
+                  .setCustomId('valor')
+                  .setLabel('Texto da mensagem')
+                  .setStyle(TextInputStyle.Paragraph)
+                  .setRequired(true)
+                  .setMaxLength(2000)
+                  .setValue(estado.mensagem ? String(estado.mensagem).slice(0, 2000) : '')
+              )
+            );
+          return interaction.showModal(modal);
         }
         if (partes[1] === 'embed') {
           estado.tipo = 'embed';

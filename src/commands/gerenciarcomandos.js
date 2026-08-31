@@ -8,6 +8,7 @@ const { isAdmin } = require('../prefixCommands/settaxa');
 const { comandoPode } = require('../utils/permissions');
 const custom = require('../utils/customCommands');
 const { registrarTodos } = require('../utils/customSync');
+const { menuEditar } = require('../utils/customEditPanel');
 
 // Menu com os comandos salvos para o admin escolher sem digitar o nome.
 function menuExcluir() {
@@ -42,6 +43,7 @@ module.exports = {
     .setDescription('Lista, edita ou exclui comandos personalizados (admin)')
     .addStringOption((o) => o.setName('acao').setDescription('O que fazer').setRequired(true).addChoices(
       { name: 'listar', value: 'listar' },
+      { name: 'editar', value: 'editar' },
       { name: 'excluir', value: 'excluir' }
     )),
 
@@ -73,9 +75,15 @@ module.exports = {
       return interaction.editReply('**Comandos personalizados (' + lista.length + '):**\n' + texto + aviso);
     }
 
+    if (acao === 'editar') {
+      const menu = menuEditar();
+      return interaction.reply({ content: menu.content, components: menu.components, flags: MessageFlags.Ephemeral });
+    }
+
     if (acao === 'excluir') {
       // Sempre abre a caixinha (select) com os comandos salvos, para o admin
       // escolher qual excluir sem precisar digitar o nome.
+
       const menu = menuExcluir();
       return interaction.reply({ content: menu.content, components: menu.components, flags: MessageFlags.Ephemeral });
     }

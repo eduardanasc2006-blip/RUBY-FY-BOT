@@ -120,7 +120,7 @@ function buildBotaoModal(userId, idx = -1,guildId = '' ) {
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
           .setCustomId('estilo')
-          .setLabel('Estilo (primario, secundario, sucesso, perigo ou link))')
+          .setLabel('Estilo (primario, secundario, sucesso)')
           .setStyle(TextInputStyle.Short)
           .setRequired(false)
           .setMaxLength(16)
@@ -129,7 +129,7 @@ function buildBotaoModal(userId, idx = -1,guildId = '' ) {
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
           .setCustomId('acao')
-          .setLabel('Acao: link (abre URL) ou privado (resposta privada)')
+          .setLabel('Acao: link (URL) ou privado (resposta)')
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
           .setMaxLength(16)
@@ -138,7 +138,7 @@ function buildBotaoModal(userId, idx = -1,guildId = '' ) {
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
           .setCustomId('valor')
-          .setLabel('Valor: URL (link) ou conteudo privado (texto ou embed)')
+          .setLabel('Valor: URL (link) ou conteudo privado')
           .setStyle(TextInputStyle.Paragraph)
           .setRequired(false)
           .setMaxLength(4000)
@@ -214,3 +214,5 @@ function buildBotaoPrivadoPainel(userId, idx) {
 
   return { embeds: [embedInfo], components: linhas };
 }
+
+module.exports = { buildBotoesPainel, buildBotaoModal, buildBotaoPrivadoPainel };
