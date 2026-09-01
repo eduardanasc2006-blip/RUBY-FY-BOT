@@ -1886,7 +1886,9 @@ client.on('interactionCreate', async (interaction) => {
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isButton() || !interaction.customId.startsWith('cttopen:')) return;
   try {
-    const [,, guildId, token] = interaction.customId.split(':');
+    const partesCtt = interaction.customId.split(':');
+    const guildId = partesCtt[1];
+    const token = partesCtt[2];
     if (!guildId || !token) {
       return interaction.reply({ content: '❌ Botão inválido.', flags: MessageFlags.Ephemeral }).catch(() => {});
     }
