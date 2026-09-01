@@ -1,6 +1,5 @@
 const { buildConfigPanel } = require('../utils/configPanel');
 const { comandoPode } = require('../utils/permissions');
-const { isAdmin } = require('./settaxa');
 
 module.exports = {
   name: 'configtaxa',

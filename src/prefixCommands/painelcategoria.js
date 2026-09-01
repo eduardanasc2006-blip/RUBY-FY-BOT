@@ -4,7 +4,6 @@ const path = require('node:path');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const estoque = require('../utils/estoque');
 const { formatBRL } = require('../utils/robuxConverter');
-const { isAdmin } = require('./settaxa');
 const { autoDelete } = require('../utils/autoDelete');
 
 const FILE = path.join(__dirname, '..', '..', 'data', 'painel_categoria.json');

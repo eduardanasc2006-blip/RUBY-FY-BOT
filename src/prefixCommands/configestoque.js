@@ -1,6 +1,5 @@
 const { adminMenu } = require('../utils/estoquePanel');
 const { comandoPode } = require('../utils/permissions');
-const { isAdmin } = require('./settaxa');
 
 module.exports = {
   name: 'configestoque',
