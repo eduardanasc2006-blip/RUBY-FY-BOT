@@ -1285,7 +1285,7 @@ client.on('interactionCreate', async (interaction) => {
                 .setCustomId('valor')
                 .setLabel(label)
                 .setStyle(multiline ? TextInputStyle.Paragraph : TextInputStyle.Short)
-                .setRequired(campo !== 'imagem' && campo !== 'thumbnail' && campo !== 'autor' && campo !== 'rodape' && campo !== 'textofora' && campo !== 'fields' && campo !== 'cargos')
+                .setRequired(campo !== 'titulo' && campo !== 'imagem' && campo !== 'thumbnail' && campo !== 'autor' && campo !== 'rodape' && campo !== 'textofora' && campo !== 'fields' && campo !== 'cargos')
                 .setValue(valorStr)
             )
           );
