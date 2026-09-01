@@ -1,5 +1,6 @@
 const { definir, carregar } = require('../utils/avisos');
 const { comandoPode } = require('../utils/permissions');
+const { isAdmin } = require('./settaxa');
 
 module.exports = {
   name: 'canalavisos',

@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const { comandoPode } = require('../utils/permissions');
 const path = require('node:path');
 const { AttachmentBuilder } = require('discord.js');
+const { isAdmin } = require('./settaxa');
 
 module.exports = {
   name: 'backup',

@@ -2,9 +2,78 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('
 
 const COR = 0xbeb6ff;
 // Páginas sempre visíveis + admin (só aparecem para admin)
+const ORDEM = ['inicio', 'conversor', 'estoque', 'personalizados', 'painel', 'admin'];
+const ORDEM_VISIVEL = ['inicio', 'conversor', 'estoque', 'personalizados', 'painel'];
 // Categorias entre as quais se navega com as setas (a home fica de fora.)
 const CATEGORIAS_PUBLICAS = ['conversor', 'estoque'];
 const CATEGORIAS_ADMIN = ['personalizados', 'painel', 'admin'];
+
+// Lista central de comandos (prefixo e slash) para o menu de ajuda.
+// É gerada dinamicamente a partir dos arquivos reais em src/commands e
+// src/prefixCommands, então nunca fica desatualizada e sempre mostra o `!`
+// e/ou o `/` que de fato existirem para cada comando.
+const fs = require('node:fs');
+const path = require('node:path');
+
+function carregarComandos() {
+ // Nomes vêm do nome dos arquivos (cada comando = um arquivo), evitando
+ // require aqui para não gerar dependência circular com src/prefixCommands.
+ const slashDir = path.join(__dirname, '..', 'commands');
+ const prefixDir = path.join(__dirname, '..', 'prefixCommands');
+ const slashPorNome = {};
+ for (const f of fs.readdirSync(slashDir).filter((x) => x.endsWith('.js'))) {
+ slashPorNome[path.basename(f, '.js')] = '/';
+ }
+ const prefixPorNome = {};
+ for (const f of fs.readdirSync(prefixDir).filter((x) => x.endsWith('.js'))) {
+ prefixPorNome[path.basename(f, '.js')] = '!';
+ }
+ // help e menu são aliases do comando de prefixo ajuda.
+ const aliasPorNome = { help: '!', menu: '!' };
+ return { slashPorNome, prefixPorNome, aliasPorNome };
+}
+
+const { slashPorNome, prefixPorNome, aliasPorNome } = carregarComandos();
+
+const COMANDOS = [
+ { grupo: 'Ajuda', cmd: 'ajuda', desc: 'Abre este menu de ajuda.', admin: false },
+ { grupo: 'Ajuda', cmd: 'help', desc: 'Alias do menu de ajuda.', admin: false },
+ { grupo: 'Conversor', cmd: 'robux', desc: 'Converte Robux em reais.', admin: false },
+ { grupo: 'Conversor', cmd: 'reais', desc: 'Converte reais em Robux.', admin: false },
+ { grupo: 'Conversor', cmd: 'gamepass', desc: 'Calcula o valor do Game Pass.', admin: false },
+ { grupo: 'Conversor', cmd: 'taxa', desc: 'Mostra as taxas atuais.', admin: false },
+ { grupo: 'Estoque', cmd: 'estoque', desc: 'Mostra produtos e preços (ou busca: !estoque <nome>).', admin: false },
+ { grupo: 'Painéis', cmd: 'painel', desc: 'Gerenciador central dos painéis fixos.', admin: true },
+ { grupo: 'Painéis', cmd: 'tabela', desc: 'Publica o painel de conversão.', admin: false },
+ { grupo: 'Painéis', cmd: 'painelestoque', desc: 'Fixa o painel de estoque.', admin: false },
+ { grupo: 'Painéis', cmd: 'painelcategoria', desc: 'Sem arg: seletor visual de categoria. Com <id>: fixa a categoria.', admin: false },
+ { grupo: 'Administração', cmd: 'configtaxa', desc: 'Painel visual das taxas.', admin: true },
+ { grupo: 'Administração', cmd: 'settaxa', desc: 'Altera a taxa (ex: !settaxa 100 3,50).', admin: true },
+ { grupo: 'Administração', cmd: 'configestoque', desc: 'Gerencia produtos e quantidades.', admin: true },
+ { grupo: 'Administração', cmd: 'embed', desc: 'Cria uma embed no canal.', admin: true },
+ { grupo: 'Administração', cmd: 'backup', desc: 'Backup de taxas e estoque na DM.', admin: true },
+ { grupo: 'Administração', cmd: 'canalavisos', desc: 'Canal de avisos de estoque.', admin: true },
+ { grupo: 'Administração', cmd: 'limpar', desc: 'Apaga mensagens do canal.', admin: true },
+ { grupo: 'Administração', cmd: 'mensagem', desc: 'Publica uma mensagem simples em qualquer canal.', admin: true },
+ { grupo: 'Administração', cmd: 'lock', desc: 'Bloqueia um canal para membros comuns.', admin: true },
+ { grupo: 'Administração', cmd: 'unlock', desc: 'Desbloqueia um canal restaurando permissões.', admin: true },
+ { grupo: 'Administração', cmd: 'rolegive', desc: 'Dá um cargo a um membro.', admin: true },
+{ grupo: 'Administração', cmd: 'modelos', desc: 'Lista e usa modelos de embed salvos neste servidor.', admin: true },
+{ grupo: 'Administração', cmd: 'setwelcome', desc: 'Personaliza a mensagem de boas-vindas do servidor.', admin: true },
+{ grupo: 'Administração', cmd: 'testwelcome', desc: 'Envia a mensagem de boas-vindas neste canal para testar.', admin: true },
+{ grupo: 'Ajuda', cmd: 'ping', desc: 'Testa a latência do bot.', admin: false },
+{ grupo: 'Ajuda', cmd: 'info', desc: 'Mostra informações básicas do bot.', admin: false },
+{ grupo: 'Ajuda', cmd: 'calc', desc: 'Calculadora: faça cálculos simples (+, -, *, /, %, parênteses).', admin: false },
+{ grupo: 'Administração', cmd: 'sorteio', desc: 'Cria um sorteio com prêmio, duração (min/horas/dias), vencedores, canal e cargo opcionais.', admin: true },
+ { grupo: 'Administração', cmd: 'permissoes', desc: 'Gerencia permissões por cargo.', admin: true },
+ { grupo: 'Comandos personalizados', cmd: 'criarcomando', desc: 'Cria um comando personalizado.', admin: true },
+ { grupo: 'Comandos personalizados', cmd: 'gerenciarcomandos', desc: 'Lista, edita ou exclui personalizados.', admin: true },
+].map((c) => {
+ const pre = prefixPorNome[c.cmd] ? '!' + c.cmd : null;
+ const aliasPre = !pre && aliasPorNome[c.cmd] ? '!' + c.cmd : null;
+ const slash = slashPorNome[c.cmd] ? '/' + c.cmd : null;
+ return { ...c, pre: pre || aliasPre, slash };
+});
 
 // Comandos personalizados criados pelo dono (adicionados dinamicamente)
 const customCom = require('./customCommands');
@@ -104,7 +173,17 @@ const PAGINAS = {
     descricao: [
       '🔒 *Área exclusiva para administradores autorizados.*',
       '',
-      '*Painéis fixos **(!painel)** e estoque **(!estoque)** têm páginas próprias: use os botões de navegação.*',
+      '➜ **!tabela**',
+      '*Abre ou atualiza o painel de conversão.*',
+      '',
+      '➜ **!painel**',
+      '*Gerenciador central dos painéis fixos.*',
+      '',
+      '➜ **!painelestoque**',
+      '*Fixa o painel de estoque.*',
+      '',
+      '➜ **!painelcategoria <id>**',
+      '*Fixar categoria: sem id abre seletor; com id fixa direto.*',
       '',
       '➜ **!settaxa 100 <valor>**',
       '*Altera a taxa de 100 a 999 Robux.*',
@@ -117,6 +196,9 @@ const PAGINAS = {
       '',
       '➜ **!configestoque**',
       '*Gerencia categorias, produtos, valores e estoque.*',
+      '',
+      '➜ **!estoque <nome>**',
+      '*Mostra produtos, preços e busca.*',
       '',
       '➜ **!embed**',
       '*Cria uma embed no canal.*',
@@ -157,7 +239,11 @@ const PAGINAS = {
       '➜ **!sorteio**',
       '*Cria um sorteio com prêmio, duração (min/horas/dias), vencedores, canal e cargo opcionais.*',
       '',
-      '*Comandos personalizados **(/criarcomando** e **/gerenciarcomandos)** têm página própria.*',
+      '➜ **/criarcomando**',
+      '*Cria um comando personalizado — aceita imagem por URL **ou anexo**.*',
+      '',
+      '➜ **/gerenciarcomandos**',
+      '*Lista, edita ou exclui personalizados.*',
     ].join('\n'),
   }),
 };

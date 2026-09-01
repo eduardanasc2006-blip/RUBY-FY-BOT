@@ -1,3 +1,4 @@
+const { isAdmin } = require('./settaxa');
 const { comandoPode } = require('../utils/permissions');
 const { autoDelete } = require('../utils/autoDelete');
 

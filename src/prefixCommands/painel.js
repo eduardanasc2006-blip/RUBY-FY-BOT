@@ -1,5 +1,6 @@
 const { buildPainelCentral } = require('../utils/painelCenter');
 const { comandoPode } = require('../utils/permissions');
+const { isAdmin } = require('./settaxa');
 const { autoDelete } = require('../utils/autoDelete');
 
 module.exports = {
