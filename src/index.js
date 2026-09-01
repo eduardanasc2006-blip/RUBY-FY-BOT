@@ -1252,7 +1252,7 @@ const welcomeVars = require('./utils/welcomeVars');
 const welcomePainel = require('./utils/welcomePainel');
 const { interpolar, interpolarEmbed } = require('./utils/interpolar');
 const cttStore = require('./utils/cttStore');
-const { linhaSelecaoCanalDe, resolverSelecaoCanal } = require('./utils/channelPicker');
+const { linhaSelecaoCanalDe } = require('./utils/channelPicker');
 const extrasHandlers = require('./utils/extras');
 
 client.on('interactionCreate', async (interaction) => {
@@ -2176,27 +2176,27 @@ if (acao === 'editar') {
       }
     }
 
-if (interaction.isStringSelectMenu()) {
+if (interaction.isStringSelectMenu() || interaction.isButton()) {
       if (id.startsWith('welcome:canalsel:')) {
-        const r = resolverSelecaoCanal(
-          interaction,
-          id
-        );
-        if (r.cancelado) {
+        if (interaction.isButton() && partes[3] === 'cancelar') {
           return responderPainel();
         }
-        if (!r.canal) {
+        let canal = null;
+        if (interaction.isStringSelectMenu()) {
+          canal = interaction.guild?.channels.cache.get(interaction.values[0]) || null;
+        } else if (interaction.isButton() && partes[3] === 'atual') {
+          canal = interaction.channel;
+        }
+        if (!canal) {
           return interaction.reply({
             content: 'Canal nao encontrado.',
             flags: MessageFlags.Ephemeral
           });
         }
-        conf.canalId = r.canal.id;
-
-
+        conf.canalId = canal.id;
         return responderPainel();
       }
-      if (id.startsWith('welcome:fieldsel:')) {
+      if (interaction.isStringSelectMenu() && id.startsWith('welcome:fieldsel:')) {
         const idx = parseInt(
           interaction.values[0],
           10
@@ -2281,7 +2281,7 @@ if (interaction.isStringSelectMenu()) {
           );
         } else {
           const idx = parseInt(
-            partes[3],
+            partes[4],
             10
           );
           if (idx >=   0 && idx < conf.embed.fields.length) {
