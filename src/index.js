@@ -1825,6 +1825,19 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply({ content: '❌ Envio cancelado.', flags: MessageFlags.Ephemeral });
       }
 
+      // Defer imediato: o envio no canal pode demorar>3s e o interaction expirar
+      // (erro "não respondeu a tempo") sem ack antecipado.
+
+      await interaction.deferUpdate().catch(() => {});
+      const responder = async (payload) => {
+        try {
+          if (interaction.deferred) {
+            return await interaction.editReply(payload);
+          }
+          return await interaction.update(payload);
+        } catch {}
+      };
+
       // Canais: seleção (select) ou botão "canal atual"
       let canal = null;
       if (interaction.isStringSelectMenu()) {
@@ -1833,7 +1846,7 @@ client.on('interactionCreate', async (interaction) => {
         canal = interaction.channel;
       }
       if (!canal) {
-        return interaction.reply({ content: '❌ Canal não encontrado.', flags: MessageFlags.Ephemeral });
+        return responder({ content: '❌ Canal não encontrado.', embeds: [], components: [] });
       }
 
       const estado = getSessao(donoId);
@@ -1849,10 +1862,10 @@ client.on('interactionCreate', async (interaction) => {
         });
       } catch (sendError) {
         console.error('[Embed] Falha ao enviar no canal:', sendError?.message || sendError);
-        return interaction.reply({ content: `❌ Não consegui enviar em <#${canal.id}>. Verifique minha permissão nesse canal.`, flags: MessageFlags.Ephemeral });
+        return responder({ content: `❌ Não consegui enviar em <#${canal.id}>. Verifique minha permissão nesse canal.`, embeds: [], components: [] });
       }
       limparSessao(donoId);
-      return interaction.update({
+      return responder({
         content: `✅ Embed enviada em <#${canal.id}>!`,
         embeds: [],
         components: [],
@@ -1874,14 +1887,24 @@ client.on('interactionCreate', async (interaction) => {
   if (!interaction.isButton() || !interaction.customId.startsWith('cttopen:')) return;
   try {
     const [,, guildId, token] = interaction.customId.split(':');
-    if (!guildId || !token) return;
-    if (interaction.guild && interaction.guild.id !== guildId) return;
+    if (!guildId || !token) {
+      return interaction.reply({ content: '❌ Botão inválido.', flags: MessageFlags.Ephemeral }).catch(() => {});
+    }
+    if (interaction.guild && interaction.guild.id !== guildId) {
+
+      return interaction.reply({ content: '❌ Este conteúdo não pode ser aberto neste servidor.', flags: MessageFlags.Ephemeral }).catch(() => {});
+    }
     const dados = cttStore.obter(token);
     if (!dados) return interaction.reply({ content: '❌ Conteúdo expirado ou inválido.', flags: MessageFlags.Ephemeral });
     const conteudoPrivado = buildConteudoPrivado(dados.paginas || [], Number(dados.paginaIdx || 0), interaction.user.id, guildId, token);
-    if (conteudoPrivado) return interaction.reply(conteudoPrivado);
+    return interaction.reply(conteudoPrivado).catch(() => {});
   } catch (error) {
     console.error('[cttopen] Erro:', error);
+   try {
+      if (!interaction.replied && !interaction.deferred) {
+        return interaction.reply({ content: '❌ Erro ao abrir este conteúdo. Tente novamente.', flags: MessageFlags.Ephemeral }).catch(() => {});
+      }
+   } catch {}
   }
 });
 
