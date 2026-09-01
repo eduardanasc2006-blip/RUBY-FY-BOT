@@ -46,6 +46,7 @@ function botoesEmLinhas(botoes, guildId = '', emPreview = false) {
       emoji:b.emoji || null,
       acao:b.acao === 'privado' ? 'privado' : 'link',
       valor: String(b.valor || '').trim(),
+      paginas: Array.isArray(b.paginas) ? b.paginas : [],
     }));
 
   const linhas = [];

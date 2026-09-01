@@ -1352,7 +1352,14 @@ client.on('interactionCreate', async (interaction) => {
       if (acao === 'botaoed') {
         const bts = Array.isArray(estado.botoes) ? estado.botoes : [];
         if (!bts.length) return interaction.reply({ content: '❌ Nenhum botão para editar.', flags: MessageFlags.Ephemeral });
-        return interaction.showModal(buildBotaoModal(donoId, 0));
+        const sel = buildBotoesPainel(donoId, interaction.guildId);
+        const linhas = Array.isArray(sel.components) ? [...sel.components] : [];
+        // Reexibe a tela de botões destacando o select de escolha
+        return interaction.update({
+          content: '✏️ **Escolha o botão que deseja editar no menu abaixo:**',
+          embeds: sel.embeds,
+          components: linhas,
+        });
       }
       if (acao === 'botaorem') {
         const bts = Array.isArray(estado.botoes) ? estado.botoes : [];
@@ -1546,6 +1553,97 @@ client.on('interactionCreate', async (interaction) => {
           )
         );
       return interaction.showModal(modal);
+    }
+
+    // Select menu para escolher um botão (editar/conteúdo privado)
+    if (interaction.isStringSelectMenu() && interaction.customId.startsWith('embedpainel:botaosel:')) {
+      const donoId = interaction.customId.split(':')[2];
+      if (interaction.user.id !== donoId) {
+
+        return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
+      }
+      if (!permitido(interaction)) {
+        return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+      }
+      const estado = getSessao(donoId);
+      const idx = parseInt(interaction.values[0], 10);
+      const bts = Array.isArray(estado.botoes) ? estado.botoes : [];
+      if (Number.isNaN(idx) || idx < 0 || idx >= bts.length) {
+        return interaction.reply({ content: '❌ Botão inválido.', flags: MessageFlags.Ephemeral });
+      }
+      const b = bts[idx];
+      if (b && (b.acao === 'privado' || b.paginas || b._privado)) {
+        if (!Array.isArray(b.paginas)) b.paginas = [];
+        return interaction.update(buildBotaoPrivadoPainel(donoId, idx));
+      }
+      return interaction.showModal(buildBotaoModal(donoId, idx));
+    }
+
+    // Select menu para escolher um conteúdo (página) do botão privado
+    if (interaction.isStringSelectMenu() && interaction.customId.startsWith('embedpainel:botpagsel:')) {
+      const partesSel = interaction.customId.split(':');
+      const donoId = partesSel[2];
+      const bi = Number(partesSel[3]);
+      if (interaction.user.id !== donoId) {
+
+        return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
+      }
+      if (!permitido(interaction)) {
+        return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+      }
+      const estado = getSessao(donoId);
+      const bts = Array.isArray(estado.botoes) ? estado.botoes : [];
+      if (!bts[bi] || !Array.isArray(bts[bi].paginas)) {
+        return interaction.reply({ content: '❌ Botão inválido.', flags: MessageFlags.Ephemeral });
+      }
+      const pi = parseInt(interaction.values[0], 10);
+      if (Number.isNaN(pi) || pi < 0 || pi >= bts[bi].paginas.length) {
+
+        return interaction.reply({ content: '❌ Conteúdo inválido.', flags: MessageFlags.Ephemeral });
+      }
+      const atual = bts[bi].paginas[pi] || {};
+        const modalPag = new ModalBuilder()
+          .setCustomId(`embedmodal:botpagedit:${donoId}:${bi}:${pi}`)
+          .setTitle(`✏️ Editar conteúdo ${pi + 1}`)
+          .addComponents(
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('ptitulo')
+                .setLabel('Titulo do conteudo (opcional)')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(false)
+                .setMaxLength(256)
+                .setValue(String(atual.titulo || '').slice(0, 256))
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('pdescricao')
+                .setLabel('Descricao do conteudo (opcional)')
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(false)
+                .setMaxLength(4000)
+                .setValue(String(atual.descricao || '').slice(0, 4000))
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('pimagem')
+                .setLabel('Link da imagem (opcional)')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(false)
+                .setMaxLength(1024)
+                .setValue(String(atual.imagem || '').slice(0, 1024))
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('pthumb')
+                .setLabel('Link do thumbnail (opcional)')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(false)
+                .setMaxLength(1024)
+                .setValue(String(atual.thumbnail || '').slice(0, 1024))
+            )
+          );
+        return interaction.showModal(modalPag);
     }
 
     // Modais do painel de embed

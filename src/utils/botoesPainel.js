@@ -21,6 +21,7 @@ function normBotoes(botoes) {
       acao:b.acao === 'privado' ? 'privado' : 'link',
       estilo:b.estilo || (b.acao === 'privado' ? 'secundario' : 'link'),
       valor: String(b.valor || '' ).trim(),
+      paginas: Array.isArray(b.paginas) ? b.paginas : [],
     }));
 }
 
@@ -176,10 +177,10 @@ function buildBotaoPrivadoPainel(userId, idx) {
 
   const linhas = [];
   const linha1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`embedpainel:botpagadd:${userId}:${idx}`).setLabel('➕ Adicionar pagina').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId(`embedpainel:botpaglimpar:${userId}:${idx}`).setLabel('🧹 Limpar paginas').setStyle(ButtonStyle.Danger)
+    new ButtonBuilder().setCustomId(`embedpainel:botpagadd:${userId}:${idx}`).setLabel('➕ Criar conteúdo').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`embedpainel:botpaglimpar:${userId}:${idx}`).setLabel('🗑️ Limpar conteúdos').setStyle(ButtonStyle.Danger)
       .setDisabled(!paginas.length),
-    new ButtonBuilder().setCustomId(`embedpainel:botaosel:${userId}`).setLabel('⬅ Voltar aos botoes').setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder().setCustomId(`embedpainel:botoes:${userId}`).setLabel('⬅ Voltar aos botões').setStyle(ButtonStyle.Secondary)
   );
   linhas.push(linha1);
 
