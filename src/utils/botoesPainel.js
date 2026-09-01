@@ -1,5 +1,6 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, StringSelectMenuBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { getSessao, botoesEmLinhas, paginasValidas, camposValidos, urlValida } = require('./embedPainel');
+const { sanitizarEmoji } = require('./sanitizarEmoji');
 
 // Tela de gerenciamento dos botoes do editor de embed.
 // Cada botao pode ser:
@@ -17,7 +18,7 @@ function normBotoes(botoes) {
     .slice(0, 10)
     .map((b) => ({
       rotulo: String(b.rotulo || '' ).slice(0, 80),
-      emoji:b.emoji || null,
+      emoji: sanitizarEmoji(b.emoji),
       acao:b.acao === 'privado' ? 'privado' : 'link',
       estilo:b.estilo || (b.acao === 'privado' ? 'secundario' : 'link'),
       valor: String(b.valor || '' ).trim(),

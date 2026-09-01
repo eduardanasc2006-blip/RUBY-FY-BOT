@@ -1,6 +1,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, RoleSelectMenuBuilder, StringSelectMenuBuilder } = require('discord.js');
 const { tokenBotao, registrar } = require('./cttStore');
 const { resolverCor } = require('../prefixCommands/embed');
+const { sanitizarEmoji } = require('./sanitizarEmoji');
 
 // Estado temporario da embed sendo montada (por usuario)
 const sessoes = new Map();
@@ -42,8 +43,8 @@ function botoesEmLinhas(botoes, guildId = '', emPreview = false) {
     .filter((b) => b && (b.rotulo || b.emoji))
     .slice(0, 10)
     .map((b) => ({
-      rotulo: String(b.rotulo || '').slice(0, 80),
-      emoji:b.emoji || null,
+      rotulo: String(b.rotulo || '' ).slice(0, 80),
+      emoji: sanitizarEmoji(b.emoji),
       acao:b.acao === 'privado' ? 'privado' : 'link',
       valor: String(b.valor || '').trim(),
       paginas: Array.isArray(b.paginas) ? b.paginas : [],

@@ -1,6 +1,46 @@
 require('dotenv').config();
 const fs = require('node:fs');
 const path = require('node:path');
+
+// Garante que apenas UMA instância do bot rode por vez (evita duplicação de
+// respostas quando o host/Discloud sobe o processo duas vezes, ex.: MAIN +
+// START apontando para o mesmo arquivo, ou restart sem matar o processo antigo).
+const LOCK_FILE = path.join(__dirname, '..', '.bot.lock');
+function tentarObterLock() {
+  try {
+    const pid = Number(fs.readFileSync(LOCK_FILE, 'utf8'));
+    if (pid > 0) {
+      try {
+        process.kill(pid, 0); // só checa se o processo existe, sem matar
+        console.error(`⚠️ Outra instância do bot já está rodando (PID ${pid}). Encerrando para evitar respostas duplicadas.`);
+        return false;
+      } catch {
+        // PID antigo morto → pode assumir o lock
+      }
+    }
+  } catch {}
+  try {
+    fs.writeFileSync(LOCK_FILE, String(process.pid));
+    return true;
+  } catch (error) {
+    console.error(`⚠️ Não foi possível criar o lock file (${error?.message || error}). Continuando mesmo assim.`);
+    return true;
+  }
+}
+if (!tentarObterLock()) {
+  process.exit(0);
+}
+process.on('exit', () => {
+  try { fs.unlinkSync(LOCK_FILE); } catch {}
+});
+process.on('SIGINT', () => {
+  try { fs.unlinkSync(LOCK_FILE); } catch {}
+  process.exit(0);
+});
+process.on('SIGTERM', () => {
+  try { fs.unlinkSync(LOCK_FILE); } catch {}
+  process.exit(0);
+});
 const {
   ActionRowBuilder,
   ButtonBuilder,
@@ -994,7 +1034,8 @@ client.on('interactionCreate', async (interaction) => {
 
       if (acao === 'catemoji') {
         const catId = partes[2];
-        const emoji = interaction.fields.getTextInputValue('emoji').trim();
+        const { sanitizarEmoji } = require('./utils/sanitizarEmoji');
+        const emoji = sanitizarEmoji(interaction.fields.getTextInputValue('emoji'));
         const cat = estoqueDb.setEmojiCategoria(catId, emoji);
         if (cat) refreshPainelEstoque(client).catch(() => {});
         painelCategoria.refresh(client).catch(() => {});
@@ -1660,7 +1701,8 @@ client.on('interactionCreate', async (interaction) => {
         const estado = getSessao(donoId);
         const botoes = Array.isArray(estado.botoes) ? estado.botoes : [];
         const rotulo = (interaction.fields.getTextInputValue('rotulo') || '').trim();
-        const emoji = (interaction.fields.getTextInputValue('emoji') || '' ).trim() || null;
+        const { sanitizarEmoji } = require('./utils/sanitizarEmoji');
+        const emoji = sanitizarEmoji(interaction.fields.getTextInputValue('emoji'));
         const estilo = (interaction.fields.getTextInputValue('estilo') || '' ).trim().toLowerCase();
         const acao = ((interaction.fields.getTextInputValue('acao') || '' ).trim().toLowerCase() === 'privado') ? 'privado' : 'link';
         const valor = (interaction.fields.getTextInputValue('valor') || '' ).trim();
