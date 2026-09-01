@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
-const { getSessao, buildPainel } = require('../utils/embedPainel');
+const { getSessaoWelcome, buildWelcomePainel } = require('../utils/welcomePainel');
+const welcomeStore = require('../utils/welcomeStore');
 const { comandoPode } = require('../utils/permissions');
 
 module.exports = {
@@ -10,10 +11,13 @@ module.exports = {
     if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'embed')) {
       return interaction.reply({ content: '🔒 Somente administradores podem usar este comando.', flags: MessageFlags.Ephemeral });
     }
-    const sessao = getSessao(interaction.user.id);
-    sessao._modoWelcome = true;
-    sessao._canalWelcome = interaction.channel.id;
-    const painel = buildPainel(interaction.user.id);
+    const sessao = getSessaoWelcome(interaction.user.id, interaction.guild.id);
+    const existente = welcomeStore.obter(interaction.guild.id);
+    if (!existente) {
+      const novaConf = welcomeStore.padrao(interaction.channel.id);
+      welcomeStore.salvar(interaction.guild.id, novaConf);
+    }
+    const painel = buildWelcomePainel(interaction.user.id, interaction.guild.id);
     return interaction.reply({
       embeds: painel.embeds,
       components: painel.components,

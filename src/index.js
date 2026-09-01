@@ -1463,13 +1463,6 @@ client.on('interactionCreate', async (interaction) => {
         if (!interaction.guild) {
           return interaction.reply({ content: '❌ Não dá para publicar no servidor pela DM. Use o comando no servidor.', flags: MessageFlags.Ephemeral });
         }
-        if (estado._modoWelcome) {
-          const canalWelcome = estado._canalWelcome || interaction.channel.id;
-          welcomeStore.salvar(interaction.guildId, { canalId: canalWelcome, embed: JSON.parse(JSON.stringify({ ...estado, _modoWelcome: undefined, _canalWelcome: undefined })) });
-          limparSessao(donoId);
-          return interaction.update({ content: `✅ Mensagem de boas-vindas salva! Ela sera enviada no canal <#${canalWelcome}> quando novos membros entrarem.`, embeds: [], components: [] });
-        }
-        // Escolha de canal antes de publicar (sistema comum de seleção de canal).
         const canais = linhaSelecaoCanalDe(interaction.guild, `embedcanal:${donoId}`, interaction.channel.id, '📣 Escolha o canal para publicar…');
         if (!canais.canais.length) {
           return interaction.reply({ content: '❌ Não encontrei nenhum canal de texto em que eu possa publicar.', flags: MessageFlags.Ephemeral });
@@ -2323,8 +2316,5 @@ if (interaction.isStringSelectMenu()) {
 extrasHandlers.registrar(client);
 const customEditHandlers = require('./utils/customEditHandler');
 customEditHandlers.registrar(client);
-const sorteioHandlers = require('./utils/sorteioHandlers');
-sorteioHandlers.registrar(client);
-const sorteioRenderBoot = require('./utils/sorteioRender');
-sorteioRenderBoot.reagendarTodos(client);
+
 client.login(process.env.DISCORD_TOKEN);

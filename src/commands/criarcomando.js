@@ -11,7 +11,7 @@ const COMANDOS_RESERVADOS = [
   'ajuda', 'backup', 'calc', 'canalavisos', 'configestoque', 'configtaxa', 'criarcomando',
   'embed', 'estoque', 'gamepass', 'gerenciarcomandos', 'info', 'limpar', 'lock',
   'mensagem', 'modelos', 'painel', 'painelcategoria', 'painelestoque', 'permissoes',
-  'ping', 'reais', 'robux', 'rolegive', 'settaxa', 'setwelcome', 'sorteio', 'tabela',
+  'ping', 'reais', 'robux', 'rolegive', 'settaxa', 'setwelcome', 'tabela',
   'taxa', 'testwelcome', 'unlock',
 ];
 

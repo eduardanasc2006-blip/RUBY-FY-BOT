@@ -64,7 +64,7 @@ const COMANDOS = [
 { grupo: 'Ajuda', cmd: 'ping', desc: 'Testa a latência do bot.', admin: false },
 { grupo: 'Ajuda', cmd: 'info', desc: 'Mostra informações básicas do bot.', admin: false },
 { grupo: 'Ajuda', cmd: 'calc', desc: 'Calculadora: faça cálculos simples (+, -, *, /, %, parênteses).', admin: false },
-{ grupo: 'Administração', cmd: 'sorteio', desc: 'Cria um sorteio com prêmio, duração (min/horas/dias), vencedores, canal e cargo opcionais.', admin: true },
+
  { grupo: 'Administração', cmd: 'permissoes', desc: 'Gerencia permissões por cargo.', admin: true },
  { grupo: 'Comandos personalizados', cmd: 'criarcomando', desc: 'Cria um comando personalizado.', admin: true },
  { grupo: 'Comandos personalizados', cmd: 'gerenciarcomandos', desc: 'Lista, edita ou exclui personalizados.', admin: true },
@@ -235,9 +235,6 @@ const PAGINAS = {
       '',
       '➜ **!testwelcome**',
       '*Envia a mensagem de boas-vindas neste canal para testar.*',
-      '',
-      '➜ **!sorteio**',
-      '*Cria um sorteio com prêmio, duração (min/horas/dias), vencedores, canal e cargo opcionais.*',
       '',
       '➜ **/criarcomando**',
       '*Cria um comando personalizado — aceita imagem por URL **ou anexo**.*',
