@@ -50,6 +50,9 @@ function botoesEmLinhas(botoes, guildId = '', emPreview = false) {
     }));
 
   const linhas = [];
+  // customId interno para botoes de link (evita BUTTON_COMPONENT_CUSTOM_ID_REQUIRED em update/preview)
+  const linkCount = {};
+  norm.forEach((b) => { if (b.acao === 'link') linkCount[b.valor || '_'] = (linkCount[b.valor || '_'] | 0) + 1; });
   for (let i =  0; i < norm.length; i +=  5) {
     const linha = new ActionRowBuilder();
     for (const b of norm.slice(i, i +  5)) {
@@ -74,6 +77,9 @@ function botoesEmLinhas(botoes, guildId = '', emPreview = false) {
         }
       } else {
         btn.setURL(b.valor.startsWith('http') ? b.valor : 'https://discord.com');
+        const chave = b.valor || '_';
+        linkCount[chave] = (linkCount[chave] | 0) + 1;
+        btn.setCustomId(`embedlink:${chave.replace(/[^a-z0-9]/gi, '').slice(0, 24)}:${linkCount[chave]}`);
       }
       linha.addComponents(btn);
     }
