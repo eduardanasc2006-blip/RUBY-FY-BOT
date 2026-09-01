@@ -241,13 +241,13 @@ function buildPreview(userId, guildId = '', emPreview = true) {
   };
 }
 
-// ---- Conteúdo privado (páginas) do botão "privado" ----
-// Cada página é um mini-embed que abre de forma éfemera (só quem clicou vê).
-// buildConteudoPrivado é o renderizador compartilhado: usado tanto pelo fluxo
-// de edição (dono) quando pelo clique do botão privado (qualquer usuário),
-// evitando duplicação do visual e da paginação.
+// ---- Conteúdo privado do botão "privado" ----
+// Cada conteúdo é uma mini-embed que abre de forma éfemera (só quem clicou vê).
+// Todas as embeds configuradas são enviadas juntas, em sequência, na mesma
+// resposta efêmera — sem paginação nem botões de navegação.
 
-function buildConteudoPrivado(paginasBrutas, idxPagina = 0, autorId = '', guildId = '', token = '') {
+
+function buildConteudoPrivado(paginasBrutas, _idxPagina = 0, autorId = '', guildId = '', token = '') {
   const paginas = paginasValidas(paginasBrutas);
   if (!paginas.length) {
     return {
@@ -257,38 +257,28 @@ function buildConteudoPrivado(paginasBrutas, idxPagina = 0, autorId = '', guildI
       flags: 1 << 6,
     };
   }
-  const index = Math.min(Math.max(Number(idxPagina) || 0, 0), Math.max(paginas.length - 1, 0));
-  const pagina = paginas[index];
 
-  const embed = new EmbedBuilder().setColor(resolverCor(null));
-  if (pagina.titulo) embed.setTitle(pagina.titulo);
-  if (pagina.descricao) embed.setDescription(pagina.descricao);
-  if (pagina.imagem) embed.setImage(pagina.imagem);
-  if (pagina.thumbnail) embed.setThumbnail(pagina.thumbnail);
-  if (pagina.fields.length) embed.addFields(pagina.fields);
-  if (!pagina.descricao) embed.setDescription('\u200b');
+  const embeds = paginas.map((pagina) => {
+    const embed = new EmbedBuilder().setColor(resolverCor(null));
+    if (pagina.titulo) embed.setTitle(pagina.titulo);
+    if (pagina.descricao) embed.setDescription(pagina.descricao);
+    if (pagina.imagem) embed.setImage(pagina.imagem);
+    if (pagina.thumbnail) embed.setThumbnail(pagina.thumbnail);
+    if (pagina.fields.length) embed.addFields(pagina.fields);
+    if (!pagina.descricao) embed.setDescription('\u200b');
+    return embed;
+  });
 
-  const temPaginas = paginas.length > 1;
   const linha = new ActionRowBuilder();
-  if (temPaginas) {
-    linha.addComponents(
-      new ButtonBuilder().setStyle(ButtonStyle.Secondary).setLabel('⬅ Voltar').setCustomId(`cttopen:${guildId}:${token}:pag:${index - 1}`).setDisabled(index === 0),
-      new ButtonBuilder().setStyle(ButtonStyle.Secondary).setLabel(`Página ${index + 1}/${paginas.length}`).setCustomId(`cttopen:${guildId}:${token}:pag:${index + 1}`).setDisabled(index === paginas.length - 1),
-      new ButtonBuilder().setStyle(ButtonStyle.Danger).setLabel('❌ Fechar').setCustomId(`cttopen:${guildId}:${token}:fechar`),
-    );
-  } else {
-    linha.addComponents(
-      new ButtonBuilder().setStyle(ButtonStyle.Danger).setLabel('❌ Fechar').setCustomId(`cttopen:${guildId}:${token}:fechar`),
-    );
-  }
   if (autorId) {
     linha.addComponents(
-      new ButtonBuilder().setStyle(ButtonStyle.Secondary).setLabel('✏️ Editar páginas').setCustomId(`cttopen:${guildId}:${token}:editar:${autorId}`),
+      new ButtonBuilder().setStyle(ButtonStyle.Secondary).setLabel('✏️ Editar conteúdos').setCustomId(`cttopen:${guildId}:${token}:editar:${autorId}`),
     );
   }
 
-  return { content: null, embeds: [embed], components: [linha], flags: 1 << 6 };
+  return { content: null, embeds, components: linha.components.length ? [linha] : [], flags: 1 << 6 };
 }
+
 
 function paginasValidas(paginas) {
   if (!Array.isArray(paginas)) return [];

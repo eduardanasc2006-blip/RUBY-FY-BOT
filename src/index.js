@@ -1898,7 +1898,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     const dados = cttStore.obter(token);
     if (!dados) return interaction.reply({ content: '❌ Conteúdo expirado ou inválido.', flags: MessageFlags.Ephemeral });
-    const conteudoPrivado = buildConteudoPrivado(dados.paginas || [], Number(dados.paginaIdx || 0), interaction.user.id, guildId, token);
+    const conteudoPrivado = buildConteudoPrivado(dados.paginas || [], 0, interaction.user.id, guildId, token);
     return interaction.reply(conteudoPrivado).catch(() => {});
   } catch (error) {
     console.error('[cttopen] Erro:', error);
