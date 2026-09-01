@@ -1,6 +1,6 @@
 const welcomeStore = require('../utils/welcomeStore');
-const { buildEmbed } = require('../utils/embedPainel');
-const { interpolar, interpolarEmbed } = require('../utils/interpolar');
+const welcomeVars = require('../utils/welcomeVars');
+const welcomePainel = require('../utils/welcomePainel');
 const { comandoPode } = require('../utils/permissions');
 
 module.exports = {
@@ -14,21 +14,28 @@ module.exports = {
     }
 
     const conf = welcomeStore.obter(message.guild.id);
-    const canal = message.channel;
-    const vars = { user: '<@' + message.author.id + '>', server: message.guild.name };
-
-    if (!conf || !conf.embed) {
-      // Mesmo sem embed configurada, mostra o comportamento real(so content se houver).
-      const content = conf ? interpolar(conf.content || null, vars) : null;
-      if (!content) {
-        return message.reply('💤 Nenhuma mensagem de boas-vindas configurada ainda. Use **!setwelcome** para criar uma.');
-      }
-      return canal.send({ content });
+    if (!conf || !conf.ativo || !conf.canalId) {
+      return message.reply('💤 Boas-vindas desativadas ou sem canal configurado. Use **!setwelcome** para configurar.');
     }
 
-    const embed = buildEmbed(conf.embed);
-    if (embed) interpolarEmbed(embed, vars);
-    const content = interpolar(conf.content || null, vars);
-    return canal.send({ embeds: embed ? [embed] : [], content });
+    const membroTeste = {
+      id: message.author.id,
+      username: message.author.username,
+      displayName: message.member?.displayName || message.author.username,
+      displayAvatarURL: () => message.author.displayAvatarURL(),
+    };
+
+    const canal = message.channel || (await message.guild.channels.fetch(conf.canalId).catch(() => null));
+    if (!canal || !canal.isTextBased()) return message.reply('❌ Canal invalido para envio.');
+
+    const mensagem = conf.tipo === 'embed' ? null : welcomeVars.interpolar(conf.mensagem || '', membroTeste, message.guild);
+    const embed = conf.tipo === 'embed' ? welcomePainel.buildWelcomeEmbed(conf, message.author.displayAvatarURL()) : null;
+    if (embed) welcomeVars.interpolarEmbed(embed, membroTeste, message.guild);
+
+    return canal.send({
+      content: mensagem || undefined,
+      embeds: embed ? [embed] : [],
+      allowedMentions: { parse: ['users'] },
+    });
   },
 };

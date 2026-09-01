@@ -29,8 +29,24 @@ function interpolar(texto, usuario, guild) {
   return texto;
 }
 
+function interpolarEmbed(embed, usuario, guild) {
+  if (!embed) return embed;
+  const d = embed.data ? embed.data : embed;
+  if (d.title) d.title = interpolar(d.title, usuario, guild);
+  if (d.description) d.description = interpolar(d.description, usuario, guild);
+  if (d.footer && d.footer.text) d.footer.text = interpolar(d.footer.text, usuario, guild);
+  if (d.author && d.author.name) d.author.name = interpolar(d.author.name, usuario, guild);
+  if (Array.isArray(d.fields)) {
+    for (const f of d.fields) {
+      if (f.name) f.name = interpolar(f.name, usuario, guild);
+      if (f.value) f.value = interpolar(f.value, usuario, guild);
+    }
+  }
+  return embed;
+}
+
 function listarVariaveis() {
   return VARIAVEIS.map((v) => `\`${v.chave}\` — ${v.descricao} (ex: ${v.exemplo}).`);
 }
 
-module.exports = { interpolar, listarVariaveis, VARIAVEIS };
+module.exports = { interpolar, interpolarEmbed, listarVariaveis, VARIAVEIS };

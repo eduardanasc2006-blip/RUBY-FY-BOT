@@ -18,8 +18,9 @@ function carregar() {
   }
 }
 
-function salvar(dados) {
-  fs.mkdirSync(path.dirname(FILE, { recursive: true }));
+function salvarArquivo(dados) {
+  const dir = path.dirname(FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(FILE, JSON.stringify(dados, null, 2));
 }
 
@@ -62,13 +63,13 @@ function salvar(guildId, conf) {
   if (!guildId) return;
   const dados = carregar();
   dados[guildId] = migrarAntiga({ ...conf });
-  salvar(dados);
+  salvarArquivo(dados);
 }
 
 function remover(guildId) {
   const dados = carregar();
   delete dados[guildId];
-  salvar(dados);
+  salvarArquivo(dados);
 }
 
 function padrao(canalId = null) {

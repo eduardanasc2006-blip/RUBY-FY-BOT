@@ -13,6 +13,7 @@ const {
   ModalBuilder,
   Partials,
   MessageFlags,
+  PermissionFlagsBits,
   TextInputBuilder,
   TextInputStyle,
 } = require('discord.js');
@@ -35,6 +36,7 @@ if (!process.env.DISCORD_TOKEN) {
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent,
@@ -1246,6 +1248,8 @@ const { buildBotoesPainel, buildBotaoModal, buildBotaoPrivadoPainel } = require(
 const { buildModelosPainel, buildCategoriaPainel } = require('./utils/modelosPainel');
 const modelosStore = require('./utils/embedModelos');
 const welcomeStore = require('./utils/welcomeStore');
+const welcomeVars = require('./utils/welcomeVars');
+const welcomePainel = require('./utils/welcomePainel');
 const { interpolar, interpolarEmbed } = require('./utils/interpolar');
 const cttStore = require('./utils/cttStore');
 const { linhaSelecaoCanalDe, resolverSelecaoCanal } = require('./utils/channelPicker');
@@ -1947,15 +1951,371 @@ client.on(Events.GuildMemberAdd, async (member) => {
   try {
     const conf = welcomeStore.obter(member.guild.id);
     if (!conf) return;
+    if (!conf.ativo) return;
+    if (!conf.canalId) return;
     const canal = await client.channels.fetch(conf.canalId).catch(() => null);
-    if (!canal || !canal.isTextBased() || !canal.permissionOverwrites) return;
-    const vars = { user: '<@' + member.id + '>', server: member.guild.name };
-    const embed = buildEmbed(conf.embed);
-    if (embed) interpolarEmbed(embed, vars);
-    const content = interpolar(conf.content || null, vars);
-    await canal.send({ embeds: embed ? [embed] : [], content });
+    if (!canal) return;
+    if (!canal.isTextBased()) return;
+    const botMembro = canal.guild?.members?.me;
+    const permissoes = canal.permissionsFor(botMembro);
+    if (!permissoes || !permissoes.has(PermissionFlagsBits.SendMessages)) return;
+
+    const conteudo = conf.tipo === 'embed' ? null : welcomeVars.interpolar(conf.mensagem || '', member, member.guild);
+    const embed = conf.tipo === 'embed' ? welcomePainel.buildWelcomeEmbed(conf, member.displayAvatarURL()) : null;
+    if (embed) welcomeVars.interpolarEmbed(embed, member, member.guild);
+
+    await canal.send({
+      content: conteudo || undefined,
+      embeds: embed ? [embed] : [],
+      allowedMentions: { parse: ['users', 'roles', 'everyone'] },
+    });
   } catch (error) {
     console.error('[Welcome] Erro:', error);
+  }
+});
+
+
+// ----- Painel de configuracao de boas-vindas -----
+client.on(Events.InteractionCreate, async (interaction) => {
+  try {
+    const id = interaction.customId || '';
+    if (!id.startsWith('welcome:')) return;
+
+    const partes = id.split(':');
+    const acao = partes[1];
+    const donoId = partes[partes.length - 1];
+    if (interaction.user.id !== donoId) return;
+
+    const sessao = welcomePainel.getSessaoWelcome(
+      donoId,
+      interaction.guildId
+    );
+    const conf = sessao.config;
+    const responderPainel = () => {
+      const painel = welcomePainel.buildWelcomePainel(
+        donoId,
+        interaction.guildId
+      );
+      return interaction.update({
+        embeds: painel.embeds,
+        components: painel.components
+      });
+    };
+
+    if (interaction.isButton()) {
+      if (acao === 'ativar' || acao === 'desativar') {
+        conf.ativo = acao === 'ativar';
+        return responderPainel();
+      }
+      if (acao === 'tipo') {
+        conf.tipo = conf.tipo === 'embed' ? 'mensagem' : 'embed';
+        if (!conf.mensagem) conf.mensagem = welcomeStore.padrao().mensagem;
+        return responderPainel();
+      }
+      if (acao === 'canal') {
+        const sel = welcomePainel.canalSelecao(
+          interaction.guildId,
+          `welcome:canalsel:${donoId}`,
+          conf.canalId
+        );
+        return interaction.update({
+          components: [sel.row, sel.botoes]
+        });
+      }
+      if (acao === 'variaveis') {
+        return interaction.reply({
+          content: welcomeVars.listarVariaveis().join('\\n'),
+          flags: MessageFlags.Ephemeral
+        });
+      }
+      if (acao === 'salvar') {
+        welcomeStore.salvar(
+          interaction.guildId,
+          conf
+        );
+        welcomePainel.limparSessaoWelcome(
+          donoId
+        );
+        return interaction.reply({
+          content: 'Salvo com sucesso.',
+          flags: MessageFlags.Ephemeral
+        });
+      }
+      if (acao === 'padrao') {
+        const padrao = welcomeStore.padrao(
+          conf.canalId
+        );
+        Object.assign(conf, padrao);
+        return responderPainel();
+      }
+      if (acao === 'preview') {
+        const memberExemplo = {
+          id: interaction.user.id,
+          username: interaction.user.username,
+          displayName: interaction.member?.displayName || interaction.user.username,
+          displayAvatarURL: () => interaction.user.displayAvatarURL(),
+        };
+        const conteudo = conf.tipo === 'embed'
+          ? null
+          : welcomeVars.interpolar(
+              conf.mensagem || '',
+              memberExemplo,
+              interaction.guild
+            );
+        const embed = conf.tipo === 'embed'
+          ? welcomePainel.buildWelcomeEmbed(
+              conf,
+              interaction.user.displayAvatarURL()
+            )
+          : null;
+        if (embed) {
+          welcomeVars.interpolarEmbed(
+            embed,
+            memberExemplo,
+            interaction.guild
+          );
+        }
+        return interaction.reply({
+          content: conteudo || 'Pre-visualizacao:',
+          embeds: embed ? [embed] : [],
+          ephemeral: true,
+          allowedMentions: { parse: [] }
+        });
+      }
+
+if (acao === 'editar') {
+        const alvo = partes[2];
+        if (alvo === 'mensagem') {
+          const modal = welcomePainel.modalCampo(
+            donoId,
+            'mensagem',
+            'Editar mensagem',
+            'Mensagem',
+            true,
+            conf.mensagem || '',
+            'Ola, <@user>! Bem-vinda ao <@server>.'
+          );
+          return interaction.showModal(modal);
+        }
+        if (alvo === 'embed') {
+          const painel = welcomePainel.buildWelcomeEmbedEdit(
+            donoId,
+            interaction.guildId
+          );
+          return interaction.update({
+            embeds: painel.embeds,
+            components: painel.components
+          });
+        }
+      }
+      if (acao === 'embed') {
+        const campoEd = partes[2];
+        if (campoEd === 'voltar') {
+          return responderPainel();
+        }
+        if (campoEd === 'fields') {
+          const painel = welcomePainel.buildWelcomeFieldsPainel(
+            donoId,
+            interaction.guildId
+          );
+          return interaction.update({
+            embeds: painel.embeds,
+            components: painel.components
+          });
+        }
+        if (campoEd === 'timestamp') {
+          conf.embed.timestamp = !conf.embed.timestamp;
+          const painel = welcomePainel.buildWelcomeEmbedEdit(
+            donoId,
+            interaction.guildId
+          );
+          return interaction.update({
+            embeds: painel.embeds,
+            components: painel.components
+          });
+        }
+        const rotulos = {
+          titulo: ['Titulo da embed', 'Titulo'],
+          descricao: ['Descricao da embed', 'Descricao'],
+          cor: ['Cor da embed', 'Cor'],
+          imagem: ['URL da imagem', 'Imagem'],
+          thumbnail: ['Thumbnail', 'Thumbnail'],
+          rodape: ['Texto do rodape', 'Rodape'],
+        };
+        const confEd = rotulos[campoEd];
+        if (!confEd) return;
+        const atual = campoEd === 'cor'
+          ? (conf.embed.cor || '#beb6ff')
+          : (conf.embed[campoEd] || '');
+        const placeholder = campoEd === 'cor'
+          ? 'Ex: #beb6ff'
+          : (campoEd === 'imagem' || campoEd === 'thumbnail')
+            ? 'Ex: https://...'
+            : 'Aceita variaveis como <user>';
+        const modal = welcomePainel.modalCampo(
+          donoId,
+          campoEd,
+          confEd[0],
+          confEd[1],
+          campoEd === 'descricao' || campoEd === 'mensagem',
+          atual,
+          placeholder
+        );
+        return interaction.showModal(modal);
+      }
+      if (acao === 'fieldadd') {
+        return interaction.showModal(
+          welcomePainel.modalField(
+            donoId
+          )
+        );
+      }
+      if (acao === 'fieldclear') {
+        conf.embed.fields = [];
+        const painel = welcomePainel.buildWelcomeFieldsPainel(
+          donoId,
+          interaction.guildId
+        );
+        return interaction.update({
+          embeds: painel.embeds,
+          components: painel.components
+        });
+      }
+    }
+
+if (interaction.isStringSelectMenu()) {
+      if (id.startsWith('welcome:canalsel:')) {
+        const r = resolverSelecaoCanal(
+          interaction,
+          id
+        );
+        if (r.cancelado) {
+          return responderPainel();
+        }
+        if (!r.canal) {
+          return interaction.reply({
+            content: 'Canal nao encontrado.',
+            flags: MessageFlags.Ephemeral
+          });
+        }
+        conf.canalId = r.canal.id;
+
+
+        return responderPainel();
+      }
+      if (id.startsWith('welcome:fieldsel:')) {
+        const idx = parseInt(
+          interaction.values[0],
+          10
+        );
+        const campos = (conf.embed.fields || []).filter(
+          (f) => f && f.name && f.value
+        );
+        const campo = campos[idx] || null;
+        return interaction.showModal(
+          welcomePainel.modalField(
+            donoId,
+            idx,
+            campo
+          )
+        );
+      }
+    }
+
+    if (interaction.isModalSubmit() && id.startsWith('welcome:modal:')) {
+      const alvo = partes[2];
+
+      if (alvo === 'mensagem') {
+        conf.mensagem = interaction.fields.getTextInputValue(
+          'valor'
+        );
+        return responderPainel();
+      }
+
+      if (alvo === 'titulo' || alvo === 'descricao' || alvo === 'cor' || alvo === 'imagem' || alvo === 'thumbnail' || alvo === 'rodape') {
+        const valor = interaction.fields.getTextInputValue(
+          'valor'
+        ).trim();
+        if (alvo === 'cor' && valor && !/^#?[0-9a-fA-F]{6}$/.test(
+          valor
+        )) {
+          return interaction.reply({
+            content: 'Cor invalida.',
+            flags: MessageFlags.Ephemeral
+          });
+        }
+        if ((alvo === 'imagem' || alvo === 'thumbnail') && valor && !(valor.startsWith('http://') || valor.startsWith('https://'))) {
+          return interaction.reply({
+            content: 'URL invalida.',
+            flags: MessageFlags.Ephemeral
+          });
+        }
+        conf.embed[alvo] = valor || null;
+        const painel = welcomePainel.buildWelcomeEmbedEdit(
+          donoId,
+          interaction.guildId
+        );
+        return interaction.update({
+          embeds: painel.embeds,
+          components: painel.components
+        });
+      }
+
+      if (alvo === 'fieldnew' || alvo === 'fieldedit') {
+        const nome = interaction.fields.getTextInputValue(
+          'fname'
+        ).trim();
+        const valor = interaction.fields.getTextInputValue(
+          'fvalue'
+        ).trim();
+        const inlineL = interaction.fields.getTextInputValue(
+          'finline'
+        ).trim().toLowerCase();
+        if (!nome || !valor) {
+          return interaction.reply({
+            content: 'Nome e valor obrigatorios.',
+            flags: MessageFlags.Ephemeral
+          });
+        }
+        const novoCampo = {
+          name: nome,
+          value: valor,
+          inline: inlineL === 'sim',
+        };
+        if (alvo === 'fieldnew') {
+          conf.embed.fields.push(
+            novoCampo
+          );
+        } else {
+          const idx = parseInt(
+            partes[3],
+            10
+          );
+          if (idx >=   0 && idx < conf.embed.fields.length) {
+            conf.embed.fields[idx] = novoCampo;
+          }
+        }
+        const painel = welcomePainel.buildWelcomeFieldsPainel(
+          donoId,
+          interaction.guildId
+        );
+        return interaction.update({
+          embeds: painel.embeds,
+          components: painel.components
+        });
+      }
+    }
+  } catch (error) {
+    console.error('[Welcome Painel] Erro:', error);
+    try {
+      if (interaction.isRepliable()) {
+        if (interaction.deferred || interaction.replied) return;
+        return interaction.reply({
+          content: 'Erro ao processar o painel.',
+          flags: MessageFlags.Ephemeral
+        });
+      }
+    } catch {}
   }
 });
 
