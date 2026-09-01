@@ -1857,7 +1857,7 @@ client.on('interactionCreate', async (interaction) => {
         await canal.send({
           content: conteudo,
           embeds: [embed],
-          components: (linhasBotoes = botoesEmLinhas(estado.botoes, interaction.guildId || '', true)).length ? linhasBotoes : [],
+          components: (linhasBotoes = botoesEmLinhas(estado.botoes, interaction.guildId || '', true, estado.cor)).length ? linhasBotoes : [],
           allowedMentions: estado.cargos.length ? { roles: estado.cargos } : { parse: [] },
         });
       } catch (sendError) {
@@ -1898,7 +1898,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     const dados = cttStore.obter(token);
     if (!dados) return interaction.reply({ content: '❌ Conteúdo expirado ou inválido.', flags: MessageFlags.Ephemeral });
-    const conteudoPrivado = buildConteudoPrivado(dados.paginas || [], 0, interaction.user.id, guildId, token);
+    const conteudoPrivado = buildConteudoPrivado(dados.paginas || [], 0, interaction.user.id, guildId, token, dados.cor || null);
     return interaction.reply(conteudoPrivado).catch(() => {});
   } catch (error) {
     console.error('[cttopen] Erro:', error);

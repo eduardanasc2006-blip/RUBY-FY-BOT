@@ -39,4 +39,9 @@ assert.ok(!JSON.stringify(dono).includes(':pag:'),'mesmo com dono nao ha paginac
 const visitante = buildConteudoPrivado(paginas,0, '', 'guild-teste', 'token-teste');
 assert.strictEqual(visitante.components.length,0,'visitante nao recebe botoes');
 
+// Cor da embed principal deve ser herdada pelos conteudos privados
+const comCor = buildConteudoPrivado(paginas,0 , '', 'guild-teste', 'token-teste', '#FF5500');
+assert.strictEqual(comCor.embeds[0].data.color , 0xFF5500,'cor da embed principal aplicada nos conteudos privados');
+assert.strictEqual(comCor.embeds[1].data.color , 0xFF5500,'cor aplicada em todas as embeds da sequencia');
+
 console.log('testes conteudoPrivado OK');

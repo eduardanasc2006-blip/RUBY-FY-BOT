@@ -35,7 +35,7 @@ function limparSessao(userId) {
 // Normaliza os botões respeitando os limites do Discord: até 5 botões por
 // linha e 10 botões no total por mensagem.
 
-function botoesEmLinhas(botoes, guildId = '', emPreview = false) {
+function botoesEmLinhas(botoes, guildId = '', emPreview = false, cor = null) {
 
   if (!Array.isArray(botoes) || !botoes.length) return [];
 
@@ -73,7 +73,7 @@ function botoesEmLinhas(botoes, guildId = '', emPreview = false) {
         } else {
           const idxGlobal = b._idx ?? 0;
           const token = tokenBotao(guildId, b, idxGlobal);
-          const payload = { rotulo: b.rotulo || null, paginas: b.paginas || [] };
+          const payload = { rotulo: b.rotulo || null, paginas: b.paginas || [], cor: cor || null };
           registrar(guildId, token, payload);
           btn.setCustomId(`cttopen:${guildId}:${token}`);
         }
@@ -208,7 +208,7 @@ function buildPainel(userId, guildId = '') {
   return {
     content: estado.textoFora || null,
     embeds: embed ? [resumo, embed] : [resumo],
-    components: [linha1, linha2, linha3, linha4, ...botoesEmLinhas(estado.botoes, guildId).slice(0, 1)]
+    components: [linha1, linha2, linha3, linha4, ...botoesEmLinhas(estado.botoes, guildId, false, estado.cor).slice(0, 1)]
   };
 }
 
@@ -237,7 +237,7 @@ function buildPreview(userId, guildId = '', emPreview = true) {
       '👁️ **Prévia — é exatamente assim que a embed será publicada**' +
       (estado.textoFora ? `\n\n${estado.textoFora}` : ''),
     embeds: [embed],
-    components: [botoes, ...botoesEmLinhas(estado.botoes, guildId, emPreview)]
+    components: [botoes, ...botoesEmLinhas(estado.botoes, guildId, emPreview, estado.cor)]
   };
 }
 
@@ -247,7 +247,7 @@ function buildPreview(userId, guildId = '', emPreview = true) {
 // resposta efêmera — sem paginação nem botões de navegação.
 
 
-function buildConteudoPrivado(paginasBrutas, _idxPagina = 0, autorId = '', guildId = '', token = '') {
+function buildConteudoPrivado(paginasBrutas, _idxPagina = 0, autorId = '', guildId = '', token = '', cor = null) {
   const paginas = paginasValidas(paginasBrutas);
   if (!paginas.length) {
     return {
@@ -259,7 +259,7 @@ function buildConteudoPrivado(paginasBrutas, _idxPagina = 0, autorId = '', guild
   }
 
   const embeds = paginas.map((pagina) => {
-    const embed = new EmbedBuilder().setColor(resolverCor(null));
+    const embed = new EmbedBuilder().setColor(resolverCor(cor));
     if (pagina.titulo) embed.setTitle(pagina.titulo);
     if (pagina.descricao) embed.setDescription(pagina.descricao);
     if (pagina.imagem) embed.setImage(pagina.imagem);

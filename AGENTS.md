@@ -22,6 +22,7 @@
 - Para o bot aparecer na DM, os usuários precisam instalar o app via **User Install**: `https://discord.com/oauth2/authorize?client_id=1509146932478476389&scope=applications.commands&integration_type=1`.
 - Toque de verificação rápida do estado do bot: `curl -H "Authorization: Bot <token>" https://discord.com/api/v10/users/@me` (e `/users/@me/guilds`, `/applications/<id>/commands`).
 - ⚠️ **Botão privado (`cttopen`)**: o clique envia **todos os conteúdos configurados em sequência, numa única resposta efêmera** — sem paginação, sem "Página X", sem botões de voltar/fechar. `buildConteudoPrivado` (em `embedPainel.js`) mapeia `paginasValidas` para `embeds[]` e só acrescenta o botão "✏️ Editar conteúdos" para o dono (custom id `cttopen:...:editar:<autorId>`).. Handler em `src/index.js` chama `buildConteudoPrivado(dados.paginas || [], 0,...)` — o `paginaIdx`/navegação por `:pag:`/`:fechar:` foi removido (commit `e4d0fe8`). Novo teste: `tests/embedConteudoPrivado.test.js`.
+- Cor herdada nos botoes privados: as embeds efemeras usam a mesma cor da embed publicada (`estado.cor`), salva no payload do `cttStore` na publicacao via `botoesEmLinhas(..., cor)` e aplicada por `resolverCor(cor)` no `buildConteudoPrivado(..., cor)` — em vez do lilas padrao.
 
 ## Estrutura
 - `src/commands/*.js` — comandos slash (deploy via deploy-commands.js).
