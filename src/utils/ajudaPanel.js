@@ -142,10 +142,11 @@ const PAGINAS = {
       linhas.push('Use **/criarcomando** para criar o seu comando.', '');
       linhas.push('Com **/criarcomando** você define nome, descrição, mensagem, imagem (URL **ou anexo**) e conteúdos copiáveis.', '');
       linhas.push('Com **/gerenciarcomandos** você lista ou exclui os já criados.');
+      linhas.push('Os comandos criados são chamados com **!nome** (prefixo, não slash).');
     } else {
       for (const c of lista) {
         const extras = c.copiaveis && c.copiaveis.length ? ` — 📋 ${c.copiaveis.length} copiável(is)` : '';
-        linhas.push(`➜ **/${c.nome}**${extras}`);
+        linhas.push(`➜ **!${c.nome}**${extras}`);
         if (c.descricao) linhas.push(`> *${c.descricao}*`);
         linhas.push('');
       }

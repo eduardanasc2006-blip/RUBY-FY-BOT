@@ -1,6 +1,5 @@
 const { Events, MessageFlags } = require('discord.js');
 const custom = require('./customCommands');
-const { registrarUm } = require('./customSync');
 const { modalEditar } = require('./customEditPanel');
 
 function registrar(client) {
@@ -101,18 +100,8 @@ function registrar(client) {
           custom.criar(slug, dados);
           custom.editar(slug, { nome: nomeNovo });
         }
-        try {
-          await registrarUm(interaction.client, slug, descricao);
-        } catch (error) {
-          console.error('[gerenciarcomandos] Falha ao registrar editado:', error?.message || error);
-        }
-        if (slug !== nomeOriginal) {
-          try {
-            await registrarUm(interaction.client, nomeOriginal, descricao);
-          } catch {}
-        }
         return interaction.reply({
-          content: '✅ Comando /' + nomeNovo + ' atualizado com sucesso!' + (slug !== nomeOriginal ? ' (nome alterado de /' + nomeOriginal + ')' : ''),
+          content: '✅ Comando !' + nomeNovo + ' atualizado com sucesso!' + (slug !== nomeOriginal ? ' (nome alterado de !' + nomeOriginal + ')' : ''),
           flags: MessageFlags.Ephemeral,
         });
       }

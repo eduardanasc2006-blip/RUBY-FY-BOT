@@ -3,7 +3,6 @@ const { camposValidos } = require('../utils/embedPainel');
 const { comandoPode } = require('../utils/permissions');
 const { isAdmin } = require('../prefixCommands/settaxa');
 const custom = require('../utils/customCommands');
-const { registrarUm } = require('../utils/customSync');
 
 // Nomes de comandos nativos do bot (nao podem ser usado por comandos personalizados,
 // senao o comando nativo sempre "vence" e o personalizado fica sem funcionar)
@@ -19,10 +18,10 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('criarcomando')
     .setDescription('Cria um comando personalizado (admin)')
-    .addStringOption((o) => o.setName('nome').setDescription('Nome do comando (pode usar espaço; vira - no /)').setRequired(true))
+    .addStringOption((o) => o.setName('nome').setDescription('Nome do comando (pode usar espaço; vira - no !)').setRequired(true))
     .addStringOption((o) => o.setName('descricao').setDescription('Descrição do comando').setRequired(true))
     .addStringOption((o) => o.setName('mensagem').setDescription('Mensagem de resposta').setRequired(true))
-    .addBooleanOption((o) => o.setName('ephemeral').setDescription('Resposta privada (ephemeral)? Padrão: sim').setRequired(false))
+    .addBooleanOption((o) => o.setName('ephemeral').setDescription('Resposta privada (ephemeral)? Padrão: não (público)').setRequired(false))
     .addStringOption((o) => o.setName('titulo').setDescription('Título da embed (opcional)').setRequired(false))
     .addStringOption((o) => o.setName('cor').setDescription('Cor: lilas, roxo, azul, verde, rosa, ou #hex (opcional)').setRequired(false))
     .addStringOption((o) => o.setName('imagem').setDescription('URL da imagem da embed (opcional)').setRequired(false))
@@ -43,7 +42,7 @@ module.exports = {
     const nome = interaction.options.getString('nome').trim();
     const descricao = interaction.options.getString('descricao').trim();
     const mensagem = interaction.options.getString('mensagem').trim();
-    const ephemeral = interaction.options.getBoolean('ephemeral') ?? true;
+    const ephemeral = interaction.options.getBoolean('ephemeral') ?? false;
     const copiaveisBruto = interaction.options.getString('copiaveis') || '';
     const tituloEmbed = (interaction.options.getString('titulo') || '' ).trim() || null;
     const corEmbed = (interaction.options.getString('cor') || '' ).trim() || null;
@@ -144,25 +143,13 @@ module.exports = {
       return interaction.reply({ content: '❌ Não consegui criar o comando.', flags: MessageFlags.Ephemeral });
     }
 
-    // Registra o comando no Discord para que o /nome apareca e responda.
-    try {
-      await registrarUm(interaction.client, nomeSlug, descricao);
-    } catch (error) {
-      console.error('[criarcomando] Falha ao registrar no Discord:', error?.message || error);
-      return interaction.reply({
-        content: `✅ Comando \`/${nome}\` salvo, mas não consegui registrá-lo no Discord agora.\n` +
-          'Tente de novo daqui a pouco ou reinicie o bot.',
-        flags: MessageFlags.Ephemeral,
-      });
-    }
-
     const aviso = copiaveis.length
       ? `📋 ${copiaveis.length} conteúdo(s) copiável(is): ${copiaveis.map((c) => c.nome).join(', ')}`
       : 'Sem conteúdo copiável.';
 
     return interaction.reply({
-      content: `✅ Comando \`/${nome}\` criado!\n${aviso}\n` +
-        '🕒 Pode levar alguns minutos até o / aparecer para todos no servidor (o Discord atualiza globalmente).',
+      content: `✅ Comando \`!${nome}\` criado!\n${aviso}\n` +
+        'Use **!comandos** para ver os comandos personalizados.',
       flags: MessageFlags.Ephemeral,
     });
   },

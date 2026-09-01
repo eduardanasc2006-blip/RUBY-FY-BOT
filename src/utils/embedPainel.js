@@ -68,7 +68,8 @@ function botoesEmLinhas(botoes, guildId = '', emPreview = false) {
         // Sem guild (ex: DM) nao da para montar botao privado util: desabilita.
 
         if (!guildId) {
-          btn.setDisabled(true).setLabel(`${b.rotulo} 🔒`);
+          // Sem custom_id o Discord rejeita o update (BUTTON_COMPONENT_CUSTOM_ID_REQUIRED)
+          btn.setDisabled(true).setCustomId('embedpainel:indisponivel:dm').setLabel(`${b.rotulo} 🔒`);
         } else {
           const idxGlobal = b._idx ?? 0;
           const token = tokenBotao(guildId, b, idxGlobal);

@@ -26,29 +26,8 @@ for (const file of fs.readdirSync(commandsPath).filter((f) => f.endsWith('.js'))
   nomesNativos.add(cmd.name.toLowerCase());
 }
 
-// Inclui também os comandos personalizados salvos, para que o deploy não os apague.
-
-// Personalizados que colidem com um comando nativo (ou que estejam duplicados) são
-// ignorados aqui: o comando nativo já garante o /nome no seletor, e registrar o
-// duplicado outra vez faz o Discord mostrar DOIS comandos com o mesmo nome.
-try {
-  const custom = require('./src/utils/customCommands');
-  const vistos = new Set();
-  for (const cmd of Object.values(custom.listar())) {
-    const nome = cmd.nome.toLowerCase();
-    if (nomesNativos.has(nome) || vistos.has(nome)) continue;
-    vistos.add(nome);
-    commands.push({
-      name: nome,
-      description: (cmd.descricao || 'Comando personalizado').slice(0, 100),
-      // Comando personalizado: só no servidor, para não expor na DM..
-      integration_types: [0],
-      contexts: [0, 1, 2],
-    });
-  }
-} catch (error) {
-  console.warn('⚠️ Não foi possível carregar comandos personalizados:', error?.message || error);
-}
+// Comandos personalizados agora sao prefixo (!) e nao slash (/): por isso nao sao
+// registrados aqui. Rodar este deploy limpa do Discord os /custom antigos.
 
 const rest = new REST().setToken(process.env.DISCORD_TOKEN);
 

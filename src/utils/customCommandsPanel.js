@@ -9,18 +9,18 @@ function buildResposta(cmd) {
   // Monta a descricao: apenas a mensagem do comando.
   // Os valores copiaveis nao entram aqui para nao duplicarem: cada um aparece
   // uma unica vez como botao (abaixo), onde o usuario clica para copiar.
-  let descricao = cmd.mensagem || '';
+  const mensagem = String(cmd.mensagem || '');
 
   // Sempre usa embed (mais bonito)
   const embed = new EmbedBuilder()
     .setColor(resolverCor(cmd.embed?.cor))
-    .setTitle(cmd.embed?.titulo || cmd.descricao || cmd.nome)
-    .setDescription(cmd.embed?.descricao || descricao);
+    .setTitle(cmd.embed?.titulo || cmd.nome)
+    .setDescription(mensagem || cmd.embed?.descricao || undefined);
   if (cmd.embed?.imagem) embed.setImage(cmd.embed.imagem);
   const fields = camposValidos(cmd.embed?.fields);
   if (fields.length > 0) embed.addFields(fields);
 
-  if (!embed.data.title && !embed.data.description) embed.setDescription((cmd.embed?.descricao || descricao));
+  if (!embed.data.title && !embed.data.description) embed.setDescription(mensagem);
   payload.embeds = [embed];
 
   // Botoes: copiaveis (handler) + links (ButtonStyle.Link nativo)

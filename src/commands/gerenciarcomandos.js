@@ -7,7 +7,6 @@ const {
 const { isAdmin } = require('../prefixCommands/settaxa');
 const { comandoPode } = require('../utils/permissions');
 const custom = require('../utils/customCommands');
-const { registrarTodos } = require('../utils/customSync');
 const { menuEditar } = require('../utils/customEditPanel');
 
 // Menu com os comandos salvos para o admin escolher sem digitar o nome.
@@ -26,7 +25,7 @@ function menuExcluir() {
     .setMaxValues(1)
     .addOptions(
       lista.slice(0, 25).map((c) => ({
-        label: '/' + c.nome,
+        label: '!' + c.nome,
         description: (c.descricao || (c.mensagem ? 'Resposta personalizada' : 'Sem descrição')).slice(0, 100),
         value: c.nome.toLowerCase(),
       }))
@@ -55,23 +54,16 @@ module.exports = {
     const acao = interaction.options.getString('acao');
 
     if (acao === 'listar') {
-      // Sincroniza antes de listar para garantir que todos os salvos estejam ativos.
-      // usa defer pois registrar no Discord (global) pode demorar.
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-      try {
-        await registrarTodos(interaction.client);
-      } catch (error) {
-        console.error('[gerenciarcomandos] Erro ao sincronizar:', error?.message || error);
-      }
 
       const lista = Object.values(custom.listar());
       if (!lista.length) {
         return interaction.editReply('📋 Nenhum comando personalizado criado ainda. Use /criarcomando.');
       }
       const texto = lista.map((c, i) =>
-        '`' + (i + 1) + '`' + ' — ' + '**/' + c.nome + '**' + (c.descricao ? ' · ' + c.descricao : '') + (c.copiaveis.length ? ' · 📋 ' + c.copiaveis.length + ' copiável(is)' : '')
+        '`' + (i + 1) + '`' + ' — ' + '**!' + c.nome + '**' + (c.descricao ? ' · ' + c.descricao : '') + (c.copiaveis.length ? ' · 📋 ' + c.copiaveis.length + ' copiável(is)' : '')
       ).join('\n');
-      const aviso = '\n\n_Use /criarcomando para adicionar; demora até 1h para aparecer para todos no Discord._';
+      const aviso = '\n\n_Use /criarcomando para adicionar._';
       return interaction.editReply('**Comandos personalizados (' + lista.length + '):**\n' + texto + aviso);
     }
 

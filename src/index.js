@@ -121,17 +121,6 @@ client.once(Events.ClientReady, () => {
   atualizarStatus();
   console.log(`✅ Bot online como ${client.user.tag}`);
 
-  // Garante que os comandos personalizados salvos estejam registrados no Discord
-  const { registrarTodos } = require('./utils/customSync');
-  registrarTodos(client).then((res) => {
-    const ok = res.filter((r) => r.ok).length;
-    const falha = res.length - ok;
-    if (falha > 0) {
-      console.log(`[CustomSync] ${ok} comando(s) verificado(s), ${falha} com falha.`);
-    }
-  }).catch((error) => {
-    console.error('[CustomSync] Erro ao sincronizar comandos no boot:', error?.message || error);
-  });
 });
 
 // Evita que o bot morra por erros não tratados (ex: interação expirada após restart)
@@ -148,22 +137,7 @@ client.on('interactionCreate', async (interaction) => {
 
   const command = client.commands.get(interaction.commandName);
 
-  // Comandos personalizados (criados pelo /criarcomando)
-  if (!command) {
-    const custom = require('./utils/customCommands');
-    const { buildResposta } = require('./utils/customCommandsPanel');
-    const cmdCustom = custom.obter(interaction.commandName);
-    if (cmdCustom) {
-      try {
-        const payload = buildResposta(cmdCustom);
-        return await interaction.reply({ ...payload, flags: cmdCustom.ephemeral ? MessageFlags.Ephemeral : undefined });
-      } catch (error) {
-        console.error('[Comando custom]', error);
-        return interaction.reply({ content: '❌ Erro ao executar o comando.', flags: MessageFlags.Ephemeral }).catch(() => {});
-      }
-    }
-    return;
-  }
+  if (!command) return; // Comandos personalizados agora sao prefixo (!) e nao slash (/)
 
   try {
     await command.execute(interaction);
@@ -1154,18 +1128,10 @@ client.on('interactionCreate', async (interaction) => {
     // Confirmação de exclusão do comando personalizado
     if (interaction.isButton() && interaction.customId.startsWith('gerencmd:confirm:')) {
       const custom = require('./utils/customCommands');
-      const { excluirUm } = require('./utils/customSync');
-      const nome = (interaction.customId.split(':')[2] || '').trim();
+      const nome = (interaction.customId.split(':')[2] || '' ).trim();
       const ok = custom.excluir(nome);
-      if (ok) {
-        try {
-          await excluirUm(interaction.client, nome);
-        } catch (error) {
-          console.error('[gerenciarcomandos] Falha ao remover do Discord:', error?.message || error);
-        }
-      }
       return interaction.update({
-        content: ok ? '✅ Comando /' + nome + ' excluído.' : '❌ Comando /' + nome + ' não encontrado.',
+        content: ok ? '✅ Comando !' + nome + ' excluído.' : '❌ Comando !' + nome + ' não encontrado.',
         components: [],
       });
     }
@@ -1497,11 +1463,12 @@ client.on('interactionCreate', async (interaction) => {
       if (acao === 'preview') {
         // Preview real: mostra apenas a embed final (sem o editor) com opções
         // de voltar a editar, enviar ou cancelar.
-        return interaction.reply({ ...buildPreview(donoId), flags: MessageFlags.Ephemeral });
+
+        return interaction.reply({ ...buildPreview(donoId, interaction.guildId), flags: MessageFlags.Ephemeral });
       }
 
       if (acao === 'voltar') {
-        return interaction.update(buildPainel(donoId));
+        return interaction.update(buildPainel(donoId, interaction.guildId));
       }
 
       if (acao === 'enviar') {
@@ -1540,7 +1507,7 @@ client.on('interactionCreate', async (interaction) => {
       }
       const estado = getSessao(donoId);
       estado.cargos = [...interaction.values]; // IDs dos cargos selecionados
-      return interaction.update(buildPainel(donoId));
+      return interaction.update(buildPainel(donoId, interaction.guildId));
     }
 
     // Select menu para editar um field da embed
@@ -1824,7 +1791,7 @@ client.on('interactionCreate', async (interaction) => {
             flags: MessageFlags.Ephemeral,
           });
         }
-        return interaction.update(buildPainel(donoId));
+        return interaction.update(buildPainel(donoId, interaction.guildId));
       } else if (campo === 'imagem' || campo === 'thumbnail') {
         const url = valor || null;
         if (url && !urlValida(url)) {
@@ -1839,7 +1806,7 @@ client.on('interactionCreate', async (interaction) => {
         estado[campo] = valor || null;
       }
 
-      return interaction.update(buildPainel(donoId));
+      return interaction.update(buildPainel(donoId, interaction.guildId));
     }
 
     // Seleção de canal para publicar a embed (fluxo do botão "Enviar")
@@ -1985,7 +1952,7 @@ client.on('interactionCreate', async (interaction) => {
       carregado.botoes = Array.isArray(carregado.botoes) ? carregado.botoes : [];
       carregado.fields = Array.isArray(carregado.fields) ? carregado.fields : [];
       Object.assign(sessao, carregado);
-      return interaction.update(buildPainel(uid));
+      return interaction.update(buildPainel(uid, interaction.guildId));
     }
     if (acao === 'editar') {
       const modalEd = new ModalBuilder()
@@ -2068,7 +2035,23 @@ client.on(Events.MessageCreate, async (message) => {
   const args = message.content.slice(PREFIX.length).trim().split(/\s+/);
   const commandName = args.shift().toLowerCase();
   const command = client.prefixCommands.get(commandName);
-  if (!command) return;
+  // Comandos personalizados: respondem por prefixo (!) e a resposta e publica;
+  // apenas o botao copiavel e ephemeral. A descricao curta e so para o menu de ajuda.
+  if (!command) {
+    const custom = require('./utils/customCommands');
+    const { buildResposta } = require('./utils/customCommandsPanel');
+    const cmdCustom = custom.obter(commandName);
+    if (cmdCustom) {
+      try {
+        const payload = buildResposta(cmdCustom);
+        return await message.reply(payload);
+      } catch (error) {
+        console.error('[Comando custom !]', error);
+        return message.reply('❌ Erro ao executar o comando.');
+      }
+    }
+    return;
+  }
 
   try {
     await command.execute(message, args, client);

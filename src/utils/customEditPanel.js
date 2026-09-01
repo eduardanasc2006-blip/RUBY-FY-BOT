@@ -13,7 +13,7 @@ function menuEditar() {
     .setMaxValues(1)
     .addOptions(
       lista.slice(0, 25).map((c) => ({
-        label: '/' + (c.nome || '?'),
+        label: '!' + (c.nome || '?'),
         description: (c.descricao || (c.mensagem ? 'Resposta personalizada' : 'Sem descrição')).slice(0, 100),
         value: String(c.nome || '').toLowerCase(),
       }))
@@ -29,7 +29,7 @@ function formatarCopiaveis(copiaveis) {
 function modalEditar(cmd) {
   return new ModalBuilder()
     .setCustomId('gerencmd:editmodal:' + String(cmd.nome || '').toLowerCase())
-    .setTitle(('✏️ Editar /' + (cmd.nome || '')).slice(0, 45))
+    .setTitle(('✏️ Editar !' + (cmd.nome || '')).slice(0, 45))
     .addComponents(
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
