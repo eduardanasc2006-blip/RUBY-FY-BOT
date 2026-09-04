@@ -1410,6 +1410,14 @@ client.on('interactionCreate', async (interaction) => {
                 .setRequired(false)
                 .setMaxLength(24)
                 .setValue('outros')
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('mdesc')
+                .setLabel('Descrição interna (opcional)')
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(false)
+                .setMaxLength(1024)
             )
           );
         return interaction.showModal(modalSalvar);
@@ -1722,9 +1730,10 @@ client.on('interactionCreate', async (interaction) => {
         if (!interaction.guildId) return interaction.reply({ content: '❌ Só funciona no servidor.', flags: MessageFlags.Ephemeral });
         const nomeM = (interaction.fields.getTextInputValue('mnome') || '' ).trim();
         const catM = (interaction.fields.getTextInputValue('mcategoria') || '' ).trim().toLowerCase();
+        const descM = (interaction.fields.getTextInputValue('mdesc') || '' ).trim() || null;
         const sessao = getSessao(donoId);
         const dadosModelo = JSON.parse(JSON.stringify({ ...sessao, botoes: sessao.botoes || [], fields: sessao.fields || [], cargos: sessao.cargos || [], paginas: undefined }));
-        const res = modelosStore.criar(interaction.guildId, { nome: nomeM, categoria: catM, dados: dadosModelo });
+        const res = modelosStore.criar(interaction.guildId, { nome: nomeM, categoria: catM, descricao: descM, dados: dadosModelo });
         if (!res.ok) return interaction.reply({ content: '❌ ' + (res.msg || 'Erro ao salvar.'), flags: MessageFlags.Ephemeral });
         return interaction.update({ content: '💾 Modelo **' + res.modelo.nome + '** salvo! Use `!modelos` para ver e usar.', embeds: [], components: [] });
       }
@@ -1736,7 +1745,8 @@ client.on('interactionCreate', async (interaction) => {
         if (!m) return interaction.reply({ content: '❌ Modelo não encontrado.', flags: MessageFlags.Ephemeral });
         const nomeM = (interaction.fields.getTextInputValue('mnome') || '' ).trim();
         const catM = (interaction.fields.getTextInputValue('mcategoria') || '' ).trim().toLowerCase();
-        const res = modelosStore.atualizar(interaction.guildId, mid, { nome: nomeM, categoria: catM });
+        const descM = (interaction.fields.getTextInputValue('mdesc') || '' ).trim() || null;
+        const res = modelosStore.atualizar(interaction.guildId, mid, { nome: nomeM, categoria: catM, descricao: descM });
         if (!res.ok) return interaction.reply({ content: '❌ ' + (res.msg || 'Erro.'), flags: MessageFlags.Ephemeral });
         return interaction.update({ content: '✅ Modelo **' + res.modelo.nome + '** atualizado.', embeds: [], components: [] });
       }
