@@ -14,7 +14,7 @@ function buildResposta(cmd) {
   // Sempre usa embed (mais bonito)
   const embed = new EmbedBuilder()
     .setColor(resolverCor(cmd.embed?.cor))
-    .setTitle(cmd.embed?.titulo || cmd.nome)
+    .setTitle(cmd.embed?.titulo || null)
     .setDescription(mensagem || cmd.embed?.descricao || undefined);
   if (cmd.embed?.imagem) embed.setImage(cmd.embed.imagem);
   const fields = camposValidos(cmd.embed?.fields);
