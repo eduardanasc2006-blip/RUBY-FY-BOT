@@ -69,12 +69,12 @@ function modalEditar(cmd) {
       ),
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
-          .setCustomId('ephemeral')
-          .setLabel('Resposta privada? (sim ou nao)')
+          .setCustomId('titulo')
+          .setLabel('Título da embed (opcional; vazio = sem título)')
           .setStyle(TextInputStyle.Short)
           .setRequired(false)
-          .setMaxLength(3)
-          .setValue(cmd.ephemeral ? 'sim' : 'nao')
+          .setMaxLength(256)
+          .setValue(String(cmd.embed?.titulo || '').slice(0, 256))
       )
     );
 }

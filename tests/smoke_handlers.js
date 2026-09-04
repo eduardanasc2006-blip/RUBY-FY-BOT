@@ -155,7 +155,7 @@ async function testarInteracoes() {
     ["select", "gerencmd:editar", { valores: ["0"] }],
     ["button", "gerencmd:confirm:apagar:xxxx"],
     ["button", "gerencmd:cancel"],
-    ["modal", "gerencmd:editmodal:nomeoriginal", { campos: { nome: "novo", mensagem: "ola", episodio: "nao" } }],
+    ["modal", "gerencmd:editmodal:nomeoriginal", { campos: { nome: "novo", mensagem: "ola", titulo: "Meu Titulo" } }],
     ["button", "perm:voltar"],
     ["button", "perm:cargos:xxx"],
     ["select", "perm:cargos:xxx", { valores: ["0"] }],

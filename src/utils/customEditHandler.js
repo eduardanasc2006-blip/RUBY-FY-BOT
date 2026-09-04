@@ -23,9 +23,7 @@ function registrar(client) {
         const descricao = interaction.fields.getTextInputValue('descricao') || '';
         const mensagem = interaction.fields.getTextInputValue('mensagem') || '';
         const copiaveisBruto = interaction.fields.getTextInputValue('copiaveis') || '';
-        const ephemeralOriginal = !!cmdAntigo.ephemeral;
-        const ephemeralTxt = (interaction.fields.getTextInputValue('ephemeral') || '' ).trim().toLowerCase();
-        const ephemeral = ephemeralTxt ? ['sim', 's', 'true', '1'].includes(ephemeralTxt) : ephemeralOriginal;
+        const tituloNovo = (interaction.fields.getTextInputValue('titulo') || '' ).trim() || null;
         if (!/^[a-z0-9_-]{1,32}$/i.test(nomeNovo)) {
 
           return interaction.reply({ content: '❌ Nome inválido. Use apenas letras, números, _ ou -. (máx. 32).', flags: MessageFlags.Ephemeral });
@@ -87,8 +85,11 @@ function registrar(client) {
         const editado = custom.editar(nomeOriginal, {
           descricao,
           mensagem,
-          embed: embedAntigo,
-          ephemeral,
+          embed: {
+            ...(embedAntigo || { descricao: null, cor: null, imagem: null, fields: [] }),
+            titulo: tituloNovo,
+          },
+          ephemeral: !!cmdAntigo.ephemeral,
           copiaveis,
         });
         if (!editado) {
