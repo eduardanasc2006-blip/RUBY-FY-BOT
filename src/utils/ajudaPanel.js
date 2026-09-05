@@ -54,6 +54,7 @@ const COMANDOS = [
  { grupo: 'Administração', cmd: 'embed', desc: 'Cria uma embed no canal.', admin: true },
  { grupo: 'Administração', cmd: 'backup', desc: 'Backup de taxas e estoque na DM.', admin: true },
  { grupo: 'Administração', cmd: 'canalavisos', desc: 'Canal de avisos de estoque.', admin: true },
+ { grupo: 'Administração', cmd: 'autoresposta', desc: 'Respostas automáticas por palavra-chave (ver, adicionar, remover, canais.)', admin: true },
  { grupo: 'Administração', cmd: 'limpar', desc: 'Apaga mensagens do canal.', admin: true },
  { grupo: 'Administração', cmd: 'mensagem', desc: 'Publica uma mensagem simples em qualquer canal.', admin: true },
  { grupo: 'Administração', cmd: 'lock', desc: 'Bloqueia um canal para membros comuns.', admin: true },
