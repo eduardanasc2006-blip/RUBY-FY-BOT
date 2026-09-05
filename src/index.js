@@ -2091,6 +2091,26 @@ client.on(Events.MessageCreate, async (message) => {
     return;
   }
 
+  if (message.guild) {
+    // Auto-respostas por palavra-chave (somente em servidor; canais restritos se configurados).
+
+    const autoStore = require('./utils/autoRespostaStore');
+    const { acharResposta } = require('./utils/autoRespostaHandler');
+    const canaisPermitidos = autoStore.canais(message.guildId);
+    if (!canaisPermitidos.length || canaisPermitidos.includes(message.channelId)) {
+
+
+      const resposta = acharResposta(autoStore.listar(message.guildId), message.content);
+      if (resposta) {
+        try {
+          return await message.channel.send(resposta);
+        } catch (error) {
+          console.error('[Auto resposta]', error);
+        }
+      }
+    }
+  }
+
   try {
     await command.execute(message, args, client);
   } catch (error) {

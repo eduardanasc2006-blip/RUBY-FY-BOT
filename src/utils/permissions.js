@@ -47,7 +47,7 @@ const GRUPOS = [
     id: 'custom',
     nome: '🧩 Comandos personalizados',
     descricao: 'Criar, editar e excluir comandos personalizados.',
-    comandos: ['criarcomando', 'gerenciarcomandos'],
+    comandos: ['criarcomando', 'gerenciarcomandos', 'autoresposta'],
   },
   {
     id: 'backup',
