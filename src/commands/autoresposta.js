@@ -2,6 +2,7 @@ const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { comandoPode } = require('../utils/permissions');
 const store = require('../utils/autoRespostaStore');
 const { menuEditar } = require('../utils/autoRespostaPanel');
+const { linhaSelecaoCanalDe } = require('../utils/channelPicker');
 
 const MAX_AUTORESPOSTAS = 30;
 
@@ -71,13 +72,14 @@ module.exports = {
         return interaction.reply({ content: '✅ Agora responde em **qualquer canal** do servidor.', flags: MessageFlags.Ephemeral });
       }
       if (!canal) {
+        const picker = linhaSelecaoCanalDe(interaction.guild, 'autorespcanal', atuais[0] || null, '📣 Escolha um canal para responder…');
+        if (!picker.canais.length) {
+          return interaction.reply({ content: '❌ Não encontrei nenhum canal de texto onde eu possa enviar mensagens.', flags: MessageFlags.Ephemeral });
+        }
         const txtCanais = atuais.length
           ? atuais.map((id) => '<#' + id + '>').join(', ')
           : 'todos os canais';
-        const dica = atuais.length
-          ? 'Use `/autoresposta canais canal:<#canal>` para adicionar/remover, ou `limpar:true` para voltar a qualquer canal.'
-          : 'Sem restrição até agora. Use `/autoresposta canais canal:<#canal>` para restringir a um canal.';
-        return interaction.reply({ content: '📌 **Canais atuais:** ' + txtCanais + '\n' + dica, flags: MessageFlags.Ephemeral });
+        return interaction.reply({ content: '📌 **Canais atuais:** ' + txtCanais + '\n🗂️ Escolha um canal abaixo para adicionar/remover, ou use `limpar:true`.', components: [picker.row, picker.botoes], flags: MessageFlags.Ephemeral });
       }
       if (atuais.includes(canal.id)) {
         const nova = atuais.filter((id) => id !== canal.id);
@@ -95,7 +97,7 @@ module.exports = {
       ? canaisIds.map((id) => '<#' + id + '>').join(', ')
       : 'todos os canais';
     if (!lista.length) {
-      return interaction.reply({ content: '📭 Nenhuma auto-resposta ainda.\n**Canais:** ' + canaisTxt + '\nUse `/autoresposta adicionar palavra:<palavra> resposta:<resposta>`.' , flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: '📭 Nenhuma auto-resposta ainda.\n**Canais:** ' + canaisTxt + '\nUse `/autoresposta adicionar palavra:<palavra> resposta:<resposta>`.', flags: MessageFlags.Ephemeral });
     }
     const linhas = lista.map((r, i) => '`' + (i + 1) + '` **' + r.palavra + '** → ' + r.resposta);
     return interaction.reply({ content: '**Auto-respostas (' + lista.length + '):**\n' + linhas.join('\n') + '\n**Canais:** ' + canaisTxt, flags: MessageFlags.Ephemeral });

@@ -2,6 +2,7 @@ const { comandoPode } = require('../utils/permissions');
 const store = require('../utils/autoRespostaStore');
 const { acharResposta } = require('../utils/autoRespostaHandler');
 const { menuEditar } = require('../utils/autoRespostaPanel');
+const { linhaSelecaoCanalDe } = require('../utils/channelPicker');
 
 const MAX_AUTORESPOSTAS = 30;
 
@@ -37,12 +38,11 @@ module.exports = {
       );
     }
 
-
-	 if (sub === 'editar') {
-	   const menu = menuEditar(message.guildId);
-	   if (!menu.components.length) return message.reply(menu.content);
-	   return message.reply({ content: menu.content, components: menu.components });
-	 }
+    if (sub === 'editar') {
+      const menu = menuEditar(message.guildId);
+      if (!menu.components.length) return message.reply(menu.content);
+      return message.reply({ content: menu.content, components: menu.components });
+    }
 
     if (sub === 'adicionar') {
       const resto = args.join(' ').trim();
@@ -75,11 +75,17 @@ module.exports = {
           store.definirCanais(message.guildId, []);
           return message.reply('✅ Agora responde em **qualquer canal** do servidor.');
         }
-        return message.reply(
-          atuais.length
-            ? `📌 **Canais atuais:** ${atuais.map((id) => `<#${id}>`).join(', ')}\nUse \`!autoresposta canais <#canal>\` para adicionar/remover, ou \`!autoresposta canais limpar\` para voltar a qualquer canal.`
-            : '📌 **Canais atuais:** todos os canais\nUse `!autoresposta canais <#canal>` para restringir.'
-        );
+        const picker = linhaSelecaoCanalDe(message.guild, 'autorespcanal', atuais[0] || null, '📣 Escolha um canal para responder…');
+        if (!picker.canais.length) {
+          return message.reply('❌ Não encontrei nenhum canal de texto onde eu possa enviar mensagens.');
+        }
+        const txtAtuais = atuais.length
+          ? atuais.map((id) => `<#${id}>`).join(', ')
+          : 'todos os canais';
+        return message.reply({
+          content: `📌 **Canais atuais:** ${txtAtuais}\n🗂️ Escolha um canal abaixo para adicionar/remover, ou use \`!autoresposta canais limpar\`.`,
+          components: [picker.row, picker.botoes],
+        });
       }
       if (atuais.includes(canal.id)) {
         const nova = atuais.filter((id) => id !== canal.id);
@@ -91,9 +97,8 @@ module.exports = {
       return message.reply(`✅ Adicionado ${canal}.` + (nova.length === 1 ? ' Agora responde **somente** neste canal.' : ''));
     }
 
-	 const menu = menuEditar(message.guildId);
-	 if (!menu.components.length) return message.reply(menu.content);
-	 return message.reply({ content: menu.content, components: menu.components });
-
+    const menu = menuEditar(message.guildId);
+    if (!menu.components.length) return message.reply(menu.content);
+    return message.reply({ content: menu.content, components: menu.components });
   },
 };

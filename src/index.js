@@ -1173,6 +1173,27 @@ client.on('interactionCreate', async (interaction) => {
       const res = store.editar(interaction.guildId, palavraAntiga, novaPalavra, novaResposta);
       return interaction.reply({ content: res.ok ? '✅ ' + res.msg : '❌ ' + res.msg, flags: MessageFlags.Ephemeral });
     }
+
+    if ((interaction.isStringSelectMenu() || interaction.isButton()) && interaction.customId.startsWith('autorespcanal')) {
+      const { resolverSelecaoCanal } = require('./utils/channelPicker');
+      const store = require('./utils/autoRespostaStore');
+      const { canal, cancelado } = resolverSelecaoCanal(interaction, 'autorespcanal');
+      if (cancelado) {
+        return interaction.reply({ content: '❌ Operação cancelada.', flags: MessageFlags.Ephemeral });
+      }
+      if (!canal || !canal.isTextBased() || !canal.permissionsFor(interaction.guild.members.me)?.has('SendMessages')) {
+        return interaction.reply({ content: '❌ Canal não encontrado ou sem permissão para eu enviar mensagens.', flags: MessageFlags.Ephemeral });
+      }
+      const atuais = store.canais(interaction.guildId);
+      if (atuais.includes(canal.id)) {
+        const nova = atuais.filter((id) => id !== canal.id);
+        store.definirCanais(interaction.guildId, nova);
+        return interaction.reply({ content: '🚫 Removido ' + canal + (nova.length ? '' : ' Agora responde em qualquer canal.'), flags: MessageFlags.Ephemeral });
+      }
+      const nova = [...atuais, canal.id];
+      store.definirCanais(interaction.guildId, nova);
+      return interaction.reply({ content: '✅ Adicionado ' + canal + (nova.length === 1 ? ' Agora responde **somente** neste canal.' : ''), flags: MessageFlags.Ephemeral });
+    }
   } catch (error) {
     console.error('[Auto-resposta editar]', error);
     try {
@@ -1203,6 +1224,7 @@ function comandoDoCustomId(interaction) {
   if (id.startsWith('unlockconf:')) return 'unlock';
   if (id.startsWith('modelos:')) return 'embed';
   if (id.startsWith('gerencmd:')) return 'gerenciarcomandos';
+  if (id.startsWith('autorespcanal')) return 'autoresposta';
   if (id.startsWith('autoresp:')) return 'autoresposta';
   if (id.startsWith('custom:copy:')) return 'criarcomando';
   return null;

@@ -228,6 +228,11 @@ async function testarInteracoes() {
     ["button", "welcome:canalsel:xxxx:cancelar"],
     ["select", "welcome:canalsel:xxxx", { valores: [canal.id] }],
     ["button", "welcome:canalsel:xxxx:atual"],
+    ["select", "autoresp:editar", { valores: ["0"] }],
+    ["modal", "autoresp:editmodal:palavra", { campos: { palavra: "NovaPalavra", resposta: "Nova resposta" } }],
+    ["select", "autorespcanal", { valores: [canal.id] }],
+    ["button", "autorespcanal:cancelar"],
+    ["button", "autorespcanal:atual"],
   ];
   let okTotal = 0;
   let falhas = 0;
