@@ -66,6 +66,26 @@ function remover(guildId, palavra) {
   return { ok: true, msg: `Auto-resposta "${palavra}" removida.` };
 }
 
+function editar(guildId, palavraAntiga, novaPalavra, novaResposta) {
+  if (!guildId || !palavraAntiga) return { ok: false, msg: 'Dados inválidos.' };
+  const d = carregar(guildId);
+  if (!Array.isArray(d.respostas)) return { ok: false, msg: 'Nenhuma auto-resposta para editar.' };
+  const chave = palavraAntiga.toLowerCase().trim();
+  const novaChave = (novaPalavra || '' ).toLowerCase().trim();
+  if (!novaChave || !novaResposta) return { ok: false, msg: 'Informe palavra e resposta.' };
+  const item = d.respostas.find((r) => r.palavra.toLowerCase() === chave);
+  if (!item) return { ok: false, msg: `Nenhuma auto-resposta "${palavraAntiga}".` };
+	
+	 if (novaChave !== chave && d.respostas.some((r) => r.palavra.toLowerCase() === novaChave)) {
+
+	   return { ok: false, msg: `Já existe uma auto-resposta para "${novaPalavra}".` };
+	 }
+	 item.palavra = novaPalavra;
+	 item.resposta = novaResposta;
+	 salvar(guildId, d);
+	 return { ok: true, msg: `Auto-resposta "${palavraAntiga}" atualizada para "${novaPalavra}".` };
+}
+
 function definirCanais(guildId, canaisIds) {
   if (!guildId) return { ok: false, msg: 'Servidor inválido.' };
   const d = carregar(guildId);
@@ -74,4 +94,4 @@ function definirCanais(guildId, canaisIds) {
   return { ok: true, msg: canaisIds.length ? 'Canais atualizados.' : 'Agora responde em qualquer canal.' };
 }
 
-module.exports = { listar, canais, adicionar, remover, definirCanais };
+module.exports = { listar, canais, adicionar, remover, editar, definirCanais };

@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { comandoPode } = require('../utils/permissions');
 const store = require('../utils/autoRespostaStore');
+const { menuEditar } = require('../utils/autoRespostaPanel');
 
 const MAX_AUTORESPOSTAS = 30;
 
@@ -16,6 +17,9 @@ module.exports = {
     .addSubcommand((sub) =>
       sub.setName('ver')
         .setDescription('Lista as respostas automáticas e canais atuais'))
+    .addSubcommand((sub) =>
+      sub.setName('editar')
+        .setDescription('Abre o seletor para editar uma resposta automática'))
     .addSubcommand((sub) =>
       sub.setName('remover')
         .setDescription('Remove uma resposta automática')
@@ -44,6 +48,12 @@ module.exports = {
       }
       const res = store.adicionar(interaction.guildId, palavra, resposta);
       return interaction.reply({ content: res.ok ? `✅ ${res.msg}` : `❌ ${res.msg}`, flags: MessageFlags.Ephemeral });
+    }
+
+    if (sub === 'editar') {
+      const menu = menuEditar(interaction.guildId);
+      if (!menu.components.length) return interaction.reply({ content: menu.content, flags: MessageFlags.Ephemeral });
+      return interaction.reply({ content: menu.content, components: menu.components, flags: MessageFlags.Ephemeral });
     }
 
     if (sub === 'remover') {

@@ -1151,6 +1151,39 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
+// ----- Editar auto-resposta via select/modal (!autoresposta / /autoresposta) -----
+client.on('interactionCreate', async (interaction) => {
+  try {
+    if (interaction.isAnySelectMenu && interaction.isAnySelectMenu() && interaction.customId === 'autoresp:editar') {
+      const store = require('./utils/autoRespostaStore');
+      const { modalEditar } = require('./utils/autoRespostaPanel');
+      const palavra = interaction.values[0];
+      const item = store.listar(interaction.guildId).find((r) => r.palavra.toLowerCase() === palavra);
+      if (!item) {
+        return interaction.reply({ content: '❌ Auto-resposta não encontrada.', flags: MessageFlags.Ephemeral });
+      }
+      return interaction.showModal(modalEditar(item));
+    }
+
+    if (interaction.isModalSubmit() && interaction.customId.startsWith('autoresp:editmodal:')) {
+      const store = require('./utils/autoRespostaStore');
+      const palavraAntiga = (interaction.customId.split(':')[2] || '' );
+      const novaPalavra = interaction.fields.getTextInputValue('palavra').trim();
+      const novaResposta = interaction.fields.getTextInputValue('resposta').trim();
+      const res = store.editar(interaction.guildId, palavraAntiga, novaPalavra, novaResposta);
+      return interaction.reply({ content: res.ok ? '✅ ' + res.msg : '❌ ' + res.msg, flags: MessageFlags.Ephemeral });
+    }
+  } catch (error) {
+    console.error('[Auto-resposta editar]', error);
+    try {
+      if (!interaction.replied && !interaction.deferred) {
+
+        await interaction.reply({ content: '❌ Erro ao editar.', flags: MessageFlags.Ephemeral });
+      }
+    } catch {}
+  }
+});
+
 // ----- Permissões por cargo (!permissoes / /permissoes) -----
 const { buildPermissionsPanel, buildGrupoPanel, buildRemoverPanel } = require('./utils/permissionsPanel');
 const { setCargo, eDono, comandoPode } = require('./utils/permissions');
@@ -1170,6 +1203,7 @@ function comandoDoCustomId(interaction) {
   if (id.startsWith('unlockconf:')) return 'unlock';
   if (id.startsWith('modelos:')) return 'embed';
   if (id.startsWith('gerencmd:')) return 'gerenciarcomandos';
+  if (id.startsWith('autoresp:')) return 'autoresposta';
   if (id.startsWith('custom:copy:')) return 'criarcomando';
   return null;
 }

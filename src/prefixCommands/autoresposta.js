@@ -1,6 +1,7 @@
 const { comandoPode } = require('../utils/permissions');
 const store = require('../utils/autoRespostaStore');
 const { acharResposta } = require('../utils/autoRespostaHandler');
+const { menuEditar } = require('../utils/autoRespostaPanel');
 
 const MAX_AUTORESPOSTAS = 30;
 
@@ -8,7 +9,7 @@ module.exports = {
   name: 'autoresposta',
   aliases: ['auto'],
   description: 'Gerencia respostas automáticas por palavra-chave (adm)',
-  usage: '!autoresposta adicionar <palavra> <resposta> | !autoresposta ver | !autoresposta remover <palavra> | !autoresposta canais [#canal]',
+  usage: '!autoresposta adicionar <palavra> <resposta> | !autoresposta ver | !autoresposta editar | !autoresposta remover <palavra> | !autoresposta canais [#canal]',
 
   async execute(message) {
     if (!message.guild || !comandoPode(message.member, message.author.id, 'autoresposta')) {
@@ -35,6 +36,13 @@ module.exports = {
         `**Auto-respostas (${lista.length}):**\n${linhas.join('\n')}\n**Canais:** ${canaisTxt}`
       );
     }
+
+
+	 if (sub === 'editar') {
+	   const menu = menuEditar(message.guildId);
+	   if (!menu.components.length) return message.reply(menu.content);
+	   return message.reply({ content: menu.content, components: menu.components });
+	 }
 
     if (sub === 'adicionar') {
       const resto = args.join(' ').trim();
@@ -83,8 +91,9 @@ module.exports = {
       return message.reply(`✅ Adicionado ${canal}.` + (nova.length === 1 ? ' Agora responde **somente** neste canal.' : ''));
     }
 
-    return message.reply(
-      '❌ Subcomando inválido.\nUso: `!autoresposta adicionar <palavra> <resposta>` | `!autoresposta remover <palavra>` | `!autoresposta canais [#canal]` | `!autoresposta ver`'
-    );
+	 const menu = menuEditar(message.guildId);
+	 if (!menu.components.length) return message.reply(menu.content);
+	 return message.reply({ content: menu.content, components: menu.components });
+
   },
 };
