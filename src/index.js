@@ -2064,7 +2064,31 @@ client.on('interactionCreate', async (interaction) => {
 
 // Responde comandos de prefixo
 client.on(Events.MessageCreate, async (message) => {
-  if (message.author.bot || !message.content.startsWith(PREFIX)) return;
+  if (message.author.bot) return;
+
+  // Auto-respostas por palavra-chave: disparam em qualquer mensagem do chat
+  // (sem precisar de prefixo,, somente em servidor e nos canais configurados.
+
+
+  if (!message.content.startsWith(PREFIX) && message.guild) {
+
+    const autoStore = require('./utils/autoRespostaStore');
+    const { acharResposta } = require('./utils/autoRespostaHandler');
+    const canaisPermitidos = autoStore.canais(message.guildId);
+    if (!canaisPermitidos.length || canaisPermitidos.includes(message.channelId)) {
+
+      const resposta = acharResposta(autoStore.listar(message.guildId), message.content);
+      if (resposta) {
+        try {
+          return await message.channel.send(resposta);
+        } catch (error) {
+          console.error('[Auto resposta]', error);
+        }
+      }
+    }
+  }
+
+  if (!message.content.startsWith(PREFIX)) return;
 
 
   const args = message.content.slice(PREFIX.length).trim().split(/\s+/);
@@ -2089,26 +2113,6 @@ client.on(Events.MessageCreate, async (message) => {
       }
     }
     return;
-  }
-
-  if (message.guild) {
-    // Auto-respostas por palavra-chave (somente em servidor; canais restritos se configurados).
-
-    const autoStore = require('./utils/autoRespostaStore');
-    const { acharResposta } = require('./utils/autoRespostaHandler');
-    const canaisPermitidos = autoStore.canais(message.guildId);
-    if (!canaisPermitidos.length || canaisPermitidos.includes(message.channelId)) {
-
-
-      const resposta = acharResposta(autoStore.listar(message.guildId), message.content);
-      if (resposta) {
-        try {
-          return await message.channel.send(resposta);
-        } catch (error) {
-          console.error('[Auto resposta]', error);
-        }
-      }
-    }
   }
 
   try {
