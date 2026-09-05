@@ -1166,6 +1166,7 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     if (interaction.isModalSubmit() && interaction.customId.startsWith('autoresp:editmodal:')) {
+
       const store = require('./utils/autoRespostaStore');
       const palavraAntiga = (interaction.customId.split(':')[2] || '' );
       const novaPalavra = interaction.fields.getTextInputValue('palavra').trim();
@@ -1193,6 +1194,71 @@ client.on('interactionCreate', async (interaction) => {
       const nova = [...atuais, canal.id];
       store.definirCanais(interaction.guildId, nova);
       return interaction.reply({ content: '✅ Adicionado ' + canal + (nova.length === 1 ? ' Agora responde **somente** neste canal.' : ''), flags: MessageFlags.Ephemeral });
+    }
+
+    if (interaction.isAnySelectMenu && interaction.isAnySelectMenu() && interaction.customId === 'autoresp:acao') {
+      const { ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
+      const store = require('./utils/autoRespostaStore');
+      const { modalAdicionar, menuEditar, selectRemover } = require('./utils/autoRespostaPanel');
+      const acao = (interaction.values || [])[0] || '';
+      if (acao === 'adicionar') {
+        return interaction.showModal(modalAdicionar());
+      }
+      if (acao === 'editar') {
+        const menu = menuEditar(interaction.guildId);
+        if (!menu.components.length) return interaction.reply({ content: menu.content, flags: MessageFlags.Ephemeral });
+        return interaction.update({ content: menu.content, components: menu.components });
+      }
+      if (acao === 'remover') {
+        const menu = selectRemover(interaction.guildId);
+        if (!menu.components.length) return interaction.reply({ content: menu.content, flags: MessageFlags.Ephemeral });
+        return interaction.update({ content: menu.content, components: menu.components });
+      }
+      if (acao === 'ver') {
+        const lista = store.listar(interaction.guildId);
+        const canaisIds = store.canais(interaction.guildId);
+        const canaisTxt = canaisIds.length ? canaisIds.map((id) => '<#' + id + '>').join(', ') : 'todos os canais';
+        if (!lista.length) return interaction.update({ content: '📭 Nenhuma auto-resposta ainda.\n**Canais:** ' + canaisTxt, components: [] });
+        const linhas = lista.map((r, i) => '`' + (i + 1) + '` **' + r.palavra + '** → ' + r.resposta).join('\n');
+        return interaction.update({ content: '**Auto-respostas (' + lista.length + '):**\n' + linhas + '\n**Canais:** ' + canaisTxt, components: [] });
+      }
+      if (acao === 'limpar') {
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId('autoresp:limparsim').setLabel('✅ Sim, apagar tudo').setStyle(ButtonStyle.Danger),
+          new ButtonBuilder().setCustomId('autoresp:limparnao').setLabel('❌ Não').setStyle(ButtonStyle.Secondary)
+        );
+        return interaction.update({ content: '🧹 **Apagar TODAS as auto-respostas?**\nEssa ação não pode ser desfeita.', components: [row] });
+      }
+    }
+
+    if (interaction.isModalSubmit() && interaction.customId === 'autoresp:addmodal') {
+      const store = require('./utils/autoRespostaStore');
+      const palavra = interaction.fields.getTextInputValue('palavra').trim();
+      const resposta = interaction.fields.getTextInputValue('resposta').trim();
+      if (!palavra || !resposta) return interaction.reply({ content: '❌ Informe palavra e resposta.', flags: MessageFlags.Ephemeral });
+      const res = store.adicionar(interaction.guildId, palavra, resposta);
+      return interaction.reply({ content: res.ok ? '✅ ' + res.msg : '❌ ' + res.msg, flags: MessageFlags.Ephemeral });
+    }
+
+    if (interaction.isStringSelectMenu() && interaction.customId === 'autoresp:remover') {
+      const store = require('./utils/autoRespostaStore');
+      const palavra = interaction.values[0];
+      const res = store.remover(interaction.guildId, palavra);
+      return interaction.reply({ content: res.ok ? '✅ ' + res.msg : '❌ ' + res.msg, flags: MessageFlags.Ephemeral });
+    }
+
+    if (interaction.isButton() && interaction.customId === 'autoresp:limparsim') {
+      const store = require('./utils/autoRespostaStore');
+      store.definirCanais(interaction.guildId, []);
+      const fs = require('node:fs');
+      const path = require('node:path');
+      const arq = path.join(__dirname, '..', 'data', 'autorespostas', interaction.guildId + '.json');
+      try { fs.rmSync(arq); } catch (e) {}
+      return interaction.update({ content: '🧹 Todas as auto-respostas foram apagadas.', components: [] });
+    }
+
+    if (interaction.isButton() && interaction.customId === 'autoresp:limparnao') {
+      return interaction.update({ content: '✅ Operação cancelada.', components: [] });
     }
   } catch (error) {
     console.error('[Auto-resposta editar]', error);

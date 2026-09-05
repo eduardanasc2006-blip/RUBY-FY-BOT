@@ -233,6 +233,11 @@ async function testarInteracoes() {
     ["select", "autorespcanal", { valores: [canal.id] }],
     ["button", "autorespcanal:cancelar"],
     ["button", "autorespcanal:atual"],
+    ["select", "autoresp:acao", { valores: ["adicionar"] }],
+    ["modal", "autoresp:addmodal", { campos: { palavra: "Teste", resposta: "Resposta de teste" } }],
+    ["select", "autoresp:remover", { valores: ["0"] }],
+    ["button", "autoresp:limparsim"],
+    ["button", "autoresp:limparnao"],
   ];
   let okTotal = 0;
   let falhas = 0;

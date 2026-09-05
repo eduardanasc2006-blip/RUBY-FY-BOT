@@ -1,7 +1,7 @@
 const { comandoPode } = require('../utils/permissions');
 const store = require('../utils/autoRespostaStore');
 const { acharResposta } = require('../utils/autoRespostaHandler');
-const { menuEditar } = require('../utils/autoRespostaPanel');
+const { menuEditar, painelCentral } = require('../utils/autoRespostaPanel');
 const { linhaSelecaoCanalDe } = require('../utils/channelPicker');
 
 const MAX_AUTORESPOSTAS = 30;
@@ -97,7 +97,7 @@ module.exports = {
       return message.reply(`✅ Adicionado ${canal}.` + (nova.length === 1 ? ' Agora responde **somente** neste canal.' : ''));
     }
 
-    const menu = menuEditar(message.guildId);
+    const menu = painelCentral(message.guildId, message.guild);
     if (!menu.components.length) return message.reply(menu.content);
     return message.reply({ content: menu.content, components: menu.components });
   },

@@ -102,6 +102,68 @@ async function msg(content, mencaoCanal = null) {
   console.log(cancelou ? "OK handler cancelar" : "FALHA cancelar: " + JSON.stringify(proxResposta));
   if (!cancelou) process.exit(1);
 
+
+  // 5. Painel central: !autoresposta (sem sub) abre 2 selects
+  const mPainel = await msg("!autoresposta");
+  await prefixo.execute(mPainel);
+  const painel = mPainel.ultimaResposta;
+  const selAcao = painel.components?.[0]?.components?.[0];
+  const selCanal = painel.components?.[1]?.components?.[0];
+  const painelOk = painel.components?.length === 3
+    && selAcao.data.custom_id === "autoresp:acao"
+    && selCanal.data.custom_id === "autorespcanal"
+    && painel.components?.[2]?.components?.length > 0;
+  console.log(painelOk ? "OK painel central abre 2 selects" : "FALHA painel: " + JSON.stringify(painel));
+  if (!painelOk) process.exit(1);
+
+  // 6. Acao adicionar abre modal
+  const interAcaoAdd = { ...interSelect, isStringSelectMenu: () => true, customId: "autoresp:acao", values: ["adicionar"] };
+  let modalCapturado = null;
+  interAcaoAdd.showModal = async (modal) => { modalCapturado = modal; };
+  await client.emit("interactionCreate", interAcaoAdd);
+  const modalJson = modalCapturado && (modalCapturado.toJSON ? modalCapturado.toJSON() : modalCapturado.data);
+
+  const abriuModal = modalJson?.custom_id === "autoresp:addmodal";
+  console.log(abriuModal ? "OK acao adicionar abre modal" : "FALHA add modal: " + JSON.stringify(modalCapturado));
+  if (!abriuModal) process.exit(1);
+
+  // 7. Submetero modal adicionar cria resposta
+  const interModalAdd = { ...interSelect, isStringSelectMenu: () => false, isModalSubmit: () => true, customId: "autoresp:addmodal", fields: { getTextInputValue: (c) => (c === "palavra" ? "estoque" : c === "resposta" ? "veja #canal" : "") }, values: [] };
+  await client.emit("interactionCreate", interModalAdd);
+  const temEstoque = store2.listar(g).some((r) => r.palavra === "estoque");
+  console.log(temEstoque ? "OK modal adicionar cria resposta" : "FALHA add via modal: " + JSON.stringify(store2.listar(g)));
+  if (!temEstoque) process.exit(1);
+
+  // 8. Acao editar abre select de edicao
+  const interAcaoEditar = { ...interSelect, isStringSelectMenu: () => true, customId: "autoresp:acao", values: ["editar"], update: async (payload) => { ultimoUpdate = payload; } };
+  let ultimoUpdate = null;
+  await client.emit("interactionCreate", interAcaoEditar);
+  const abriuEditar = ultimoUpdate?.components?.[0]?.components?.[0]?.data?.custom_id === "autoresp:editar";
+  console.log(abriuEditar ? "OK acao editar abre select edicao" : "FALHA editar: " + JSON.stringify(ultimoUpdate));
+  if (!abriuEditar) process.exit(1);
+
+  // 9. Acao ver mostra lista
+  const interAcaoVer = { ...interSelect, isStringSelectMenu: () => true, customId: "autoresp:acao", values: ["ver"], update: async (payload) => { ultimoUpdate = payload; } };
+  await client.emit("interactionCreate", interAcaoVer);
+  const mostrouLista = String(ultimoUpdate.content || "").includes("estoque");
+  console.log(mostrouLista ? "OK acao ver mostra lista" : "FALHA ver: " + JSON.stringify(ultimoUpdate));
+  if (!mostrouLista) process.exit(1);
+
+  // 10. Acao limpar mostra botoes de confirmacao
+  const interAcaoLimpar = { ...interSelect, isStringSelectMenu: () => true, customId: "autoresp:acao", values: ["limpar"], update: async (payload) => { ultimoUpdate = payload; } };
+  await client.emit("interactionCreate", interAcaoLimpar);
+  const temBotoesLimpar = ultimoUpdate?.components?.[0]?.components?.length === 2
+    && ultimoUpdate.components[0].components[0].data.custom_id === "autoresp:limparsim"
+    && ultimoUpdate.components[0].components[1].data.custom_id === "autoresp:limparnao";
+  console.log(temBotoesLimpar ? "OK acao limpar mostra confirmacao" : "FALHA limpar: " + JSON.stringify(ultimoUpdate));
+  if (!temBotoesLimpar) process.exit(1);
+
+  // 11. Confirmar limpar apaga tudo
+  const interLimparSim = { ...interSelect, isStringSelectMenu: () => false, isButton: () => true, customId: "autoresp:limparsim", values: undefined, update: async (payload) => { ultimoUpdate = payload; } };
+  await client.emit("interactionCreate", interLimparSim);
+  const limpou = store2.listar(g).length === 0;
+  console.log(limpou ? "OK limpar apaga tudo" : "FALHA limpar sim: " + JSON.stringify(store2.listar(g)));
+  if (!limpou) process.exit(1);
   try { fs.rmSync(arq); } catch (e) {}
   console.log("TESTE-CANAL-OK");
 })().catch((e) => { console.error("ERRO:", e); process.exit(1); });
