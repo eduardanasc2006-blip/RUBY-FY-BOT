@@ -1,9 +1,10 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 
 const COR = 0xbeb6ff;
-// Páginas sempre visíveis + admin (só aparecem para admin)
-const ORDEM = ['inicio', 'conversor', 'estoque', 'personalizados', 'painel', 'admin'];
-const ORDEM_VISIVEL = ['inicio', 'conversor', 'estoque', 'personalizados', 'painel'];
+// Páginas sempre visíveis + admin (só aparecem para admin). A página
+// "personalizados" (comandos custom) so existe dentro de um servidor, pois
+// os comandos personalizados sao por-servidor (nao existem em DM).
+
 // Categorias entre as quais se navega com as setas (a home fica de fora.)
 const CATEGORIAS_PUBLICAS = ['conversor', 'estoque'];
 const CATEGORIAS_ADMIN = ['personalizados', 'painel', 'admin'];
@@ -134,8 +135,8 @@ const PAGINAS = {
   }),
 
 
-  personalizados: () => {
-    const lista = Object.values(customCom.listar());
+  personalizados: (guildId) => {
+    const lista = Object.values(customCom.listar(guildId));
     const linhas = [];
     if (lista.length === 0) {
       linhas.push('*Nenhum comando personalizado criado ainda.*', '');
@@ -225,11 +226,14 @@ const PAGINAS = {
   }),
 };
 
-function buildAjuda(pagina = 'inicio', isAdmin = false) {
+function buildAjuda(pagina = 'inicio', isAdmin = false, guildId = null) {
   let pag = PAGINAS[pagina] ? pagina : 'inicio';
   if ((pag === 'admin' || pag === 'painel' || pag === 'personalizados') && !isAdmin) pag = 'inicio';
+  // Comandos personalizados sao por-servidor: a pagina so existe no servidor
+  // (em DM nao ha o que listar, entao cai para a home).
+  if (!guildId && pag === 'personalizados') pag = 'inicio';
 
-  const dados = PAGINAS[pag](isAdmin);
+  const dados = PAGINAS[pag](guildId, isAdmin);;
   const embed = new EmbedBuilder()
     .setColor(COR)
     .setTitle(dados.titulo)

@@ -389,7 +389,7 @@ client.on('interactionCreate', async (interaction) => {
       const pagina = partes.length >= 3 ? partes[partes.length - 1] : partes[1];
       const admin = interaction.guild ? permitido(interaction) : false;
       const pag = (pagina === 'admin' || pagina === 'painel' || pagina === 'personalizados') && !admin ? 'inicio' : pagina;
-      return interaction.update(buildAjuda(pag, admin));
+      return interaction.update(buildAjuda(pag, admin, interaction.guildId || null));
     }
   } catch (error) {
     console.error('[Ajuda] Erro na interação:', error);
@@ -1089,7 +1089,7 @@ client.on('interactionCreate', async (interaction) => {
       const nomeCmd = partes[2];
       const idx = parseInt(partes[3], 10);
 
-      const cmd = custom.obter(nomeCmd);
+      const cmd = custom.obter(interaction.guildId, nomeCmd);
       if (!cmd || !cmd.copiaveis[idx]) {
         return interaction.reply({ content: '❌ Conteúdo não encontrado.', flags: MessageFlags.Ephemeral });
       }
@@ -1129,7 +1129,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.isButton() && interaction.customId.startsWith('gerencmd:confirm:')) {
       const custom = require('./utils/customCommands');
       const nome = (interaction.customId.split(':')[2] || '' ).trim();
-      const ok = custom.excluir(nome);
+      const ok = custom.excluir(interaction.guildId, nome);
       return interaction.update({
         content: ok ? '✅ Comando !' + nome + ' excluído.' : '❌ Comando !' + nome + ' não encontrado.',
         components: [],
@@ -2075,7 +2075,10 @@ client.on(Events.MessageCreate, async (message) => {
   if (!command) {
     const custom = require('./utils/customCommands');
     const { buildResposta } = require('./utils/customCommandsPanel');
-    const cmdCustom = custom.obter(commandName);
+    // Comandos personalizados sao por-servidor: so existem no guild em que
+    // foram criados (message.guildId). Em DM (ou outro servidor) nao respondem.
+
+    const cmdCustom = message.guild ? custom.obter(message.guildId, commandName) : null;
     if (cmdCustom) {
       try {
         const payload = buildResposta(cmdCustom);

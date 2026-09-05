@@ -9,6 +9,6 @@ module.exports = {
 
   async execute(message) {
     const admin = message.guild ? isAdmin(message.member, message.author.id) : false;
-    return message.reply({ ...buildAjuda('inicio', admin), allowedMentions: { repliedUser: false } });
+    return message.reply({ ...buildAjuda('inicio', admin, message.guildId || null), allowedMentions: { repliedUser: false } });
   },
 };

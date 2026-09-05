@@ -68,8 +68,8 @@ module.exports = {
     if (COMANDOS_RESERVADOS.includes(nomeSlug)) {
       return interaction.reply({ content: `❌ O nome **${nome}** é um comando padrão do bot. Escolha outro nome.`, flags: MessageFlags.Ephemeral });
     }
-    if (custom.existe(nomeSlug)) {
-      return interaction.reply({ content: `❌ O comando \`${nome}\` já existe. Use \`/gerenciarcomandos\` para editar.`, flags: MessageFlags.Ephemeral });
+    if (custom.existe(interaction.guildId, nomeSlug)) {
+      return interaction.reply({ content: `❌ O comando \`${nome}\` já existe neste servidor. Use \`/gerenciarcomandos\` para editar.`, flags: MessageFlags.Ephemeral });
     }
 
     // Parse copiaveis: "nome:tipo:valor" separados por ;
@@ -138,7 +138,7 @@ module.exports = {
     const embed = (tituloEmbed || corEmbed || imagemEmbed || fieldsEmbed.length)
       ? { titulo: tituloEmbed, descricao: descricao, cor: corEmbed, imagem: imagemEmbed, fields: fieldsEmbed }
       : null;
-    const cmd = custom.criar(nomeSlug, { nome, descricao, mensagem, ephemeral, copiaveis, embed });
+    const cmd = custom.criar(interaction.guildId, nomeSlug, { nome, descricao, mensagem, ephemeral, copiaveis, embed });
     if (!cmd) {
       return interaction.reply({ content: '❌ Não consegui criar o comando.', flags: MessageFlags.Ephemeral });
     }

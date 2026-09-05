@@ -10,8 +10,8 @@ const custom = require('../utils/customCommands');
 const { menuEditar } = require('../utils/customEditPanel');
 
 // Menu com os comandos salvos para o admin escolher sem digitar o nome.
-function menuExcluir() {
-  const lista = Object.values(custom.listar());
+function menuExcluir(guildId) {
+  const lista = Object.values(custom.listar(guildId));
   if (!lista.length) {
     return {
       content: '📋 Nenhum comando personalizado criado ainda. Use /criarcomando.',
@@ -56,7 +56,7 @@ module.exports = {
     if (acao === 'listar') {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-      const lista = Object.values(custom.listar());
+      const lista = Object.values(custom.listar(interaction.guildId));
       if (!lista.length) {
         return interaction.editReply('📋 Nenhum comando personalizado criado ainda. Use /criarcomando.');
       }
@@ -68,7 +68,7 @@ module.exports = {
     }
 
     if (acao === 'editar') {
-      const menu = menuEditar();
+      const menu = menuEditar(interaction.guildId);
       return interaction.reply({ content: menu.content, components: menu.components, flags: MessageFlags.Ephemeral });
     }
 
@@ -76,7 +76,9 @@ module.exports = {
       // Sempre abre a caixinha (select) com os comandos salvos, para o admin
       // escolher qual excluir sem precisar digitar o nome.
 
-      const menu = menuExcluir();
+
+
+      const menu = menuExcluir(interaction.guildId);
       return interaction.reply({ content: menu.content, components: menu.components, flags: MessageFlags.Ephemeral });
     }
   },

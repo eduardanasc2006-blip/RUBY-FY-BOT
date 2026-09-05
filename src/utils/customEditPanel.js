@@ -1,8 +1,8 @@
 const { ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder, ActionRowBuilder } = require('discord.js');
 const custom = require('./customCommands');
 
-function menuEditar() {
-  const lista = Object.values(custom.listar());
+function menuEditar(guildId) {
+  const lista = Object.values(custom.listar(guildId));
   if (!lista.length) {
     return { content: '📋 Nenhum comando personalizado criado ainda. Use /criarcomando.', components: [] };
   }

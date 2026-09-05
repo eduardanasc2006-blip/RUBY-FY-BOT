@@ -9,6 +9,6 @@ module.exports = {
 
   async execute(interaction) {
     const admin = interaction.guild ? isAdmin(interaction.member, interaction.user.id) : false;
-    return interaction.reply(buildAjuda('inicio', admin));
+    return interaction.reply(buildAjuda('inicio', admin, interaction.guildId || null));
   },
 };
