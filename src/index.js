@@ -9,11 +9,19 @@ const LOCK_FILE = path.join(__dirname, '..', '.bot.lock');
 function tentarObterLock() {
   try {
     const pid = Number(fs.readFileSync(LOCK_FILE, 'utf8'));
-    if (pid > 0) {
+    if (pid > 0 && pid !== process.pid) {
       try {
         process.kill(pid, 0); // só checa se o processo existe, sem matar
-        console.error(`⚠️ Outra instância do bot já está rodando (PID ${pid}). Encerrando para evitar respostas duplicadas.`);
-        return false;
+        // No Discloud o Node roda como PID 1 (init do container). Se o lock
+        // guardou o PID 1 de uma execucao anterior (ex.: restart/reconnect sem
+        // o handler de exit rodar), process.kill(1, 0) sempre devolve sucesso
+        // no Linux — mesmo para o proprio processo, causando falso positivo de
+        // "outra instancia". Por isso, se o PID do lock e o nosso proprio PID
+        // (checado acima no `pid !== process.pid`), assumimos o lock normalmente.
+        if (process.kill(pid, 0)) {
+          console.error(`⚠️ Outra instância do bot já está rodando (PID ${pid}). Encerrando para evitar respostas duplicadas.`);
+          return false;
+        }
       } catch {
         // PID antigo morto → pode assumir o lock
       }
