@@ -2632,4 +2632,34 @@ extrasHandlers.registrar(client);
 const customEditHandlers = require('./utils/customEditHandler');
 customEditHandlers.registrar(client);
 
+// Mantém os slash commands (/) sempre sincronizados com o código atual.
+// Como a Discloud inicia via MAIN=src/index.js (e nao via npm start/),
+
+// o deploy-commands.js sozinho nunca rodaria no boot. Registramos aqui,
+// em segundo plano e sem travar o login, para que opções como /criarcomando
+// titulo (entre outras) apareçam no Discord imediatamente ao subir/atualizar.
+
+(async () => {
+  try {
+    const fsDeploy = require('node:fs');
+    const pathDeploy = require('node:path');
+    const { REST, Routes } = require('discord.js');
+    if (!process.env.DISCORD_TOKEN || !process.env.CLIENT_ID) return;
+    const PUBLICOS = new Set(['ajuda', 'estoque', 'gamepass', 'reais', 'robux', 'taxa', 'calc']);
+    const commands = [];
+    const commandsPath = pathDeploy.join(__dirname, 'commands');
+    for (const file of fsDeploy.readdirSync(commandsPath).filter((f) => f.endsWith('.js'))) {
+      const cmd = require(pathDeploy.join(commandsPath, file)).data.toJSON();
+      cmd.integration_types = PUBLICOS.has(cmd.name) ? [0, 1] : [0];
+      cmd.contexts = [0, 1, 2];
+      commands.push(cmd);
+    }
+    await new REST().setToken(process.env.DISCORD_TOKEN)
+      .put(Routes.applicationCommands(process.env.CLIENT_ID), { body: commands });
+    console.log(`✅ ${commands.length} comandos (/) sincronizados automaticamente no boot.`);
+  } catch (error) {
+    console.error('⚠️ Falha ao sincronizar comandos (/) no boot:', error?.message || error);
+  }
+})();
+
 client.login(process.env.DISCORD_TOKEN);
