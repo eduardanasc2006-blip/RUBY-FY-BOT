@@ -103,17 +103,14 @@ async function msg(content, mencaoCanal = null) {
   if (!cancelou) process.exit(1);
 
 
-  // 5. Painel central: !autoresposta (sem sub) abre 2 selects
+  // 5. Painel central: !autoresposta (sem respostas ainda abre painel completo
   const mPainel = await msg("!autoresposta");
   await prefixo.execute(mPainel);
   const painel = mPainel.ultimaResposta;
   const selAcao = painel.components?.[0]?.components?.[0];
-  const selCanal = painel.components?.[1]?.components?.[0];
-  const painelOk = painel.components?.length === 3
-    && selAcao.data.custom_id === "autoresp:acao"
-    && selCanal.data.custom_id === "autorespcanal"
-    && painel.components?.[2]?.components?.length > 0;
-  console.log(painelOk ? "OK painel central abre 2 selects" : "FALHA painel: " + JSON.stringify(painel));
+  const painelSerializado = JSON.stringify(painel && painel.toJSON ? painel.toJSON() : painel);
+  const painelOk = painelSerializado.includes("autoresp:acao") && painelSerializado.includes("canais");
+  console.log(painelOk ? "OK painel central abre painel completo (acao + canais)" : "FALHA painel: " + JSON.stringify(painel));
   if (!painelOk) process.exit(1);
 
   // 6. Acao adicionar abre modal
@@ -123,14 +120,17 @@ async function msg(content, mencaoCanal = null) {
   await client.emit("interactionCreate", interAcaoAdd);
   const modalJson = modalCapturado && (modalCapturado.toJSON ? modalCapturado.toJSON() : modalCapturado.data);
 
-  const abriuModal = modalJson?.custom_id === "autoresp:addmodal";
+  const abriuModal = modalJson?.custom_id === "autoresp:addmodal:canais" && modalJson?.components?.[2]?.components?.[0]?.custom_id === "canais";
   console.log(abriuModal ? "OK acao adicionar abre modal" : "FALHA add modal: " + JSON.stringify(modalCapturado));
   if (!abriuModal) process.exit(1);
 
   // 7. Submetero modal adicionar cria resposta
-  const interModalAdd = { ...interSelect, isStringSelectMenu: () => false, isModalSubmit: () => true, customId: "autoresp:addmodal", fields: { getTextInputValue: (c) => (c === "palavra" ? "estoque" : c === "resposta" ? "veja #canal" : "") }, values: [] };
+  const interModalAdd = { ...interSelect, isStringSelectMenu: () => false, isModalSubmit: () => true, customId: "autoresp:addmodal:canais", fields: { getTextInputValue: (c) => (c === "palavra" ? "estoque" : c === "resposta" ? "veja #canal" : c === "canais" ? "222" : "") }, values: [] };
   await client.emit("interactionCreate", interModalAdd);
   const temEstoque = store2.listar(g).some((r) => r.palavra === "estoque");
+const temCanais = store2.listar(g).some((r) => r.palavra === "estoque" && Array.isArray(r.canais) && r.canais.includes("222"));
+console.log(temCanais ? "OK modal salva canais da resposta" : "FALHA canais na resposta: " + JSON.stringify(store2.listar(g)));
+if (!temCanais) process.exit(1);
   console.log(temEstoque ? "OK modal adicionar cria resposta" : "FALHA add via modal: " + JSON.stringify(store2.listar(g)));
   if (!temEstoque) process.exit(1);
 

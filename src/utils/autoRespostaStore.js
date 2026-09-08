@@ -40,7 +40,7 @@ function canais(guildId) {
   return Array.isArray(d.canais) ? d.canais : [];
 }
 
-function adicionar(guildId, palavra, resposta) {
+function adicionar(guildId, palavra, resposta, canaisIds) {
   if (!guildId || !palavra) return { ok: false, msg: 'Dados inválidos.' };
   const d = carregar(guildId);
   if (!Array.isArray(d.respostas)) d.respostas = [];
@@ -49,7 +49,9 @@ function adicionar(guildId, palavra, resposta) {
   if (d.respostas.some((r) => r.palavra.toLowerCase() === chave)) {
    return { ok: false, msg: `Já existe uma auto-resposta para "${palavra}".` };
   }
-  d.respostas.push({ palavra, resposta });
+  // Canais opcionais por resposta (vazio = usa canais globais ou todos).)
+  const canais = Array.isArray(canaisIds) ? canaisIds.map((id) => String(id)) : [];
+  d.respostas.push({ palavra, resposta, canais });
   salvar(guildId, d);
   return { ok: true, msg: `Auto-resposta "${palavra}" criada.` };
 }

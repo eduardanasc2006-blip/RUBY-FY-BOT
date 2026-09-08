@@ -1,6 +1,6 @@
 const { ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const store = require('./autoRespostaStore');
-const { linhaSelecaoCanalDe } = require('./channelPicker');
+const { linhaSelecaoCanalDe, canaisPublicaveis } = require('./channelPicker');
 
 function menuEditar(guildId) {
   const lista = store.listar(guildId);
@@ -48,30 +48,43 @@ function modalEditar(item) {
     );
 }
 
-function modalAdicionar() {
-  return new ModalBuilder()
-    .setCustomId('autoresp:addmodal')
-    .setTitle('➕ Adicionar auto-resposta')
-    .addComponents(
+function modalAdicionar(comCanal = false) {
+  const rows = [
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId('palavra')
+        .setLabel('Palavra que dispara a resposta')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setMaxLength(32)
+        .setPlaceholder('ex: estoque')
+    ),
+    new ActionRowBuilder().addComponents(
+      new TextInputBuilder()
+        .setCustomId('resposta')
+        .setLabel('Mensagem que o bot vai responder')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+        .setMaxLength(4000)
+        .setPlaceholder('ex: veja #canal-estoque')
+    ),
+  ];
+  if (comCanal) {
+    rows.push(
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
-          .setCustomId('palavra')
-          .setLabel('Palavra que dispara a resposta')
+          .setCustomId('canais')
+          .setLabel('Canais (opcional): IDs separados por vírgula')
           .setStyle(TextInputStyle.Short)
-          .setRequired(true)
-          .setMaxLength(32)
-          .setPlaceholder('ex: estoque')
-      ),
-      new ActionRowBuilder().addComponents(
-        new TextInputBuilder()
-          .setCustomId('resposta')
-          .setLabel('Mensagem que o bot vai responder')
-          .setStyle(TextInputStyle.Paragraph)
-          .setRequired(true)
-          .setMaxLength(4000)
-          .setPlaceholder('ex: veja #canal-estoque')
+          .setRequired(false)
+          .setPlaceholder('ex: 123456789012345678, 876543210987654321')
       )
     );
+  }
+  return new ModalBuilder()
+    .setCustomId('autoresp:addmodal' + (comCanal ? ':canais' : '' ))
+    .setTitle('➕ Adicionar auto-resposta')
+    .addComponents(...rows);
 }
 
 function selectRemover(guildId) {
@@ -103,21 +116,50 @@ function painelCentral(guildId, guild) {
     .setMinValues(1)
     .setMaxValues(1)
     .addOptions([
-      { label: '➕ Adicionar nova', description: 'Abre um modal para criar palavra e mensagem', value: 'adicionar' },
-      { label: '✏️ Editar existente', description: 'Altera palavra ou mensagem de uma resposta', value: 'editar' },
+      { label: '➕ Adicionar nova', description: 'Abre um modal para criar palavra, mensagem e canais', value: 'adicionar' },
+      { label: '✏️ Editar existente', description: 'Altera palavra, mensagem ou canais de uma resposta', value: 'editar' },
       { label: '🗑️ Remover', description: 'Apaga uma resposta existente', value: 'remover' },
       { label: '📋 Ver lista', description: 'Mostra todas as respostas e canais atuais', value: 'ver' },
+      { label: '📣 Canais (comuns)', description: 'Escolhe em quais canais TODAS as respostas respondem (ou todas)', value: 'canais' },
       { label: '🧹 Limpar tudo', description: 'Apaga todas as respostas do servidor', value: 'limpar' },
     ]);
-  const canaisSelecao = linhaSelecaoCanalDe(guild, 'autorespcanal', canaisIds[0] || null, '📣 Canais onde responder…');
   const linhas = lista.slice(0, 10).map((r, i) => `\`${i + 1}\` **${r.palavra}** → ${String(r.resposta || '' ).replace(/\s+/g, ' ').slice(0, 60)}`).join('\n');
   const content = '⚙️ **Painel de auto-respostas**\n' +
     (lista.length ? `📄 **${lista.length}** resposta(s):\n${linhas}${lista.length > 10 ? '\n…' : ''}` : '📭 Nenhuma auto-resposta ainda.') +
-    '\n**Canais:** ' + (canaisIds.length ? canaisIds.map((id) => `<#${id}>`).join(', ') : 'todos os canais');
-  if (!canaisSelecao.canais.length) {
-    return { content: content + '\n*Sem canais de texto disponíveis.*', components: [new ActionRowBuilder().addComponents(acao)] };
+    '\n**Canais (comuns):** ' + (canaisIds.length ? canaisIds.map((id) => `<#${id}>`).join(', ') : 'todos os canais');
+  if (!lista.length) {
+    return { content: content + '\n*Escolha ➕ Abaixo para adicionar.*', components: [new ActionRowBuilder().addComponents(acao)] };
   }
-  return { content, components: [new ActionRowBuilder().addComponents(acao), canaisSelecao.row, canaisSelecao.botoes] };
+  return { content, components: [new ActionRowBuilder().addComponents(acao), menuCanaisRapido(guild, canaisIds), botoesCanais(guild) ] };
+}
+
+// Select de UM canal rápido para definir a lista global (comum) de canais. No
+// mesmo painel, sem precisar trocar de página/select.
+function menuCanaisRapido(guild, canaisIds) {
+  const canais = canaisPublicaveis(guild);
+  if (!canais.length) return null;
+  return new StringSelectMenuBuilder()
+    .setCustomId('autoresp:canalrapido')
+    .setPlaceholder('📣 Definir canais comuns (adicione/remova na hora)…')
+    .setMinValues(1)
+    .setMaxValues(Math.min(canais.length, 25))
+    .addOptions(
+      canais.map((c) => ({
+        label: (canaisIds.includes(c.id) ? '✅ ' : '') + c.name,
+        description: canaisIds.includes(c.id) ? 'Clique para remover' : 'Clique para adicionar',
+        value: c.id,
+      }))
+    );
+}
+
+function botoesCanais(guild) {
+  const canais = canaisPublicaveis(guild);
+  if (!canais.length) return null;
+  return new ActionRowBuilder()
+    .addComponents(
+      new ButtonBuilder().setCustomId('autoresp:canalrapido:todos').setLabel('🌐 Todos os canais').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId('autoresp:canalrapido:limpar').setLabel('🧹 Limpar lista').setStyle(ButtonStyle.Danger)
+    );
 }
 
 module.exports = { menuEditar, modalEditar, modalAdicionar, selectRemover, painelCentral };

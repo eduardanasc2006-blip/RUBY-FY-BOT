@@ -1233,13 +1233,37 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ content: '✅ Adicionado ' + canal + (nova.length === 1 ? ' Agora responde **somente** neste canal.' : ''), flags: MessageFlags.Ephemeral });
     }
 
+    if (interaction.isStringSelectMenu() && interaction.customId === 'autoresp:canalrapido') {
+
+      const store = require('./utils/autoRespostaStore');
+      const valores = Array.isArray(interaction.values) ? interaction.values : [];
+      const atuais = store.canais(interaction.guildId);
+      const novo = [...new Set([...atuais, ...valores])];
+      store.definirCanais(interaction.guildId, novo);
+      return interaction.reply({ content: '✅ Canais comuns atualizados: ' + (novo.length ? novo.map((id) => '<#' + id + '>').join(', ') : 'todos os canais'), flags: MessageFlags.Ephemeral });
+    }
+
+    if (interaction.isButton() && interaction.customId === 'autoresp:canalrapido:todos') {
+
+      const store = require('./utils/autoRespostaStore');
+      store.definirCanais(interaction.guildId, []);
+      return interaction.update({ content: '🌐 Agora responde em **qualquer canal** do servidor.', components: [] });
+    }
+
+    if (interaction.isButton() && interaction.customId === 'autoresp:canalrapido:limpar') {
+
+      const store = require('./utils/autoRespostaStore');
+      store.definirCanais(interaction.guildId, []);
+      return interaction.reply({ content: '🧹 Lista de canais comum limpa — responde em **qualquer canal**.', flags: MessageFlags.Ephemeral });
+    }
+
     if (interaction.isAnySelectMenu && interaction.isAnySelectMenu() && interaction.customId === 'autoresp:acao') {
       const { ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
       const store = require('./utils/autoRespostaStore');
-      const { modalAdicionar, menuEditar, selectRemover } = require('./utils/autoRespostaPanel');
+      const { modalAdicionar, menuEditar, selectRemover, painelCentral } = require('./utils/autoRespostaPanel');
       const acao = (interaction.values || [])[0] || '';
       if (acao === 'adicionar') {
-        return interaction.showModal(modalAdicionar());
+        return interaction.showModal(modalAdicionar(true));
       }
       if (acao === 'editar') {
         const menu = menuEditar(interaction.guildId);
@@ -1266,15 +1290,40 @@ client.on('interactionCreate', async (interaction) => {
         );
         return interaction.update({ content: '🧹 **Apagar TODAS as auto-respostas?**\nEssa ação não pode ser desfeita.', components: [row] });
       }
+      if (acao === 'canais') {
+        const { canaisPublicaveis } = require('./utils/channelPicker');
+        const { StringSelectMenuBuilder } = require('discord.js');
+        const canais = canaisPublicaveis(interaction.guild);
+        const atuais = store.canais(interaction.guildId);
+        const sel = new StringSelectMenuBuilder()
+          .setCustomId('autoresp:canalrapido')
+          .setPlaceholder('📣 Escolha um ou mais canais (comuns)…')
+          .setMinValues(1)
+          .setMaxValues(Math.min(canais.length, 25))
+          .addOptions(canais.map((c) => ({
+            label: (atuais.includes(c.id) ? '✅ ' : '') + c.name,
+            description: atuais.includes(c.id) ? 'Clique para remover' : 'Clique para adicionar',
+            value: c.id,
+          })));
+        if (!canais.length) return interaction.update({ content: '❌ Nenhum canal de texto disponível.', components: [] });
+        const row = new ActionRowBuilder().addComponents(sel);
+        return interaction.update({ content: '📣 **Canais comuns** — escolha abaixo (pode marcar vários).\nAtual: ' + (atuais.length ? atuais.map((id) => '<#' + id + '>').join(', ') : 'todos os canais'), components: [row] });
+      }
     }
 
-    if (interaction.isModalSubmit() && interaction.customId === 'autoresp:addmodal') {
+    if (interaction.isModalSubmit() && interaction.customId.startsWith('autoresp:addmodal')) {
       const store = require('./utils/autoRespostaStore');
       const palavra = interaction.fields.getTextInputValue('palavra').trim();
       const resposta = interaction.fields.getTextInputValue('resposta').trim();
       if (!palavra || !resposta) return interaction.reply({ content: '❌ Informe palavra e resposta.', flags: MessageFlags.Ephemeral });
-      const res = store.adicionar(interaction.guildId, palavra, resposta);
-      return interaction.reply({ content: res.ok ? '✅ ' + res.msg : '❌ ' + res.msg, flags: MessageFlags.Ephemeral });
+      let canaisIds = [];
+      if (interaction.customId === 'autoresp:addmodal:canais') {
+        const bruto = interaction.fields.getTextInputValue('canais') || '';
+        canaisIds = bruto.split(/[,\s]+/) .map((s) => s.trim().replace(/[<#>]/g, '' )).filter((s) => /^\d+$/.test(s));
+        canaisIds = [...new Set(canaisIds)];
+      }
+      const res = store.adicionar(interaction.guildId, palavra, resposta, canaisIds);
+      return interaction.reply({ content: res.ok ? '✅ ' + res.msg + (canaisIds.length ? ' (canais: ' + canaisIds.map((id) => '<#' + id + '>').join(', ') + ')' : '') : '❌ ' + res.msg, flags: MessageFlags.Ephemeral });
     }
 
     if (interaction.isStringSelectMenu() && interaction.customId === 'autoresp:remover') {
@@ -2234,12 +2283,18 @@ client.on(Events.MessageCreate, async (message) => {
     const autoStore = require('./utils/autoRespostaStore');
     const { acharResposta } = require('./utils/autoRespostaHandler');
     const canaisPermitidos = autoStore.canais(message.guildId);
-    if (!canaisPermitidos.length || canaisPermitidos.includes(message.channelId)) {
+    const resposta = acharResposta(autoStore.listar(message.guildId), message.content);
+    if (resposta) {
+      // Canais da resposta tem prioridade; se vazios, usa a lista comum; se
+      // ambas vazias, responde em qualquer canal do servidor.
 
-      const resposta = acharResposta(autoStore.listar(message.guildId), message.content);
-      if (resposta) {
+      const canaisDaResposta = Array.isArray(resposta.canais) ? resposta.canais : [];
+      const canalPermitido = canaisDaResposta.length
+        ? canaisDaResposta.includes(message.channelId)
+        : (!canaisPermitidos.length || canaisPermitidos.includes(message.channelId));
+      if (canalPermitido) {
         try {
-          return await message.channel.send(resposta);
+          return await message.channel.send({ content: resposta.resposta || resposta, allowedMentions: { parse: [] } });
         } catch (error) {
           console.error('[Auto resposta]', error);
         }
