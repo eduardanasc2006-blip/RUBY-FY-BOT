@@ -1,6 +1,13 @@
-const { ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder, ChannelSelectMenuBuilder, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const store = require('./autoRespostaStore');
 const { linhaSelecaoCanalDe, canaisPublicaveis } = require('./channelPicker');
+
+function botaoVoltar() {
+  return new ButtonBuilder()
+    .setCustomId('autoresp:voltar')
+    .setLabel('⬅️ Voltar ao menu')
+    .setStyle(ButtonStyle.Secondary);
+}
 
 function menuEditar(guildId) {
   const lista = store.listar(guildId);
@@ -19,7 +26,10 @@ function menuEditar(guildId) {
         value: String(r.palavra).toLowerCase(),
       }))
     );
-  return { content: '✏️ **Editar auto-resposta** — selecione abaixo qual alterar:', components: [new ActionRowBuilder().addComponents(select)] };
+  return {
+    content: '✏️ **Editar auto-resposta** — selecione abaixo qual alterar:',
+    components: [new ActionRowBuilder().addComponents(select), new ActionRowBuilder().addComponents(botaoVoltar())],
+  };
 }
 
 function modalEditar(item) {
@@ -102,7 +112,10 @@ function selectRemover(guildId) {
         value: String(r.palavra).toLowerCase(),
       }))
     );
-  return { content: '🗑️ **Remover auto-resposta** — selecione abaixo qual apagar:', components: [new ActionRowBuilder().addComponents(select)] };
+  return {
+    content: '🗑️ **Remover auto-resposta** — selecione abaixo qual apagar:',
+    components: [new ActionRowBuilder().addComponents(select), new ActionRowBuilder().addComponents(botaoVoltar())],
+  };
 }
 
 function painelCentral(guildId, guild) {
@@ -160,4 +173,27 @@ function botoesCanais(guild) {
     );
 }
 
-module.exports = { menuEditar, modalEditar, modalAdicionar, selectRemover, painelCentral };
+// Tela exibida apos o submit do modal de criação quando o campo de canais
+// veio vazio: oferece um ChannelSelectMenu nativo (canais reais da guild,
+// multi-seleção) para escolher os canais sem digitar IDs// A palavra a resposta são passadas só para exibição (os dados ficam no cache do handler).
+function telaEscolherCanais(guild, palavra, resposta) {
+  const canais = canaisPublicaveis(guild);
+  const select = new ChannelSelectMenuBuilder()
+    .setCustomId('autoresp:pickcanais')
+    .setPlaceholder('📣 Selecione um ou mais canais…')
+    .setChannelTypes(ChannelType.GuildText)
+    .setMinValues(1)
+    .setMaxValues(Math.min(Math.max(canais.length, 1), 25))
+  const rowSelect = new ActionRowBuilder().addComponents(select);
+  const rowBotoes = new ActionRowBuilder()
+    .addComponents(
+      new ButtonBuilder().setCustomId('autoresp:picksalvar').setLabel('✅ Salvar sem canais').setStyle(ButtonStyle.Primary),
+      botaoVoltar()
+    );
+  return {
+    content: '📣 **Escolha os canais** onde esta resposta vai responder (ou salve sem canais):\n\n**Palavra:** `' + palavra + '`\n**Resposta:** ' + (String(resposta || '' ).length > 100 ? String(resposta).slice(0, 100) + '…' : String(resposta || '' )) ,
+    components: [rowSelect, rowBotoes],
+  };
+}
+
+module.exports = { menuEditar, modalEditar, modalAdicionar, selectRemover, painelCentral, botaoVoltar, telaEscolherCanais };

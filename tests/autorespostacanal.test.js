@@ -60,7 +60,7 @@ async function msg(content, mencaoCanal = null) {
     isModalSubmit: () => false,
     isRoleSelectMenu: () => false,
     isUserSelectMenu: () => false,
-    isMentionableSelectMenu: () => false,
+    isMentionableSelectMenu: () => false, isChatInputCommand: () => false, isContextMenuCommand: () => false, isMessageContextMenuCommand: () => false, isUserContextMenuCommand: () => false,
     isChannelSelectMenu: () => false,
     isAnySelectMenu: () => true,
     customId: "autorespcanal",
@@ -185,5 +185,40 @@ if (!temCanais) process.exit(1);
   const salvou = JSON.stringify(store2.listar(g)).includes("estoque") && JSON.stringify(store2.listar(g)).includes("231");
   console.log(salvou ? "OK modal pre-preenchido salva com canais" : "FALHA submit pre: " + JSON.stringify(store2.listar(g)));
   if (!salvou) process.exit(1);
+
+  // 18. Editar abre select com botao voltar, e voltar retorna ao painel
+  let ultimoUpd2 = null;
+  const interEditVoltar = { ...interSelect, isStringSelectMenu: () => true, customId: "autoresp:acao", values: ["editar"], update: async (payload) => { ultimoUpd2 = payload; } };
+  await client.emit("interactionCreate", interEditVoltar);
+  const temVoltarNaEdicao = ultimoUpd2?.components?.[1]?.components?.[0]?.data?.custom_id === "autoresp:voltar";
+  console.log(temVoltarNaEdicao ? "OK editar mostra botao voltar" : "FALHA voltar edicao: " + JSON.stringify(ultimoUpd2));
+  if (!temVoltarNaEdicao) process.exit(1);
+  const interVoltar = { ...interSelect, isStringSelectMenu: () => false, isButton: () => true, customId: "autoresp:voltar", values: undefined, update: async (payload) => { ultimoUpd2 = payload; } };
+ await client.emit("interactionCreate", interVoltar);
+  const voltouAoMenu = String(ultimoUpd2?.content || "").includes("Painel de auto-respostas") && JSON.stringify(ultimoUpd2).includes("autoresp:acao");
+  console.log(voltouAoMenu ? "OK voltar retorna ao menu principal" : "FALHA voltar menu: " + JSON.stringify(ultimoUpd2));
+ if (!voltouAoMenu) process.exit(1);
+
+
+  // 19. Criar sem canais no modal mostra seletor de canais da guild
+  let ultimaTela = null;
+  const interAddSemCanal = { ...interSelect, isStringSelectMenu: () => false, isModalSubmit: () => true, customId: "autoresp:addmodal:canais", fields: { getTextInputValue: (c) => (c === "palavra" ? "novoitem" : c === "resposta" ? "resposta nova" : "") }, reply: async (payload) => { ultimaTela = payload; } };
+ await client.emit("interactionCreate", interAddSemCanal);
+  const respTela = ultimaTela && (ultimaTela.toJSON ? ultimaTela.toJSON() : ultimaTela);
+  const tela = JSON.stringify(respTela);
+  const temSelectCanais = respTela?.components?.[0]?.components?.[0]?.data?.custom_id === "autoresp:pickcanais"
+    && respTela?.components?.[1]?.components?.[0]?.data?.custom_id === "autoresp:picksalvar";
+  console.log(temSelectCanais ? "OK criar sem canais mostra seletor de canais" : "FALHA tela canais: " + tela);
+ if (!temSelectCanais) process.exit(1);
+
+  // 20. Escolher 2 canais no ChannelSelect salva com ambos
+  let capturouUpdate = null;
+  const interPickCanais = { ...interSelect, isStringSelectMenu: () => false, isChannelSelectMenu: () => true, customId: "autoresp:pickcanais", values: ["111", "222"], update: async (payload) => { capturouUpdate = payload;; } };
+ await client.emit("interactionCreate", interPickCanais);
+  const salvouCanaisPick = store2.listar(g).some((r) => r.palavra === "novoitem" && Array.isArray(r.canais) && r.canais.includes("111") && r.canais.includes("222"));
+  console.log(salvouCanaisPick ? "OK seletor salva com multiplos canais" : "FALHA pick canais: " + JSON.stringify(store2.listar(g)));
+ if (!salvouCanaisPick) process.exit(1);
+
+
   console.log("TESTE-CANAL-OK");
 })().catch((e) => { console.error("ERRO:", e); process.exit(1); });

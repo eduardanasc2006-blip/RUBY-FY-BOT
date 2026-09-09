@@ -1188,9 +1188,53 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
+// Guarda palavra+resposta entre o submit do modal de criação e a escolha
+// de canais (ChannelSelectMenu), pois o modal não pode conter select menus.
+// Key: `${userId}:${guildId}`; limpo em 2min ou após resolver.
+const autorespCriacaoCache = new Map();
+function cacheCriacao(interaction, palavra, resposta) {
+  const key = interaction.user.id + ':' + interaction.guildId;
+  const dados = { palavra, resposta };
+  autorespCriacaoCache.set(key, dados);
+  setTimeout(() => {
+    if (autorespCriacaoCache.get(key) === dados) autorespCriacaoCache.delete(key);
+  }, 120000);
+  return dados;
+}
+
 // ----- Editar auto-resposta via select/modal (!autoresposta / /autoresposta) -----
 client.on('interactionCreate', async (interaction) => {
   try {
+    if (interaction.isButton() && interaction.customId === 'autoresp:voltar') {
+      const { painelCentral } = require('./utils/autoRespostaPanel');
+      const menu = painelCentral(interaction.guildId, interaction.guild);
+      if (!menu.components.length) return interaction.update({ content: menu.content, components: [] });
+      return interaction.update({ content: menu.content, components: menu.components });
+    }
+
+    if (interaction.isChannelSelectMenu() && interaction.customId === 'autoresp:pickcanais') {
+      const store = require('./utils/autoRespostaStore');
+      const dados = autorespCriacaoCache.get(interaction.user.id + ':' + interaction.guildId);
+      if (!dados) return interaction.update({ content: '❌ Sessão expirada. Execute /autoresposta ou !autoresposta novamente.', components: [] });
+      autorespCriacaoCache.delete(interaction.user.id + ':' + interaction.guildId);
+      const canaisIds = [...new Set((interaction.values || []) .filter((id) => /^\d+$/.test(id)))];
+      const res = store.adicionar(interaction.guildId, dados.palavra, dados.resposta, canaisIds);
+      const sucesso = res.ok ? '✅ ' + res.msg + (canaisIds.length ? ' (canais: ' + canaisIds.map((id) => '<#' + id + '>').join(', ') + ')' : '') : '❌ ' + res.msg;
+      return interaction.update({
+        content: sucesso,
+        components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('autoresp:voltar').setLabel('⬅️ Voltar ao menu').setStyle(ButtonStyle.Secondary))],
+      });
+    }
+
+    if (interaction.isButton() && interaction.customId === 'autoresp:picksalvar') {
+      const store = require('./utils/autoRespostaStore');
+      const dados = autorespCriacaoCache.get(interaction.user.id + ':' + interaction.guildId);
+      if (!dados) return interaction.update({ content: '❌ Sessão expirada. Execute /autoresposta ou !autoresposta novamente.', components: [] });
+      autorespCriacaoCache.delete(interaction.user.id + ':' + interaction.guildId);
+      const res = store.adicionar(interaction.guildId, dados.palavra, dados.resposta, []);
+      return interaction.update({ content: res.ok ? '✅ ' + res.msg : '❌ ' + res.msg, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('autoresp:voltar').setLabel('⬅️ Voltar ao menu').setStyle(ButtonStyle.Secondary))] });
+    }
+
     if (interaction.isAnySelectMenu && interaction.isAnySelectMenu() && interaction.customId === 'autoresp:editar') {
       const store = require('./utils/autoRespostaStore');
       const { modalEditar } = require('./utils/autoRespostaPanel');
@@ -1247,7 +1291,7 @@ client.on('interactionCreate', async (interaction) => {
 
       const store = require('./utils/autoRespostaStore');
       store.definirCanais(interaction.guildId, []);
-      return interaction.update({ content: '🌐 Agora responde em **qualquer canal** do servidor.', components: [] });
+      return interaction.update({ content: '🌐 Agora responde em **qualquer canal** do servidor.', components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('autoresp:voltar').setLabel('⬅️ Voltar ao menu').setStyle(ButtonStyle.Secondary))] });
     }
 
     if (interaction.isButton() && interaction.customId === 'autoresp:canalrapido:limpar') {
@@ -1279,16 +1323,17 @@ client.on('interactionCreate', async (interaction) => {
         const lista = store.listar(interaction.guildId);
         const canaisIds = store.canais(interaction.guildId);
         const canaisTxt = canaisIds.length ? canaisIds.map((id) => '<#' + id + '>').join(', ') : 'todos os canais';
-        if (!lista.length) return interaction.update({ content: '📭 Nenhuma auto-resposta ainda.\n**Canais:** ' + canaisTxt, components: [] });
+        if (!lista.length) return interaction.update({ content: '📭 Nenhuma auto-resposta ainda.\n**Canais:** ' + canaisTxt, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('autoresp:voltar').setLabel('⬅️ Voltar ao menu').setStyle(ButtonStyle.Secondary))] });
         const linhas = lista.map((r, i) => '`' + (i + 1) + '` **' + r.palavra + '** → ' + r.resposta).join('\n');
-        return interaction.update({ content: '**Auto-respostas (' + lista.length + '):**\n' + linhas + '\n**Canais:** ' + canaisTxt, components: [] });
+        return interaction.update({ content: '**Auto-respostas (' + lista.length + '):**\n' + linhas + '\n**Canais:** ' + canaisTxt, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('autoresp:voltar').setLabel('⬅️ Voltar ao menu').setStyle(ButtonStyle.Secondary))] });
       }
       if (acao === 'limpar') {
         const row = new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId('autoresp:limparsim').setLabel('✅ Sim, apagar tudo').setStyle(ButtonStyle.Danger),
           new ButtonBuilder().setCustomId('autoresp:limparnao').setLabel('❌ Não').setStyle(ButtonStyle.Secondary)
         );
-        return interaction.update({ content: '🧹 **Apagar TODAS as auto-respostas?**\nEssa ação não pode ser desfeita.', components: [row] });
+        const rowVoltar = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('autoresp:voltar').setLabel('⬅️ Voltar ao menu').setStyle(ButtonStyle.Secondary));
+        return interaction.update({ content: '🧹 **Apagar TODAS as auto-respostas?**\nEssa ação não pode ser desfeita.', components: [row, rowVoltar] });
       }
       if (acao === 'canais') {
         const { canaisPublicaveis } = require('./utils/channelPicker');
@@ -1305,14 +1350,16 @@ client.on('interactionCreate', async (interaction) => {
             description: atuais.includes(c.id) ? 'Clique para remover' : 'Clique para adicionar',
             value: c.id,
           })));
-        if (!canais.length) return interaction.update({ content: '❌ Nenhum canal de texto disponível.', components: [] });
         const row = new ActionRowBuilder().addComponents(sel);
-        return interaction.update({ content: '📣 **Canais comuns** — escolha abaixo (pode marcar vários).\nAtual: ' + (atuais.length ? atuais.map((id) => '<#' + id + '>').join(', ') : 'todos os canais'), components: [row] });
+        const rowVoltar = new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('autoresp:voltar').setLabel('⬅️ Voltar ao menu').setStyle(ButtonStyle.Secondary));
+        if (!canais.length) return interaction.update({ content: '❌ Nenhum canal de texto disponível.', components: [rowVoltar] });
+        return interaction.update({ content: '📣 **Canais comuns** — escolha abaixo (pode marcar vários).\nAtual: ' + (atuais.length ? atuais.map((id) => '<#' + id + '>').join(', ') : 'todos os canais'), components: [row, rowVoltar] });
       }
     }
 
     if (interaction.isModalSubmit() && interaction.customId.startsWith('autoresp:addmodal')) {
       const store = require('./utils/autoRespostaStore');
+      const { telaEscolherCanais } = require('./utils/autoRespostaPanel');
       const palavra = interaction.fields.getTextInputValue('palavra').trim();
       const resposta = interaction.fields.getTextInputValue('resposta').trim();
       if (!palavra || !resposta) return interaction.reply({ content: '❌ Informe palavra e resposta.', flags: MessageFlags.Ephemeral });
@@ -1322,8 +1369,16 @@ client.on('interactionCreate', async (interaction) => {
         canaisIds = bruto.split(/[,\s]+/) .map((s) => s.trim().replace(/[<#>]/g, '' )).filter((s) => /^\d+$/.test(s));
         canaisIds = [...new Set(canaisIds)];
       }
-      const res = store.adicionar(interaction.guildId, palavra, resposta, canaisIds);
-      return interaction.reply({ content: res.ok ? '✅ ' + res.msg + (canaisIds.length ? ' (canais: ' + canaisIds.map((id) => '<#' + id + '>').join(', ') + ')' : '') : '❌ ' + res.msg, flags: MessageFlags.Ephemeral });
+      // Canais já informados no modal (ou modal sem campo de canais)→ salva direto (fluxo atual preservado).
+      if (canaisIds.length || interaction.customId === 'autoresp:addmodal') {
+
+        const res = store.adicionar(interaction.guildId, palavra, resposta, canaisIds);
+        return interaction.reply({ content: res.ok ? '✅ ' + res.msg + (canaisIds.length ? ' (canais: ' + canaisIds.map((id) => '<#' + id + '>').join(', ') + ')' : '') : '❌ ' + res.msg, flags: MessageFlags.Ephemeral });
+      }
+      // Sem canais no modal: oferece o seletor de canais da guild (sem digitar IDs.
+
+      cacheCriacao(interaction, palavra, resposta);
+      return interaction.reply(telaEscolherCanais(interaction.guild, palavra, resposta));
     }
 
     if (interaction.isStringSelectMenu() && interaction.customId === 'autoresp:remover') {
@@ -1340,11 +1395,11 @@ client.on('interactionCreate', async (interaction) => {
       const path = require('node:path');
       const arq = path.join(__dirname, '..', 'data', 'autorespostas', interaction.guildId + '.json');
       try { fs.rmSync(arq); } catch (e) {}
-      return interaction.update({ content: '🧹 Todas as auto-respostas foram apagadas.', components: [] });
+      return interaction.update({ content: '🧹 Todas as auto-respostas foram apagadas.', components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('autoresp:voltar').setLabel('⬅️ Voltar ao menu').setStyle(ButtonStyle.Secondary))] });
     }
 
     if (interaction.isButton() && interaction.customId === 'autoresp:limparnao') {
-      return interaction.update({ content: '✅ Operação cancelada.', components: [] });
+      return interaction.update({ content: '✅ Operação cancelada.', components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('autoresp:voltar').setLabel('⬅️ Voltar ao menu').setStyle(ButtonStyle.Secondary))] });
     }
   } catch (error) {
     console.error('[Auto-resposta editar]', error);
