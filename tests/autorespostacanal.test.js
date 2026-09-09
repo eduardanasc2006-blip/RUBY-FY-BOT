@@ -165,5 +165,14 @@ if (!temCanais) process.exit(1);
   console.log(limpou ? "OK limpar apaga tudo" : "FALHA limpar sim: " + JSON.stringify(store2.listar(g)));
   if (!limpou) process.exit(1);
   try { fs.rmSync(arq); } catch (e) {}
+  const slashCmd = require("../src/commands/autoresposta");
+  const dataSlash = slashCmd.data.toJSON();
+  const subsSlash = (dataSlash.options || []).filter((o) => o.type === 1);
+  let ultimoSlash = null;
+  const interSlash = { guild, guildId: g, member, user: { id: uid }, isChatInputCommand: () => true, options: { getSubcommand: () => null }, reply: async (payload) => { ultimoSlash = payload; } };
+  await slashCmd.execute(interSlash);
+  const slOk = dataSlash.name === "autoresposta" && subsSlash.length === 0 && JSON.stringify(ultimoSlash).includes("autoresp:acao");
+  console.log(slOk ? "OK slash unico abre painel central" : "FALHA slash unico: " + JSON.stringify(dataSlash.options));
+  if (!slOk) process.exit(1);
   console.log("TESTE-CANAL-OK");
 })().catch((e) => { console.error("ERRO:", e); process.exit(1); });
