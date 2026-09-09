@@ -48,45 +48,43 @@ function modalEditar(item) {
     );
 }
 
-function modalAdicionar(comCanal = false) {
+function modalAdicionar(comCanal = false, preenchimento = null) {
+  const pre = preenchimento || {};
+  const palavraInput = new TextInputBuilder()
+    .setCustomId('palavra')
+    .setLabel('Palavra que dispara a resposta')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(32)
+    .setPlaceholder('ex: estoque');
+  if (pre.palavra) palavraInput.setValue(String(pre.palavra));
+  const respostaInput = new TextInputBuilder()
+    .setCustomId('resposta')
+    .setLabel('Mensagem que o bot vai responder')
+    .setStyle(TextInputStyle.Paragraph)
+    .setRequired(true)
+    .setMaxLength(4000)
+    .setPlaceholder('ex: veja #canal-estoque');
+  if (pre.resposta) respostaInput.setValue(String(pre.resposta));
   const rows = [
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder()
-        .setCustomId('palavra')
-        .setLabel('Palavra que dispara a resposta')
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true)
-        .setMaxLength(32)
-        .setPlaceholder('ex: estoque')
-    ),
-    new ActionRowBuilder().addComponents(
-      new TextInputBuilder()
-        .setCustomId('resposta')
-        .setLabel('Mensagem que o bot vai responder')
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true)
-        .setMaxLength(4000)
-        .setPlaceholder('ex: veja #canal-estoque')
-    ),
+    new ActionRowBuilder().addComponents(palavraInput),
+    new ActionRowBuilder().addComponents(respostaInput),
   ];
   if (comCanal) {
-    rows.push(
-      new ActionRowBuilder().addComponents(
-        new TextInputBuilder()
-          .setCustomId('canais')
-          .setLabel('Canais (opcional): IDs separados por vírgula')
-          .setStyle(TextInputStyle.Short)
-          .setRequired(false)
-          .setPlaceholder('ex: 123456789012345678, 876543210987654321')
-      )
-    );
+    const canaisInput = new TextInputBuilder()
+      .setCustomId('canais')
+      .setLabel('Canais (opcional): IDs separados por virgula')
+      .setStyle(TextInputStyle.Short)
+      .setRequired(false)
+      .setPlaceholder('ex: 123456789012345678, 876543210987654321');
+    if (pre.canais) canaisInput.setValue(String(pre.canais));
+    rows.push(new ActionRowBuilder().addComponents(canaisInput));
   }
   return new ModalBuilder()
-    .setCustomId('autoresp:addmodal' + (comCanal ? ':canais' : '' ))
+    .setCustomId('autoresp:addmodal' + (comCanal ? ':canais' : ''))
     .setTitle('➕ Adicionar auto-resposta')
     .addComponents(...rows);
 }
-
 function selectRemover(guildId) {
   const lista = store.listar(guildId);
   if (!lista.length) {
