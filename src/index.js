@@ -1434,6 +1434,7 @@ function comandoDoCustomId(interaction) {
   if (id.startsWith('autorespcanal')) return 'autoresposta';
   if (id.startsWith('autoresp:')) return 'autoresposta';
   if (id.startsWith('custom:copy:')) return 'criarcomando';
+  if (id.startsWith('metaspainel:') || id.startsWith('metasmodal:')) return 'metas';
   return null;
 }
 function permitido(interaction) {
@@ -2761,6 +2762,273 @@ if (interaction.isStringSelectMenu() || interaction.isButton()) {
           content: 'Erro ao processar o painel.',
           flags: MessageFlags.Ephemeral
         });
+      }
+    } catch {}
+  }
+});
+
+
+// ----- Compra: painel /comprar, pedidos, confirmacao/cancelamento e metas -----
+const { escolherCategoria, escolherProduto, escolherQuantidade, mensagemPedido } = require('./utils/comprarPanel');
+const pedidoStore = require('./utils/pedidoStore');
+const estoqueCompras = require('./utils/estoque');
+const comprasStore = require('./utils/comprasStore');
+const metasStoreCompra = require('./utils/metasStore');
+const { buildMetasPainel, telaEscolherCargo, telaEscolherTipo } = require('./utils/metasPanel');
+
+async function cargoDaInteracao(interaction, roleId) {
+  let role = interaction.guild?.roles?.cache?.get(roleId) || null;
+  if (!role && interaction.guild?.roles?.fetch) {
+    try { role = await interaction.guild.roles.fetch(roleId).catch(() => null); } catch { role = null; }
+  }
+  return role;
+}
+
+// Avalia as metas do servidor contra os dados previstos do cliente (apos a venda).
+function metasConquistadas(guildId, clienteId, valor) {
+  const dados = comprasStore.dadosDoCliente(guildId, clienteId);
+  const novasVendas = (dados.vendas || 0) + 1;
+  const novoGasto = (dados.gasto || 0) + (valor ||  0);
+  const conquistadas = [];
+  for (const m of metasStoreCompra.listaMetas(guildId)) {
+    if (!m || !m.cargoId) continue;
+    const atingiu = m.tipo === 'valor'
+      ? novoGasto >= (m.meta || 0)
+      : novasVendas >= (m.meta || 0);
+    if (atingiu) conquistadas.push(m);
+  }
+  return conquistadas;
+}
+
+client.on('interactionCreate', async (interaction) => {
+  try {
+    const id = interaction.customId || '';
+    if (!id.startsWith('comp:') && !id.startsWith('metaspainel:') && !id.startsWith('metasmodal:')) return;
+
+    const partes = id.split(':');
+    const acao = partes[1];
+    const guildId = interaction.guildId || '';
+
+    // ----- Painel de compra (/comprar) -----
+    if (id.startsWith('comp:')) {
+      if (!interaction.guild) {
+        return interaction.reply({ content: '❌ Isso só funciona no servidor.', flags: MessageFlags.Ephemeral });
+      }
+
+      if (acao === 'cat') {
+        return interaction.update(escolherProduto(guildId, partes[2]));
+      }
+      if (acao === 'voltar') {
+        return interaction.update(escolherCategoria(guildId));
+      }
+      if (acao === 'prod') {
+        return interaction.update(escolherQuantidade(guildId, partes[2], partes[3]));
+      }
+
+      if (acao === 'qtd') {
+        const catId = partes[2];
+        const prodId = partes[3];
+        const qtd = parseInt(partes[4], 10) || 0;
+        const p = estoqueCompras.produto(catId, prodId);
+        if (!p || qtd <= 0) {
+          return interaction.reply({ content: '❌ Produto ou quantidade inválida.', flags: MessageFlags.Ephemeral });
+        }
+        if (p.controlarQtd) {
+          const disponivel = pedidoStore.disponivel(guildId, p);
+          if (disponivel < qtd) {
+            return interaction.reply({ content: '❌ Estoque insuficiente agora. A quantidade reservada pode ter mudado. Tente novamente.', flags: MessageFlags.Ephemeral });
+          }
+        }
+        const pedido = pedidoStore.criar(guildId, {
+          clienteId: interaction.user.id,
+          clienteTag: interaction.user.tag || interaction.user.username || null,
+          catId, prodId,
+          itemNome: p.nome,
+          quantidade: qtd,
+          valor: Math.round((p.valor ||  0) * qtd * 100) / 100,
+        });
+        return interaction.update(mensagemPedido(guildId, pedido));
+      }
+
+      if (acao === 'confirmar' || acao === 'cancelar') {
+        if (!comandoPode(interaction.member, interaction.user.id, 'comprar')) {
+          return interaction.reply({
+            content: '🔒 Somente administradores ou equipe autorizada podem confirmar ou cancelar pedidos.',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+        const pedidoId = partes[2];
+        const pedido = pedidoStore.obter(guildId, pedidoId);
+        if (!pedido) {
+          return interaction.reply({ content: '❌ Pedido não encontrado.', flags: MessageFlags.Ephemeral });
+        }
+        if (pedido.status !== 'pendente') {
+          return interaction.reply({
+            content: '❌ Este pedido já foi processado (não é mais possível alterá-lo).',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        if (acao === 'cancelar') {
+          pedidoStore.atualizar(guildId, pedidoId, {
+            status: 'cancelado',
+            canceladoEm: Date.now(),
+          });
+          return interaction.update(mensagemPedido(guildId, pedidoStore.obter(guildId, pedidoId)));
+        }
+
+        // ----- Confirmacao do pagamento (uma unica vez) -----
+        const produto = estoqueCompras.produto(pedido.catId, pedido.prodId);
+        if (produto && produto.controlarQtd) {
+          const reservadosOutros = pedidoStore.reservado(guildId, pedido.catId, pedido.prodId) - pedido.quantidade;
+          const disponivelReal = (produto.quantidade ||  0) - reservadosOutros;
+          if (disponivelReal < pedido.quantidade) {
+
+            return interaction.reply({
+              content: '❌ Estoque insuficiente para este pedido agora.. Peça ao cliente para aguardar reposição ou cancele o pedido.',
+              flags: MessageFlags.Ephemeral,
+            });
+          }
+          estoqueCompras.setQuantidade(pedido.catId, pedido.prodId, (produto.quantidade ||  0) - pedido.quantidade);
+        }
+
+        const conquistadas = metasConquistadas(guildId, pedido.clienteId, pedido.valor);
+        comprasStore.registrarVenda(guildId, pedido.clienteId, pedido.valor, conquistadas.map((m) => m.cargoNome || `<@&${m.cargoId}>`));
+        pedidoStore.atualizar(guildId, pedidoId, {
+          status: 'confirmado',
+          confirmadoEm: Date.now(),
+          confirmadoPor: interaction.user.id,
+        });
+
+        // Adiciona os cargos conquistados (acumulativo, sem remover nenhum)
+        if (conquistadas.length) {
+          const membroAlvo = interaction.guild?.members?.cache?.get(pedido.clienteId) ||
+            (await interaction.guild?.members?.fetch(pedido.clienteId).catch(() => null));
+          for (const m of conquistadas) {
+            try {
+              if (membroAlvo) await membroAlvo.roles.add(m.cargoId);
+            } catch (e) {
+              console.error('[Compra] Falha ao adicionar cargo:', e?.message || e);
+            }
+          }
+        }
+
+        return interaction.update(mensagemPedido(guildId, pedidoStore.obter(guildId, pedidoId)));
+      }
+
+      return interaction.reply({ content: '❌ Ação desconhecida.', flags: MessageFlags.Ephemeral });
+    }
+
+    // ----- Painel de metas (/metas) -----
+    const userId = partes[partes.length - 1];
+    if (interaction.user.id !== userId) {
+      return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
+    }
+    if (!comandoPode(interaction.member, interaction.user.id, 'metas')) {
+      return interaction.reply({ content: '🔒 Somente administradores ou equipe autorizada.', flags: MessageFlags.Ephemeral });
+    }
+    if (!interaction.guild) {
+      return interaction.reply({ content: '❌ Isso só funciona no servidor.', flags: MessageFlags.Ephemeral });
+    }
+
+    if (id.startsWith('metaspainel:')) {
+      if (acao === 'add') {
+        return interaction.update(telaEscolherCargo(interaction.guild, userId, 'add', ''));
+      }
+      if (acao === 'edit') {
+        const metaId = partes[2];
+        const meta = metasStoreCompra.meta(guildId, metaId);
+        if (!meta) {
+          return interaction.reply({ content: '❌ Meta não encontrada.', flags: MessageFlags.Ephemeral });
+        }
+        return interaction.update(telaEscolherCargo(interaction.guild, userId, 'edit', metaId, meta.cargoId));
+      }
+      if (acao === 'rm') {
+        metasStoreCompra.removerMeta(guildId, partes[2]);
+        return interaction.update(buildMetasPainel(interaction.guild, userId));
+      }
+      if (acao === 'refresh') {
+        return interaction.update(buildMetasPainel(interaction.guild, userId));
+      }
+      if (acao === 'cancel') {
+        return interaction.update(buildMetasPainel(interaction.guild, userId));
+      }
+
+      if (interaction.isRoleSelectMenu() && acao === 'role') {
+        const modo = partes[2];
+        const metaId = modo === 'edit' ? partes[3] : '';
+        const roleId = interaction.values[0];
+        const role = await cargoDaInteracao(interaction, roleId);
+        if (!role) {
+          return interaction.reply({ content: '❌ Cargo não encontrado neste servidor.', flags: MessageFlags.Ephemeral });
+        }
+        return interaction.update(telaEscolherTipo(interaction.guild, userId, modo, metaId, role.id, role.name));
+      }
+
+      if (interaction.isStringSelectMenu() && acao === 'tipo') {
+        const modo = partes[2];
+        const metaId = modo === 'edit' ? partes[3] : '';
+        const roleId = partes[partes.length - 2];
+        const tipo = interaction.values[0];
+        const modal = new ModalBuilder()
+          .setCustomId(`metasmodal:${modo}:${tipo}:${metaId}:${roleId}:${userId}`)
+          .setTitle(modo === 'edit' ? '✏️ Editar meta' : '➕ Nova meta')
+          .addComponents(
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('meta')
+                .setLabel(tipo === 'valor' ? 'Valor total gasto (R$)' : 'Quantidade de vendas')
+                .setPlaceholder(tipo === 'valor' ? 'Ex:  50' : 'Ex:  10')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true)
+            )
+          );
+        if (modo === 'edit') {
+          const metaAtual = metasStoreCompra.meta(guildId, metaId);
+          if (metaAtual) modal.components[0].components[0].setValue(String(metaAtual.meta));
+        }
+        return interaction.showModal(modal);
+      }
+    }
+
+    if (interaction.isModalSubmit() && id.startsWith('metasmodal:')) {
+      const modo = partes[1];
+      const tipo = partes[2] === 'valor' ? 'valor' : 'vendas';
+      const metaId = modo === 'edit' ? partes[3] : '';
+      const roleId = partes[partes.length - 2];
+      const role = await cargoDaInteracao(interaction, roleId);
+      if (!role) {
+        return interaction.reply({ content: '❌ Cargo não encontrado neste servidor.', flags: MessageFlags.Ephemeral });
+      }
+      const bruto = interaction.fields.getTextInputValue('meta').trim().replace(/\./g, '').replace(/,/g, '.')
+      const metaNum = parseFloat(bruto);
+      if (isNaN(metaNum) || metaNum <=  0) {
+        return interaction.reply({ content: '❌ Meta inválida. Informe um número maior que zero.', flags: MessageFlags.Ephemeral });
+      }
+
+      if (modo === 'edit') {
+        metasStoreCompra.atualizarMeta(guildId, metaId, {
+          cargoId: role.id,
+          cargoNome: role.name,
+          tipo,
+          meta: metaNum,
+        });
+      } else {
+        metasStoreCompra.addMeta(guildId, {
+          cargoId: role.id,
+          cargoNome: role.name,
+          tipo,
+          meta: metaNum,
+        });
+      }
+      return interaction.update(buildMetasPainel(interaction.guild, userId));
+    }
+  } catch (error) {
+    console.error('[Comprar/Metas] Erro na interação:', error?.message || error);
+    try {
+      if (interaction.isRepliable()) {
+        if (interaction.deferred || interaction.replied) return;
+        return interaction.reply({ content: '❌ Ocorreu um erro ao processar esta interação.', flags: MessageFlags.Ephemeral });
       }
     } catch {}
   }

@@ -37,4 +37,44 @@ b.cargos.push(cargoNome);
   salvar();
 }
 
-module.exports = { base, somarPedido, addCargoMeta };
+
+// ----- Controle por cliente (para as metas e o perfil) -----
+// Os dados ficam internos: o /cliente so mostra cargos conquistados.
+
+
+function cliente(guildId, clienteId) {
+  const b = base(guildId);
+  if (!b.clientes) b.clientes = {};
+  if (!b.clientes[clienteId]) {
+    b.clientes[clienteId] = { vendas:  0, gasto:  0, cargos: [] };
+    salvar();
+  }
+  return b.clientes[clienteId];
+}
+
+// Registra uma venda confirmada para um cliente (uma unica vez por pedido).
+function registrarVenda(guildId, clienteId, valor, cargosNovos = []) {
+
+  const c = cliente(guildId, clienteId);
+  c.vendas += 1;
+  c.gasto += valor;
+  c.cargos = [...new Set([...c.cargos, ...cargosNovos])];
+  salvar();
+}
+
+// Lista os cargos ja conquistados pelo cliente.
+
+function cargosDoCliente(guildId, clienteId) {
+
+  const c = cliente(guildId, clienteId);
+  return c.cargos || [];
+}
+
+// Dados brutos de venda do cliente (para o sistema de metas;nao exibir no perfil).
+function dadosDoCliente(guildId, clienteId) {
+
+  const c = cliente(guildId, clienteId);
+  return { vendas: c.vendas ||  0, gasto: c.gasto ||  0 };
+}
+
+module.exports = { base, somarPedido, addCargoMeta, cliente, registrarVenda, cargosDoCliente, dadosDoCliente };

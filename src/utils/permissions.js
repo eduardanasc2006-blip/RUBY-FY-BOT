@@ -46,8 +46,14 @@ const GRUPOS = [
   {
     id: 'custom',
     nome: '🧩 Comandos personalizados',
-    descricao: 'Criar, editar e excluir comandos personalizados.',
+    descricao: 'Criar.. editar e excluir comandos personalizados.',
     comandos: ['criarcomando', 'gerenciarcomandos', 'autoresposta'],
+  },
+  {
+    id: 'vendas',
+    nome: '🛒 Vendas e pedidos',
+    descricao: 'Gerenciar pedidos.. metas e perfil de clientes.',
+    comandos: ['comprar', 'metas', 'cliente'],
   },
   {
     id: 'backup',

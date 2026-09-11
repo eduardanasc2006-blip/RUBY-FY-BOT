@@ -238,6 +238,23 @@ async function testarInteracoes() {
     ["select", "autoresp:remover", { valores: ["0"] }],
     ["button", "autoresp:limparsim"],
     ["button", "autoresp:limparnao"],
+    ["button", "comp:cat:xxxx"],
+    ["button", "comp:voltar"],
+    ["button", "comp:prod:xxxx:xxxx"],
+    ["button", "comp:qtd:xxxx:xxxx:2"],
+    ["button", "comp:confirmar:xxxx"],
+    ["button", "comp:cancelar:xxxx"],
+    ["button", "metaspainel:add:111111111111111111"],
+    ["button", "metaspainel:edit:xxxx:111111111111111111"],
+    ["button", "metaspainel:rm:xxxx:111111111111111111"],
+    ["button", "metaspainel:refresh:111111111111111111"],
+    ["button", "metaspainel:cancel:111111111111111111"],
+    ["roleselect", "metaspainel:role:add:111111111111111111", { valores: ["0"] }],
+    ["roleselect", "metaspainel:role:edit:xxxx:111111111111111111", { valores: ["0"] }],
+    ["select", "metaspainel:tipo:add:xxxx:111111111111111111", { valores: ["vendas"] }],
+    ["select", "metaspainel:tipo:edit:xxxx:xxxx:111111111111111111", { valores: ["valor"] }],
+    ["modal", "metasmodal:add:vendas:xxxx:111111111111111111", { campos: { meta: "10" } }],
+    ["modal", "metasmodal:edit:vendas:xxxx:xxxx:111111111111111111", { campos: { meta: "50" } }],
   ];
   let okTotal = 0;
   let falhas = 0;
