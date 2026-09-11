@@ -33,7 +33,7 @@ checa('Admin home mostra Painel', botoesAdmin.includes('ajuda:cat:painel'));
 // Navegação: público só navega entre as públicas
 const navP = buildAjuda('conversor', false).components.find((r) => r.components.some((b) => b.data.custom_id.startsWith('ajuda:nav:')));
 const idsNavP = navP.components.map((b) => b.data.custom_id);
-checa('Nav publica prev para estoque', idsNavP.includes('ajuda:nav:prev:estoque'));
+checa('Nav publica prev para compras', idsNavP.includes('ajuda:nav:prev:compras'));
 checa('Nav publica next para estoque', idsNavP.includes('ajuda:nav:next:estoque'));
 
 // Admin navega por todas categorias

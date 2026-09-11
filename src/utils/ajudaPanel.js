@@ -6,7 +6,7 @@ const COR = 0xbeb6ff;
 // os comandos personalizados sao por-servidor (nao existem em DM).
 
 // Categorias entre as quais se navega com as setas (a home fica de fora.)
-const CATEGORIAS_PUBLICAS = ['conversor', 'estoque'];
+const CATEGORIAS_PUBLICAS = ['conversor', 'estoque', 'compras'];
 const CATEGORIAS_ADMIN = ['personalizados', 'painel', 'admin'];
 
 // Lista central de comandos (prefixo e slash) para o menu de ajuda.
@@ -43,7 +43,10 @@ const COMANDOS = [
  { grupo: 'Conversor', cmd: 'reais', desc: 'Converte reais em Robux.', admin: false },
  { grupo: 'Conversor', cmd: 'gamepass', desc: 'Calcula o valor do Game Pass.', admin: false },
  { grupo: 'Conversor', cmd: 'taxa', desc: 'Mostra as taxas atuais.', admin: false },
- { grupo: 'Estoque', cmd: 'estoque', desc: 'Mostra produtos e preços (ou busca: !estoque <nome>).', admin: false },
+ { grupo: 'Estoque', cmd: 'estoque', desc: 'Mostra produtos e preços ( ou busca: !estoque <nome>).', admin: false },
+ { grupo: 'Compras', cmd: 'comprar', desc: 'Inicia uma compra pelos produtos do estoque.', admin: false },
+ { grupo: 'Compras', cmd: 'cliente', desc: 'Mostra os cargos de cliente conquistados.', admin: false },
+ { grupo: 'Compras', cmd: 'metas', desc: 'Configura metas de cargos para clientes.', admin: true },
  { grupo: 'Painéis', cmd: 'painel', desc: 'Gerenciador central dos painéis fixos.', admin: true },
  { grupo: 'Painéis', cmd: 'tabela', desc: 'Publica o painel de conversão.', admin: true },
  { grupo: 'Painéis', cmd: 'painelestoque', desc: 'Fixa o painel de estoque.', admin: true },
@@ -91,6 +94,9 @@ const PAGINAS = {
       '☁️ **ESTOQUE**',
       '*Veja os produtos disponíveis e seus valores.*',
       '',
+      '☁️ **COMPRAS**',
+      '*Compre produtos do estoque direto pelo bot.*',
+      '',
       '☁️ **ADMINISTRAÇÃO**',
       '*Configurações disponíveis para administradores.*',
       '',
@@ -131,6 +137,24 @@ const PAGINAS = {
       '',
       '➜ **!estoque**',
       '*Abra o painel de estoque e escolha uma categoria.*',
+    ].join('\n'),
+  }),
+
+  compras: () => ({
+    titulo: '☁️ COMPRAS',
+    descricao: [
+      '*Compre produtos do estoque direto pelo bot, dentro do seu ticket.*',
+      '',
+      '➜ **/comprar**',
+      '*Inicia a compra: escolha categoria, produto e quantidade.*',
+      '',
+      '➜ **/cliente <@usuário>**',
+      '*Mostra os cargos de cliente já conquistados.*',
+      '',
+      '➜ **/metas (adm)**',
+      '*Configura metas de cargos para clientes.*',
+      '',
+      '*Após o pedido, envie o comprovante no ticket e aguarde a confirmação da equipe.*',
     ].join('\n'),
   }),
 
@@ -186,6 +210,12 @@ const PAGINAS = {
       '',
       '➜ **!configestoque (adm)**',
       '*Gerencia categorias, produtos, valores e estoque.*',
+      '',
+      '➜ **/metas (adm)**',
+      '*Configura metas de cargos para clientes.*',
+      '',
+      '➜ **/comprar (adm)**',
+      '*Aprova ou cancela pedidos confirmando/cancelando nos botões do pedido.*',
       '',
       '➜ **!embed (adm)**',
       '*Cria uma embed no canal.*',
@@ -249,6 +279,7 @@ function buildAjuda(pagina = 'inicio', isAdmin = false, guildId = null) {
     const categorias = new ActionRowBuilder().addComponents(
       new ButtonBuilder().setCustomId('ajuda:cat:conversor').setEmoji('🎮').setLabel('Conversor').setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId('ajuda:cat:estoque').setEmoji('📦').setLabel('Estoque').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId('ajuda:cat:compras').setEmoji('🛒').setLabel('Compras').setStyle(ButtonStyle.Primary),
     );
     rows.push(categorias);
 
