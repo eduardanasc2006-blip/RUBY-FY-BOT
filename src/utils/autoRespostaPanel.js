@@ -141,7 +141,8 @@ function painelCentral(guildId, guild) {
   if (!lista.length) {
     return { content: content + '\n*Escolha ➕ Abaixo para adicionar.*', components: [new ActionRowBuilder().addComponents(acao)] };
   }
-  return { content, components: [new ActionRowBuilder().addComponents(acao), menuCanaisRapido(guild, canaisIds), botoesCanais(guild) ] };
+  const linhasExtras = [menuCanaisRapido(guild, canaisIds), botoesCanais(guild)].filter(Boolean);
+  return { content, components: [new ActionRowBuilder().addComponents(acao), ...linhasExtras] };
 }
 
 // Select de UM canal rápido para definir a lista global (comum) de canais. No
