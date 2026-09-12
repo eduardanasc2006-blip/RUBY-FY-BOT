@@ -39,6 +39,7 @@ function publicoCategorias(guildId) {
 }
 
 function publicoProdutos(guildId, catId) {
+  const cats = estoque.categorias(guildId);
   const cat = estoque.categoria(guildId, catId);
   if (!cat) return publicoCategorias(guildId);
 
@@ -49,6 +50,12 @@ function publicoProdutos(guildId, catId) {
     const desc = p.descricao ? `\n_${p.descricao}_` : '';
     return `${s.emoji} **${p.nome}**\n💵 ${formatBRL(p.valor)}\n${s.texto}${qtd}${desc}`;
   });
+
+  const idx = cats.findIndex((c) => c.id === catId);
+  const nav = [];
+  if (idx > 0) nav.push(btn(`estfixo:prev:${cats[idx - 1].id}`, `◀️ ${emojiDa(cats[idx - 1])} ${cats[idx - 1].nome}`, ButtonStyle.Secondary));
+  nav.push(btn('estfixo:voltar', '⬅️ Categorias', ButtonStyle.Primary));
+  if (idx >= 0 && idx < cats.length - 1) nav.push(btn(`estfixo:next:${cats[idx + 1].id}`, `${emojiDa(cats[idx + 1])} ${cats[idx + 1].nome} ▶️`, ButtonStyle.Secondary));
 
   const embed = new EmbedBuilder()
     .setColor(COR)
@@ -64,7 +71,7 @@ function publicoProdutos(guildId, catId) {
 
   return {
     embeds: [embed],
-    components: [row(btn('estfixo:voltar', '⬅️ Voltar às categorias', ButtonStyle.Secondary))],
+    components: [row(...nav)],
   };
 }
 

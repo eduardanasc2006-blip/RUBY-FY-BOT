@@ -2,6 +2,36 @@ const assert = require('node:assert');
 const estoquePanel = require('../src/utils/estoquePanel');
 const estoque = require('../src/utils/estoque');
 
+// Navegação entre categorias no painel público (!estoque / painel fixo)
+function testeNavegacao() {
+  const G = 'g-nav-test';
+  const c1 = estoque.addCategoria(G, 'Godlys');
+  const c2 = estoque.addCategoria(G, 'Soltas');
+  const c3 = estoque.addCategoria(G, 'Míticas');
+  estoque.addProduto(G, c1.id, { nome: 'Iceblaster', valor: 150, controlarQtd: true, quantidade: 3 });
+
+  const first = estoquePanel.publicoProdutos(G, c1.id);
+  const idsFirst = first.components[0].components.map((b) => b.data.custom_id);
+  assert.ok(idsFirst.includes(`estfixo:next:${c2.id}`), 'primeira categoria mostra a próxima');
+  assert.ok(idsFirst.includes('estfixo:voltar'), 'tem botão voltar');
+  assert.ok(!idsFirst.some((i) => i.startsWith('estfixo:prev:')), 'primeira categoria não mostra anterior');
+
+  const middle = estoquePanel.publicoProdutos(G, c2.id);
+  const idsMiddle = middle.components[0].components.map((b) => b.data.custom_id);
+  assert.ok(idsMiddle.includes(`estfixo:prev:${c1.id}`), 'categoria do meio mostra anterior');
+  assert.ok(idsMiddle.includes(`estfixo:next:${c3.id}`), 'categoria do meio mostra próxima');
+
+  const last = estoquePanel.publicoProdutos(G, c3.id);
+  const idsLast = last.components[0].components.map((b) => b.data.custom_id);
+  assert.ok(idsLast.includes(`estfixo:prev:${c2.id}`), 'última categoria mostra anterior');
+  assert.ok(!idsLast.some((i) => i.startsWith('estfixo:next:')), 'última categoria não mostra próxima');
+
+  const fs = require('node:fs');
+  const path = require('node:path');
+  try { fs.rmSync(path.join(__dirname, '..', 'data', 'estoque', `${G}.json`)); } catch {}
+  console.log('teste navegação painel estoque OK');
+}
+
 // Paginação das telas de escolha de categoria/produto no painel de estoque.
 // Antes, só os 5 primeiros itens apareciam (slice(0,5)) e o resto ficava inacessível.
 
@@ -54,3 +84,6 @@ try {
   const arquivo = path.join(__dirname, '..', 'data', 'estoque', `${GUILD}.json`);
   try { fs.rmSync(arquivo); } catch {}
 }
+
+testeNavegacao();
+console.log('SUITE PAGINACAO + NAVEGACAO OK');

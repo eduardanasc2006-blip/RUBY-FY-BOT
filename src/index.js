@@ -648,7 +648,7 @@ client.on('interactionCreate', async (interaction) => {
       const payload =
         acao === 'voltar'
           ? estoquePanel.publicoCategorias(interaction.guildId)
-          : acao === 'cat'
+          : acao === 'cat' || acao === 'prev' || acao === 'next'
             ? estoquePanel.publicoProdutos(interaction.guildId, catId)
             : null;
       if (!payload) return;
