@@ -48,7 +48,7 @@ async function enviarSolicitacao(client, guildId, pedido) {
     const embed = new EmbedBuilder()
       .setColor(0x2ecc71)
       .setTitle('🧾 Comprovante solicitado')
-      .setDescription(`**Pedido #${pedido.id}** confirmado — peça para o cliente enviar o proof com \`/proof link:<url>\`.`)
+      .setDescription(`**Pedido #${pedido.id}** confirmado — peça para o cliente enviar o comprovante:\n\n\`/proof imagem:<foto>\` (print/foto da entrega)\nou \`/proof link:<url>\``)
       .addFields(
         { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
         { name: '📦 Item', value: pedido.itemNome, inline: true },
@@ -63,7 +63,9 @@ async function enviarSolicitacao(client, guildId, pedido) {
 }
 
 // Publica o comprovante enviado pelo cliente no canal de proofs (para a equipe).
-async function publicarProof(client, guildId, autor, pedido, link) {
+// - ehImagem=true: mostra a imagem inline na embed (upload direto pelo cliente)
+// - link: mostra link clicável
+async function publicarProof(client, guildId, autor, pedido, url, ehImagem) {
   const canalId = obter(guildId);
   if (!canalId || !client || !pedido) return false;
   try {
@@ -72,13 +74,16 @@ async function publicarProof(client, guildId, autor, pedido, link) {
     const embed = new EmbedBuilder()
       .setColor(0x2ecc71)
       .setTitle('📎 Comprovante recebido')
-      .setDescription(link ? `[Abrir comprovante](${link})` : '*Anexo enviado separadamente.*')
-      .addFields(
-        { name: '🧾 Pedido', value: `#${pedido.id}`, inline: true },
-        { name: '👤 Cliente', value: autor ? `<@${autor.id}>` : `<@${pedido.clienteId}>`, inline: true },
-        { name: '📦 Item', value: pedido.itemNome, inline: true },
-        { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true }
-      );
+      .setDescription(ehImagem ? '*Imagem do comprovante:*' : (url ? `[Abrir comprovante](${url})` : '*Comprovante enviado.*'));
+    if (ehImagem && url) {
+      embed.setImage(url);
+    }
+    embed.addFields(
+      { name: '🧾 Pedido', value: `#${pedido.id}`, inline: true },
+      { name: '👤 Cliente', value: autor ? `<@${autor.id}>` : `<@${pedido.clienteId}>`, inline: true },
+      { name: '📦 Item', value: pedido.itemNome, inline: true },
+      { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true }
+    );
     await canal.send({ embeds: [embed], allowedMentions: { parse: [] } });
     return true;
   } catch (e) {
