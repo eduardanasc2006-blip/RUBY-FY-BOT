@@ -150,7 +150,7 @@ function painelCentral(guildId, guild) {
 function menuCanaisRapido(guild, canaisIds) {
   const canais = canaisPublicaveis(guild);
   if (!canais.length) return null;
-  return new StringSelectMenuBuilder()
+  const select = new StringSelectMenuBuilder()
     .setCustomId('autoresp:canalrapido')
     .setPlaceholder('📣 Definir canais comuns (adicione/remova na hora)…')
     .setMinValues(1)
@@ -162,6 +162,7 @@ function menuCanaisRapido(guild, canaisIds) {
         value: c.id,
       }))
     );
+  return new ActionRowBuilder().addComponents(select);
 }
 
 function botoesCanais(guild) {

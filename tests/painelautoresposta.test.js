@@ -61,6 +61,19 @@ try {
     "painel com canais validos tem 3 linhas (acao + rapido + botoes)",
     comCanaais.components.length === 3 && comNull
   );
+  // Regressao: todo component de topo precisa serializar como ActionRow (type 1).
+  // O menu rapido de canais era um StringSelectMenu solto, o que quebrava o
+  // message.reply() real com "Cannot read properties of undefined (reading 'options')"
+  // e o !autoresposta respondia "❌ Ocorreu um erro ao executar este comando."
+  const tipoDeTopo = (c) => (c && typeof c.toJSON === "function" ? c.toJSON().type : null);
+  checa(
+    "painel com canais serializa top-level em ActionRows (type 1)",
+    comCanaais.components.every((c) => tipoDeTopo(c) === 1)
+  );
+  checa(
+    "painel sem canais validos serializa top-level em ActionRows (type 1)",
+    semCanaais.components.every((c) => tipoDeTopo(c) === 1)
+  );
 } catch (e) {
   console.error("❌ excecao inesperada:", e.message);
   falhas++;
