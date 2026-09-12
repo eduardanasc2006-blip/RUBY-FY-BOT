@@ -368,8 +368,7 @@ client.on('interactionCreate', async (interaction) => {
     const linhas = [];
     if (dados.produto) linhas.push(`📦 Produto: ${dados.produto}`);
     if (dados.clienteId) {
-      const u = interaction.guild.members.cache.get(dados.clienteId)?.user;
-      linhas.push(`👤 Cliente: ${u ? `<@${u.id}> (\`${u.username}\`)` : `<@${dados.clienteId}>`}`);
+      linhas.push(`👤 Cliente: <@${dados.clienteId}> (ID: \`${dados.clienteId}\`)`);
     }
     if (dados.valor) {
       const v = dados.valor.toLowerCase().startsWith('r$') ? dados.valor : `R$ ${dados.valor}`;

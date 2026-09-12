@@ -93,10 +93,9 @@ function buildProofFormulario(userId, guild, dados) {
     desc.push(`💰 Valor: ${v}`);
   }
 
-  // Usuário selecionado: mostra @nome (o UserSelect já filtra pela busca do Discord)
+  // Usuário selecionado: mostra a menção (@nome) e o ID numérico (o UserSelect já filtra pela busca do Discord)
   if (dados.clienteId) {
-    const u = guild.members.cache.get(dados.clienteId)?.user;
-    desc.push(`👤 Cliente: ${u ? `<@${u.id}> (\`${u.username}\`)` : `<@${dados.clienteId}>`}`);
+    desc.push(`👤 Cliente: <@${dados.clienteId}> (ID: \`${dados.clienteId}\`)`);
   }
   if (dados.canalId) {
     desc.push(`📥 Canal: <#${dados.canalId}>`);
