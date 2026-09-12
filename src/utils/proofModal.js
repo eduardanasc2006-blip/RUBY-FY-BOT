@@ -83,6 +83,14 @@ function buildProofModal(guildId, extras = {}) {
     );
 }
 
+// Cliente é um dos dois: menção do Discord (<@id> + ID) ou um nome livre
+// de plataforma externa (Instagram, TikTok, etc.) digitado via modal.
+function linhasDoCliente(dados) {
+  if (dados.clienteNome) return [`👤 Cliente: ${dados.clienteNome}`];
+  if (dados.clienteId) return [`👤 Cliente: <@${dados.clienteId}>`, `🆔 ID: \`${dados.clienteId}\``];
+  return [];
+}
+
 // Monta a mensagem efêmera com os seletores (cliente + canal) e o botão final.
 function buildProofFormulario(userId, guild, dados) {
   const canalPadrao = proofStore.obter(guild.id);
@@ -93,11 +101,7 @@ function buildProofFormulario(userId, guild, dados) {
     desc.push(`💰 Valor: ${v}`);
   }
 
-  // Cliente/ID são opcionais (a venda pode ser pela Insta ou outra plataforma) — só aparecem se selecionados.
-  if (dados.clienteId) {
-    desc.push(`👤 Cliente: <@${dados.clienteId}>`);
-    desc.push(`🆔 ID: \`${dados.clienteId}\``);
-  }
+  desc.push(...linhasDoCliente(dados));
   if (dados.canalId) {
     desc.push(`📥 Canal: <#${dados.canalId}>`);
   }
@@ -131,9 +135,10 @@ function buildProofFormulario(userId, guild, dados) {
   const linhaCliente = new ActionRowBuilder().addComponents(
     new UserSelectMenuBuilder()
       .setCustomId('proofsel:cliente')
-      .setPlaceholder('Selecione o cliente (busca por @)')
+      .setPlaceholder(dados.clienteNome ? `Cliente: ${dados.clienteNome} (fora do Discord)` : 'Selecione o cliente (busca por @)')
       .setMinValues(0)
-      .setMaxValues(1)
+      .setMaxValues(1),
+    new ButtonBuilder().setCustomId('proofsel:plataforma').setLabel('🌐 Fora do Discord').setStyle(ButtonStyle.Secondary)
   );
 
   const linhaBotao = new ActionRowBuilder().addComponents(
@@ -149,4 +154,22 @@ function buildProofFormulario(userId, guild, dados) {
   };
 }
 
-module.exports = { buildProofModal, buildProofFormulario, salvarFluxo, obterFluxo, limparFluxo, listarProdutos, opcoesProdutos };
+// Modal para digitar o nome do cliente quando a venda é fora do Discord
+// (Instagram, TikTok, etc.). O texto vira o valor de "Cliente:" no proof.
+function modalClientePlataforma(valorAtual = '') {
+  const cliente = new TextInputBuilder()
+    .setCustomId('clienteNome')
+    .setLabel('Cliente fora do Discord')
+    .setPlaceholder('ex: Instagram, TikTok, @usuario…')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(80)
+    .setValue(valorAtual || '');
+
+  return new ModalBuilder()
+    .setCustomId('proofsel:plataformamodal')
+    .setTitle('🌐 Cliente fora do Discord')
+    .addComponents(new ActionRowBuilder().addComponents(cliente));
+}
+
+module.exports = { buildProofModal, buildProofFormulario, modalClientePlataforma, salvarFluxo, obterFluxo, limparFluxo, listarProdutos, opcoesProdutos };

@@ -328,6 +328,53 @@ async function testarInteracoes() {
       falhas++;
     }
   }
+  // --- Fluxo com cliente "fora do Discord" (nome de plataforma) ---
+  proofStore.salvarRascunho(author.id, {
+    urls: ["https://cdn.discordapp.com/attachments/1/1/c.png"],
+    nomes: ["c.png"],
+    canalPadrao: canal.id,
+  });
+  {
+    const e = await emitir("modal", "proofmodal", { campos: { numero: "28", produto: "Testando", valor: "3,00" } });
+    if (e.erro || !interacaoValida(e)) { falhas++; registrar("proofmodal plataforma", false, "falhou ao abrir painel"); }
+  }
+  {
+    // botão "Fora do Discord" → abre modal para digitar o nome
+    const e = await emitir("button", "proofsel:plataforma");
+    if (!e.erro && canal.ultimoModal?.data?.custom_id === "proofsel:plataformamodal") {
+      registrar("proofsel:plataforma [abre modal]", true);
+      okTotal++;
+    } else {
+      registrar("proofsel:plataforma", false, "ERRO: " + (e.erro?.message || e.erro || "nao abriu modal"));
+      falhas++;
+    }
+  }
+  {
+    // digita o nome da plataforma → painel atualizado com Cliente: Instagram
+    const e = await emitir("modal", "proofsel:plataformamodal", { campos: { clienteNome: "Instagram" } });
+    const painel = canal.ultimaInteracao || {};
+    const desc = (painel.embeds?.[0]?.data?.description || "");
+    if (!e.erro && desc.includes("👤 Cliente: Instagram") && !desc.includes("🆔 ID")) {
+      registrar("proofsel:plataformamodal [cliente plataforma]", true, desc.replace(/\n/g, " | "));
+      okTotal++;
+    } else {
+      registrar("proofsel:plataformamodal", false, "ERRO: " + (e.erro?.message || e.erro || "nao atualizou") + " | desc: " + desc.slice(0, 150));
+      falhas++;
+    }
+  }
+  {
+    // confirmar → posta com o nome da plataforma no lugar da menção
+    const e = await emitir("button", "proofsel:confirmar");
+    const enviada = canal.ultimaMensagemEnviada?.content || "";
+    if (!e.erro && enviada.includes("👤 Cliente: Instagram") && !enviada.includes("🆔 ID") && !enviada.includes("<@")) {
+      registrar("proofsel:confirmar [POSTA COM PLATAFORMA OK]", true, enviada.replace(/\n/g, " | "));
+      okTotal++;
+    } else {
+      registrar("proofsel:confirmar plataforma", false, "ERRO: " + (e.erro?.message || e.erro || "nao postou") + " | enviada: " + JSON.stringify(enviada));
+      falhas++;
+    }
+  }
+
   // sem rascunho (imagens expiradas) deve responder erro, sem crash
   proofStore.limparRascunho(author.id);
   {

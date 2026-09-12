@@ -1,7 +1,7 @@
 const assert = require('node:assert');
 const proofStore = require('../src/utils/proofStore');
 const estoque = require('../src/utils/estoque');
-const { buildProofModal, buildProofFormulario, opcoesProdutos } = require('../src/utils/proofModal');
+const { buildProofModal, buildProofFormulario, modalClientePlataforma, opcoesProdutos } = require('../src/utils/proofModal');
 
 // Testa config de canal de proofs (define/obter/desativar) de forma isolada.
 // No teste real, o cliente usa /proof link:... e o bot publica no canal.
@@ -49,8 +49,35 @@ try {
   const customIds = painel.components.flatMap((r) => r.components.map((c) => c.data.custom_id));
   assert.ok(customIds.includes('proofsel:canal'), 'select de canal');
   assert.ok(customIds.includes('proofsel:cliente'), 'select de cliente');
+  assert.ok(customIds.includes('proofsel:plataforma'), 'botão Fora do Discord');
   assert.ok(customIds.includes('proofsel:produto'), 'select de produto (com estoque)');
   assert.ok(customIds.includes('proofsel:confirmar'), 'botão confirmar');
+
+  // Cliente por plataforma externa (Instagram, TikTok...) — aparece só o nome, sem ID
+  const painelPlataforma = buildProofFormulario(
+    'u-teste',
+    { id: GUILD, members: { cache: new Map() } },
+    { numero: 30, produto: 'X', valor: '3,00', clienteId: null, clienteNome: 'Instagram' }
+  );
+  const descPlataforma = painelPlataforma.embeds[0].data.description;
+  assert.ok(descPlataforma.includes('👤 Cliente: Instagram'), 'cliente da plataforma aparece como nome');
+  assert.ok(!descPlataforma.includes('🆔 ID'), 'plataforma não exibe ID numérico');
+
+  // Painel com cliente Discord exibe menção + ID
+  const painelDiscord = buildProofFormulario(
+    'u-teste',
+    { id: GUILD, members: { cache: new Map() } },
+    { numero: 30, produto: 'X', valor: '3,00', clienteId: '111111111111111', clienteNome: null }
+  );
+  const descDiscord = painelDiscord.embeds[0].data.description;
+  assert.ok(descDiscord.includes('👤 Cliente: <@111111111111111>'), 'cliente do Discord vira menção');
+  assert.ok(descDiscord.includes('🆔 ID: `111111111111111`'), 'ID aparece para cliente do Discord');
+
+  // Modal 'Fora do Discord' tem o campo certo
+  const modalPlataforma = modalClientePlataforma('TikTok').toJSON();
+  assert.strictEqual(modalPlataforma.custom_id, 'proofsel:plataformamodal', 'customId do modal de plataforma');
+  assert.strictEqual(modalPlataforma.components[0].components[0].custom_id, 'clienteNome', 'campo do nome da plataforma');
+  assert.strictEqual(modalPlataforma.components[0].components[0].value, 'TikTok', 'pré-preenche valor atual');
 
   // O seletor de produto NÃO altera o estoque — existência/quantidade preservada
   const prodsel = painel.components.find((r) => r.components[0].data.custom_id === 'proofsel:produto');

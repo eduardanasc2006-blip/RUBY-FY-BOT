@@ -311,6 +311,7 @@ client.on('interactionCreate', async (interaction) => {
       dados.canalId = interaction.values[0] || null;
     } else if (interaction.isUserSelectMenu && interaction.customId === 'proofsel:cliente') {
       dados.clienteId = interaction.values[0] || null;
+      dados.clienteNome = null; // selecionado por @ — limpa nome externo
     } else if (interaction.isStringSelectMenu && interaction.customId === 'proofsel:produto') {
       // Busca apenas o nome do produto no estoque (não altera quantidade/estoque)
       const prodId = interaction.values[0] || null;
@@ -334,6 +335,30 @@ client.on('interactionCreate', async (interaction) => {
   if (interaction.isChannelSelectMenu && interaction.customId === 'proofsel:canal') return handlerProofSel(interaction);
   if (interaction.isUserSelectMenu && interaction.customId === 'proofsel:cliente') return handlerProofSel(interaction);
   if (interaction.isStringSelectMenu && interaction.customId === 'proofsel:produto') return handlerProofSel(interaction);
+
+  // ---- Botão "Fora do Discord": pede o nome do cliente/plataforma ----
+  if (interaction.isButton() && interaction.customId === 'proofsel:plataforma') {
+    const dados = obterFluxo(interaction.user.id);
+    if (!dados) {
+      return interaction.reply({ content: '❌ Sessão expirada. Envie `/proof` ou `!proof` novamente com as imagens.', flags: MessageFlags.Ephemeral });
+    }
+    return interaction.showModal(modalClientePlataforma(dados.clienteNome || ''));
+  }
+
+  // ---- Submit do modal "Fora do Discord": grava o nome do cliente externo ----
+  if (interaction.isModalSubmit() && interaction.customId === 'proofsel:plataformamodal') {
+    const respostaPrivada = (payload) => interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
+    if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'comprar')) {
+      return respostaPrivada({ content: '🔒 Somente administradores ou equipe autorizada.' });
+    }
+    const dados = obterFluxo(interaction.user.id);
+    if (!dados) {
+      return respostaPrivada({ content: '❌ Sessão expirada. Envie `/proof` ou `!proof` novamente com as imagens.' });
+    }
+    dados.clienteNome = (interaction.fields.getTextInputValue('clienteNome') || '').trim().slice(0, 80);
+    dados.clienteId = null; // nome externo substitui a menção do Discord
+    return interaction.update(buildProofFormulario(interaction.user.id, interaction.guild, dados));
+  }
 
   // ---- Botão confirmar: posta o proof no canal escolhido ----
   if (interaction.isButton() && interaction.customId === 'proofsel:confirmar') {
@@ -371,7 +396,9 @@ client.on('interactionCreate', async (interaction) => {
       const v = dados.valor.toLowerCase().startsWith('r$') ? dados.valor : `R$ ${dados.valor}`;
       linhas.push(`💰 Valor: ${v}`);
     }
-    if (dados.clienteId) {
+    if (dados.clienteNome) {
+      linhas.push(`👤 Cliente: ${dados.clienteNome}`);
+    } else if (dados.clienteId) {
       linhas.push(`👤 Cliente: <@${dados.clienteId}>`);
       linhas.push(`🆔 ID: \`${dados.clienteId}\``);
     }
@@ -2945,7 +2972,7 @@ const estoqueCompras = require('./utils/estoque');
 const comprasStore = require('./utils/comprasStore');
 const logComprasStore = require('./utils/logComprasStore');
 const proofStore = require('./utils/proofStore');
-const { buildProofModal, buildProofFormulario, salvarFluxo, obterFluxo, limparFluxo } = require('./utils/proofModal');
+const { buildProofModal, buildProofFormulario, modalClientePlataforma, salvarFluxo, obterFluxo, limparFluxo } = require('./utils/proofModal');
 const metasStoreCompra = require('./utils/metasStore');
 const { buildMetasPainel, telaEscolherCargo, telaEscolherTipo } = require('./utils/metasPanel');
 
