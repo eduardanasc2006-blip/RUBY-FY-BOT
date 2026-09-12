@@ -66,6 +66,7 @@ function fazerMensagem(conteudo) {
     content: conteudo,
     channel: canal,
     mentions: { channels: { first: () => null }, roles: { first: () => null }, users: { first: () => null } },
+    attachments: { first: () => undefined, values: () => [], size: 0, map: () => [] },
     reply: async (payload) => { canal.ultimaResposta = payload; return payload; },
     delete: async () => {},
     client,
@@ -271,6 +272,21 @@ async function testarInteracoes() {
 
   // --- Fluxo do /proof com modal (admin) ---
   const proofStore = require("../src/utils/proofStore");
+
+  // botão do !proof abre o modal (precisa de rascunho)
+  proofStore.definir(guild.id, canal.id);
+  proofStore.salvarRascunho(author.id, { urls: ["https://cdn.discordapp.com/attachments/1/1/a.png"], nomes: ["a.png"], canalPadrao: canal.id });
+  {
+    const e = await emitir("button", "proofiniciar");
+    if (interacaoValida(e) && canal.ultimoModal?.data?.custom_id === "proofmodal") {
+      registrar("proofiniciar [abre modal]", true);
+      okTotal++;
+    } else {
+      registrar("proofiniciar", false, "ERRO: " + (e.erro?.message || e.erro || "nao abriu modal"));
+      falhas++;
+    }
+  }
+  proofStore.limparRascunho(author.id);
   proofStore.definir(guild.id, canal.id);
   proofStore.salvarRascunho(author.id, {
     urls: ["https://cdn.discordapp.com/attachments/1/1/a.png", "https://cdn.discordapp.com/attachments/1/1/b.png"],

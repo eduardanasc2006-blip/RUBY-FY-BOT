@@ -1,6 +1,7 @@
-const { SlashCommandBuilder, MessageFlags, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { comandoPode } = require('../utils/permissions');
 const proofStore = require('../utils/proofStore');
+const { buildProofModal } = require('../utils/proofModal');
 
 const QUANTIDADE_MAX = 5;
 
@@ -41,59 +42,6 @@ module.exports = {
       canalPadrao: proofStore.obter(interaction.guildId),
     });
 
-    const modal = new ModalBuilder()
-      .setCustomId('proofmodal')
-      .setTitle('📸 Postar Proof');
-
-    // Campo: número
-    const numero = new TextInputBuilder()
-      .setCustomId('numero')
-      .setLabel('Número do proof')
-      .setPlaceholder('ex: 26')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(true);
-
-    // Campo: produto
-    const produto = new TextInputBuilder()
-      .setCustomId('produto')
-      .setLabel('Produto / Item')
-      .setPlaceholder('ex: Testando')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(false);
-
-    // Campo: cliente (aceita @menção ou texto livre)
-    const cliente = new TextInputBuilder()
-      .setCustomId('cliente')
-      .setLabel('Cliente')
-      .setPlaceholder('ex: @finix.yin (deixe vazio se não quiser)')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(false);
-
-    // Campo: valor
-    const valor = new TextInputBuilder()
-      .setCustomId('valor')
-      .setLabel('Valor')
-      .setPlaceholder('ex: 3,00')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(false);
-
-    // Campo: canal
-    const canalPadrao = proofStore.obter(interaction.guildId);
-    const canal = new TextInputBuilder()
-      .setCustomId('canal')
-      .setLabel('Canal para postar (ID ou #nome — vazio = canal configurado)')
-      .setPlaceholder(canalPadrao ? `<#${canalPadrao}>` : 'ex: 123456789012345678')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(false);
-
-    modal.addComponents(
-      new ActionRowBuilder().addComponents(numero),
-      new ActionRowBuilder().addComponents(produto),
-      new ActionRowBuilder().addComponents(cliente),
-      new ActionRowBuilder().addComponents(valor),
-      new ActionRowBuilder().addComponents(canal)
-    );
-
-    return interaction.showModal(modal);
+    return interaction.showModal(buildProofModal(interaction.guildId));
   },
 };

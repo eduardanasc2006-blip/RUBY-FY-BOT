@@ -241,6 +241,23 @@ client.on('interactionCreate', async (interaction) => {
     return interaction.showModal(modal);
   }
 
+  // ---- Botão do !proof: abre o modal de preenchimento ----
+  if (interaction.isButton() && interaction.customId === 'proofiniciar') {
+    if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'comprar')) {
+      return interaction.reply({ content: '🔒 Somente administradores ou equipe autorizada.', flags: MessageFlags.Ephemeral });
+    }
+
+    const rascunho = proofStore.obterRascunho(interaction.user.id);
+    if (!rascunho?.urls?.length) {
+      return interaction.reply({
+        content: '❌ Suas imagens expiraram. Envie `!proof` novamente anexando as imagens.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    return interaction.showModal(buildProofModal(interaction.guildId));
+  }
+
   // ---- Modal do /proof (admin) ----
   if (interaction.isModalSubmit() && interaction.customId === 'proofmodal') {
     const respostaPrivada = (payload) => interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
@@ -2865,6 +2882,7 @@ const estoqueCompras = require('./utils/estoque');
 const comprasStore = require('./utils/comprasStore');
 const logComprasStore = require('./utils/logComprasStore');
 const proofStore = require('./utils/proofStore');
+const { buildProofModal } = require('./utils/proofModal');
 const metasStoreCompra = require('./utils/metasStore');
 const { buildMetasPainel, telaEscolherCargo, telaEscolherTipo } = require('./utils/metasPanel');
 
