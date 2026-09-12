@@ -3018,18 +3018,24 @@ client.on('interactionCreate', async (interaction) => {
         if (!criados.length) {
           return interaction.reply({ content: '❌ Não foi possível finalizar: itens podem ter ficado sem estoque.', flags: MessageFlags.Ephemeral });
         }
-        // Envia um log por pedido criado
+        // Envia um log por pedido criado (dividido em embeds menores p/ leitura fácil)
         for (const pedido of criados) {
           logComprasStore.enviar(interaction.client, guildId, {
             titulo: '📥 Pedido criado',
-            descricao: `**#${pedido.id}** aguardando confirmação do pagamento.`,
+            descricao: `**#${pedido.id}** está aguardando confirmação do pagamento.`,
             cor: 0xf1c40f,
-            campos: [
-              { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
-              { name: '📦 Item', value: pedido.itemNome, inline: true },
-              { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
-              { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
-              { name: '⏳ Status', value: 'Aguardando confirmação do pagamento', inline: true },
+            grupos: [
+              [
+                { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
+              ],
+              [
+                { name: '📦 Item', value: pedido.itemNome, inline: true },
+                { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
+              ],
+              [
+                { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
+                { name: '⏳ Status', value: 'Aguardando confirmação do pagamento', inline: true },
+              ],
             ],
             timestamp: true,
           });
@@ -3100,14 +3106,20 @@ client.on('interactionCreate', async (interaction) => {
         });
         logComprasStore.enviar(interaction.client, guildId, {
           titulo: '📥 Pedido criado',
-          descricao: `**#${pedido.id}** aguardando confirmação do pagamento.`,
+          descricao: `**#${pedido.id}** está aguardando confirmação do pagamento.`,
           cor: 0xf1c40f,
-          campos: [
-            { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
-            { name: '📦 Item', value: pedido.itemNome, inline: true },
-            { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
-            { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
-            { name: '⏳ Status', value: 'Aguardando confirmação do pagamento', inline: true },
+          grupos: [
+            [
+              { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
+            ],
+            [
+              { name: '📦 Item', value: pedido.itemNome, inline: true },
+              { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
+            ],
+            [
+              { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
+              { name: '⏳ Status', value: 'Aguardando confirmação do pagamento', inline: true },
+            ],
           ],
           timestamp: true,
         });
