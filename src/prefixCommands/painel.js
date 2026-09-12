@@ -14,6 +14,6 @@ module.exports = {
     }
     autoDelete(message, 5000);
 
-    return message.reply({ ...buildPainelCentral(), allowedMentions: { repliedUser: false } });
+    return message.reply({ ...buildPainelCentral(message.guildId), allowedMentions: { repliedUser: false } });
   },
 };

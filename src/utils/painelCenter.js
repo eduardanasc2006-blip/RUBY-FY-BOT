@@ -17,19 +17,52 @@ function salvarJson(file, dados) {
   nodeFs.writeFileSync(file, JSON.stringify(dados, null, 2));
 }
 
-const PANEL_FILE = path.join(__dirname, '..', '..', 'data', 'panel.json');
-const ESTOQUE_FILE = path.join(__dirname, '..', '..', 'data', 'painel_estoque.json');
-const CATEGORIA_FILE = path.join(__dirname, '..', '..', 'data', 'painel_categoria.json');
+const DATA_DIR = path.join(__dirname, '..', '..', 'data');
+const PANEL_FILE = path.join(DATA_DIR, 'panel.json'); // legado (global) — migrado por guild
+const ESTOQUE_FILE = path.join(DATA_DIR, 'painel_estoque.json'); // legado (global) — migrado por guild
+const CATEGORIA_FILE = path.join(DATA_DIR, 'painel_categoria.json'); // legado (global) — migrado por guild
+const PAINEIS_DIR = path.join(DATA_DIR, 'paineis');
 
-function readConversao() { return carregarJson(PANEL_FILE); }
-function readEstoque() { return carregarJson(ESTOQUE_FILE); }
-function readCategorias() { return carregarJson(CATEGORIA_FILE) || {}; }
+function arquivoGuild(guildId) {
+  return path.join(PAINEIS_DIR, `${guildId || 'global'}.json`);
+}
+
+// Carrega os registros por-guild, migrando o legado global na primeira vez.
+function carregarRegistros(guildId) {
+  const def = { conversao: null, estoque: null, categorias: {} };
+  if (!guildId) {
+    return {
+      conversao: carregarJson(PANEL_FILE),
+      estoque: carregarJson(ESTOQUE_FILE),
+      categorias: carregarJson(CATEGORIA_FILE) || {},
+    };
+  }
+  const arq = arquivoGuild(guildId);
+  const local = carregarJson(arq);
+  if (local) return { ...def, ...local };
+  // Migração única do legado global (se existir)
+  const legado = { conversao: carregarJson(PANEL_FILE), estoque: carregarJson(ESTOQUE_FILE), categorias: carregarJson(CATEGORIA_FILE) || {} };
+  let temLegado = false;
+  for (const k of ['conversao', 'estoque']) if (legado[k]) temLegado = true;
+  if (Object.keys(legado.categorias).length) temLegado = true;
+  if (temLegado) {
+    salvarJson(arq, legado);
+    return legado;
+  }
+  salvarJson(arq, def);
+  return def;
+}
+
+function readConversao(guildId) { return carregarRegistros(guildId || 'global').conversao; }
+function readEstoque(guildId) { return carregarRegistros(guildId || 'global').estoque; }
+function readCategorias(guildId) { return carregarRegistros(guildId || 'global').categorias || {}; }
 
 // Monta o painel central: estado de cada painel fixo + botoes para publicar/atualizar
-function buildPainelCentral() {
-  const conv = readConversao();
-  const est = readEstoque();
-  const cats = readCategorias();
+function buildPainelCentral(guildId) {
+  const registros = carregarRegistros(guildId);
+  const conv = registros.conversao;
+  const est = registros.estoque;
+  const cats = registros.categorias || {};
 
   const linhas = [
     '🟣 **Painel de conversão** — ' + (conv ? '✅ fixado' : '➖ não publicado'),
@@ -131,12 +164,28 @@ module.exports = {
   readConversao,
   readEstoque,
   readCategorias,
-  salvarConversao: (ref) => salvarJson(PANEL_FILE, ref),
-  salvarEstoque: (ref) => salvarJson(ESTOQUE_FILE, ref),
-  salvarCategoria: (msgId, catId, channelId) => {
-    const dados = readCategorias();
-    dados[msgId] = { catId, channelId };
-    salvarJson(CATEGORIA_FILE, dados);
+  salvarConversao: (guildId, ref) => {
+    const registros = carregarRegistros(guildId);
+    registros.conversao = ref;
+    salvarJson(arquivoGuild(guildId), registros);
+    // Mantém o legado global atualizado também (compatibilidade com versões antigas)
+    salvarJson(PANEL_FILE, ref);
+  },
+  salvarEstoque: (guildId, ref) => {
+    const registros = carregarRegistros(guildId);
+    registros.estoque = ref;
+    salvarJson(arquivoGuild(guildId), registros);
+    salvarJson(ESTOQUE_FILE, ref);
+  },
+  salvarCategoria: (guildId, msgId, catId, channelId) => {
+    const registros = carregarRegistros(guildId);
+    registros.categorias = registros.categorias || {};
+    registros.categorias[msgId] = { catId, channelId };
+    salvarJson(arquivoGuild(guildId), registros);
+    // Espelha no legado global para compatibilidade
+    const cats = carregarJson(CATEGORIA_FILE) || {};
+    cats[msgId] = { catId, channelId };
+    salvarJson(CATEGORIA_FILE, cats);
   },
   privar,
 };

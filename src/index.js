@@ -473,7 +473,11 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     // ----- gerenciamento central de paineis (!painel / /painel) -----
-    if (interaction.isButton() && interaction.customId.startsWith('painelcenter:')) {
+    // Botões do seletor de canal (painelcenter:selcanal:*:atual/cancelar)
+    // são tratados no handler específico logo abaixo — não entram aqui
+    // (entrar aqui causava "Ação desconhecida" ao publicar).
+    const ehSeletorCanal = interaction.customId?.startsWith('painelcenter:selcanal:');
+    if (interaction.isButton() && interaction.customId.startsWith('painelcenter:') && !ehSeletorCanal) {
       if (!interaction.guild || !permitido(interaction)) {
         return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
       }
@@ -507,7 +511,7 @@ client.on('interactionCreate', async (interaction) => {
         }
         const msg = await interaction.channel.send({ embeds: [embed] });
         painelCategoria.salvar(msg.id, catId, interaction.channel.id, interaction.guildId);
-        await interaction.update(buildPainelCentral());
+        await interaction.update(buildPainelCentral(interaction.guildId));
         return interaction.followUp({
           content: `✅ Painel da categoria **${catId}** publicado no canal atual.`,
           flags: MessageFlags.Ephemeral,
@@ -526,10 +530,10 @@ client.on('interactionCreate', async (interaction) => {
         );
       }
       if (alvo === 'remcancel') {
-        return interaction.update(buildPainelCentral());
+        return interaction.update(buildPainelCentral(interaction.guildId));
       }
       if (alvo === 'remconversao-confirm' || alvo === 'remestoque-confirm') {
-        const ref = alvo.startsWith('remconversao') ? painelCenter.readConversao() : painelCenter.readEstoque();
+        const ref = alvo.startsWith('remconversao') ? painelCenter.readConversao(interaction.guildId) : painelCenter.readEstoque(interaction.guildId);
         if (ref) {
           try {
             const canal = await client.channels.fetch(ref.channelId);
@@ -537,9 +541,9 @@ client.on('interactionCreate', async (interaction) => {
             await msg.delete().catch(() => {});
           } catch {}
         }
-        if (alvo.startsWith('remconversao')) painelCenter.salvarConversao(null);
-        else painelCenter.salvarEstoque(null);
-        await interaction.update(buildPainelCentral());
+        if (alvo.startsWith('remconversao')) painelCenter.salvarConversao(interaction.guildId, null);
+        else painelCenter.salvarEstoque(interaction.guildId, null);
+        await interaction.update(buildPainelCentral(interaction.guildId));
         return interaction.followUp({
           content: `✅ Painel fixo ${alvo.startsWith('remconversao') ? 'de conversão' : 'de estoque'} removido.`,
           flags: MessageFlags.Ephemeral,
@@ -557,7 +561,7 @@ client.on('interactionCreate', async (interaction) => {
       }
       if (alvo === 'remcategoria-confirm') {
         const [, , msgId, catId] = interaction.customId.split(':');
-        const cats = painelCenter.readCategorias();
+        const cats = painelCenter.readCategorias(interaction.guildId);
         const info = cats[msgId];
         if (info && typeof info === 'object' && info.canal) {
           try {
@@ -572,7 +576,7 @@ client.on('interactionCreate', async (interaction) => {
         const CATEGORIA_FILE = pathX.join(__dirname, '..', 'data', 'painel_categoria.json');
         fsX.mkdirSync(pathX.dirname(CATEGORIA_FILE), { recursive: true });
         fsX.writeFileSync(CATEGORIA_FILE, JSON.stringify(cats, null, 2));
-        await interaction.update(buildPainelCentral());
+        await interaction.update(buildPainelCentral(interaction.guildId));
         return interaction.followUp({
           content: `✅ Painel fixo da categoria **${catId}** removido.`,
           flags: MessageFlags.Ephemeral,
@@ -591,7 +595,7 @@ client.on('interactionCreate', async (interaction) => {
       const tipo = partes[2];
 
       if (interaction.isButton() && partes[3] === 'cancelar') {
-        return interaction.update(buildPainelCentral());
+        return interaction.update(buildPainelCentral(interaction.guildId));
       }
 
       let canal = null;
@@ -601,7 +605,7 @@ client.on('interactionCreate', async (interaction) => {
         canal = interaction.channel;
       }
       if (!canal) {
-        return interaction.update(buildPainelCentral());
+        return interaction.update(buildPainelCentral(interaction.guildId));
       }
 
       if (tipo === 'conversao') {
@@ -950,14 +954,16 @@ client.on('interactionCreate', async (interaction) => {
       const partes = interaction.customId.split(':');
       const acao = partes[1];
 
-      // Edita o proprio painel com o resultado, em vez de criar mensagem nova
-      const voltarMenu = (texto) =>
+      // Edita o proprio painel com o resultado, em vez de criar mensagem nova.
+      // botoesExtras ficam na mesma linha do "Voltar ao menu".
+      const voltarMenu = (texto, botoesExtras = []) =>
         interaction.update({
           content: texto,
           embeds: [],
           components: [
             new ActionRowBuilder().addComponents(
-              new ButtonBuilder().setCustomId('estadm:menu').setLabel('⬅️ Voltar ao menu').setStyle(ButtonStyle.Secondary)
+              new ButtonBuilder().setCustomId('estadm:menu').setLabel('⬅️ Voltar ao menu').setStyle(ButtonStyle.Secondary),
+              ...botoesExtras
             ),
           ],
         });
@@ -996,7 +1002,10 @@ client.on('interactionCreate', async (interaction) => {
         return voltarMenu(
           p
             ? `✅ Produto **${nome}** adicionado por ${formatBRL(valor)}${controlarQtd ? ` (estoque: ${quantidade})` : ' (sem controle de quantidade)'}.`
-            : '❌ Já existe um produto com esse nome nessa categoria.'
+            : '❌ Já existe um produto com esse nome nessa categoria.',
+          p
+            ? [new ButtonBuilder().setCustomId(`estadm:addprod2:${catId}`).setLabel('➕ Adicionar outro produto').setStyle(ButtonStyle.Success)]
+            : []
         );
       }
 

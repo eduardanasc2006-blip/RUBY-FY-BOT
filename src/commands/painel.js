@@ -12,6 +12,6 @@ module.exports = {
     if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'painel')) {
       return interaction.reply(privar('🔒 Somente administradores podem usar este comando.'));
     }
-    return interaction.reply(buildPainelCentral());
+    return interaction.reply(buildPainelCentral(interaction.guildId));
   },
 };
