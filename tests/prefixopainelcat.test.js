@@ -17,6 +17,7 @@ const uid = 'u' + 'ser';
 
 const message = {
   guild,
+  guildId: guild.id,
   member,
   author: { id: uid },
   content: '',
@@ -29,9 +30,9 @@ const message = {
 process.env.ADMIN_IDS = uid;
 
 (async () => {
-  if (!estoque.categoria('vip')) {
-    estoque.addCategoria('vip');
-    estoque.addProduto('vip', { nome: 'KVM', valor: 100, controlarQtd: true, quantidade: 5 });
+  if (!estoque.categoria('g1', 'vip')) {
+    estoque.addCategoria('g1', 'vip');
+    estoque.addProduto('g1', 'vip', { nome: 'KVM', valor: 100, controlarQtd: true, quantidade: 5 });
   }
   await painelcategoria.execute(message, ['vip']);
   const enviouNoB = canalB.enviado === true;

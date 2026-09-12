@@ -12,9 +12,9 @@ const FILE = path.join(__dirname, '..', '..', 'data', 'painel_categoria.json');
 function carregar() {
   try { return JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch { return {}; }
 }
-function salvar(msgId, catId, channelId) {
+function salvar(msgId, catId, channelId, guildId) {
   const dados = carregar();
-  dados[msgId] = { catId, channelId };
+  dados[msgId] = { catId, channelId, guildId };
   fs.mkdirSync(path.dirname(FILE), { recursive: true });
   fs.writeFileSync(FILE, JSON.stringify(dados, null, 2));
 }
@@ -134,7 +134,7 @@ module.exports = {
     }
 
     const msg = await canalAlvo.send({ embeds: [embed] });
-    salvar(msg.id, catId, canalAlvo.id);
+    salvar(msg.id, catId, canalAlvo.id, message.guildId || message.guild?.id);
 
     // Confirmação some depois de 5 segundos para não poluir o canal
     const confirmacao = await message.reply(`✅ Painel da categoria **${catId}** fixado em ${canalAlvo}.`);
@@ -150,13 +150,14 @@ module.exports = {
         // Compatibilidade: formato antigo (string) ou novo (objeto)
         const catId = typeof info === 'string' ? info : info.catId;
         const channelId = typeof info === 'string' ? null : info.channelId;
+        const guildId = typeof info === 'object' ? info.guildId : null;
 
         if (channelId) {
           const ch = await client.channels.fetch(channelId).catch(() => null);
           if (ch) {
             const msg = await ch.messages.fetch(msgId).catch(() => null);
             if (msg) {
-              const embed = buildCategoria(message.guildId, catId);
+              const embed = buildCategoria(guildId || ch.guildId, catId);
               if (embed) await msg.edit({ embeds: [embed] });
             }
           }

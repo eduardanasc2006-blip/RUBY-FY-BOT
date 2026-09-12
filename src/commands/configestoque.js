@@ -13,6 +13,6 @@ module.exports = {
       return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
     }
 
-    return interaction.reply(adminMenu());
+    return interaction.reply(adminMenu(interaction.guildId));
   },
 };

@@ -72,3 +72,5 @@ async function refreshPainelEstoque(client) {
   }
   return algum;
 }
+
+module.exports = { publicarOuAtualizar, limparRef, refreshPainelEstoque };

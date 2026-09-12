@@ -111,6 +111,7 @@ const estoque = {
 
   },
   setDescricaoProduto(guildId, catId, prodId, descricao) {
+    const p = estoque.produto(guildId, catId, prodId);
     if (!p) return null;
     p.descricao = descricao || null;
     salvar(guildId);

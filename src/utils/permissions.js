@@ -4,6 +4,14 @@ const { PermissionFlagsBits } = require('discord.js');
 
 const FILE = path.join(__dirname, '..', '..', 'data', 'permissoes.json');
 
+// dados por guild: dados[guildId] = { grupos: { grupoId: [roleId,...] } }
+let dados = {};
+try {
+  dados = JSON.parse(fs.readFileSync(FILE, 'utf8'));
+} catch {
+  // Permissões vazias na primeira execução.
+}
+
 // Grupos de comandos que podem ser concedidos a cargos.
 // Cada grupo lista os comandos/áreas que ele libera (para o painel).
 const GRUPOS = [
@@ -61,18 +69,9 @@ const GRUPOS = [
     descricao: 'Gerar e baixar backups das taxas e estoque.',
     comandos: ['backup'],
   },
-  ];
+];
 
-
-module.exports = {
-  GRUPOS,
-  eDono,
-  pode,
-  comandoPode,
-  mapearComandoParaGrupo,
-  cargosDoGrupo,
-  setCargo,
-};// Cada servidor tem as suas proprias permissoes: dados[guildId].grupos.
+// Cada servidor tem as suas proprias permissoes: dados[guildId].grupos.
 function conf(guildId) {
   if (!guildId) return { grupos: {} };
   if (!dados[guildId]) {
@@ -157,3 +156,13 @@ function mapearComandoParaGrupo(nomeComando) {
   const grupo = GRUPOS.find((g) => g.comandos.includes(nomeComando));
   return grupo ? grupo.id : null;
 }
+
+module.exports = {
+  GRUPOS,
+  eDono,
+  pode,
+  comandoPode,
+  mapearComandoParaGrupo,
+  cargosDoGrupo,
+  setCargo,
+};

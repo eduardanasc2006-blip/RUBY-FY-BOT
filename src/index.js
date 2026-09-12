@@ -506,7 +506,7 @@ client.on('interactionCreate', async (interaction) => {
           return interaction.reply({ content: `❌ Categoria **${catId}** não encontrada.`, flags: MessageFlags.Ephemeral });
         }
         const msg = await interaction.channel.send({ embeds: [embed] });
-        painelCategoria.salvar(msg.id, catId, interaction.channel.id);
+        painelCategoria.salvar(msg.id, catId, interaction.channel.id, interaction.guildId);
         await interaction.update(buildPainelCentral());
         return interaction.followUp({
           content: `✅ Painel da categoria **${catId}** publicado no canal atual.`,
@@ -650,7 +650,7 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply({ content: '❌ Categoria não encontrada.', flags: MessageFlags.Ephemeral });
       }
       const msg = await interaction.channel.send({ embeds: [embed] });
-      painelCategoria.salvar(msg.id, catId, interaction.channel.id);
+      painelCategoria.salvar(msg.id, catId, interaction.channel.id, interaction.guildId);
       return interaction.reply({ content: `✅ Painel da categoria **${catId}** fixado no canal.`, flags: MessageFlags.Ephemeral });
     }
 
@@ -718,7 +718,7 @@ client.on('interactionCreate', async (interaction) => {
       }
       if (acao === 'toggle3') {
         const [, , catId, prodId] = partes;
-        const p = estoqueDb.toggleAtivo(catId, prodId);
+        const p = estoqueDb.toggleAtivo(interaction.guildId, catId, prodId);
         if (p) refreshPainelEstoque(client).catch(() => {});
         painelCategoria.refresh(client).catch(() => {});
         if (!p) return interaction.reply({ content: '❌ Produto não encontrado.', flags: MessageFlags.Ephemeral });
@@ -735,7 +735,7 @@ client.on('interactionCreate', async (interaction) => {
       }
       if (acao === 'remover3') {
         const [, , catId, prodId] = partes;
-        const p = estoqueDb.produto(catId, prodId);
+        const p = estoqueDb.produto(interaction.guildId, catId, prodId);
         if (!p) return interaction.update({ content: '❌ Produto não encontrado.', embeds: [], components: [] });
         return interaction.update(
           montarConfirmacao(
@@ -751,8 +751,8 @@ client.on('interactionCreate', async (interaction) => {
       }
       if (acao === 'remover-confirm') {
         const [, , catId, prodId] = partes;
-        const p = estoqueDb.produto(catId, prodId);
-        const ok = estoqueDb.removeProduto(catId, prodId);
+        const p = estoqueDb.produto(interaction.guildId, catId, prodId);
+        const ok = estoqueDb.removeProduto(interaction.guildId, catId, prodId);
         if (ok) refreshPainelEstoque(client).catch(() => {});
         painelCategoria.refresh(client).catch(() => {});
         return interaction.update({
@@ -770,7 +770,7 @@ client.on('interactionCreate', async (interaction) => {
       if (acao === 'remcat') return interaction.update(estoquePanel.adminEscolherCategoria(interaction.guildId, 'remcat2'));
       if (acao === 'remcat2') {
         const catId = partes[2];
-        const cat = estoqueDb.categoria(catId);
+        const cat = estoqueDb.categoria(interaction.guildId, catId);
         if (!cat) return interaction.update({ content: '❌ Categoria não encontrada.', embeds: [], components: [] });
         return interaction.update(
           montarConfirmacao(
@@ -782,8 +782,8 @@ client.on('interactionCreate', async (interaction) => {
       }
       if (acao === 'remcat-confirm') {
         const catId = partes[2];
-        const cat = estoqueDb.categoria(catId);
-        const ok = estoqueDb.removeCategoria(catId);
+        const cat = estoqueDb.categoria(interaction.guildId, catId);
+        const ok = estoqueDb.removeCategoria(interaction.guildId, catId);
         if (ok) refreshPainelEstoque(client).catch(() => {});
         painelCategoria.refresh(client).catch(() => {});
         return interaction.update({
@@ -804,7 +804,7 @@ client.on('interactionCreate', async (interaction) => {
       if (acao === 'vender2') return interaction.update(estoquePanel.adminEscolherProduto(interaction.guildId, 'vender3', partes[2]));
       if (acao === 'vender3') {
         const [, , catId, prodId] = partes;
-        const atual = estoqueDb.produto(catId, prodId);
+        const atual = estoqueDb.produto(interaction.guildId, catId, prodId);
 
         // Defer imediato para ganhar tempo (evita timeout de 3s)
         await interaction.deferUpdate().catch(() => {});
@@ -826,7 +826,7 @@ client.on('interactionCreate', async (interaction) => {
         if (!atual.controlarQtd) return responder({ content: `❌ **${atual.nome}** não tem controle de quantidade.`, embeds: [], components: [] });
 
         const novaQtd = Math.max(0, atual.quantidade - 1);
-        const p = estoqueDb.setQuantidade(catId, prodId, novaQtd);
+        const p = estoqueDb.setQuantidade(interaction.guildId, catId, prodId, novaQtd);
         if (p) refreshPainelEstoque(client).catch(() => {});
         painelCategoria.refresh(client).catch(() => {});
         // Aviso de esgotado em background (nao trava a resposta)
@@ -893,13 +893,13 @@ client.on('interactionCreate', async (interaction) => {
       }
       if (acao === 'catsubir') {
         const catId = partes[2];
-        estoqueDb.moverCategoria(catId, -1);
+        estoqueDb.moverCategoria(interaction.guildId, catId, -1);
         painelCategoria.refresh(client).catch(() => {});
         return interaction.update(estoquePanel.adminGerCatDetalhe(interaction.guildId, catId));
       }
       if (acao === 'catdescer') {
         const catId = partes[2];
-        estoqueDb.moverCategoria(catId, 1);
+        estoqueDb.moverCategoria(interaction.guildId, catId, 1);
         painelCategoria.refresh(client).catch(() => {});
         return interaction.update(estoquePanel.adminGerCatDetalhe(interaction.guildId, catId));
       }
@@ -964,7 +964,7 @@ client.on('interactionCreate', async (interaction) => {
 
       if (acao === 'addcat') {
         const nome = interaction.fields.getTextInputValue('nome').trim();
-        const cat = estoqueDb.addCategoria(nome);
+        const cat = estoqueDb.addCategoria(interaction.guildId, nome);
         if (cat) refreshPainelEstoque(client).catch(() => {});
         painelCategoria.refresh(client).catch(() => {});
         return voltarMenu(cat ? `✅ Categoria **${nome}** criada.` : `❌ A categoria **${nome}** já existe.`);
@@ -990,7 +990,7 @@ client.on('interactionCreate', async (interaction) => {
         if (imagem && !imagem.startsWith('http')) {
           return voltarMenu('❌ Link de imagem inválido. Use um link começando com http.');
         }
-        const p = estoqueDb.addProduto(catId, { nome, valor, controlarQtd, quantidade, descricao, imagem });
+        const p = estoqueDb.addProduto(interaction.guildId, catId, { nome, valor, controlarQtd, quantidade, descricao, imagem });
         if (p) refreshPainelEstoque(client).catch(() => {});
         painelCategoria.refresh(client).catch(() => {});
         return voltarMenu(
@@ -1006,7 +1006,7 @@ client.on('interactionCreate', async (interaction) => {
         if (isNaN(qtd) || qtd < 0) {
           return voltarMenu('❌ Quantidade inválida.');
         }
-        const p = estoqueDb.setQuantidade(catId, prodId, qtd);
+        const p = estoqueDb.setQuantidade(interaction.guildId, catId, prodId, qtd);
         if (p) refreshPainelEstoque(client).catch(() => {});
         painelCategoria.refresh(client).catch(() => {});
         // Avisa quando o produto esgota
@@ -1022,8 +1022,8 @@ client.on('interactionCreate', async (interaction) => {
         const [, , catId, prodId] = partes;
         const novoNome = interaction.fields.getTextInputValue('nome').trim();
         if (!novoNome) return voltarMenu('❌ Nome inválido.');
-        const antes = estoqueDb.produto(catId, prodId)?.nome;
-        const p = estoqueDb.setNome(catId, prodId, novoNome);
+        const antes = estoqueDb.produto(interaction.guildId, catId, prodId)?.nome;
+        const p = estoqueDb.setNome(interaction.guildId, catId, prodId, novoNome);
         if (p) refreshPainelEstoque(client).catch(() => {});
         painelCategoria.refresh(client).catch(() => {});
         return voltarMenu(
@@ -1035,7 +1035,7 @@ client.on('interactionCreate', async (interaction) => {
         const catId = partes[2];
         const novoNome = interaction.fields.getTextInputValue('nome').trim();
         if (!novoNome) return voltarMenu('❌ Nome inválido.');
-        const cat = estoqueDb.renomearCategoria(catId, novoNome);
+        const cat = estoqueDb.renomearCategoria(interaction.guildId, catId, novoNome);
         if (cat) refreshPainelEstoque(client).catch(() => {});
         painelCategoria.refresh(client).catch(() => {});
         return voltarMenu(
@@ -1047,7 +1047,7 @@ client.on('interactionCreate', async (interaction) => {
         const catId = partes[2];
         const { sanitizarEmoji } = require('./utils/sanitizarEmoji');
         const emoji = sanitizarEmoji(interaction.fields.getTextInputValue('emoji'));
-        const cat = estoqueDb.setEmojiCategoria(catId, emoji);
+        const cat = estoqueDb.setEmojiCategoria(interaction.guildId, catId, emoji);
         if (cat) refreshPainelEstoque(client).catch(() => {});
         painelCategoria.refresh(client).catch(() => {});
         return voltarMenu(
@@ -1058,7 +1058,7 @@ client.on('interactionCreate', async (interaction) => {
       if (acao === 'catdesc') {
         const catId = partes[2];
         const descricao = (interaction.fields.getTextInputValue('descricao') || '').trim();
-        const cat = estoqueDb.setDescricaoCategoria(catId, descricao);
+        const cat = estoqueDb.setDescricaoCategoria(interaction.guildId, catId, descricao);
         if (cat) refreshPainelEstoque(client).catch(() => {});
         painelCategoria.refresh(client).catch(() => {});
         return voltarMenu(
@@ -1069,7 +1069,7 @@ client.on('interactionCreate', async (interaction) => {
       if (acao === 'proddtl-desc') {
         const [, , catId, prodId] = partes;
         const descricao = (interaction.fields.getTextInputValue('descricao') || '').trim();
-        const p = estoqueDb.setDescricaoProduto(catId, prodId, descricao);
+        const p = estoqueDb.setDescricaoProduto(interaction.guildId, catId, prodId, descricao);
         if (p) refreshPainelEstoque(client).catch(() => {});
         painelCategoria.refresh(client).catch(() => {});
         return voltarMenu(
@@ -1083,7 +1083,7 @@ client.on('interactionCreate', async (interaction) => {
         if (imagem && !imagem.startsWith('http')) {
           return voltarMenu('❌ Link de imagem inválido. Use um link começando com http.');
         }
-        const p = estoqueDb.setImagemProduto(catId, prodId, imagem);
+        const p = estoqueDb.setImagemProduto(interaction.guildId, catId, prodId, imagem);
         if (p) refreshPainelEstoque(client).catch(() => {});
         painelCategoria.refresh(client).catch(() => {});
         return voltarMenu(
@@ -1097,7 +1097,7 @@ client.on('interactionCreate', async (interaction) => {
         if (isNaN(valor) || valor <= 0) {
           return voltarMenu('❌ Valor inválido.');
         }
-        const p = estoqueDb.setValor(catId, prodId, valor);
+        const p = estoqueDb.setValor(interaction.guildId, catId, prodId, valor);
         if (p) refreshPainelEstoque(client).catch(() => {});
         painelCategoria.refresh(client).catch(() => {});
         return voltarMenu(
@@ -1212,7 +1212,7 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.update({ content: menu.content, components: menu.components });
     }
 
-    if (interaction.isChannelSelectMenu() && interaction.customId === 'autoresp:pickcanais') {
+    if (interaction.isChannelSelectMenu && interaction.isChannelSelectMenu() && interaction.customId === 'autoresp:pickcanais') {
       const store = require('./utils/autoRespostaStore');
       const dados = autorespCriacaoCache.get(interaction.user.id + ':' + interaction.guildId);
       if (!dados) return interaction.update({ content: '❌ Sessão expirada. Execute /autoresposta ou !autoresposta novamente.', components: [] });
@@ -2830,7 +2830,7 @@ client.on('interactionCreate', async (interaction) => {
         const catId = partes[2];
         const prodId = partes[3];
         const qtd = parseInt(partes[4], 10) || 0;
-        const p = estoqueCompras.produto(catId, prodId);
+        const p = estoqueCompras.produto(guildId, catId, prodId);
         if (!p || qtd <= 0) {
           return interaction.reply({ content: '❌ Produto ou quantidade inválida.', flags: MessageFlags.Ephemeral });
         }
@@ -2904,7 +2904,7 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         // ----- Confirmacao do pagamento (uma unica vez) -----
-        const produto = estoqueCompras.produto(pedido.catId, pedido.prodId);
+        const produto = estoqueCompras.produto(guildId, pedido.catId, pedido.prodId);
         if (produto && produto.controlarQtd) {
           const reservadosOutros = pedidoStore.reservado(guildId, pedido.catId, pedido.prodId) - pedido.quantidade;
           const disponivelReal = (produto.quantidade ||  0) - reservadosOutros;
@@ -2915,7 +2915,7 @@ client.on('interactionCreate', async (interaction) => {
               flags: MessageFlags.Ephemeral,
             });
           }
-          estoqueCompras.setQuantidade(pedido.catId, pedido.prodId, (produto.quantidade ||  0) - pedido.quantidade);
+          estoqueCompras.setQuantidade(guildId, pedido.catId, pedido.prodId, (produto.quantidade ||  0) - pedido.quantidade);
         }
 
         const conquistadas = metasConquistadas(guildId, pedido.clienteId, pedido.valor);

@@ -42,6 +42,6 @@ module.exports = {
       return interaction.reply({ embeds: [embed] });
     }
 
-    return interaction.reply(publicoCategorias());
+    return interaction.reply(publicoCategorias(interaction.guildId));
   },
 };

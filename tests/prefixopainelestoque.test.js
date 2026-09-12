@@ -2,11 +2,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const painelestoque = require('../src/prefixCommands/painelestoque');
 
-const FILE_REF = path.join(__dirname, '..', 'data', 'painel_estoque.json');
+const FILE_REF = path.join(__dirname, '..', 'data', 'painel_estoque', 'g1.json');
 if (fs.existsSync(FILE_REF)) fs.rmSync(FILE_REF);
 
-const canalA = { id: '111', name: 'geral', isTextBased: () => true, permissionsFor: () => ({ has: () => true }) };
-const canalB = { id: '222', name: 'vendas', isTextBased: () => true, permissionsFor: () => ({ has: () => true }) };
+const canalA = { id: '111', guildId: 'g1', name: 'geral', isTextBased: () => true, permissionsFor: () => ({ has: () => true }) };
+const canalB = { id: '222', guildId: 'g1', name: 'vendas', isTextBased: () => true, permissionsFor: () => ({ has: () => true }) };
 canalA.send = async () => ({ id: 'mA', channelId: '111' });
 canalB.send = async (payload) => { canalB.enviado = true; canalB.payload = payload; return { id: 'mB', channelId: '222' }; };
 

@@ -11,6 +11,6 @@ module.exports = {
     if (!message.guild || !comandoPode(message.member, message.author.id, 'configestoque')) {
       return message.reply('🔒 Somente administradores podem configurar o estoque.');
     }
-    return message.reply({ ...adminMenu(), allowedMentions: { repliedUser: false } });
+    return message.reply({ ...adminMenu(message.guildId), allowedMentions: { repliedUser: false } });
   },
 };

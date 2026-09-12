@@ -34,6 +34,6 @@ module.exports = {
       return message.reply({ embeds: [embed], allowedMentions: { repliedUser: false } });
     }
 
-    return message.reply({ ...publicoCategorias(), allowedMentions: { repliedUser: false } });
+    return message.reply({ ...publicoCategorias(message.guildId), allowedMentions: { repliedUser: false } });
   },
 };

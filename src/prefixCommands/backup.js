@@ -21,7 +21,10 @@ module.exports = {
       estoque: null,
     };
     try { backup.taxas = JSON.parse(fs.readFileSync(path.join(DATA, 'rates.json'), 'utf8')); } catch {}
-    try { backup.estoque = JSON.parse(fs.readFileSync(path.join(DATA, 'estoque.json'), 'utf8')); } catch {}
+    const arqEstoque = path.join(DATA, 'estoque', `${message.guildId}.json`);
+    try { backup.estoque = JSON.parse(fs.readFileSync(arqEstoque, 'utf8')); } catch {
+      try { backup.estoque = JSON.parse(fs.readFileSync(path.join(DATA, 'estoque.json'), 'utf8')); } catch {}
+    }
 
     const arquivo = new AttachmentBuilder(
       Buffer.from(JSON.stringify(backup, null, 2)),
