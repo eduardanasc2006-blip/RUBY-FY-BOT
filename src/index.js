@@ -2861,12 +2861,16 @@ client.on('interactionCreate', async (interaction) => {
           titulo: '📥 Pedido criado',
           descricao: `**#${pedido.id}** aguardando confirmação do pagamento.`,
           cor: 0xf1c40f,
-          campos: [
-            { name: '👤 Cliente', value: pedido.clienteTag || `<@${pedido.clienteId}>`, inline: true },
-            { name: '📦 Item', value: pedido.itemNome, inline: true },
-            { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
-            { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
-            { name: '⏳ Status', value: 'Aguardando confirmação do pagamento', inline: false },
+          grupos: [
+            [
+              { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
+              { name: '📦 Item', value: pedido.itemNome, inline: true },
+              { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
+            ],
+            [
+              { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
+              { name: '⏳ Status', value: 'Aguardando confirmação do pagamento', inline: true },
+            ],
           ],
           timestamp: true,
         });
@@ -2901,11 +2905,15 @@ client.on('interactionCreate', async (interaction) => {
             titulo: '❌ Pedido cancelado',
             descricao: `**#${pedido.id}** foi cancelado — reserva liberada, nenhuma venda registrada.`,
             cor: 0xe74c3c,
-            campos: [
-              { name: '👤 Cliente', value: pedido.clienteTag || `<@${pedido.clienteId}>`, inline: true },
-              { name: '📦 Item', value: pedido.itemNome, inline: true },
-              { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
-              { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
+            grupos: [
+              [
+                { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
+                { name: '📦 Item', value: pedido.itemNome, inline: true },
+                { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
+              ],
+              [
+                { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
+              ],
             ],
             timestamp: true,
           });
@@ -2938,12 +2946,16 @@ client.on('interactionCreate', async (interaction) => {
           titulo: '✅ Pedido confirmado',
           descricao: `**#${pedido.id}** pagamento confirmado e venda registrada.`,
           cor: 0x2ecc71,
-          campos: [
-            { name: '👤 Cliente', value: pedido.clienteTag || `<@${pedido.clienteId}>`, inline: true },
-            { name: '📦 Item', value: pedido.itemNome, inline: true },
-            { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
-            { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
-            { name: '👮 Confirmado por', value: `<@${interaction.user.id}>`, inline: true },
+          grupos: [
+            [
+              { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
+              { name: '📦 Item', value: pedido.itemNome, inline: true },
+              { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
+            ],
+            [
+              { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
+              { name: '👮 Confirmado por', value: `<@${interaction.user.id}>`, inline: true },
+            ],
           ],
           timestamp: true,
         });
@@ -2957,7 +2969,7 @@ client.on('interactionCreate', async (interaction) => {
               if (membroAlvo) await membroAlvo.roles.add(m.cargoId);
               logComprasStore.enviar(interaction.client, guildId, {
                 titulo: '🏆 Meta atingida',
-                descricao: `**${m.cargoNome || `<@&${m.cargoId}>`}** concedido a ${pedido.clienteTag || `<@${pedido.clienteId}>`}.`,
+                descricao: `**${m.cargoNome || `<@&${m.cargoId}>`}** concedido a ${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`).`,
                 cor: 0x9b59b6,
                 campos: [
                   { name: '🎯 Meta', value: m.tipoDescricao || m.tipo || '—', inline: true },

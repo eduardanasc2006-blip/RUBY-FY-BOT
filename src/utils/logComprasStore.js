@@ -36,26 +36,42 @@ function desativar(guildId) {
   salvar();
 }
 
-// Envia um embed de log para o canal configurado (se houver).
-// Estrutura: titulo, descricao e campos montados pelo chamador.
+// Monta as embeds de log a partir de titulo/descricao/campos ou grupos.
+// - `campos`: (antigo) todos os campos sao colocados na embed principal.
+// - `grupos`: lista de grupos — o 1º grupo vai na embed principal (junto com
+//   titulo/descricao) e cada grupo seguinte vira uma embed separada, para
+//   a mensagem nao virar um bloco unico gigante.
+function montarEmbeds({ titulo = '🧾 Log de compras', descricao = null, cor = 0xbeb6ff, campos = [], grupos = [], timestamp = false }) {
+  const corFinal = cor ?? 0xbeb6ff;
+  const lista = grupos.length ? grupos : [campos];
+  const embeds = [];
+  lista.slice(0, 10).forEach((g, i) => {
+    const builder = i === 0
+      ? new EmbedBuilder().setColor(corFinal).setTitle(titulo)
+      : new EmbedBuilder().setColor(corFinal);
+    if (i === 0 && descricao) builder.setDescription(descricao);
+    if (i === 0 && timestamp) builder.setTimestamp(Date.now());
+    if (g && g.length) {
+      for (const c of g.slice(0, 8)) {
+        builder.addFields({ name: c.name, value: c.value, inline: !!c.inline });
+      }
+    }
+    embeds.push(builder);
+  });
+  return embeds;
+}
 
-async function enviar(client, guildId, { titulo = '🧾 Log de compras', descricao = null, cor = 0xbeb6ff, campos = [], timestamp = false }) {
+// Envia o log para o canal configurado (se houver).
+// Estrutura: titulo, descricao, cor, timestamp e campos/grupos do chamador.
+
+async function enviar(client, guildId, opts = {}) {
   const canalId = obter(guildId);
   if (!canalId || !client) return false;
   try {
     const canal = await client.channels.fetch(canalId);
     if (!canal || !canal.isTextBased()) return false;
-    const embed = new EmbedBuilder()
-      .setColor(cor)
-      .setTitle(titulo);
-    if (descricao) embed.setDescription(descricao);
-    if (timestamp) embed.setTimestamp(Date.now());
-    if (campos.length) {
-      for (const c of campos.slice(0, 8)) {
-        embed.addFields({ name: c.name, value: c.value, inline: !!c.inline });
-      }
-    }
-    await canal.send({ embeds: [embed], allowedMentions: { parse: [] } });
+    const embeds = montarEmbeds(opts);
+    await canal.send({ embeds, allowedMentions: { parse: [] } });
     return true;
   } catch (e) {
     console.error('[LogCompras] Falha ao enviar log:', e?.message || e);
@@ -63,4 +79,4 @@ async function enviar(client, guildId, { titulo = '🧾 Log de compras', descric
   }
 }
 
-module.exports = { obter, definir, desativar, enviar };
+module.exports = { obter, definir, desativar, enviar, montarEmbeds };
