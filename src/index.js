@@ -856,6 +856,9 @@ client.on('interactionCreate', async (interaction) => {
       if (acao === 'menu') return interaction.update(estoquePanel.adminMenu(interaction.guildId));
       if (acao === 'lista') return interaction.update(estoquePanel.adminLista(interaction.guildId));
       if (acao === 'gercatpag') return interaction.update(estoquePanel.adminGerenciarCategorias(interaction.guildId, parseInt(partes[2])));
+      // Paginação da escolha de categoria/produto (estadm:catpag:<acao>:<pag> e estadm:prodpag:<acao>:<catId>:<pag>)
+      if (acao === 'catpag') return interaction.update(estoquePanel.adminEscolherCategoria(interaction.guildId, partes[2], parseInt(partes[3])));
+      if (acao === 'prodpag') return interaction.update(estoquePanel.adminEscolherProduto(interaction.guildId, partes[2], partes[3], parseInt(partes[4])));
 
       if (acao === 'addcat') {
         const modal = new ModalBuilder().setCustomId('estmodal:addcat').setTitle('Nova categoria').addComponents(

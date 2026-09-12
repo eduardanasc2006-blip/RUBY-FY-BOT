@@ -184,8 +184,25 @@ function adminGerCatDetalhe(guildId, catId) {
   };
 }
 
-// Lista de categorias para escolher (usada em vários fluxos admin)
-function adminEscolherCategoria(guildId, acao) {
+// Lista de categorias para escolher (usada em vários fluxos admin), paginada
+function paginaNav(idPrefix, atual, total, params) {
+  const nav = [];
+  if (atual > 0) nav.push(btn(`estadm:${idPrefix}:${params}${atual - 1}`, '◀️ Anterior', ButtonStyle.Primary));
+  nav.push(btn('estadm:menu', '⬅️ Voltar', ButtonStyle.Secondary));
+  if (atual < total - 1) nav.push(btn(`estadm:${idPrefix}:${params}${atual + 1}`, 'Próxima ▶️', ButtonStyle.Primary));
+  return nav;
+}
+
+// Distribui botões em linhas de até 5
+function linhasDeBotoes(botoes, ultimaFila = true) {
+  const linhas = [];
+  for (let i = 0; i < botoes.length; i += 5) {
+    linhas.push(row(...botoes.slice(i, i + 5)));
+  }
+  return linhas;
+}
+
+function adminEscolherCategoria(guildId, acao, pag = 0) {
   const cats = estoque.categorias(guildId);
   if (!cats.length) {
     return {
@@ -194,18 +211,22 @@ function adminEscolherCategoria(guildId, acao) {
       components: [row(btn('estadm:menu', '⬅️ Voltar'))],
     };
   }
-  const embed = new EmbedBuilder().setColor(COR).setTitle('⚙️ Escolha a categoria');
-  const linhas = cats.slice(0, 5).map((c) =>
-    btn(`estadm:${acao}:${c.id}`, `${emojiDa(c)} ${c.nome}`, ButtonStyle.Primary)
+  const totalPaginas = Math.max(1, Math.ceil(cats.length / 5));
+  const paginaAtual = numeroPagina(pag, totalPaginas);
+  const visiveis = cats.slice(paginaAtual * 5, paginaAtual * 5 + 5);
+  const embed = new EmbedBuilder()
+    .setColor(COR)
+    .setTitle(cats.length > 5 ? `⚙️ Escolha a categoria (${paginaAtual + 1}/${totalPaginas})` : '⚙️ Escolha a categoria');
+  const componentes = linhasDeBotoes(
+    visiveis.map((c) => btn(`estadm:${acao}:${c.id}`, `${emojiDa(c)} ${c.nome}`, ButtonStyle.Primary))
   );
-  return {
-    embeds: [embed],
-    components: [row(...linhas), row(btn('estadm:menu', '⬅️ Voltar'))],
-  };
+  const nav = paginaNav('catpag', paginaAtual, totalPaginas, `${acao}:`);
+  if (nav.length) componentes.push(row(...nav));
+  return { embeds: [embed], components: componentes };
 }
 
-// Lista de produtos de uma categoria (para editar/remover/qtd/toggle)
-function adminEscolherProduto(guildId, acao, catId) {
+// Lista de produtos de uma categoria (para editar/remover/qtd/toggle/vender), paginada
+function adminEscolherProduto(guildId, acao, catId, pag = 0) {
   const cat = estoque.categoria(guildId, catId);
   if (!cat) return adminMenu(guildId);
   if (!cat.produtos.length) {
@@ -215,16 +236,22 @@ function adminEscolherProduto(guildId, acao, catId) {
       components: [row(btn('estadm:menu', '⬅️ Voltar'))],
     };
   }
+  const totalPaginas = Math.max(1, Math.ceil(cat.produtos.length / 5));
+  const paginaAtual = numeroPagina(pag, totalPaginas);
+  const visiveis = cat.produtos.slice(paginaAtual * 5, paginaAtual * 5 + 5);
   const embed = new EmbedBuilder()
     .setColor(COR)
-    .setTitle(`⚙️ ${cat.nome} — escolha o produto`);
-  const linhas = cat.produtos.slice(0, 5).map((p) =>
-    btn(`estadm:${acao}:${catId}:${p.id}`, p.nome, ButtonStyle.Primary)
+    .setTitle(
+      cat.produtos.length > 5
+        ? `⚙️ ${cat.nome} — escolha o produto (${paginaAtual + 1}/${totalPaginas})`
+        : `⚙️ ${cat.nome} — escolha o produto`
+    );
+  const componentes = linhasDeBotoes(
+    visiveis.map((p) => btn(`estadm:${acao}:${catId}:${p.id}`, p.nome, ButtonStyle.Primary))
   );
-  return {
-    embeds: [embed],
-    components: [row(...linhas), row(btn('estadm:menu', '⬅️ Voltar'))],
-  };
+  const nav = paginaNav('prodpag', paginaAtual, totalPaginas, `${acao}:${catId}:`);
+  if (nav.length) componentes.push(row(...nav));
+  return { embeds: [embed], components: componentes };
 }
 
 // Detalhes de um produto (editar descrição/imagem/valor)
