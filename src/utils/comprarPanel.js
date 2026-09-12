@@ -1,6 +1,7 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, EmbedBuilder } = require('discord.js');
 const estoque = require('./estoque');
 const pedidoStore = require('./pedidoStore');
+const carrinhoStore = require('./carrinhoStore');
 const { formatBRL } = require('./robuxConverter');
 
 const COR = 0xbeb6ff;
@@ -90,7 +91,7 @@ function escolherQuantidade(guildId, catId, prodId) {
     .setDescription(
       `**Preço:** ${formatBRL(p.valor)} cada\n` +
       `**Disponível:** ${disponivel === null ? 'ilimitado' : `${disponivel} unidade(s)`}\n\n` +
-      'Selecione a quantidade desejada:'
+      'Selecione a quantidade ou **adicione ao carrinho** para escolher mais produtos depois:'
     );
   if (disponivel !== null && disponivel <=  0) {
     embed.setDescription(`**${p.nome}** está esgotado no momento.`);
@@ -115,11 +116,105 @@ function escolherQuantidade(guildId, catId, prodId) {
   btn(`comp:qtd:${catId}:${p.id}:${q}`, `${q}x`, ButtonStyle.Secondary)
   );
   });
+
+  // Ações do carrinho: adicionar por modal (multi-compra) e ver carrinho
+  linhas.push(row(
+    btn(`comp:addcarrinho:${catId}:${p.id}`, '🛒 Adicionar ao carrinho', ButtonStyle.Primary, '🛒'),
+    btn(`comp:carrinho`, 'Ver carrinho', ButtonStyle.Secondary)
+  ));
   linhas.push(row(btn(`comp:prod:${catId}:${p.id}`, '⬅️ Voltar aos produtos', ButtonStyle.Secondary)));
   return {
   embeds: [embed],
   components: linhas,
   };
+}
+
+// ----- Modal: quantidade personalizada -----
+function modalQuantidade(catId, prodId, userId) {
+  const modal = new ModalBuilder()
+    .setCustomId(`comp:modaldigitar:${catId}:${prodId}`)
+    .setTitle('🔢 Quantidade')
+    .addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('quantidade')
+          .setLabel('Digite a quantidade desejada')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMaxLength(4)
+      )
+    );
+  return modal;
+}
+
+// ----- Tela: carrinho de compras -----
+function montarCarrinho(guildId, userId) {
+  const itens = carrinhoStore.listar(guildId, userId);
+  const total = carrinhoStore.total(guildId, userId);
+
+  const embed = new EmbedBuilder()
+    .setColor(COR)
+    .setTitle('🛒 Carrinho')
+    .setDescription(
+      itens.length
+        ? itens.map((i) => `**${i.nome}** × ${i.quantidade} — ${formatBRL((i.valorUnitario || 0) * i.quantidade)}`).join('\n') +
+          `\n\n**Total: ${formatBRL(total)}**`
+        : '*Carrinho vazio. Adicione itens pelo painel de compra.*'
+    );
+
+  const linhas = [];
+  if (itens.length) {
+    // Botões de remover item (máx 5 por linha; no máx 4 linhas, senão estoura ActionRow)
+    const exibidos = itens.slice(0, 20);
+    for (let i = 0; i < exibidos.length; i++) {
+      if (i % 5 === 0) linhas.push(new ActionRowBuilder());
+      linhas[linhas.length - 1].addComponents(
+        btn(`comp:rem:${exibidos[i].catId}:${exibidos[i].prodId}`, `✖ ${exibidos[i].nome}`, ButtonStyle.Danger)
+      );
+    }
+    linhas.push(row(
+      btn('comp:finalizar', '✅ Finalizar compra', ButtonStyle.Success, '✅'),
+      btn(`comp:voltar`, '🎁 Escolher mais produtos', ButtonStyle.Primary),
+      btn('comp:limpar', '🗑️ Limpar carrinho', ButtonStyle.Danger, '🗑️')
+    ));
+  } else {
+    linhas.push(row(
+      btn('comp:voltar', '🎁 Escolher produtos', ButtonStyle.Primary)
+    ));
+  }
+  if (linhas.length > 5) {
+    // Se ainda passou de 5 linhas, mantém só as ações de finalizar/limpar
+    linhas.splice(0, linhas.length - 5);
+  }
+  return { embeds: [embed], components: linhas };
+}
+
+// ----- Finalizar o carrinho: cria um pedido por item -----
+function finalizarCarrinho(guildId, userId, clienteTag) {
+  const itens = carrinhoStore.listar(guildId, userId);
+  const criados = [];
+  for (const item of itens) {
+    const p = estoque.produto(guildId, item.catId, item.prodId);
+    if (!p) continue;
+    // Reserva (se controlar quantidade)
+    if (p.controlarQtd) {
+      const disp = pedidoStore.disponivel(guildId, p);
+      if (disp < item.quantidade) continue;
+    }
+    const pedido = pedidoStore.criar(guildId, {
+      clienteId: userId,
+      clienteTag,
+      catId: item.catId,
+      prodId: item.prodId,
+      itemNome: item.nome,
+      quantidade: item.quantidade,
+      valor: Math.round((item.valorUnitario || 0) * item.quantidade * 100) / 100,
+    });
+    criados.push(pedido);
+  }
+  // Limpa o carrinho após tentativa
+  carrinhoStore.limpar(guildId, userId);
+  return criados;
 }
 
 // ----- Mensagem do pedido pendente -----
@@ -163,4 +258,4 @@ function componentesDoPedido(p) {
   }
   return [];
 }
-module.exports = { escolherCategoria, escolherProduto, escolherQuantidade, mensagemPedido, statusTexto, componentesDoPedido };
+module.exports = { escolherCategoria, escolherProduto, escolherQuantidade, modalQuantidade, montarCarrinho, finalizarCarrinho, mensagemPedido, statusTexto, componentesDoPedido };

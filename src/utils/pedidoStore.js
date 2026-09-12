@@ -78,4 +78,12 @@ function disponivel(guildId, p) {
   return Math.max(0, p.quantidade - pends);
 }
 
-module.exports = { lista, criar, obter, atualizar, reservado, disponivel };
+// Pedidos de um cliente por status (para /proof e consultas).
+function doCliente(guildId, clienteId, status) {
+  return lista(guildId).filter(
+    (p) => p.clienteId && String(p.clienteId) === String(clienteId) &&
+      (!status || p.status === status)
+  );
+}
+
+module.exports = { lista, criar, obter, atualizar, reservado, disponivel, doCliente };
