@@ -3040,11 +3040,6 @@ client.on('interactionCreate', async (interaction) => {
           timestamp: true,
         });
 
-        // ----- Solicita comprovante (proof) no canal configurado, se houver -----
-        if (proofStore.obter(guildId)) {
-          await proofStore.enviarSolicitacao(interaction.client, guildId, pedido);
-        }
-
         // Adiciona os cargos conquistados（acumulativo, sem remover nenhum）
         if (conquistadas.length) {
           const membroAlvo = interaction.guild?.members?.cache?.get(pedido.clienteId) ||
