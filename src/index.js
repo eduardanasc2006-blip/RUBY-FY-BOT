@@ -367,13 +367,13 @@ client.on('interactionCreate', async (interaction) => {
     // ----- Monta o texto -----
     const linhas = [];
     if (dados.produto) linhas.push(`📦 Produto: ${dados.produto}`);
-    if (dados.clienteId) {
-      linhas.push(`👤 Cliente: <@${dados.clienteId}>`);
-      linhas.push(`🆔 ID: \`${dados.clienteId}\``);
-    }
     if (dados.valor) {
       const v = dados.valor.toLowerCase().startsWith('r$') ? dados.valor : `R$ ${dados.valor}`;
       linhas.push(`💰 Valor: ${v}`);
+    }
+    if (dados.clienteId) {
+      linhas.push(`👤 Cliente: <@${dados.clienteId}>`);
+      linhas.push(`🆔 ID: \`${dados.clienteId}\``);
     }
     const content = `# PROOF #${dados.numero}${linhas.length ? '\n\n' + linhas.join('\n') : ''}`;
 

@@ -88,15 +88,15 @@ function buildProofFormulario(userId, guild, dados) {
   const canalPadrao = proofStore.obter(guild.id);
   const desc = [`🧾 **Proof #${dados.numero}**`];
   if (dados.produto) desc.push(`📦 Produto: ${dados.produto}`);
-
-  // Usuário selecionado: mostra a menção (@nome) e o ID numérico em linha própria (o UserSelect já filtra pela busca do Discord)
-  if (dados.clienteId) {
-    desc.push(`👤 Cliente: <@${dados.clienteId}>`);
-    desc.push(`🆔 ID: \`${dados.clienteId}\``);
-  }
   if (dados.valor) {
     const v = dados.valor.toLowerCase().startsWith('r$') ? dados.valor : `R$ ${dados.valor}`;
     desc.push(`💰 Valor: ${v}`);
+  }
+
+  // Cliente/ID são opcionais (a venda pode ser pela Insta ou outra plataforma) — só aparecem se selecionados.
+  if (dados.clienteId) {
+    desc.push(`👤 Cliente: <@${dados.clienteId}>`);
+    desc.push(`🆔 ID: \`${dados.clienteId}\``);
   }
   if (dados.canalId) {
     desc.push(`📥 Canal: <#${dados.canalId}>`);
