@@ -1,6 +1,7 @@
 const assert = require('node:assert');
 const proofStore = require('../src/utils/proofStore');
-const { buildProofModal, buildProofFormulario } = require('../src/utils/proofModal');
+const estoque = require('../src/utils/estoque');
+const { buildProofModal, buildProofFormulario, opcoesProdutos } = require('../src/utils/proofModal');
 
 // Testa config de canal de proofs (define/obter/desativar) de forma isolada.
 // No teste real, o cliente usa /proof link:... e o bot publica no canal.
@@ -39,15 +40,39 @@ try {
   const numeroInput = modalJson.components[0].components[0];
   assert.strictEqual(numeroInput.value, '30', 'numero pré-preenchido');
 
-  // buildProofFormulario monta o painel com selects de canal+cliente e botão
-  const painel = buildProofFormulario('u-teste', { id: 'g', members: { cache: new Map() } }, { numero: 30, produto: 'X', valor: '3,00', clienteId: null, canalId: null });
+  // buildProofFormulario monta o painel com selects de canal+cliente+produto e botão
+  // Cria um produto de teste para o seletor aparecer (só leitura, não altera estoque)
+  const catTeste = estoque.addCategoria(GUILD, 'Categoria Proof Teste');
+  const prodTeste = estoque.addProduto(GUILD, catTeste.id, { nome: 'Produto Prova', valor: 7.5, controlarQtd: true, quantidade: 3 });
+  const painel = buildProofFormulario('u-teste', { id: GUILD, members: { cache: new Map() } }, { numero: 30, produto: 'X', valor: '3,00', clienteId: null, canalId: null });
   assert.ok(painel.embeds.length === 1, 'painel com embed');
   const customIds = painel.components.flatMap((r) => r.components.map((c) => c.data.custom_id));
   assert.ok(customIds.includes('proofsel:canal'), 'select de canal');
   assert.ok(customIds.includes('proofsel:cliente'), 'select de cliente');
+  assert.ok(customIds.includes('proofsel:produto'), 'select de produto (com estoque)');
   assert.ok(customIds.includes('proofsel:confirmar'), 'botão confirmar');
+
+  // O seletor de produto NÃO altera o estoque — existência/quantidade preservada
+  const prodsel = painel.components.find((r) => r.components[0].data.custom_id === 'proofsel:produto');
+  const menu = prodsel.components[0];
+  const op0 = menu.options[0];
+  assert.strictEqual(menu.options.length, 1, 'uma opção de produto');
+  assert.strictEqual(op0.data.label, 'Produto Prova', 'opção com o nome do produto');
+  assert.strictEqual(op0.data.value, prodTeste.id, 'value do produto é o id');
+  assert.strictEqual(op0.data.description, 'R$ 7,50', 'descrição com valor formatado');
+  const depois = estoque.produto(GUILD, catTeste.id, prodTeste.id);
+  assert.strictEqual(depois.quantidade, 3, 'montar opções NÃO diminui o estoque');
+  assert.strictEqual(depois.ativo, true, 'montar opções NÃO altera o estado');
+  // opcoesProdutos exportada também funciona
+  assert.strictEqual(opcoesProdutos(GUILD)[0].label, 'Produto Prova', 'opcoesProdutos direta');
 
   console.log('testes proof OK');
 } finally {
+  // limpa estoque temporário do teste
+  estoque.removeCategoria(GUILD, 'categoria-proof-teste');
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const arquivo = path.join(__dirname, '..', 'data', 'estoque', `${GUILD}.json`);
+  try { fs.unlinkSync(arquivo); } catch {}
   proofStore.desativar(GUILD);
 }

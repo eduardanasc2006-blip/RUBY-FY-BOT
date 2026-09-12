@@ -311,10 +311,21 @@ client.on('interactionCreate', async (interaction) => {
       dados.canalId = interaction.values[0] || null;
     } else if (interaction.isUserSelectMenu && interaction.customId === 'proofsel:cliente') {
       dados.clienteId = interaction.values[0] || null;
+    } else if (interaction.isStringSelectMenu && interaction.customId === 'proofsel:produto') {
+      // Busca apenas o nome do produto no estoque (não altera quantidade/estoque)
+      const prodId = interaction.values[0] || null;
+      if (prodId) {
+        for (const cat of estoqueCompras.categorias(interaction.guildId)) {
+          const p = (cat.produtos || []).find((x) => x.id === prodId);
+          if (p) { dados.produto = p.nome; break; }
+        }
+      } else {
+        dados.produto = null;
+      }
     }
 
     const painel = buildProofFormulario(interaction.user.id, interaction.guild, dados);
-    if (interaction.isChannelSelectMenu || interaction.isUserSelectMenu) {
+    if (interaction.isChannelSelectMenu || interaction.isUserSelectMenu || interaction.isStringSelectMenu) {
       return interaction.update(painel);
     }
     return interaction.reply(painel);
@@ -322,6 +333,7 @@ client.on('interactionCreate', async (interaction) => {
 
   if (interaction.isChannelSelectMenu && interaction.customId === 'proofsel:canal') return handlerProofSel(interaction);
   if (interaction.isUserSelectMenu && interaction.customId === 'proofsel:cliente') return handlerProofSel(interaction);
+  if (interaction.isStringSelectMenu && interaction.customId === 'proofsel:produto') return handlerProofSel(interaction);
 
   // ---- Botão confirmar: posta o proof no canal escolhido ----
   if (interaction.isButton() && interaction.customId === 'proofsel:confirmar') {

@@ -163,7 +163,7 @@ const PAGINAS = {
       '*Configura o canal donde ficam os logs das compras.*',
       '',
       '➜ **/proof (adm)**',
-      '*Posta o comprovante do pedido. Anexe as imagens e no fluxo escolha o **cliente** (busca pelo @) e o **canal** por seleção.*',
+      '*Posta o comprovante do pedido. Anexe as imagens e no fluxo escolha **cliente** (busca pelo @), **canal** e **produto** (vem do estoque, sem dar baixa).*',
       '',
       '➜ **!proof (adm)**',
       '*Mesmo fluxo do /proof, mas por mensagem: anexe as imagens e clique no botão para preencher.*',
