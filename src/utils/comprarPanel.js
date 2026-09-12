@@ -225,7 +225,7 @@ function mensagemPedido(guildId, pedido) {
   const embed = new EmbedBuilder()
     .setColor(COR)
     .setTitle('🛒 PEDIDO PENDENTE')
-    .addFields({ name: '👤 Cliente', value: p.clienteTag || `<@${p.clienteId}>` })
+    .addFields({ name: '👤 Cliente', value: `${p.clienteTag || `<@${p.clienteId}>`} (\`${p.clienteId}\`)` })
     .addFields(
       { name: '📦 Item', value: p.itemNome, inline: true },
       { name: '🔢 Quantidade', value: String(p.quantidade), inline: true },
