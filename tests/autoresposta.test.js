@@ -23,6 +23,25 @@ if (!process.env.AUTOTEST_TMP) {
   checa('handler ignora CASE', acharResposta(lista, 'ENVIAR agora')?.resposta === 'Enviado!');
   checa('handler nao acha palavra ausente', acharResposta(lista, 'ola mundo') === null);
   checa('handler lista vazia', acharResposta([], 'qualquer') === null);
+} else if (process.env.AUTOTEST_TMP === 'STORE_BUG') {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const store = require('../src/utils/autoRespostaStore');
+  const g = 'g-store-bug';
+  const arq = path.join(__dirname, '..', 'data', 'autorespostas', g + '.json');
+  try { fs.rmSync(arq); } catch (e) {}
+  store.adicionar(g, 'palavra1', 'resposta1');
+  // adicionarPalavra deve atualizar a palavra principal (item.palavra)
+  const r1 = store.adicionarPalavra(g, 'palavra1', 'palavra2');
+  checa('adicionarPalavra ok', r1.ok);
+  let item = store.listar(g)[0];
+  checa('palavra principal sincronizada apos adicionar', item.palavra === item.palavras[0] && item.palavras.includes('palavra2'));
+  // removerPalavra deve re-sincronizar a palavra principal
+  const r2 = store.removerPalavra(g, 'palavra2', 'palavra1');
+  checa('removerPalavra ok', r2.ok);
+  item = store.listar(g)[0];
+  checa('palavra principal atualizada apos remover', item.palavra === item.palavras[0]);
+  try { fs.rmSync(arq); } catch (e) {}
 } else {
   const fs = require('node:fs');
   const path = require('node:path');

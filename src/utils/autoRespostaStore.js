@@ -161,7 +161,7 @@ function adicionarPalavra(guildId, palavraExistente, palavraNova) {
   const duplicada = novas.find((p) => usadas.has(p.toLowerCase()));
   if (duplicada) return { ok: false, msg: `Já existe outra auto-resposta para "${duplicada}".` };
   item.palavras.push(...novas);
-  item.palavra.a = item.palavras[0];
+  item.palavra = item.palavras[0];
   salvar(guildId, d);
   return { ok: true, msg: `✅ Palavra "${novas[0]}" adicionada (agora são ${item.palavras.length}).` };
 }
@@ -188,7 +188,7 @@ function removerPalavra(guildId, palavraExistente, palavraRemover) {
     salvar(guildId, d);
     return { ok: true, msg: "A última palavra foi removida — a auto-resposta inteira foi apagada." };
   }
-  item.palavra.a = item.palavras[0];
+  item.palavra = item.palavras[0];
   salvar(guildId, d);
   return { ok: true, msg: `Palavra "${palavraRemover}" removida (restam ${item.palavras.length}).` };
 }
