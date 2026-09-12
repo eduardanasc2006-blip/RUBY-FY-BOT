@@ -61,7 +61,7 @@ function registrar(client) {
           const eb = require('./embedPainel');
           const sessaoEmbed = eb.getSessao(donoId);
           if (estado.mensagem) sessaoEmbed.descricao = estado.mensagem;
-          if (estado.imagem) sessaoEmbed.imagem = estado.imagem;
+          if (estado.imagens?.length) sessaoEmbed.imagem = estado.imagens[0];
 
           return interaction.update(eb.buildPainel(donoId, interaction.guildId));
         }
@@ -109,7 +109,7 @@ function registrar(client) {
         if (acao === 'preview') return interaction.update(buildPreview(donoId, interaction.guildId));
         if (acao === 'voltar') return interaction.update(buildPainel(donoId, interaction.guildId));
         if (acao === 'publicar') {
-          if (!estado.mensagem && !estado.imagem) {
+          if (!estado.mensagem && !(estado.imagens || []).length) {
 
             return interaction.reply({ content: '❌ Preencha a mensagem ou escolha uma imagem.', flags: MessageFlags.Ephemeral });
           }
@@ -143,10 +143,15 @@ function registrar(client) {
         const estado = getSessao(donoId);
         const valor = interaction.fields.getTextInputValue('valor').trim();
         if (campo === 'imagem') {
-          if (valor && !urlValida(valor)) {
-            return interaction.reply({ content: '❌ URL de imagem inválida. Use um link completo com http(s)://. Deixe vazio para remover.', flags: MessageFlags.Ephemeral });
+          if (!valor) {
+            estado.imagens = [];
+            return interaction.update(buildPainel(donoId, interaction.guildId));
           }
-          estado.imagem = valor || null;
+          if (!urlValida(valor)) {
+            return interaction.reply({ content: '❌ URL de imagem inválida. Use um link completo com http(s)://. Deixe vazio para limpar as imagens.', flags: MessageFlags.Ephemeral });
+          }
+          estado.imagens.push(valor);
+          if (estado.imagens.length > 10) estado.imagens = estado.imagens.slice(-10);
         } else {
           estado.mensagem = valor || null;
         }
@@ -174,7 +179,7 @@ function registrar(client) {
        }
         const estado = getSessao(donoId);
         const conteudo = estado.mensagem || null;
-        const arquivos = estado.imagem ? [{ attachment: estado.imagem }] : [];
+        const arquivos = (estado.imagens || []).slice(0, 10).map((url) => ({ attachment: url }));
         try {
             await canal.send({ content: conteudo, files: arquivos, allowedMentions: { parse: [] } });
           } catch (e) {
