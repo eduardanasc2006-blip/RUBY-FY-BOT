@@ -368,7 +368,8 @@ client.on('interactionCreate', async (interaction) => {
     const linhas = [];
     if (dados.produto) linhas.push(`📦 Produto: ${dados.produto}`);
     if (dados.clienteId) {
-      linhas.push(`👤 Cliente: <@${dados.clienteId}> (ID: \`${dados.clienteId}\`)`);
+      linhas.push(`👤 Cliente: <@${dados.clienteId}>`);
+      linhas.push(`🆔 ID: \`${dados.clienteId}\``);
     }
     if (dados.valor) {
       const v = dados.valor.toLowerCase().startsWith('r$') ? dados.valor : `R$ ${dados.valor}`;
