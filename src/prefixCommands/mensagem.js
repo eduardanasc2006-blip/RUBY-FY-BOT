@@ -15,7 +15,8 @@ module.exports = {
     const sessao = getSessao(message.author.id);
     const anexoImg = message.attachments?.first();
     if (anexoImg && anexoImg.contentType?.startsWith('image/')) {
-      sessao.imagem = anexoImg.url;
+      if (!Array.isArray(sessao.imagens)) sessao.imagens = [];
+      sessao.imagens.push(anexoImg.url);
 
     }
     const texto = args.join(' ').trim();
