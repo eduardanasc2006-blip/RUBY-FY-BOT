@@ -61,4 +61,5 @@ try {
 } finally {
   // Limpa o que foi criado para não vazar para o ambiente
   carrinhoStore.limpar(GUILD, USER);
+  pedidoStore.removerDaGuild(GUILD);
 }

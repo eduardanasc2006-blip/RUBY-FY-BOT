@@ -36,4 +36,26 @@ function desativar(guildId) {
   salvar();
 }
 
-module.exports = { obter, definir, desativar };
+// Rascunhos de proof em memória (imagens anexadas no /proof aguardando o modal).
+// key: `${userId}`  value: { urls: [], canalPadrao: string|null }
+const rascunhos = new Map();
+
+function salvarRascunho(userId, rascunho) {
+  rascunhos.set(userId, rascunho);
+  // Expira em 10min para não acumular se o admin abandonar o modal.
+  // .unref() para não segurar o processo do bot (nem testes) aberto esperando o timer.
+  const timer = setTimeout(() => {
+    if (rascunhos.get(userId) === rascunho) rascunhos.delete(userId);
+  }, 10 * 60 * 1000);
+  timer.unref?.();
+}
+
+function obterRascunho(userId) {
+  return rascunhos.get(userId) || null;
+}
+
+function limparRascunho(userId) {
+  rascunhos.delete(userId);
+}
+
+module.exports = { obter, definir, desativar, salvarRascunho, obterRascunho, limparRascunho };

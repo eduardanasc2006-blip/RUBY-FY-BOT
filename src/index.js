@@ -241,6 +241,86 @@ client.on('interactionCreate', async (interaction) => {
     return interaction.showModal(modal);
   }
 
+  // ---- Modal do /proof (admin) ----
+  if (interaction.isModalSubmit() && interaction.customId === 'proofmodal') {
+    const respostaPrivada = (payload) => interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
+
+    if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'comprar')) {
+      return respostaPrivada({ content: '🔒 Somente administradores ou equipe autorizada.' });
+    }
+    const guildId = interaction.guildId;
+
+    const rascunho = proofStore.obterRascunho(interaction.user.id);
+    const urls = rascunho?.urls || [];
+    if (!urls.length) {
+      return respostaPrivada({ content: '❌ Suas imagens expiraram. Anexe novamente no `/proof`.', });
+    }
+
+    const numeroRaw = (interaction.fields.getTextInputValue('numero') || '').trim();
+    const numero = parseInt(numeroRaw.replace(/\D/g, ''), 10);
+    if (isNaN(numero) || numero < 0) {
+      return respostaPrivada({ content: '❌ Número do proof inválido. Digite só o número, ex: `26`.', });
+    }
+    const produto = (interaction.fields.getTextInputValue('produto') || '').trim();
+    const clienteRaw = (interaction.fields.getTextInputValue('cliente') || '').trim();
+    const valor = (interaction.fields.getTextInputValue('valor') || '').trim();
+    const canalRaw = (interaction.fields.getTextInputValue('canal') || '').trim();
+
+    // ----- Resolve o canal de destino -----
+    let canalAlvo = null;
+    const canalConfig = proofStore.obter(guildId);
+    if (canalRaw) {
+      // aceita: <#123...>, 123..., ou #nome-do-canal
+      const matchId = canalRaw.match(/\d{17,20}/);
+      if (matchId) {
+        canalAlvo = interaction.guild.channels.cache.get(matchId[0]);
+        if (!canalAlvo) {
+          canalAlvo = await interaction.guild.channels.fetch(matchId[0]).catch(() => null);
+        }
+      } else {
+        const nome = canalRaw.replace(/^#/, '').toLowerCase();
+        canalAlvo = interaction.guild.channels.cache.find((c) => c.isTextBased?.() && c.name.toLowerCase() === nome) || null;
+      }
+      if (!canalAlvo) {
+        return respostaPrivada({ content: `❌ Canal **${canalRaw}** não encontrado. Use o ID ou o nome exato.`, });
+      }
+    } else if (canalConfig) {
+      canalAlvo = interaction.guild.channels.cache.get(canalConfig) ||
+        (await interaction.guild.channels.fetch(canalConfig).catch(() => null));
+    }
+
+    if (!canalAlvo || !canalAlvo.isTextBased()) {
+      return respostaPrivada({
+        content: canalConfig
+          ? `❌ Canal de proofs configurado inválido. Reconfigure com /setproof ou digite o canal no modal.`
+          : '❌ Nenhum canal de destino. Configure com `/setproof #canal` ou digite o canal no modal.',
+      });
+    }
+
+    // ----- Monta o texto -----
+    const linhas = [];
+    if (produto) linhas.push(`📦 Produto: ${produto}`);
+    if (clienteRaw) linhas.push(`👤 Cliente: ${clienteRaw}`);
+    if (valor) {
+      const v = valor.toLowerCase().startsWith('r$') ? valor : `R$ ${valor}`;
+      linhas.push(`💰 Valor: ${v}`);
+    }
+    const content = `# PROOF #${numero}${linhas.length ? '\n\n' + linhas.join('\n') : ''}`;
+
+    // ----- Posta no canal (re-envia os arquivos anexados no /proof) -----
+    const files = urls.map((url, i) => ({ attachment: url, name: `proof-${numero}-${i + 1}.png` }));
+    await canalAlvo.send({ content, files, allowedMentions: { parse: [] } }).catch((e) => {
+      console.error('[ProofModal] Erro ao postar:', e?.message || e);
+      return respostaPrivada({ content: '❌ Erro ao postar o proof: ' + (e?.message || 'erro desconhecido'), });
+    });
+
+    proofStore.limparRascunho(interaction.user.id);
+
+    return respostaPrivada({
+      content: `✅ Proof **#${numero}** postado em ${canalAlvo} com **${files.length} imagem(ns)**.`,
+    });
+  }
+
   if (interaction.isModalSubmit() && interaction.customId.startsWith('modal:')) {
     const acao = interaction.customId.split(':')[1];
     const bruto = interaction.fields.getTextInputValue('valor').trim();

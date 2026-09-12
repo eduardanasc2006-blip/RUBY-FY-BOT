@@ -23,7 +23,7 @@ const canal = {
   isVoiceBased: () => false,
   permissionsFor: () => ({ has: () => true, missing: () => [] }),
   guild: null,
-  send: async () => ({ id: "m1" }),
+  send: async (payload) => { canal.ultimaMensagemEnviada = payload; return { id: "m1" }; },
   reply: async () => {},
   delete: async () => {},
 };
@@ -268,6 +268,33 @@ async function testarInteracoes() {
       falhas++;
     }
   }
+
+  // --- Fluxo do /proof com modal (admin) ---
+  const proofStore = require("../src/utils/proofStore");
+  proofStore.definir(guild.id, canal.id);
+  proofStore.salvarRascunho(author.id, {
+    urls: ["https://cdn.discordapp.com/attachments/1/1/a.png", "https://cdn.discordapp.com/attachments/1/1/b.png"],
+    nomes: ["a.png", "b.png"],
+    canalPadrao: canal.id,
+  });
+  {
+    const e = await emitir("modal", "proofmodal", { campos: { numero: "26", produto: "Testando", cliente: "@finix.yin", valor: "3,00", canal: canal.id } });
+    const enviada = canal.ultimaMensagemEnviada?.content || "";
+    if (!e.erro && enviada.includes("# PROOF #26") && canal.ultimaMensagemEnviada?.files?.length === 2) {
+      registrar("proofmodal [POSTA PROOF OK]", true, enviada.replace(/\n/g, " | "));
+      okTotal++;
+    } else {
+      registrar("proofmodal", false, "ERRO: " + (e.erro?.message || e.erro || "nao postou") + " | enviada: " + JSON.stringify(enviada));
+      falhas++;
+    }
+  }
+  // sem rascunho (imagens expiradas) deve responder erro, sem crash
+  proofStore.limparRascunho(author.id);
+  {
+    const e = await emitir("modal", "proofmodal", { campos: { numero: "27", produto: "X", cliente: "", valor: "", canal: "" } });
+    if (interacaoValida(e)) registrar("proofmodal sem rascunho", true); else falhas++;
+  }
+
   console.log("\nInteracoes: " + okTotal + " ok," + falhas + " falhas");
   return falhas === 0;
 }

@@ -221,4 +221,5 @@ if (!temCanais) process.exit(1);
 
 
   console.log("TESTE-CANAL-OK");
+  process.exit(0);
 })().catch((e) => { console.error("ERRO:", e); process.exit(1); });

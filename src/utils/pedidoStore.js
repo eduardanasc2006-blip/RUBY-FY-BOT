@@ -86,4 +86,11 @@ function doCliente(guildId, clienteId, status) {
   );
 }
 
-module.exports = { lista, criar, obter, atualizar, reservado, disponivel, doCliente };
+// Remove todos os pedidos de uma guild (usado em testes e limpeza).
+function removerDaGuild(guildId) {
+  if (!dados[guildId]) return;
+  delete dados[guildId];
+  salvar();
+}
+
+module.exports = { lista, criar, obter, atualizar, reservado, disponivel, doCliente, removerDaGuild };
