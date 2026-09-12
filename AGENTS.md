@@ -12,6 +12,7 @@
 
 ## Limites da API do Discord (componentes)
 - **ActionRow**: máx 5 componentes por linha e máx 5 linhas por mensagem — violação devolve `DiscordAPIError 50035 components[N].components[BASE_TYPE_BAD_LENGTH]`.
+- ⚠️ **Todo elemento de `components` DEVE ser um ActionRow (type 1)** — select menu solto no top level devolve `50035 'Value of field "type" must be one of (1, 9, 10, 12, 13, 14, 17)'` (fix de 2026-09-12, commit `16f8194`: `menuCanaisRapido` do `autoRespostaPanel.js` retornava `StringSelectMenuBuilder` solto → `!autoresposta` falhava com "❌ Ocorreu um erro ao executar este comando" quando havia ≥1 auto-resposta E canais de texto válidos). Teste de regressão adicionado em `tests/painelautoresposta.test.js` (top-level deve serializar `type 1`).
 - Painel do embed (`buildPainel` in `src/utils/embedPainel.js`): 4 linhas fixas — linha1 (4: Título/Descrição/Cor/Imagem), linha2 (5: Thumbnail/Autor/Rodapé/Fields/**Cancelar**), linha3 (5: Texto fora/Botões/Salvar/Preview/Enviar), linha4 (menu de cargos) — botões customizados entram com **no máx 1 linha** (`.slice(0, 1)`), pois o total tem que ficar ≤5 linhas.
 - Layout histórico: em 2026-08-31 a linha3 tinha 6 botões (causou o 50035 em produção às 10:06); fix em `6baf26d` redistribuiu Cancelar para a linha2 e limitou customizados a 1 linha.
 
