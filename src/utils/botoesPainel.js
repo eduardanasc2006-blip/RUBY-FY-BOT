@@ -200,6 +200,21 @@ function buildBotaoPrivadoPainel(userId, idx) {
         }))
       );
     linhas.push(new ActionRowBuilder().addComponents(select));
+
+    // Select para remover uma pagina individual (sem apagar as outras)
+    const selectRem = new StringSelectMenuBuilder()
+      .setCustomId(`embedpainel:botpagdel:${userId}:${idx}`)
+      .setPlaceholder('🗑️ Escolha uma pagina para REMOVER…')
+      .setMinValues(1)
+      .setMaxValues(1)
+      .addOptions(
+        paginas.map((p, i) => ({
+          label: `Pagina ${i + 1}: ${(p.titulo || p.descricao || 'sem titulo').slice(0, 80)}`,
+          value: String(i),
+          description: 'Remove esta pagina do conteudo privado',
+        }))
+      );
+    linhas.push(new ActionRowBuilder().addComponents(selectRem));
   }
 
   if (pagina) {

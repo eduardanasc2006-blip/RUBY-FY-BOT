@@ -2058,6 +2058,30 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.showModal(buildBotaoModal(donoId, idx));
     }
 
+    // Select menu para REMOVER uma única página (conteúdo) do botão privado
+    if (interaction.isStringSelectMenu() && interaction.customId.startsWith('embedpainel:botpagdel:')) {
+      const partesSel = interaction.customId.split(':');
+      const donoId = partesSel[2];
+      const bi = Number(partesSel[3]);
+      if (interaction.user.id !== donoId) {
+        return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
+      }
+      if (!permitido(interaction)) {
+        return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+      }
+      const estado = getSessao(donoId);
+      const bts = Array.isArray(estado.botoes) ? estado.botoes : [];
+      if (!bts[bi] || !Array.isArray(bts[bi].paginas)) {
+        return interaction.reply({ content: '❌ Botão inválido.', flags: MessageFlags.Ephemeral });
+      }
+      const pi = parseInt(interaction.values[0], 10);
+      if (Number.isNaN(pi) || pi < 0 || pi >= bts[bi].paginas.length) {
+        return interaction.reply({ content: '❌ Conteúdo inválido.', flags: MessageFlags.Ephemeral });
+      }
+      bts[bi].paginas.splice(pi, 1);
+      return interaction.update(buildBotaoPrivadoPainel(donoId, bi));
+    }
+
     // Select menu para escolher um conteúdo (página) do botão privado
     if (interaction.isStringSelectMenu() && interaction.customId.startsWith('embedpainel:botpagsel:')) {
       const partesSel = interaction.customId.split(':');

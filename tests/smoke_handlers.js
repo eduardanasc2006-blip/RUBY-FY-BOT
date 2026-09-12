@@ -178,6 +178,7 @@ async function testarInteracoes() {
     ["select", "embedpainel:fieldsel:xxxx", { valores: ["0"] }],
     ["select", "embedpainel:botaosel:xxxx", { valores: ["0"] }],
     ["select", "embedpainel:botpagsel:xxxx", { valores: ["0"] }],
+    ["select", "embedpainel:botpagdel:xxxx", { valores: ["0"] }],
     ["roleselect", "embedpainel:selcargos:xxxx", { valores: ["0"] }],
     ["modal", "embedmodal:titulo", { campos: { valor: "Titulo Teste" } }],
     ["modal", "embedmodal:descricao", { campos: { valor: "Descricao teste" } }],

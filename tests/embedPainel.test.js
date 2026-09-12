@@ -1,5 +1,6 @@
 const assert = require('node:assert');
 const { urlValida, camposValidos, buildEmbed, buildPreview, buildPainel, getSessao, limparSessao } = require('../src/utils/embedPainel');
+const { buildBotaoPrivadoPainel } = require('../src/utils/botoesPainel');
 
 assert.strictEqual(urlValida('https://cdn.discordapp.com/x.png'), true);
 assert.strictEqual(urlValida('http://exemplo.com/a.png'), true);
@@ -56,5 +57,19 @@ s2.botoes.push({ rotulo: 'B10', acao: 'link', valor: 'https://exemplo.com' });
 const painelCheio = buildPainel('user-rows');
 assert.ok(painelCheio.components.length <= 5, `com 10 botoes customizados, no máx 5 linhas (tem ${painelCheio.components.length})`);
 limparSessao('user-rows');
+
+// Tela de conteúdo de botão privado oferece editar E remover página individual
+const sBtn = getSessao('user-botao');
+sBtn.botoes = [
+  { rotulo: 'Copiar PIX', acao: 'privado', estilo: 'secundario', valor: '', paginas: [
+    { titulo: 'Chave', descricao: 'pix@x.com' },
+    { titulo: 'Confirmação', descricao: 'envie o comprovante' },
+  ] },
+];
+const painelBtn = buildBotaoPrivadoPainel('user-botao', 0);
+const idsSel = painelBtn.components.flatMap((r) => r.components).filter((c) => c.data?.type === 3).map((c) => c.data.custom_id);
+assert.ok(idsSel.includes('embedpainel:botpagsel:user-botao:0'), 'select de editar página presente');
+assert.ok(idsSel.includes('embedpainel:botpagdel:user-botao:0'), 'select de remover página presente');
+limparSessao('user-botao');
 
 console.log('testes embedPainel OK');
