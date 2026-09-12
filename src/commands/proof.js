@@ -7,19 +7,13 @@ const COR = 0xbeb6ff;
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('proof')
-    .setDescription('Envia o comprovante (proof) de pagamento dos seus pedidos confirmados')
-    .addAttachmentOption((option) =>
-      option
-        .setName('imagem')
-        .setDescription('Imagem do comprovante/entrega (print) — envie o arquivo aqui')
-        .setRequired(false)
-    )
-    .addStringOption((option) =>
-      option
-        .setName('link')
-        .setDescription('Link do comprovante (print, imgur, etc.) — alternativa à imagem')
-        .setRequired(false)
-    ),
+    .setDescription('Envia as imagens do comprovante de pagamento dos seus pedidos confirmados')
+    // Discord permite no máximo 5 anexos por comando: múltiplas opções de imagem
+    .addAttachmentOption((o) => o.setName('imagem1').setDescription('Imagem do comprovante (1)').setRequired(false))
+    .addAttachmentOption((o) => o.setName('imagem2').setDescription('Imagem do comprovante (2)').setRequired(false))
+    .addAttachmentOption((o) => o.setName('imagem3').setDescription('Imagem do comprovante (3)').setRequired(false))
+    .addAttachmentOption((o) => o.setName('imagem4').setDescription('Imagem do comprovante (4)').setRequired(false))
+    .addAttachmentOption((o) => o.setName('imagem5').setDescription('Imagem do comprovante (5)').setRequired(false)),
 
   async execute(interaction) {
     if (!interaction.guild) {
@@ -31,10 +25,14 @@ module.exports = {
       return interaction.reply({ content: '❌ Nenhum pedido confirmado seu aguardando comprovante.', flags: MessageFlags.Ephemeral });
     }
 
-    const imagem = interaction.options.getAttachment('imagem');
-    const link = interaction.options.getString('link');
+    // Coleta todas as imagens enviadas (imagem1..imagem5)
+    const imagens = [];
+    for (let i = 1; i <= 5; i++) {
+      const anexo = interaction.options.getAttachment(`imagem${i}`);
+      if (anexo) imagens.push(anexo);
+    }
 
-    if (!imagem && !link) {
+    if (!imagens.length) {
       // Lista os pedidos confirmados e explica como enviar
       const embed = new EmbedBuilder()
         .setColor(COR)
@@ -42,27 +40,25 @@ module.exports = {
         .setDescription(
           pedidos.map((p) => `**#${p.id}** — ${p.itemNome} × ${p.quantidade} — ${'R$ ' + p.valor.toFixed(2).replace('.', ',')}`).join('\n') +
           '\n\n**Como enviar o comprovante:**\n' +
-          '`/proof imagem:<arquivo>` — envie a foto/print direto\n' +
-          '`/proof link:<url>` — ou cole um link do comprovante'
+          '`/proof imagem1:<arquivo> imagem2:<arquivo> ...` — anexe as fotos da entrega (até 5)'
         );
       return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
     }
 
-    // Procura o pedido confirmado mais recente sem proof para vincular o link
-    const pedido = pedidos.find((p) => !p.proofUrl) || pedidos[pedidos.length - 1];
+    // Procura o pedido confirmado mais recente sem proof (ou o último)
+    const pedido = pedidos.find((p) => !p.proofUrls || !p.proofUrls.length) || pedidos[pedidos.length - 1];
 
-    // Guarda a URL do anexo (imagem do Discord) ou o link informado
-    const url = imagem ? imagem.url : link;
+    // Guarda as URLs das imagens no pedido
     pedidoStore.atualizar(interaction.guildId, pedido.id, {
-      proofUrl: url,
-      proofTipo: imagem ? 'imagem' : 'link',
+      proofUrls: imagens.map((a) => a.url),
+      proofTipo: 'imagem',
     });
 
-    // Publica o proof no canal configurado (se houver) para a equipe conferir
-    await proofStore.publicarProof(interaction.client, interaction.guildId, interaction.user, pedido, url, imagem ? true : false);
+    // Publica as imagens + info no canal de proofs (por servidor) para a equipe conferir
+    await proofStore.publicarProof(interaction.client, interaction.guildId, interaction.user, pedido, imagens);
 
     return interaction.reply({
-      content: `✅ Comprovante registrado para o pedido **#${pedido.id}**. A equipe vai verificar!`,
+      content: `✅ Comprovante registrado para o pedido **#${pedido.id}** com **${imagens.length} imagem(ns)**. A equipe vai verificar!`,
       flags: MessageFlags.Ephemeral,
     });
   },
