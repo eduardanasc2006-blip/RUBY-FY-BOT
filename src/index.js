@@ -2861,16 +2861,12 @@ client.on('interactionCreate', async (interaction) => {
           titulo: '📥 Pedido criado',
           descricao: `**#${pedido.id}** aguardando confirmação do pagamento.`,
           cor: 0xf1c40f,
-          grupos: [
-            [
-              { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
-              { name: '📦 Item', value: pedido.itemNome, inline: true },
-              { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
-            ],
-            [
-              { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
-              { name: '⏳ Status', value: 'Aguardando confirmação do pagamento', inline: true },
-            ],
+          campos: [
+            { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
+            { name: '📦 Item', value: pedido.itemNome, inline: true },
+            { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
+            { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
+            { name: '⏳ Status', value: 'Aguardando confirmação do pagamento', inline: true },
           ],
           timestamp: true,
         });
@@ -2905,15 +2901,11 @@ client.on('interactionCreate', async (interaction) => {
             titulo: '❌ Pedido cancelado',
             descricao: `**#${pedido.id}** foi cancelado — reserva liberada, nenhuma venda registrada.`,
             cor: 0xe74c3c,
-            grupos: [
-              [
-                { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
-                { name: '📦 Item', value: pedido.itemNome, inline: true },
-                { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
-              ],
-              [
-                { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
-              ],
+            campos: [
+              { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
+              { name: '📦 Item', value: pedido.itemNome, inline: true },
+              { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
+              { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
             ],
             timestamp: true,
           });
@@ -2946,16 +2938,12 @@ client.on('interactionCreate', async (interaction) => {
           titulo: '✅ Pedido confirmado',
           descricao: `**#${pedido.id}** pagamento confirmado e venda registrada.`,
           cor: 0x2ecc71,
-          grupos: [
-            [
-              { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
-              { name: '📦 Item', value: pedido.itemNome, inline: true },
-              { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
-            ],
-            [
-              { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
-              { name: '👮 Confirmado por', value: `<@${interaction.user.id}>`, inline: true },
-            ],
+          campos: [
+            { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
+            { name: '📦 Item', value: pedido.itemNome, inline: true },
+            { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
+            { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
+            { name: '👮 Confirmado por', value: `<@${interaction.user.id}>`, inline: true },
           ],
           timestamp: true,
         });
