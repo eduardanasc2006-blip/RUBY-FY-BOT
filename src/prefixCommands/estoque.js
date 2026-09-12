@@ -13,7 +13,7 @@ module.exports = {
     if (args.length > 0) {
       const busca = args.join(' ').toLowerCase();
       const resultados = [];
-      for (const cat of estoque.categorias()) {
+      for (const cat of estoque.categorias(message.guildId)) {
         for (const p of cat.produtos) {
           if (p.nome.toLowerCase().includes(busca)) {
             const s = estoque.status(p);

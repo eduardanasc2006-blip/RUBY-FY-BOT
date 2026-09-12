@@ -460,9 +460,9 @@ client.on('interactionCreate', async (interaction) => {
 
       const payload =
         acao === 'voltar'
-          ? estoquePanel.publicoCategorias()
+          ? estoquePanel.publicoCategorias(interaction.guildId)
           : acao === 'cat'
-            ? estoquePanel.publicoProdutos(catId)
+            ? estoquePanel.publicoProdutos(interaction.guildId, catId)
             : null;
       if (!payload) return;
 
@@ -494,14 +494,14 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       if (alvo === 'criarcategoria') {
-        const selecao = painelCategoria.construirPainelSelecao();
+        const selecao = painelCategoria.construirPainelSelecao(interaction.guildId);
         await interaction.update({ embeds: selecao.embeds, components: selecao.components });
         return;
       }
 
       if (alvo === 'cat') {
         const catId = interaction.customId.split(':')[2];
-        const embed = painelCategoria.buildCategoria(catId);
+        const embed = painelCategoria.buildCategoria(interaction.guildId, catId);
         if (!embed) {
           return interaction.reply({ content: `❌ Categoria **${catId}** não encontrada.`, flags: MessageFlags.Ephemeral });
         }
@@ -640,12 +640,12 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.update(painelCategoria.construirPainelSelecao(parseInt(partes[2])));
       }
       if (catId === 'gercat') {
-        return interaction.update(estoquePanel.adminGerenciarCategorias());
+        return interaction.update(estoquePanel.adminGerenciarCategorias(interaction.guildId));
       }
       if (!interaction.channel) {
         return interaction.reply({ content: '❌ Não consegui identificar o canal.', flags: MessageFlags.Ephemeral });
       }
-      const embed = painelCategoria.buildCategoria(catId);
+      const embed = painelCategoria.buildCategoria(interaction.guildId, catId);
       if (!embed) {
         return interaction.reply({ content: '❌ Categoria não encontrada.', flags: MessageFlags.Ephemeral });
       }
@@ -662,9 +662,9 @@ client.on('interactionCreate', async (interaction) => {
       const partes = interaction.customId.split(':');
       const acao = partes[1];
 
-      if (acao === 'menu') return interaction.update(estoquePanel.adminMenu());
-      if (acao === 'lista') return interaction.update(estoquePanel.adminLista());
-      if (acao === 'gercatpag') return interaction.update(estoquePanel.adminGerenciarCategorias(parseInt(partes[2])));
+      if (acao === 'menu') return interaction.update(estoquePanel.adminMenu(interaction.guildId));
+      if (acao === 'lista') return interaction.update(estoquePanel.adminLista(interaction.guildId));
+      if (acao === 'gercatpag') return interaction.update(estoquePanel.adminGerenciarCategorias(interaction.guildId, parseInt(partes[2])));
 
       if (acao === 'addcat') {
         const modal = new ModalBuilder().setCustomId('estmodal:addcat').setTitle('Nova categoria').addComponents(
@@ -676,7 +676,7 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.showModal(modal);
       }
 
-      if (acao === 'addprod') return interaction.update(estoquePanel.adminEscolherCategoria('addprod2'));
+      if (acao === 'addprod') return interaction.update(estoquePanel.adminEscolherCategoria(interaction.guildId, 'addprod2'));
       if (acao === 'addprod2') {
         const catId = partes[2];
         const modal = new ModalBuilder().setCustomId(`estmodal:addprod:${catId}`).setTitle('Novo produto').addComponents(
@@ -699,13 +699,13 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.showModal(modal);
       }
 
-      if (acao === 'qtd') return interaction.update(estoquePanel.adminEscolherCategoria('qtd2'));
-      if (acao === 'toggle') return interaction.update(estoquePanel.adminEscolherCategoria('toggle2'));
-      if (acao === 'remover') return interaction.update(estoquePanel.adminEscolherCategoria('remover2'));
+      if (acao === 'qtd') return interaction.update(estoquePanel.adminEscolherCategoria(interaction.guildId, 'qtd2'));
+      if (acao === 'toggle') return interaction.update(estoquePanel.adminEscolherCategoria(interaction.guildId, 'toggle2'));
+      if (acao === 'remover') return interaction.update(estoquePanel.adminEscolherCategoria(interaction.guildId, 'remover2'));
 
-      if (acao === 'qtd2') return interaction.update(estoquePanel.adminEscolherProduto('qtd3', partes[2]));
-      if (acao === 'toggle2') return interaction.update(estoquePanel.adminEscolherProduto('toggle3', partes[2]));
-      if (acao === 'remover2') return interaction.update(estoquePanel.adminEscolherProduto('remover3', partes[2]));
+      if (acao === 'qtd2') return interaction.update(estoquePanel.adminEscolherProduto(interaction.guildId, 'qtd3', partes[2]));
+      if (acao === 'toggle2') return interaction.update(estoquePanel.adminEscolherProduto(interaction.guildId, 'toggle3', partes[2]));
+      if (acao === 'remover2') return interaction.update(estoquePanel.adminEscolherProduto(interaction.guildId, 'remover3', partes[2]));
 
       if (acao === 'qtd3') {
         const [, , catId, prodId] = partes;
@@ -747,7 +747,7 @@ client.on('interactionCreate', async (interaction) => {
       }
       if (acao === 'remover-cancel') {
         const [, , catId, prodId] = partes;
-        return interaction.update(estoquePanel.adminProdDetalhe(catId, prodId));
+        return interaction.update(estoquePanel.adminProdDetalhe(interaction.guildId, catId, prodId));
       }
       if (acao === 'remover-confirm') {
         const [, , catId, prodId] = partes;
@@ -767,7 +767,7 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       // ----- remover categoria -----
-      if (acao === 'remcat') return interaction.update(estoquePanel.adminEscolherCategoria('remcat2'));
+      if (acao === 'remcat') return interaction.update(estoquePanel.adminEscolherCategoria(interaction.guildId, 'remcat2'));
       if (acao === 'remcat2') {
         const catId = partes[2];
         const cat = estoqueDb.categoria(catId);
@@ -800,8 +800,8 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       // ----- vender: diminui 1 da quantidade -----
-      if (acao === 'vender') return interaction.update(estoquePanel.adminEscolherCategoria('vender2'));
-      if (acao === 'vender2') return interaction.update(estoquePanel.adminEscolherProduto('vender3', partes[2]));
+      if (acao === 'vender') return interaction.update(estoquePanel.adminEscolherCategoria(interaction.guildId, 'vender2'));
+      if (acao === 'vender2') return interaction.update(estoquePanel.adminEscolherProduto(interaction.guildId, 'vender3', partes[2]));
       if (acao === 'vender3') {
         const [, , catId, prodId] = partes;
         const atual = estoqueDb.produto(catId, prodId);
@@ -845,8 +845,8 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       // ----- editar nome produto -----
-      if (acao === 'nome') return interaction.update(estoquePanel.adminEscolherCategoria('nome2'));
-      if (acao === 'nome2') return interaction.update(estoquePanel.adminEscolherProduto('nome3', partes[2]));
+      if (acao === 'nome') return interaction.update(estoquePanel.adminEscolherCategoria(interaction.guildId, 'nome2'));
+      if (acao === 'nome2') return interaction.update(estoquePanel.adminEscolherProduto(interaction.guildId, 'nome3', partes[2]));
       if (acao === 'nome3') {
         const [, , catId, prodId] = partes;
         const modal = new ModalBuilder().setCustomId(`estmodal:nome:${catId}:${prodId}`).setTitle('Editar nome do produto').addComponents(
@@ -858,7 +858,7 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       // ----- renomear categoria -----
-      if (acao === 'rencat') return interaction.update(estoquePanel.adminEscolherCategoria('rencat2'));
+      if (acao === 'rencat') return interaction.update(estoquePanel.adminEscolherCategoria(interaction.guildId, 'rencat2'));
       if (acao === 'rencat2') {
         const catId = partes[2];
         const modal = new ModalBuilder().setCustomId(`estmodal:rencat:${catId}`).setTitle('Renomear categoria').addComponents(
@@ -870,8 +870,8 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       // ----- gerenciar categorias (emoji, descrição, reordenar) -----
-      if (acao === 'gercat') return interaction.update(estoquePanel.adminGerenciarCategorias());
-      if (acao === 'gercat2') return interaction.update(estoquePanel.adminGerCatDetalhe(partes[2]));
+      if (acao === 'gercat') return interaction.update(estoquePanel.adminGerenciarCategorias(interaction.guildId));
+      if (acao === 'gercat2') return interaction.update(estoquePanel.adminGerCatDetalhe(interaction.guildId, partes[2]));
 
       if (acao === 'catemoji') {
         const catId = partes[2];
@@ -895,21 +895,21 @@ client.on('interactionCreate', async (interaction) => {
         const catId = partes[2];
         estoqueDb.moverCategoria(catId, -1);
         painelCategoria.refresh(client).catch(() => {});
-        return interaction.update(estoquePanel.adminGerCatDetalhe(catId));
+        return interaction.update(estoquePanel.adminGerCatDetalhe(interaction.guildId, catId));
       }
       if (acao === 'catdescer') {
         const catId = partes[2];
         estoqueDb.moverCategoria(catId, 1);
         painelCategoria.refresh(client).catch(() => {});
-        return interaction.update(estoquePanel.adminGerCatDetalhe(catId));
+        return interaction.update(estoquePanel.adminGerCatDetalhe(interaction.guildId, catId));
       }
 
       // ----- info do produto (descrição, imagem, preço) -----
-      if (acao === 'prodinfo') return interaction.update(estoquePanel.adminEscolherCategoria('prodinfo2'));
-      if (acao === 'prodinfo2') return interaction.update(estoquePanel.adminEscolherProduto('prodinfo3', partes[2]));
+      if (acao === 'prodinfo') return interaction.update(estoquePanel.adminEscolherCategoria(interaction.guildId, 'prodinfo2'));
+      if (acao === 'prodinfo2') return interaction.update(estoquePanel.adminEscolherProduto(interaction.guildId, 'prodinfo3', partes[2]));
       if (acao === 'prodinfo3') {
         const [, , catId, prodId] = partes;
-        return interaction.update(estoquePanel.adminProdDetalhe(catId, prodId));
+        return interaction.update(estoquePanel.adminProdDetalhe(interaction.guildId, catId, prodId));
       }
 
       if (acao === 'proddtl-desc') {
@@ -1478,7 +1478,7 @@ client.on('interactionCreate', async (interaction) => {
       if (acao === 'remover2') {
         const grupoId = partes[2];
         const roleId = partes[3];
-        setCargo(grupoId, roleId, false);
+        setCargo(interaction.guildId, grupoId, roleId, false);
         return interaction.update(buildGrupoPanel(interaction.guild, grupoId, donoId));
       }
 
@@ -1499,7 +1499,7 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       for (const roleId of interaction.values) {
-        setCargo(grupoId, roleId, true);
+        setCargo(interaction.guildId, grupoId, roleId, true);
       }
       return interaction.update(buildGrupoPanel(interaction.guild, grupoId, donoId));
     }

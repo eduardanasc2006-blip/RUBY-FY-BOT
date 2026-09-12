@@ -31,14 +31,14 @@ module.exports = {
     // Sem categoria informada: abre o seletor visual (mesmo comportamento do !painelcategoria sem args)
     const catBruto = interaction.options.getString('categoria');
     if (!catBruto || !catBruto.trim()) {
-      const selecao = painelCategoria.construirPainelSelecao();
+      const selecao = painelCategoria.construirPainelSelecao(interaction.guildId);
       return interaction.reply({ ...selecao, content: selecao.content || '📌 Escolha a categoria para fixar:', flags: MessageFlags.Ephemeral });
     }
 
     const catId = catBruto.toLowerCase().trim();
-    const embed = painelCategoria.buildCategoria(catId);
+    const embed = painelCategoria.buildCategoria(interaction.guildId, catId);
     if (!embed) {
-      const cats = estoque.categorias().map((c) => `\`${c.id}\``).join(', ') || '(nenhuma)';
+      const cats = estoque.categorias(interaction.guildId).map((c) => `\`${c.id}\``).join(', ') || '(nenhuma)';
       return interaction.reply({ content: `❌ Categoria \`${catId}\` não encontrada. Categorias: ${cats}`, flags: MessageFlags.Ephemeral });
     }
 

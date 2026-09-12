@@ -19,8 +19,8 @@ function emojiDa(c) {
   return c.emoji || '📦';
 }
 
-function publicoCategorias() {
-  const cats = estoque.categorias();
+function publicoCategorias(guildId) {
+  const cats = estoque.categorias(guildId);
   const embed = new EmbedBuilder()
     .setColor(COR)
     .setTitle('☁️ Estoque — RUBY FY')
@@ -38,9 +38,9 @@ function publicoCategorias() {
   return { embeds: [embed], components: linhas.length ? [row(...linhas)] : [] };
 }
 
-function publicoProdutos(catId) {
-  const cat = estoque.categoria(catId);
-  if (!cat) return publicoCategorias();
+function publicoProdutos(guildId, catId) {
+  const cat = estoque.categoria(guildId, catId);
+  if (!cat) return publicoCategorias(guildId);
 
   const linhas = cat.produtos.map((p) => {
     const s = estoque.status(p);
@@ -70,8 +70,8 @@ function publicoProdutos(catId) {
 
 // ---------- VISÃO ADMIN (!configestoque) ----------
 
-function adminMenu() {
-  const cats = estoque.categorias();
+function adminMenu(guildId) {
+  const cats = estoque.categorias(guildId);
   const totalProdutos = cats.reduce((acc, c) => acc + c.produtos.length, 0);
   const embed = new EmbedBuilder()
     .setColor(COR)
@@ -107,8 +107,8 @@ function adminMenu() {
 
 const POR_PAGINA_GERCAT = 9;
 
-function adminGerenciarCategorias(pag =  0) {
-  const cats = estoque.categorias();
+function adminGerenciarCategorias(guildId, pag =  0) {
+  const cats = estoque.categorias(guildId);
   if (!cats.length) {
     return { content: '📦 Nenhuma categoria cadastrada. Crie uma primeiro com **➕ Categoria**.', embeds: [], components: [row(btn('estadm:menu', '⬅️ Voltar'))] };
   }
@@ -150,11 +150,11 @@ function numeroPagina(pag, total) {
 }
 
 // Tela de uma categoria específica (editar emoji/descrição/reordenar/renomear/remover)
-function adminGerCatDetalhe(catId) {
-  const cat = estoque.categoria(catId);
+function adminGerCatDetalhe(guildId, catId) {
+  const cat = estoque.categoria(guildId, catId);
   if (!cat) return { content: '❌ Categoria não encontrada.', embeds: [], components: [] };
-  const i = estoque.categorias().findIndex((c) => c.id === catId);
-  const total = estoque.categorias().length;
+  const i = estoque.categorias(guildId).findIndex((c) => c.id === catId);
+  const total = estoque.categorias(guildId).length;
 
   const embed = new EmbedBuilder()
     .setColor(COR)
@@ -185,8 +185,8 @@ function adminGerCatDetalhe(catId) {
 }
 
 // Lista de categorias para escolher (usada em vários fluxos admin)
-function adminEscolherCategoria(acao) {
-  const cats = estoque.categorias();
+function adminEscolherCategoria(guildId, acao) {
+  const cats = estoque.categorias(guildId);
   if (!cats.length) {
     return {
       content: '📦 Nenhuma categoria cadastrada. Crie uma primeiro com **➕ Categoria**.',
@@ -205,9 +205,9 @@ function adminEscolherCategoria(acao) {
 }
 
 // Lista de produtos de uma categoria (para editar/remover/qtd/toggle)
-function adminEscolherProduto(acao, catId) {
-  const cat = estoque.categoria(catId);
-  if (!cat) return adminMenu();
+function adminEscolherProduto(guildId, acao, catId) {
+  const cat = estoque.categoria(guildId, catId);
+  if (!cat) return adminMenu(guildId);
   if (!cat.produtos.length) {
     return {
       content: `📦 A categoria **${cat.nome}** não tem produtos.`,
@@ -228,9 +228,9 @@ function adminEscolherProduto(acao, catId) {
 }
 
 // Detalhes de um produto (editar descrição/imagem/valor)
-function adminProdDetalhe(catId, prodId) {
-  const cat = estoque.categoria(catId);
-  const p = estoque.produto(catId, prodId);
+function adminProdDetalhe(guildId, catId, prodId) {
+  const cat = estoque.categoria(guildId, catId);
+  const p = estoque.produto(guildId, catId, prodId);
   if (!cat || !p) {
     return { content: '❌ Produto não encontrado.', embeds: [], components: [row(btn('estadm:menu', '⬅️ Voltar'))] };
   }
@@ -262,8 +262,8 @@ function adminProdDetalhe(catId, prodId) {
 }
 
 // Visão admin completa (com tudo, mesmo inativos)
-function adminLista() {
-  const cats = estoque.categorias();
+function adminLista(guildId) {
+  const cats = estoque.categorias(guildId);
   const blocos = cats.map((c) => {
     const prods = c.produtos
       .map((p) => {

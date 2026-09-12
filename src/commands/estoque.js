@@ -21,7 +21,7 @@ module.exports = {
     if (busca) {
       const alvo = busca.toLowerCase();
       const resultados = [];
-      for (const cat of estoque.categorias()) {
+      for (const cat of estoque.categorias(interaction.guildId)) {
         for (const p of cat.produtos) {
           if (p.nome.toLowerCase().includes(alvo)) {
             const s = estoque.status(p);

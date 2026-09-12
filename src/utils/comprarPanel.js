@@ -22,7 +22,7 @@ function btn(id, label, style, emoji) {
 // ----- Tela 1: selecionar categoria -----
 
 function escolherCategoria(guildId) {
-  const cats = estoque.categorias().filter((c) => c.produtos.some((p) => p.ativo));
+  const cats = estoque.categorias(guildId).filter((c) => c.produtos.some((p) => p.ativo));
   const embed = new EmbedBuilder()
     .setColor(COR)
     .setTitle('🛒 Comprar — Passo 1 de  3')
@@ -49,7 +49,7 @@ function escolherCategoria(guildId) {
 // ----- Tela 2: selecionar produto -----
 
 function escolherProduto(guildId, catId) {
-  const cat = estoque.categoria(catId);
+  const cat = estoque.categoria(guildId, catId);
   if (!cat) return escolherCategoria(guildId);
   const produtos = cat.produtos.filter((p) => p.ativo);
   const embed = new EmbedBuilder()
@@ -81,7 +81,7 @@ function escolherProduto(guildId, catId) {
 // ----- Tela 3: selecionar quantidade -----
 
 function escolherQuantidade(guildId, catId, prodId) {
-  const p = estoque.produto(catId, prodId);
+  const p = estoque.produto(guildId, catId, prodId);
   if (!p) return escolherCategoria(guildId);
   const disponivel = pedidoStore.disponivel(guildId, p);
   const embed = new EmbedBuilder()

@@ -24,7 +24,7 @@ function buildPermissionsPanel(guild, userId) {
   for (let i = 0; i < GRUPOS.length; i++) {
     if (i % 4 === 0) linhas.push(new ActionRowBuilder());
     const g = GRUPOS[i];
-    const qtd = cargosDoGrupo(g.id).length;
+    const qtd = cargosDoGrupo(guild.id, g.id).length;
     linhas[linhas.length - 1].addComponents(
       new ButtonBuilder()
         .setCustomId(`perm:grupo:${g.id}:${userId}`)
@@ -44,7 +44,7 @@ function buildGrupoPanel(guild, grupoId, userId) {
   const grupo = GRUPOS.find((g) => g.id === grupoId);
   if (!grupo) return { content: '❌ Grupo não encontrado.', embeds: [], components: [] };
 
-  const cargos = cargosDoGrupo(grupoId)
+  const cargos = cargosDoGrupo(guild.id, grupoId)
     .map((id) => guild?.roles?.cache?.get(id))
     .filter(Boolean);
   const listaCargos = cargos.map((r) => `${r}`).join(' ') || '*Nenhum cargo ainda.*';
@@ -82,7 +82,7 @@ function buildGrupoPanel(guild, grupoId, userId) {
 // Lista para escolher qual cargo remover do grupo.
 function buildRemoverPanel(guild, grupoId, userId) {
   const grupo = GRUPOS.find((g) => g.id === grupoId);
-  const cargos = cargosDoGrupo(grupoId)
+  const cargos = cargosDoGrupo(guild.id, grupoId)
     .map((id) => guild?.roles?.cache?.get(id))
     .filter(Boolean);
 

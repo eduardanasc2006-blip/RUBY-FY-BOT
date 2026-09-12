@@ -19,8 +19,8 @@ function salvar(msgId, catId, channelId) {
   fs.writeFileSync(FILE, JSON.stringify(dados, null, 2));
 }
 
-function buildCategoria(catId) {
-  const cat = estoque.categoria(catId);
+function buildCategoria(guildId, catId) {
+  const cat = estoque.categoria(guildId, catId);
   if (!cat) return null;
   const emoji = cat.emoji ? `${cat.emoji} ` : '📦 ';
   const linhas = cat.produtos
@@ -41,8 +41,8 @@ function buildCategoria(catId) {
 }
 
 // Painel visual para o admin escolher qual categoria fixar no canal
-function construirPainelSelecao(pag = 0) {
-  const cats = estoque.categorias();
+function construirPainelSelecao(guildId, pag = 0) {
+  const cats = estoque.categorias(guildId);
   const POR_PAGINA = 8;
   const totalPaginas = Math.max(1, Math.ceil(cats.length / POR_PAGINA));
   const paginaAtual = numeroPagina(pag, totalPaginas);
@@ -112,16 +112,16 @@ module.exports = {
     // Sem argumentos: abre o seletor visual de categorias para o admin escolher
     // qual fixar no canal (sem precisar digitar o id). Para editar o estoque use !configestoque.
     if (args.length === 0) {
-      return message.reply({ ...construirPainelSelecao(), allowedMentions: { repliedUser: false } });
+      return message.reply({ ...construirPainelSelecao(message.guildId), allowedMentions: { repliedUser: false } });
     }
 
     const catId = (args[0] || '').toLowerCase().trim();
     if (!catId) {
-      const cats = estoque.categorias().map((c) => `\`${c.id}\``).join(', ') || '(nenhuma)';
+      const cats = estoque.categorias(message.guildId).map((c) => `\`${c.id}\``).join(', ') || '(nenhuma)';
       return message.reply(`❌ Use: \`!painelcategoria <categoria>\` — categorias: ${cats}`);
     }
 
-    const embed = buildCategoria(catId);
+    const embed = buildCategoria(message.guildId, catId);
     if (!embed) {
       return message.reply(`❌ Categoria \`${catId}\` não encontrada.`);
     }
@@ -156,7 +156,7 @@ module.exports = {
           if (ch) {
             const msg = await ch.messages.fetch(msgId).catch(() => null);
             if (msg) {
-              const embed = buildCategoria(catId);
+              const embed = buildCategoria(message.guildId, catId);
               if (embed) await msg.edit({ embeds: [embed] });
             }
           }
