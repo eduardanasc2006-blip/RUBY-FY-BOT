@@ -3,8 +3,20 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('
 const sessoes = new Map();
 
 function getSessao(userId) {
-  if (!sessoes.has(userId)) sessoes.set(userId, { mensagem: null, imagem: null, tipo: 'normal' });
-  return sessoes.get(userId);
+  if (!sessoes.has(userId)) {
+    const sessao = { mensagem: null, imagens: [], tipo: 'normal' };
+    sessoes.set(userId, sessao);
+    return sessao;
+  }
+  const sessao = sessoes.get(userId);
+  // Migracao do estado antigo (imagem unica → lista)
+  if (sessao.imagem && !sessao.imagens) {
+
+    sessao.imagens = [sessao.imagem];
+    delete sessao.imagem;
+  }
+  if (!Array.isArray(sessao.imagens)) sessao.imagens = [];
+  return sessao;
 }
 
 function limparSessao(userId) {
@@ -13,10 +25,13 @@ function limparSessao(userId) {
 
 // Monta a embed de preview a partir do estado (aceita mensagem + imagem).
 function buildEmbed(estado) {
-  if (!estado.mensagem && !estado.imagem) return null;
+  const imgs = estado.imagens || [];
+  if (!estado.mensagem && imgs.length === 0) return null;
   const embed = new EmbedBuilder().setColor(0xbeb6ff);
-  if (estado.imagem) embed.setImage(estado.imagem);
   embed.setDescription(estado.mensagem || " ");
+  if (imgs.length) {
+    embed.addFields({ name: '🖼️ Imagens', value: `${imgs.length} imagem(ns) serão anexadas`, inline: false });
+  }
   return embed;
 }
 
@@ -41,6 +56,7 @@ function buildEscolhaPainel(userId) {
 // Painel de edicao da mensagem
 function buildPainel(userId, tipo = 'normal') {
   const estado = getSessao(userId);
+  const imgs = estado.imagens || [];
   const titulo = tipo === 'embed' ? '📨 Publicar embed' : '📨 Publicar mensagem';
   const resumo = new EmbedBuilder()
     .setColor(0xbeb6ff)
@@ -48,7 +64,7 @@ function buildPainel(userId, tipo = 'normal') {
     .setDescription(
       [
         estado.mensagem ? `📝 Mensagem: ${estado.mensagem.slice(0, 80)}${estado.mensagem.length > 80 ? '…' : ''}` : '📝 Mensagem: *(vazia)*',
-        estado.imagem ? '🖼️ Imagem: ✅ (sera enviada junto)' : '🖼️ Imagem: *(nenhuma)*',
+        imgs.length ? `🖼️ Imagens: ${imgs.length} anexada(s) — adicione mais por link no 🖼️` : '🖼️ Imagens: *(nenhuma)*',
       ].join('\n')
     );
 
@@ -70,9 +86,10 @@ function buildPainel(userId, tipo = 'normal') {
 // Preview: mostra o que sera publicado (texto +/ou imagem) com voltar/publicar/cancelar
 function buildPreview(userId) {
   const estado = getSessao(userId);
-  if (!estado.mensagem && !estado.imagem) {
+  const imgs = estado.imagens || [];
+  if (!estado.mensagem && imgs.length === 0) {
     return {
-      content: '⚠️ **Nada para publicar.** Escreva uma mensagem ou escolha uma imagem primeiro.',
+      content: '⚠️ **Nada para publicar.** Escreva uma mensagem ou envie imagens primeiro.',
       embeds: [],
       components: [],
     };
@@ -86,7 +103,9 @@ function buildPreview(userId) {
 
   return {
     content: estado.mensagem || null,
-    embeds: estado.imagem ? [new EmbedBuilder().setColor(0xbeb6ff).setDescription(estado.mensagem || ' ').setImage(estado.imagem)] : [],
+    embeds: [new EmbedBuilder().setColor(0xbeb6ff).setDescription(
+      `${estado.mensagem || '_Sem texto_'}\n\n🖼️ **${imgs.length} imagem(ns) serão anexadas na publicação.**`
+    )],
     components: [botoes],
   };
 }

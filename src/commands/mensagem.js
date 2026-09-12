@@ -7,8 +7,12 @@ module.exports = {
     .setName('mensagem')
     .setDescription('Publica uma mensagem simples (texto e/ou imagem) num canal (admin)')
     .addStringOption((o) => o.setName('mensagem').setDescription('Texto da mensagem (opcional)').setRequired(false))
-    .addAttachmentOption((o) => o.setName('imagem').setDescription('Imagem anexada').setRequired(false))
-    .addStringOption((o) => o.setName('link_imagem').setDescription('URL da imagem (alternativa ao anexo)').setRequired(false)),
+    .addAttachmentOption((o) => o.setName('imagem').setDescription('Imagem anexada (1)').setRequired(false))
+    .addAttachmentOption((o) => o.setName('imagem2').setDescription('Imagem anexada (2)').setRequired(false))
+    .addAttachmentOption((o) => o.setName('imagem3').setDescription('Imagem anexada (3)').setRequired(false))
+    .addAttachmentOption((o) => o.setName('imagem4').setDescription('Imagem anexada (4)').setRequired(false))
+    .addAttachmentOption((o) => o.setName('imagem5').setDescription('Imagem anexada (5)').setRequired(false))
+    .addStringOption((o) => o.setName('link_imagem').setDescription('URL da imagem (alternativa aos anexos)').setRequired(false)),
 
   async execute(interaction) {
     if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'mensagem')) {
@@ -17,13 +21,23 @@ module.exports = {
     }
 
     const texto = interaction.options.getString('mensagem');
-    const anexo = interaction.options.getAttachment('imagem');
     const link = interaction.options.getString('link_imagem');
 
     const sessao = getSessao(interaction.user.id);
-    if (anexo && anexo.contentType?.startsWith('image/')) sessao.imagem = anexo.url;
+    const anexos = [
+      'imagem',
+      'imagem2',
+      'imagem3',
+      'imagem4',
+      'imagem5',
+    ]
+      .map((nome) => interaction.options.getAttachment(nome))
+      .filter(Boolean);
+    for (const anexo of anexos) {
+      if (anexo.contentType?.startsWith('image/')) sessao.imagens.push(anexo.url);
+    }
 
-    else if (link && link.startsWith('http')) sessao.imagem = link;
+    if (link && link.startsWith('http')) sessao.imagens.push(link);
 
 
 

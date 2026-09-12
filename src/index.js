@@ -2773,6 +2773,7 @@ const { escolherCategoria, escolherProduto, escolherQuantidade, mensagemPedido }
 const pedidoStore = require('./utils/pedidoStore');
 const estoqueCompras = require('./utils/estoque');
 const comprasStore = require('./utils/comprasStore');
+const logComprasStore = require('./utils/logComprasStore');
 const metasStoreCompra = require('./utils/metasStore');
 const { buildMetasPainel, telaEscolherCargo, telaEscolherTipo } = require('./utils/metasPanel');
 
@@ -2847,6 +2848,19 @@ client.on('interactionCreate', async (interaction) => {
           quantidade: qtd,
           valor: Math.round((p.valor ||  0) * qtd * 100) / 100,
         });
+        logComprasStore.enviar(interaction.client, guildId, {
+          titulo: '📥 Pedido criado',
+          descricao: `**#${pedido.id}** aguardando confirmação do pagamento.`,
+          cor: 0xf1c40f,
+          campos: [
+            { name: '👤 Cliente', value: pedido.clienteTag || `<@${pedido.clienteId}>`, inline: true },
+            { name: '📦 Item', value: pedido.itemNome, inline: true },
+            { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
+            { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
+            { name: '⏳ Status', value: 'Aguardando confirmação do pagamento', inline: false },
+          ],
+          timestamp: true,
+        });
         return interaction.update(mensagemPedido(guildId, pedido));
       }
 
@@ -2874,6 +2888,18 @@ client.on('interactionCreate', async (interaction) => {
             status: 'cancelado',
             canceladoEm: Date.now(),
           });
+          logComprasStore.enviar(interaction.client, guildId, {
+            titulo: '❌ Pedido cancelado',
+            descricao: `**#${pedido.id}** foi cancelado — reserva liberada, nenhuma venda registrada.`,
+            cor: 0xe74c3c,
+            campos: [
+              { name: '👤 Cliente', value: pedido.clienteTag || `<@${pedido.clienteId}>`, inline: true },
+              { name: '📦 Item', value: pedido.itemNome, inline: true },
+              { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
+              { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
+            ],
+            timestamp: true,
+          });
           return interaction.update(mensagemPedido(guildId, pedidoStore.obter(guildId, pedidoId)));
         }
 
@@ -2899,14 +2925,37 @@ client.on('interactionCreate', async (interaction) => {
           confirmadoEm: Date.now(),
           confirmadoPor: interaction.user.id,
         });
+        logComprasStore.enviar(interaction.client, guildId, {
+          titulo: '✅ Pedido confirmado',
+          descricao: `**#${pedido.id}** pagamento confirmado e venda registrada.`,
+          cor: 0x2ecc71,
+          campos: [
+            { name: '👤 Cliente', value: pedido.clienteTag || `<@${pedido.clienteId}>`, inline: true },
+            { name: '📦 Item', value: pedido.itemNome, inline: true },
+            { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
+            { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
+            { name: '👮 Confirmado por', value: `<@${interaction.user.id}>`, inline: true },
+          ],
+          timestamp: true,
+        });
 
-        // Adiciona os cargos conquistados (acumulativo, sem remover nenhum)
+        // Adiciona os cargos conquistados（acumulativo, sem remover nenhum）
         if (conquistadas.length) {
           const membroAlvo = interaction.guild?.members?.cache?.get(pedido.clienteId) ||
             (await interaction.guild?.members?.fetch(pedido.clienteId).catch(() => null));
           for (const m of conquistadas) {
             try {
               if (membroAlvo) await membroAlvo.roles.add(m.cargoId);
+              logComprasStore.enviar(interaction.client, guildId, {
+                titulo: '🏆 Meta atingida',
+                descricao: `**${m.cargoNome || `<@&${m.cargoId}>`}** concedido a ${pedido.clienteTag || `<@${pedido.clienteId}>`}.`,
+                cor: 0x9b59b6,
+                campos: [
+                  { name: '🎯 Meta', value: m.tipoDescricao || m.tipo || '—', inline: true },
+                  { name: '🎯 Requisito', value: `${m.meta ?? ''}`, inline: true },
+                ],
+                timestamp: true,
+              });
             } catch (e) {
               console.error('[Compra] Falha ao adicionar cargo:', e?.message || e);
             }
