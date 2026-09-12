@@ -32,7 +32,8 @@ function definir(guildId, canalId) {
 
 function desativar(guildId) {
   if (!guildId) return;
-  dados[guildId] = { canalId: null };
+  if (!dados[guildId]) return;
+  delete dados[guildId];
   salvar();
 }
 

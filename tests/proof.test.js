@@ -1,6 +1,6 @@
 const assert = require('node:assert');
 const proofStore = require('../src/utils/proofStore');
-const { buildProofModal } = require('../src/utils/proofModal');
+const { buildProofModal, buildProofFormulario } = require('../src/utils/proofModal');
 
 // Testa config de canal de proofs (define/obter/desativar) de forma isolada.
 // No teste real, o cliente usa /proof link:... e o bot publica no canal.
@@ -31,15 +31,21 @@ try {
   proofStore.limparRascunho('u-teste');
   assert.strictEqual(proofStore.obterRascunho('u-teste'), null, 'rascunho limpo');
 
-  // buildProofModal monta modal com 5 campos e canal pré-preenchido pelo config
+  // buildProofModal monta modal com 3 campos de texto (canal/cliente viraram selects)
   proofStore.definir(GUILD, '987654321');
-  const modalJson = buildProofModal(GUILD, { numero: '30', cliente: '@teste' }).toJSON();
+  const modalJson = buildProofModal(GUILD, { numero: '30', produto: 'Testando' }).toJSON();
   assert.strictEqual(modalJson.custom_id, 'proofmodal', 'customId do modal');
-  assert.strictEqual(modalJson.components.length, 5, '5 inputs no modal');
-  const canalInput = modalJson.components[4].components[0];
-  assert.ok(canalInput.placeholder.includes('987654321'), 'placeholder do canal usa o config');
+  assert.strictEqual(modalJson.components.length, 3, '3 inputs no modal');
   const numeroInput = modalJson.components[0].components[0];
   assert.strictEqual(numeroInput.value, '30', 'numero pré-preenchido');
+
+  // buildProofFormulario monta o painel com selects de canal+cliente e botão
+  const painel = buildProofFormulario('u-teste', { id: 'g', members: { cache: new Map() } }, { numero: 30, produto: 'X', valor: '3,00', clienteId: null, canalId: null });
+  assert.ok(painel.embeds.length === 1, 'painel com embed');
+  const customIds = painel.components.flatMap((r) => r.components.map((c) => c.data.custom_id));
+  assert.ok(customIds.includes('proofsel:canal'), 'select de canal');
+  assert.ok(customIds.includes('proofsel:cliente'), 'select de cliente');
+  assert.ok(customIds.includes('proofsel:confirmar'), 'botão confirmar');
 
   console.log('testes proof OK');
 } finally {

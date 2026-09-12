@@ -258,7 +258,8 @@ client.on('interactionCreate', async (interaction) => {
     return interaction.showModal(buildProofModal(interaction.guildId));
   }
 
-  // ---- Modal do /proof (admin) ----
+  // ---- Modal do /proof (admin): coleta numero/produto/valor, depois apresenta
+// o painel com os seletores de cliente (@com busca) e canal ----
   if (interaction.isModalSubmit() && interaction.customId === 'proofmodal') {
     const respostaPrivada = (payload) => interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
 
@@ -279,63 +280,113 @@ client.on('interactionCreate', async (interaction) => {
       return respostaPrivada({ content: '❌ Número do proof inválido. Digite só o número, ex: `26`.', });
     }
     const produto = (interaction.fields.getTextInputValue('produto') || '').trim();
-    const clienteRaw = (interaction.fields.getTextInputValue('cliente') || '').trim();
     const valor = (interaction.fields.getTextInputValue('valor') || '').trim();
-    const canalRaw = (interaction.fields.getTextInputValue('canal') || '').trim();
 
-    // ----- Resolve o canal de destino -----
+    // Canal padrão já entra escolhido (o usuário pode trocar no select)
+    const dados = salvarFluxo(interaction.user.id, {
+      urls,
+      nomes: rascunho.nomes || [],
+      numero,
+      produto,
+      valor,
+      clienteId: null,
+      canalId: proofStore.obter(guildId),
+    });
+
+    const painel = buildProofFormulario(interaction.user.id, interaction.guild, dados);
+    return interaction.reply(painel);
+  }
+
+  // ---- Seletores do painel de proof ----
+  const handlerProofSel = async (interaction) => {
+    const autorizado = interaction.guild && comandoPode(interaction.member, interaction.user.id, 'comprar');
+    if (!autorizado) return interaction.reply({ content: '🔒 Somente administradores ou equipe autorizada.', flags: MessageFlags.Ephemeral });
+
+    const dados = obterFluxo(interaction.user.id);
+    if (!dados) {
+      return interaction.reply({ content: '❌ Sessão expirada. Envie `/proof` ou `!proof` novamente com as imagens.', flags: MessageFlags.Ephemeral });
+    }
+
+    if (interaction.isChannelSelectMenu && interaction.customId === 'proofsel:canal') {
+      dados.canalId = interaction.values[0] || null;
+    } else if (interaction.isUserSelectMenu && interaction.customId === 'proofsel:cliente') {
+      dados.clienteId = interaction.values[0] || null;
+    }
+
+    const painel = buildProofFormulario(interaction.user.id, interaction.guild, dados);
+    if (interaction.isChannelSelectMenu || interaction.isUserSelectMenu) {
+      return interaction.update(painel);
+    }
+    return interaction.reply(painel);
+  };
+
+  if (interaction.isChannelSelectMenu && interaction.customId === 'proofsel:canal') return handlerProofSel(interaction);
+  if (interaction.isUserSelectMenu && interaction.customId === 'proofsel:cliente') return handlerProofSel(interaction);
+
+  // ---- Botão confirmar: posta o proof no canal escolhido ----
+  if (interaction.isButton() && interaction.customId === 'proofsel:confirmar') {
+    const respostaPrivada = (payload) => interaction.update({ ...payload, components: [] });
+
+    if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'comprar')) {
+      return interaction.reply({ content: '🔒 Somente administradores ou equipe autorizada.', flags: MessageFlags.Ephemeral });
+    }
+    const dados = obterFluxo(interaction.user.id);
+    if (!dados) {
+      return respostaPrivada({ content: '❌ Sessão expirada. Envie `/proof` ou `!proof` novamente com as imagens.', });
+    }
+
     let canalAlvo = null;
-    const canalConfig = proofStore.obter(guildId);
-    if (canalRaw) {
-      // aceita: <#123...>, 123..., ou #nome-do-canal
-      const matchId = canalRaw.match(/\d{17,20}/);
-      if (matchId) {
-        canalAlvo = interaction.guild.channels.cache.get(matchId[0]);
-        if (!canalAlvo) {
-          canalAlvo = await interaction.guild.channels.fetch(matchId[0]).catch(() => null);
-        }
-      } else {
-        const nome = canalRaw.replace(/^#/, '').toLowerCase();
-        canalAlvo = interaction.guild.channels.cache.find((c) => c.isTextBased?.() && c.name.toLowerCase() === nome) || null;
-      }
-      if (!canalAlvo) {
-        return respostaPrivada({ content: `❌ Canal **${canalRaw}** não encontrado. Use o ID ou o nome exato.`, });
-      }
-    } else if (canalConfig) {
+    if (dados.canalId) {
+      canalAlvo = interaction.guild.channels.cache.get(dados.canalId) ||
+        (await interaction.guild.channels.fetch(dados.canalId).catch(() => null));
+    }
+    const canalConfig = proofStore.obter(interaction.guildId);
+    if (!canalAlvo && canalConfig) {
       canalAlvo = interaction.guild.channels.cache.get(canalConfig) ||
         (await interaction.guild.channels.fetch(canalConfig).catch(() => null));
     }
 
     if (!canalAlvo || !canalAlvo.isTextBased()) {
       return respostaPrivada({
-        content: canalConfig
-          ? `❌ Canal de proofs configurado inválido. Reconfigure com /setproof ou digite o canal no modal.`
-          : '❌ Nenhum canal de destino. Configure com `/setproof #canal` ou digite o canal no modal.',
+        content: '❌ Canal de destinos inválido. Selecione um canal no menu acima e tente de novo.',
       });
     }
 
     // ----- Monta o texto -----
     const linhas = [];
-    if (produto) linhas.push(`📦 Produto: ${produto}`);
-    if (clienteRaw) linhas.push(`👤 Cliente: ${clienteRaw}`);
-    if (valor) {
-      const v = valor.toLowerCase().startsWith('r$') ? valor : `R$ ${valor}`;
+    if (dados.produto) linhas.push(`📦 Produto: ${dados.produto}`);
+    if (dados.clienteId) {
+      const u = interaction.guild.members.cache.get(dados.clienteId)?.user;
+      linhas.push(`👤 Cliente: ${u ? `<@${u.id}> (\`${u.username}\`)` : `<@${dados.clienteId}>`}`);
+    }
+    if (dados.valor) {
+      const v = dados.valor.toLowerCase().startsWith('r$') ? dados.valor : `R$ ${dados.valor}`;
       linhas.push(`💰 Valor: ${v}`);
     }
-    const content = `# PROOF #${numero}${linhas.length ? '\n\n' + linhas.join('\n') : ''}`;
+    const content = `# PROOF #${dados.numero}${linhas.length ? '\n\n' + linhas.join('\n') : ''}`;
 
     // ----- Posta no canal (re-envia os arquivos anexados no /proof) -----
-    const files = urls.map((url, i) => ({ attachment: url, name: `proof-${numero}-${i + 1}.png` }));
+    const files = dados.urls.map((url, i) => ({ attachment: url, name: `proof-${dados.numero}-${i + 1}.png` }));
     await canalAlvo.send({ content, files, allowedMentions: { parse: [] } }).catch((e) => {
       console.error('[ProofModal] Erro ao postar:', e?.message || e);
+      limparFluxo(interaction.user.id);
+      proofStore.limparRascunho(interaction.user.id);
       return respostaPrivada({ content: '❌ Erro ao postar o proof: ' + (e?.message || 'erro desconhecido'), });
     });
 
+    limparFluxo(interaction.user.id);
     proofStore.limparRascunho(interaction.user.id);
 
     return respostaPrivada({
-      content: `✅ Proof **#${numero}** postado em ${canalAlvo} com **${files.length} imagem(ns)**.`,
+      content: `✅ Proof **#${dados.numero}** postado em ${canalAlvo} com **${files.length} imagem(ns)**.`,
     });
+  }
+
+  // ---- Botão cancelar do painel de proof ----
+  if (interaction.isButton() && interaction.customId === 'proofsel:cancelar') {
+    limparFluxo(interaction.user.id);
+    proofStore.limparRascunho(interaction.user.id);
+    return interaction.update({ content: '❌ Proof cancelado.', embeds: [], components: [] });
   }
 
   if (interaction.isModalSubmit() && interaction.customId.startsWith('modal:')) {
@@ -2882,7 +2933,7 @@ const estoqueCompras = require('./utils/estoque');
 const comprasStore = require('./utils/comprasStore');
 const logComprasStore = require('./utils/logComprasStore');
 const proofStore = require('./utils/proofStore');
-const { buildProofModal } = require('./utils/proofModal');
+const { buildProofModal, buildProofFormulario, salvarFluxo, obterFluxo, limparFluxo } = require('./utils/proofModal');
 const metasStoreCompra = require('./utils/metasStore');
 const { buildMetasPainel, telaEscolherCargo, telaEscolherTipo } = require('./utils/metasPanel');
 

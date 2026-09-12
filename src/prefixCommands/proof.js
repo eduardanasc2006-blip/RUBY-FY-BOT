@@ -24,14 +24,12 @@ module.exports = {
     const imagens = anexos.slice(0, 5);
 
     // Pré-preenche o modal com argumentos opcionais:
-    // !proof 26 | Testando | @finix.yin | 3,00
+    // !proof 26 | Testando | 3,00
     const partes = (args.join(' ').split('|') || []).map((s) => s.trim());
     const extras = {
       numero: partes[0] && /^\d+$/.test(partes[0]) ? partes[0] : '',
       produto: partes[1] || '',
-      cliente: partes[2] || '',
-      valor: partes[3] || '',
-      canal: partes[4] || '',
+      valor: partes[2] || '',
     };
 
     proofStore.salvarRascunho(message.author.id, {

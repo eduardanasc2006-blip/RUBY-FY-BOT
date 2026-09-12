@@ -36,11 +36,12 @@ const colecaoCanais = {
   size: 1,
   forEach: () => {},
 };
+const membrosCache = new Map();
 const guild = {
   id: "111111111111111111",
   name: "F.Y SERVER",
   channels: { cache: colecaoCanais },
-  members: { me: { id: "1509146932478476389", permissions: { has: () => true } } },
+  members: { me: { id: "1509146932478476389", permissions: { has: () => true } }, cache: membrosCache },
   roles: { cache: new Map() },
 };
 canal.guild = guild;
@@ -57,6 +58,7 @@ const membro = {
   bannable: true,
   guild,
 };
+membrosCache.set(membro.id, membro);
 const author = { id: "111111111111111111", bot: false, username: "admin-teste" };
 function fazerMensagem(conteudo) {
   return {
@@ -87,7 +89,9 @@ function fazerInteracao(tipo, customId, extras) {
     isModalSubmit: () => tipo === "modal",
     isStringSelectMenu: () => tipo === "select",
     isRoleSelectMenu: () => tipo === "roleselect",
-    isAnySelectMenu: () => tipo === "select",
+    isChannelSelectMenu: () => tipo === "channelSelect",
+    isUserSelectMenu: () => tipo === "userSelect",
+    isAnySelectMenu: () => ["select", "roleselect", "channelSelect", "userSelect"].includes(tipo),
     isChatInputCommand: () => false,
     isRepliable: () => true,
     deferred: false,
@@ -270,7 +274,7 @@ async function testarInteracoes() {
     }
   }
 
-  // --- Fluxo do /proof com modal (admin) ---
+  // --- Fluxo do /proof com modal + selects + confirmar (admin) ---
   const proofStore = require("../src/utils/proofStore");
 
   // botão do !proof abre o modal (precisa de rascunho)
@@ -287,29 +291,50 @@ async function testarInteracoes() {
     }
   }
   proofStore.limparRascunho(author.id);
-  proofStore.definir(guild.id, canal.id);
   proofStore.salvarRascunho(author.id, {
     urls: ["https://cdn.discordapp.com/attachments/1/1/a.png", "https://cdn.discordapp.com/attachments/1/1/b.png"],
     nomes: ["a.png", "b.png"],
     canalPadrao: canal.id,
   });
   {
-    const e = await emitir("modal", "proofmodal", { campos: { numero: "26", produto: "Testando", cliente: "@finix.yin", valor: "3,00", canal: canal.id } });
-    const enviada = canal.ultimaMensagemEnviada?.content || "";
-    if (!e.erro && enviada.includes("# PROOF #26") && canal.ultimaMensagemEnviada?.files?.length === 2) {
-      registrar("proofmodal [POSTA PROOF OK]", true, enviada.replace(/\n/g, " | "));
+    // modal → deve responder com o painel (selects), sem postar ainda
+    const e = await emitir("modal", "proofmodal", { campos: { numero: "26", produto: "Testando", valor: "3,00" } });
+    const painel = canal.ultimaInteracao || {};
+    const temSeletores = Array.isArray(painel.components) && painel.components.length >= 3;
+    if (!e.erro && temSeletores) {
+      registrar("proofmodal [PAINEL OK]", true);
       okTotal++;
     } else {
-      registrar("proofmodal", false, "ERRO: " + (e.erro?.message || e.erro || "nao postou") + " | enviada: " + JSON.stringify(enviada));
+      registrar("proofmodal", false, "ERRO: " + (e.erro?.message || e.erro || "sem painel") + " | resp: " + JSON.stringify(painel).slice(0, 150));
+      falhas++;
+    }
+  }
+  {
+    // selecionar cliente (UserSelect) e canal (ChannelSelect) → update do painel
+    const e = await emitir("userSelect", "proofsel:cliente", { valores: [author.id] });
+    if (interacaoValida(e)) registrar("proofsel:cliente [select]", true); else { registrar("proofsel:cliente", false, "ERRO: " + (e.erro?.message || e.erro)); falhas++; }
+    const e2 = await emitir("channelSelect", "proofsel:canal", { valores: [canal.id] });
+    if (interacaoValida(e2)) registrar("proofsel:canal [select]", true); else { registrar("proofsel:canal", false, "ERRO: " + (e2.erro?.message || e2.erro)); falhas++; }
+  }
+  {
+    // confirmar → posta no canal com as imagens
+    const e = await emitir("button", "proofsel:confirmar");
+    const enviada = canal.ultimaMensagemEnviada?.content || "";
+    if (!e.erro && enviada.includes("# PROOF #26") && canal.ultimaMensagemEnviada?.files?.length === 2) {
+      registrar("proofsel:confirmar [POSTA PROOF OK]", true, enviada.replace(/\n/g, " | "));
+      okTotal++;
+    } else {
+      registrar("proofsel:confirmar", false, "ERRO: " + (e.erro?.message || e.erro || "nao postou") + " | enviada: " + JSON.stringify(enviada));
       falhas++;
     }
   }
   // sem rascunho (imagens expiradas) deve responder erro, sem crash
   proofStore.limparRascunho(author.id);
   {
-    const e = await emitir("modal", "proofmodal", { campos: { numero: "27", produto: "X", cliente: "", valor: "", canal: "" } });
+    const e = await emitir("modal", "proofmodal", { campos: { numero: "27", produto: "X", valor: "" } });
     if (interacaoValida(e)) registrar("proofmodal sem rascunho", true); else falhas++;
   }
+  proofStore.desativar(guild.id); // não deixar guild de teste no proofs.json real
 
   console.log("\nInteracoes: " + okTotal + " ok," + falhas + " falhas");
   return falhas === 0;
