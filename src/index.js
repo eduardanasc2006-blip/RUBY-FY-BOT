@@ -195,6 +195,22 @@ client.on('interactionCreate', async (interaction) => {
 
   if (!command) return; // Comandos personalizados agora sao prefixo (!) e nao slash (/)
 
+  // Restrição de canal (mesma regra dos prefix): admins/cargos passam, usuário
+  // comum limitado aos canais configurados via /canalcomando.
+  if (interaction.guild && interaction.channel) {
+    const { podeUsarNoCanal } = require('./utils/permissions');
+    const canaisCheck = podeUsarNoCanal(
+      interaction.channelId,
+      interaction.guildId,
+      interaction.member,
+      interaction.user.id,
+      command.data.name
+    );
+    if (!canaisCheck.ok) {
+      return interaction.reply({ content: canaisCheck.msg, flags: MessageFlags.Ephemeral });
+    }
+  }
+
   try {
     await command.execute(interaction);
   } catch (error) {
@@ -381,10 +397,23 @@ client.on('interactionCreate', async (interaction) => {
 
   // ---- Botão confirmar: posta o proof no canal escolhido ----
   if (interaction.isButton() && interaction.customId === 'proofsel:confirmar') {
-    const respostaPrivada = (payload) => interaction.update({ ...payload, components: [] });
+    // Responde a interação imediatamente (15min de margem) para o envio dos
+    // anexos não estourar os 3s do botão. A mensagem efêmera original é
+    // atualizada depois via editReply.
+    if (typeof interaction.deferUpdate === 'function') {
+      await interaction.deferUpdate().catch(() => {});
+    }
+
+    const respostaPrivada = async (payload) => {
+      if (typeof interaction.editReply === 'function') {
+        await interaction.editReply({ ...payload, components: [] }).catch(() => {});
+      } else if (typeof interaction.update === 'function') {
+        await interaction.update({ ...payload, components: [] }).catch(() => {});
+      }
+    };
 
     if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'comprar')) {
-      return interaction.reply({ content: '🔒 Somente administradores ou equipe autorizada.', flags: MessageFlags.Ephemeral });
+      return respostaPrivada({ content: '🔒 Somente administradores ou equipe autorizada.' });
     }
     const dados = obterFluxo(interaction.user.id);
     if (!dados) {
@@ -425,19 +454,25 @@ client.on('interactionCreate', async (interaction) => {
 
     // ----- Posta no canal (re-envia os arquivos anexados no /proof) -----
     const files = dados.urls.map((url, i) => ({ attachment: url, name: `proof-${dados.numero}-${i + 1}.png` }));
-    await canalAlvo.send({ content, files, allowedMentions: { parse: [] } }).catch((e) => {
+    let postado = true;
+    try {
+      await canalAlvo.send({ content, files, allowedMentions: { parse: [] } });
+    } catch (e) {
+      postado = false;
       console.error('[ProofModal] Erro ao postar:', e?.message || e);
       limparFluxo(interaction.user.id);
       proofStore.limparRascunho(interaction.user.id);
       return respostaPrivada({ content: '❌ Erro ao postar o proof: ' + (e?.message || 'erro desconhecido'), });
-    });
+    }
 
     limparFluxo(interaction.user.id);
     proofStore.limparRascunho(interaction.user.id);
 
-    return respostaPrivada({
-      content: `✅ Proof **#${dados.numero}** postado em ${canalAlvo} com **${files.length} imagem(ns)**.`,
-    });
+    if (postado) {
+      return respostaPrivada({
+        content: `✅ Proof **#${dados.numero}** postado em ${canalAlvo} com **${files.length} imagem(ns)**.`,
+      });
+    }
   }
 
   // ---- Botão cancelar do painel de proof ----
@@ -663,7 +698,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.isButton() && interaction.customId.startsWith('estfixo:')) {
       const partes = interaction.customId.split(':');
       const acao = partes[1];
-      const dentroDeEphemeral = interaction.message.flags.has('Ephemeral');
+      const dentroDeEphemeral = Boolean(interaction.message?.flags?.has?.('Ephemeral'));
 
       // Navegação entre páginas de categoria (lista de categorias)
       if (acao === 'prevcat' || acao === 'nextcat') {
@@ -1747,6 +1782,129 @@ client.on('interactionCreate', async (interaction) => {
     } catch {}
   }
 });
+// ----- Comandos por canal (!canalcomando) -----
+client.on('interactionCreate', async (interaction) => {
+  try {
+    const id = interaction.customId || '';
+    if (!id.startsWith('canalcmd:')) return;
+
+    const { buildCanalComandoPanel, buildCanalComandoLista, buildCanalComandoDetalhe, buildCanalComandoCanais } = require('./utils/canalComandoPanel');
+    const canalStore = require('./utils/canalComandoStore');
+
+    const partes = id.split(':');
+    const acao = partes[1];
+    const donoId = partes[partes.length - 1];
+
+    if (interaction.user.id !== donoId) {
+      return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
+    }
+    if (!isAdmin(interaction.member, interaction.user.id) && !eDono(interaction.user.id)) {
+      return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+    }
+    if (!interaction.guild) {
+      return interaction.reply({ content: '🔒 Isso só funciona no servidor.', flags: MessageFlags.Ephemeral });
+    }
+
+    if (acao === 'voltar') {
+      return interaction.update(buildCanalComandoPanel(interaction.guildId, donoId));
+    }
+
+    if (acao === 'escolhercat') {
+      const categoriaId = interaction.values[0];
+      return interaction.update(buildCanalComandoLista(interaction.guildId, donoId, categoriaId));
+    }
+
+    if (acao === 'escolher') {
+      const comando = interaction.values[0];
+      return interaction.update(buildCanalComandoDetalhe(interaction.guildId, donoId, comando));
+    }
+
+    if (acao === 'canais') {
+      const comando = partes[2];
+      return interaction.update(buildCanalComandoCanais(interaction.guild, donoId, comando));
+    }
+
+    if (acao === 'todos') {
+      const comando = partes[2];
+      canalStore.definir(interaction.guildId, comando, null);
+      return interaction.update(buildCanalComandoDetalhe(interaction.guildId, donoId, comando));
+    }
+
+    if (acao === 'nenhum') {
+      const comando = partes[2];
+      canalStore.definir(interaction.guildId, comando, []);
+      return interaction.update(buildCanalComandoDetalhe(interaction.guildId, donoId, comando));
+    }
+
+    if (acao === 'setcanais') {
+      const comando = partes[2];
+      canalStore.definir(interaction.guildId, comando, interaction.values);
+      return interaction.update(buildCanalComandoDetalhe(interaction.guildId, donoId, comando));
+    }
+
+    if (acao === 'mensagem') {
+      const atualMsg = canalStore.mensagemGlobal(interaction.guildId) || '';
+      const modal = new ModalBuilder()
+        .setCustomId(`canalcmd:mensagemmodal:${donoId}`)
+        .setTitle('✏️ Mensagem de bloqueio')
+        .addComponents(
+          new ActionRowBuilder().addComponents(
+            new TextInputBuilder()
+              .setCustomId('mensagem')
+              .setLabel('Mensagem ao usar fora dos canais (use {canais} p/ citar)')
+              .setStyle(TextInputStyle.Paragraph)
+              .setRequired(false)
+              .setMaxLength(500)
+              .setPlaceholder('Ex.: ❌ Você não pode usar comandos aqui! Faça em {canais}')
+              .setValue(atualMsg)
+          )
+        );
+      return interaction.showModal(modal);
+    }
+
+    return interaction.reply({ content: '❌ Ação desconhecida.', flags: MessageFlags.Ephemeral });
+  } catch (error) {
+    console.error('[CanalComando] Erro:', error?.message || error);
+    try {
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: '❌ Ocorreu um erro.', flags: MessageFlags.Ephemeral });
+      }
+    } catch {}
+  }
+});
+
+// Modal da mensagem global de bloqueio dos comandos por canal.
+client.on('interactionCreate', async (interaction) => {
+  try {
+    if (!interaction.isModalSubmit()) return;
+    if (!interaction.customId.startsWith('canalcmd:mensagemmodal:')) return;
+
+    const canalStore = require('./utils/canalComandoStore');
+    const { buildCanalComandoPanel } = require('./utils/canalComandoPanel');
+    const donoId = interaction.customId.split(':').slice(-1)[0];
+
+    if (interaction.user.id !== donoId) {
+      return interaction.reply({ content: '🔒 Este painel não é seu.', flags: MessageFlags.Ephemeral });
+    }
+    if (!isAdmin(interaction.member, interaction.user.id) && !eDono(interaction.user.id)) {
+      return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+    }
+
+    const mensagem = interaction.fields?.getTextInputValue?.('mensagem') || '';
+    canalStore.definirMensagemGlobal(interaction.guildId, mensagem || null);
+
+    return interaction.reply({
+      content: mensagem
+        ? '✅ Mensagem de bloqueio atualizada!'
+        : '✅ Mensagem de bloqueio **removida** (volta à padrão).',
+      ...buildCanalComandoPanel(interaction.guildId, donoId),
+      flags: MessageFlags.Ephemeral,
+    });
+  } catch (error) {
+    console.error('[CanalComandoModal] Erro:', error?.message || error);
+  }
+});
+
 // ----- Painel visual de embed -----
 
 const { getSessao, limparSessao, buildEmbed, buildPainel, buildPreview, buildFieldsPainel, buildConteudoPrivado, urlValida, botoesEmLinhas } = require('./utils/embedPainel');
@@ -2642,6 +2800,22 @@ client.on(Events.MessageCreate, async (message) => {
       }
     }
     return;
+  }
+
+  // Restrição de canal: admins/cargos sempre passam; usuário comum pode ser
+  // limitado aos canais configurados via !canalcomando (persistidos no store).
+  if (message.guild) {
+    const { podeUsarNoCanal } = require('./utils/permissions');
+    const canaisCheck = podeUsarNoCanal(
+      message.channelId,
+      message.guildId,
+      message.member,
+      message.author.id,
+      command.name // usa o nome canônico (aliases como !help -> ajuda seguem a mesma regra)
+    );
+    if (!canaisCheck.ok) {
+      return message.reply(canaisCheck.msg);
+    }
   }
 
   try {

@@ -157,6 +157,38 @@ function mapearComandoParaGrupo(nomeComando) {
   return grupo ? grupo.id : null;
 }
 
+// ---- Restrição de comando por canal ----
+// Admins/dono e cargos com permissão para o comando **nunca** são restringidos:
+// podem usar em qualquer canal. Somente usuários sem permissão são limitados
+// aos canais configurados via !canalcomando (quando houver).
+
+function podeUsarNoCanal(channelId, guildId, member, userId, nomeComando) {
+  // Se o usuário tem permissão para o comando (admin/dono/cargo), libera em qualquer canal.
+  const grupo = GRUPOS.find((g) => g.comandos.includes(nomeComando));
+  const temPermissao = grupo
+    ? pode(member, userId, grupo.id)
+    : eDono(userId) || member?.permissions?.has?.(PermissionFlagsBits.Administrator);
+  if (temPermissao) return { ok: true };
+
+  const store = require('./canalComandoStore');
+  const canais = store.canaisParaComando(guildId, nomeComando);
+  if (!canais) return { ok: true }; // sem restrição → qualquer canal
+
+  if (canais.includes(channelId)) return { ok: true };
+
+  // Bloqueado: retorna a mensagem customizada (ou padrão) para o usuário.
+  let msg = store.mensagemParaComando(guildId, nomeComando);
+  if (!msg) {
+    const mencoes = canais.map((id) => `<#${id}>`).join(' ');
+    msg = `❌ Você não pode usar \`!${nomeComando}\` aqui. Use em: ${mencoes || '*nenhum canal liberado*'}`;
+  } else {
+    // A mensagem customizada pode usar {canais} para citar os canais permitidos.
+    const mencoes = canais.map((id) => `<#${id}>`).join(' ');
+    msg = msg.replaceAll('{canais}', mencoes || '*nenhum canal liberado*');
+  }
+  return { ok: false, msg };
+}
+
 module.exports = {
   GRUPOS,
   eDono,
@@ -165,4 +197,5 @@ module.exports = {
   mapearComandoParaGrupo,
   cargosDoGrupo,
   setCargo,
+  podeUsarNoCanal,
 };

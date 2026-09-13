@@ -67,6 +67,7 @@ Todos funcionam com **prefixo `!`** (`!robux 1000`) e também como **slash comma
 | `!gerenciarcomandos` / `/gerenciarcomandos` | Edita/remove comandos personalizados |
 | `!proof` / `/proof` | Posta comprovante (proof) com imagens e dados |
 | `!setproof` / `/setproof` | Configura o canal/log de proofs |
+| `!canalcomando` / `/canalcomando` | Restringe comandos a canais específicos (admins e cargos autorizados passam em qualquer canal; a mensagem de bloqueio é personalizável e aceita `{canais}`) |
 
 ### Automação e moderação (admin)
 
