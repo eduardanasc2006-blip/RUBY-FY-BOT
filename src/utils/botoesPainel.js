@@ -26,35 +26,35 @@ function normBotoes(botoes) {
     }));
 }
 
-// Resumo legivel do botao para o painel
+// Resumo legível do botão para o painel
 function resumoBotao(b) {
-  const rotulo = (b.rotulo || '(sem rotulo)').trim();
+  const rotulo = (b.rotulo || '(sem rótulo)').trim();
   const emoji = b.emoji ? `${b.emoji} ` : '';
   switch (b.acao) {
     case 'privado':
-      return `🔒 ${emoji}**${rotulo}** — privado (so quem clica ve)`;
+      return `🔒 ${emoji}**${rotulo}** — privado (só quem clica vê)`;
     default:
       return `🔗 ${emoji}**${rotulo}** — link: ${String(b.valor || '' ).slice(0, 40)}`;
   }
 }
 
-// Tela principal dos botoes: lista os atuais + acoes
+// Tela principal dos botões: lista os atuais + ações
 function buildBotoesPainel(userId, guildId = '') {
   const estado = getSessao(userId);
   const botoes = normBotoes(estado.botoes);
   const linhasDesc = botoes.length
     ? botoes.map((b, i) => `**${i +  1}.** ${resumoBotao(b)}` )
-    : ['*(nenhum botao ainda)*'];
+    : ['*(nenhum botão ainda)*'];
 
   const embed = new EmbedBuilder()
     .setColor(0xbeb6ff)
-    .setTitle('🔘 Botoes da mensagem')
+    .setTitle('🔘 Botões da mensagem')
     .setDescription([
-      `**${botoes.length}** botao(oes) configurado(s.`,
+      `**${botoes.length}** botão(ões) configurado(s).`,
       '',
       ...linhasDesc,
       '',
-      'Botoes **privados** mostram uma resposta so para quem clicar (ex: 📋 Copiar PIX).',
+      'Botões **privados** mostram uma resposta só para quem clicar (ex: 📋 Copiar PIX).',
     ].join('\n')
   );
 
@@ -73,12 +73,12 @@ function buildBotoesPainel(userId, guildId = '') {
   if (botoes.length) {
     const select = new StringSelectMenuBuilder()
       .setCustomId(`embedpainel:botaosel:${userId}`)
-      .setPlaceholder('Escolha o botao…')
+      .setPlaceholder('Escolha o botão…')
       .setMinValues(1)
       .setMaxValues(1)
       .addOptions(
         botoes.map((b, i) => ({
-          label: `${i + 1}. ${(b.rotulo || 'sem rotulo').slice(0, 80)}`,
+          label: `${i + 1}. ${(b.rotulo || 'sem rótulo').slice(0, 80)}`,
           value: String(i),
           description: (b.acao === 'privado' ? 'Privado (ephemeral)' : b.valor ? b.valor.slice(0, 80) : 'Link'),
         }))
@@ -99,12 +99,12 @@ function buildBotaoModal(userId, idx = -1,guildId = '' ) {
 
   return new ModalBuilder()
     .setCustomId(customIdBase)
-    .setTitle(b ? `✏️ Editar botao ${idx + 1}` : '➕ Novo botao')
+    .setTitle(b ? `✏️ Editar botão ${idx + 1}` : '➕ Novo botão')
     .addComponents(
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
           .setCustomId('rotulo')
-          .setLabel('Nome do botao')
+          .setLabel('Nome do botão')
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
           .setMaxLength(80)
@@ -122,7 +122,7 @@ function buildBotaoModal(userId, idx = -1,guildId = '' ) {
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
           .setCustomId('estilo')
-          .setLabel('Estilo (primario, secundario, sucesso)')
+          .setLabel('Estilo (primário, secundário, sucesso)')
           .setStyle(TextInputStyle.Short)
           .setRequired(false)
           .setMaxLength(16)
@@ -131,7 +131,7 @@ function buildBotaoModal(userId, idx = -1,guildId = '' ) {
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
           .setCustomId('acao')
-          .setLabel('Acao: link (URL) ou privado (resposta)')
+          .setLabel('Ação: link (URL) ou privado (resposta)')
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
           .setMaxLength(16)
@@ -140,7 +140,7 @@ function buildBotaoModal(userId, idx = -1,guildId = '' ) {
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
           .setCustomId('valor')
-          .setLabel('Valor: URL (link) ou conteudo privado')
+          .setLabel('Valor: URL (link) ou conteúdo privado')
           .setStyle(TextInputStyle.Paragraph)
           .setRequired(false)
           .setMaxLength(4000)
@@ -157,7 +157,7 @@ function buildBotaoPrivadoPainel(userId, idx) {
   const estado = getSessao(userId);
   const botoes = normBotoes(estado.botoes);
   const b = botoes[idx];
-  if (!b) return { content: '❌ Botao nao encontrado.', embeds: [], components: [] };
+  if (!b) return { content: '❌ Botão não encontrado.', embeds: [], components: [] };
 
   const paginaAtual = b.paginaIdx ?? 0;
   const paginas = paginasValidas(b.paginas);
@@ -166,13 +166,13 @@ function buildBotaoPrivadoPainel(userId, idx) {
 
   const embedInfo = new EmbedBuilder()
     .setColor(0xbeb6ff)
-    .setTitle(`🔒 Conteudo privado — ${b.rotulo || 'botao'}`)
+    .setTitle(`🔒 Conteúdo privado — ${b.rotulo || 'botão'}`)
     .setDescription([
       paginas.length
-        ? `**${paginas.length}** pagina(s) configurada(s.`
-        : '*(nenhum conteudo ainda — adicione uma pagina abaixo)*',
+        ? `**${paginas.length}** página(s) configurada(s).`
+        : '*(nenhum conteúdo ainda — adicione uma página abaixo)*',
       '',
-      'O botao mostra esta resposta **so para quem clicar** (ephemeral).',
+      'O botão mostra esta resposta **só para quem clicar** (ephemeral).',
     ].join('\n')
   );
 
@@ -189,14 +189,14 @@ function buildBotaoPrivadoPainel(userId, idx) {
   if (paginas.length) {
     const select = new StringSelectMenuBuilder()
       .setCustomId(`embedpainel:botpagsel:${userId}:${idx}`)
-      .setPlaceholder('✏️ Escolha uma pagina para editar…')
+      .setPlaceholder('✏️ Escolha uma página para editar…')
       .setMinValues(1)
       .setMaxValues(1)
       .addOptions(
         paginas.slice(0, 25).map((p, i) => ({
-          label: `Pagina ${i + 1}: ${(p.titulo || p.descricao || 'sem titulo').slice(0, 80)}`,
+          label: `Página ${i + 1}: ${(p.titulo || p.descricao || 'sem título').slice(0, 80)}`,
           value: String(i),
-          description: 'Editar conteudo privado',
+          description: 'Editar conteúdo privado',
         }))
       );
     linhas.push(new ActionRowBuilder().addComponents(select));
@@ -204,21 +204,21 @@ function buildBotaoPrivadoPainel(userId, idx) {
     // Select para remover uma pagina individual (sem apagar as outras)
     const selectRem = new StringSelectMenuBuilder()
       .setCustomId(`embedpainel:botpagdel:${userId}:${idx}`)
-      .setPlaceholder('🗑️ Escolha uma pagina para REMOVER…')
+      .setPlaceholder('🗑️ Escolha uma página para REMOVER…')
       .setMinValues(1)
       .setMaxValues(1)
       .addOptions(
         paginas.slice(0, 25).map((p, i) => ({
-          label: `Pagina ${i + 1}: ${(p.titulo || p.descricao || 'sem titulo').slice(0, 80)}`,
+          label: `Página ${i + 1}: ${(p.titulo || p.descricao || 'sem título').slice(0, 80)}`,
           value: String(i),
-          description: 'Remove esta pagina do conteudo privado',
+          description: 'Remove esta página do conteúdo privado',
         }))
       );
     linhas.push(new ActionRowBuilder().addComponents(selectRem));
   }
 
   if (pagina) {
-  // Preview do conteudo atual (se houver)
+  // Preview do conteúdo atual (se houver)
     const prevEmbed = new EmbedBuilder().setColor(0xbeb6ff);
     if (pagina.titulo) prevEmbed.setTitle(pagina.titulo);
     if (pagina.descricao) prevEmbed.setDescription(pagina.descricao);

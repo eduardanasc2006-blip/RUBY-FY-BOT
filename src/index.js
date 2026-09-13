@@ -127,7 +127,7 @@ function atualizarStatus() {
 
 client.once(Events.ClientReady, () => {
   atualizarStatus();
-  console.log(`✅ Bot online como ${client.user.tag}`);
+  console.log(`✅ Bot online como ${client.user.username}`);
 
   // Sincroniza os slash commands (/) com o código atual sempre que o bot
   // sobe. A Discloud inicia via MAIN=src/index.js (nao via npm start), e o
@@ -161,11 +161,30 @@ client.once(Events.ClientReady, () => {
 });
 
 // Evita que o bot morra por erros não tratados (ex: interação expirada após restart)
+// Também grava em arquivo para diagnóstico na Discloud (o console não persiste);
+// nome: data/logs/erros.log (gitignored, não vai no ZIP de upload).
+const pathLogErros = path.join(__dirname, '..', 'data', 'logs', 'erros.log');
+function logErroRotulo(motivo, erro) {
+  try {
+    const fsLog = require('node:fs');
+    fsLog.mkdirSync(path.dirname(pathLogErros), { recursive: true });
+    fsLog.appendFileSync(
+      pathLogErros,
+      `[${new Date().toISOString()}] ${motivo}: ${(erro && (erro.stack || erro.message)) || 'sem detalhe'}\n`
+    );
+  } catch {}
+}
 process.on('unhandledRejection', (error) => {
   console.error('[Erro não tratado]', error?.code || error?.message || error);
+  logErroRotulo('unhandledRejection', error);
+});
+process.on('uncaughtException', (error) => {
+  console.error('[Exceção não capturada]', error?.code || error?.message || error);
+  logErroRotulo('uncaughtException', error);
 });
 client.on('error', (error) => {
   console.error('[Erro do client]', error?.message || error);
+  logErroRotulo('client', error);
 });
 
 // Responde slash commands
@@ -3097,7 +3116,7 @@ client.on('interactionCreate', async (interaction) => {
         if (!itens.length) {
           return interaction.reply({ content: '❌ Seu carrinho está vazio.', flags: MessageFlags.Ephemeral });
         }
-        const criados = finalizarCarrinho(guildId, interaction.user.id, interaction.user.tag || interaction.user.username || null);
+        const criados = finalizarCarrinho(guildId, interaction.user.id, interaction.user.globalName || interaction.user.username || null);
         if (!criados.length) {
           return interaction.reply({ content: '❌ Não foi possível finalizar: itens podem ter ficado sem estoque.', flags: MessageFlags.Ephemeral });
         }
@@ -3181,7 +3200,7 @@ client.on('interactionCreate', async (interaction) => {
         }
         const pedido = pedidoStore.criar(guildId, {
           clienteId: interaction.user.id,
-          clienteTag: interaction.user.tag || interaction.user.username || null,
+          clienteTag: interaction.user.globalName || interaction.user.username || null,
           catId, prodId,
           itemNome: p.nome,
           quantidade: qtd,

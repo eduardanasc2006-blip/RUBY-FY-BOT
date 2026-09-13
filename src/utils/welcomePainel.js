@@ -84,14 +84,14 @@ function embedStatus(donoId, guildId) {
   }
 
   linhas.push('');
-  linhas.push('\u{1F525} **Variaveis:** use **Variaveis** para ver as disponiveis.');
+  linhas.push('\u{1F525} **Variáveis:** use **Variáveis** para ver as disponíveis.');
 
 
   const embed = new EmbedBuilder()
     .setColor(0xbeb6ff)
-    .setTitle('\u2601\uFE0F CONFIGURACAO DE BOAS-VINDAS')
+    .setTitle('\u2601\uFE0F CONFIGURAÇÃO DE BOAS-VINDAS')
     .setDescription(linhas.join('\n'))
-    .setFooter({ text: 'Configuracao por servidor — clique em Salvar para persistir' });
+    .setFooter({ text: 'Configuração por servidor — clique em Salvar para persistir' });
 
 
   return embed;
@@ -108,7 +108,7 @@ function buildWelcomePainel(donoId, guildId) {
     new ButtonBuilder().setCustomId(`welcome:${conf.ativo ? 'desativar' : 'ativar'}:${donoId}`).setLabel(conf.ativo ? '\u{1F534} Desativar' : '\u{1F7E2} Ativar').setStyle(conf.ativo ? ButtonStyle.Danger : ButtonStyle.Success),
     new ButtonBuilder().setCustomId(`welcome:canal:${donoId}`).setLabel('\u{1F4E3} Escolher canal').setStyle(ButtonStyle.Primary),
     new ButtonBuilder().setCustomId(`welcome:tipo:${donoId}`).setLabel(conf.tipo === 'embed' ? '\u{1F4AC} Tipo: Mensagem' : '\u{1F4E7} Tipo: Embed').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId(`welcome:variaveis:${donoId}`).setLabel('\u{1F525} Variaveis').setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder().setCustomId(`welcome:variaveis:${donoId}`).setLabel('\u{1F525} Variáveis').setStyle(ButtonStyle.Secondary)
   );
 
   const linha2 = new ActionRowBuilder().addComponents(
