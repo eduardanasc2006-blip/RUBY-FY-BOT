@@ -193,7 +193,7 @@ function buildBotaoPrivadoPainel(userId, idx) {
       .setMinValues(1)
       .setMaxValues(1)
       .addOptions(
-        paginas.map((p, i) => ({
+        paginas.slice(0, 25).map((p, i) => ({
           label: `Pagina ${i + 1}: ${(p.titulo || p.descricao || 'sem titulo').slice(0, 80)}`,
           value: String(i),
           description: 'Editar conteudo privado',
@@ -208,7 +208,7 @@ function buildBotaoPrivadoPainel(userId, idx) {
       .setMinValues(1)
       .setMaxValues(1)
       .addOptions(
-        paginas.map((p, i) => ({
+        paginas.slice(0, 25).map((p, i) => ({
           label: `Pagina ${i + 1}: ${(p.titulo || p.descricao || 'sem titulo').slice(0, 80)}`,
           value: String(i),
           description: 'Remove esta pagina do conteudo privado',

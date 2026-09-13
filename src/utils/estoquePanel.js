@@ -19,11 +19,21 @@ function emojiDa(c) {
   return c.emoji || '📦';
 }
 
-function publicoCategorias(guildId) {
+const POR_PAGINA_PUBLICO = 5;
+
+function publicoCategorias(guildId, pag = 0) {
   const cats = estoque.categorias(guildId);
+  const totalPaginas = Math.max(1, Math.ceil(cats.length / POR_PAGINA_PUBLICO));
+  const paginaAtual = numeroPagina(pag, totalPaginas);
+  const visiveis = cats.slice(paginaAtual * POR_PAGINA_PUBLICO, (paginaAtual + 1) * POR_PAGINA_PUBLICO);
+
   const embed = new EmbedBuilder()
     .setColor(COR)
-    .setTitle('☁️ Estoque — RUBY FY')
+    .setTitle(
+      cats.length > POR_PAGINA_PUBLICO
+        ? `☁️ Estoque — RUBY FY (${paginaAtual + 1}/${totalPaginas})`
+        : '☁️ Estoque — RUBY FY'
+    )
     .setDescription(
       cats.length
         ? '**Selecione uma categoria abaixo para visualizar os produtos disponíveis.**'
@@ -31,19 +41,31 @@ function publicoCategorias(guildId) {
     )
     .setFooter({ text: '☁️ RUBY FY • Atualizado em tempo real' });
 
-  const linhas = cats.slice(0, 5).map((c) => {
+  const linhas = visiveis.map((c) => {
     const total = c.produtos.filter((p) => p.ativo).length;
     return btn(`estfixo:cat:${c.id}`, `${emojiDa(c)} ${c.nome} (${total})`, ButtonStyle.Primary);
   });
-  return { embeds: [embed], components: linhas.length ? [row(...linhas)] : [] };
+
+  const components = linhas.length ? [row(...linhas)] : [];
+  const nav = [];
+  if (paginaAtual > 0) nav.push(btn(`estfixo:prevcat:${paginaAtual - 1}`, '◀️ Anterior', ButtonStyle.Secondary));
+  if (paginaAtual < totalPaginas - 1) nav.push(btn(`estfixo:nextcat:${paginaAtual + 1}`, 'Próxima ▶️', ButtonStyle.Secondary));
+  if (nav.length) components.push(row(...nav));
+
+  return { embeds: [embed], components };
 }
 
-function publicoProdutos(guildId, catId) {
+function publicoProdutos(guildId, catId, pagProduto = 0) {
   const cats = estoque.categorias(guildId);
   const cat = estoque.categoria(guildId, catId);
   if (!cat) return publicoCategorias(guildId);
 
-  const linhas = cat.produtos.map((p) => {
+  const produtos = (cat.produtos || []).filter((p) => p);
+  const totalPaginas = Math.max(1, Math.ceil(produtos.length / POR_PAGINA_PUBLICO));
+  const paginaAtual = numeroPagina(pagProduto, totalPaginas);
+  const visiveis = produtos.slice(paginaAtual * POR_PAGINA_PUBLICO, (paginaAtual + 1) * POR_PAGINA_PUBLICO);
+
+  const linhas = visiveis.map((p) => {
     const s = estoque.status(p);
     const qtd =
       p.controlarQtd && p.quantidade > 1 ? `\n📦 ${p.quantidade} unidades` : '';
@@ -57,21 +79,34 @@ function publicoProdutos(guildId, catId) {
   nav.push(btn('estfixo:voltar', '⬅️ Categorias', ButtonStyle.Primary));
   if (idx >= 0 && idx < cats.length - 1) nav.push(btn(`estfixo:next:${cats[idx + 1].id}`, `${emojiDa(cats[idx + 1])} ${cats[idx + 1].nome} ▶️`, ButtonStyle.Secondary));
 
+  const components = [row(...nav)];
+
+  // Paginação de produtos dentro da categoria (evita estourar o limite de 4096)
+  const navProd = [];
+  if (paginaAtual > 0) navProd.push(btn(`estfixo:pprev:${catId}:${paginaAtual - 1}`, '◀️ Produtos', ButtonStyle.Secondary));
+  if (paginaAtual < totalPaginas - 1) navProd.push(btn(`estfixo:pnext:${catId}:${paginaAtual + 1}`, 'Produtos ▶️', ButtonStyle.Secondary));
+  if (navProd.length) components.push(row(...navProd));
+
+  const tituloCats = `${emojiDa(cat)} ${cat.nome}`;
+  const titulo = produtos.length > POR_PAGINA_PUBLICO
+    ? `${tituloCats} — produtos (${paginaAtual + 1}/${totalPaginas})`
+    : tituloCats;
+
   const embed = new EmbedBuilder()
     .setColor(COR)
-    .setTitle(`${emojiDa(cat)} ${cat.nome}`)
+    .setTitle(titulo)
     .setDescription(
       `${cat.descricao ? `*${cat.descricao}*\n\n` : ''}${linhas.length ? linhas.join('\n\n') : 'Nenhum produto nesta categoria.'}`
     );
 
   // Mostra a imagem do produto quando a categoria tem um único produto com imagem
-  if (cat.produtos.length === 1 && cat.produtos[0].imagem) {
-    embed.setImage(cat.produtos[0].imagem);
+  if (produtos.length === 1 && produtos[0].imagem) {
+    embed.setImage(produtos[0].imagem);
   }
 
   return {
     embeds: [embed],
-    components: [row(...nav)],
+    components,
   };
 }
 

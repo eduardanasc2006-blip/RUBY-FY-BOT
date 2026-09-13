@@ -642,9 +642,26 @@ client.on('interactionCreate', async (interaction) => {
     // Clique no PAINEL PUBLICO -> responde ephemeral (so quem clicou ve)
     // Clique DENTRO da resposta ephemeral -> EDITA a mesma mensagem
     if (interaction.isButton() && interaction.customId.startsWith('estfixo:')) {
-      const [, acao, catId] = interaction.customId.split(':');
+      const partes = interaction.customId.split(':');
+      const acao = partes[1];
       const dentroDeEphemeral = interaction.message.flags.has('Ephemeral');
 
+      // Navegação entre páginas de categoria (lista de categorias)
+      if (acao === 'prevcat' || acao === 'nextcat') {
+        const payload = estoquePanel.publicoCategorias(interaction.guildId, parseInt(partes[2] || '0', 10));
+        if (dentroDeEphemeral) return interaction.update(payload);
+        return interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
+      }
+
+      // Navegação entre páginas de produtos dentro da categoria
+      if (acao === 'pprev' || acao === 'pnext') {
+        const catId = partes[2];
+        const payload = estoquePanel.publicoProdutos(interaction.guildId, catId, parseInt(partes[3] || '0', 10));
+        if (dentroDeEphemeral) return interaction.update(payload);
+        return interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
+      }
+
+      const [, , catId] = partes;
       const payload =
         acao === 'voltar'
           ? estoquePanel.publicoCategorias(interaction.guildId)

@@ -85,5 +85,53 @@ try {
   try { fs.rmSync(arquivo); } catch {}
 }
 
+// Paginação pública: lista de categorias e lista de produtos
+function testePublicoPaginado() {
+  const G = 'g-pub-pag-' + Date.now();
+  // 7 categorias -> página 0 = 5, página 1 = 2
+  for (let i = 1; i <= 7; i++) estoque.addCategoria(G, 'Pub Cat ' + i);
+  const pc0 = estoquePanel.publicoCategorias(G, 0);
+  assert.strictEqual(pc0.components[0].components.length, 5, 'página 0 pública = 5 categorias');
+  const nav0 = pc0.components[1].components.map((c) => c.data.custom_id);
+  assert.ok(nav0.includes('estfixo:nextcat:1'), 'página 0 pública tem Próxima');
+  assert.ok(!nav0.includes('estfixo:prevcat'), 'página 0 pública não tem Anterior');
+  const pc1 = estoquePanel.publicoCategorias(G, 1);
+  assert.strictEqual(pc1.components[0].components.length, 2, 'página 1 pública = 2 categorias');
+  assert.ok(pc1.components[1].components.some((c) => c.data.custom_id === 'estfixo:prevcat:0'), 'página 1 pública tem Anterior');
+  assert.ok(pc1.embeds[0].data.title.includes('(2/2)'), 'título público mostra página 2/2');
+
+  // Categoria com 12 produtos -> 3 páginas de 5, sem estourar 4096
+  const cBig = estoque.addCategoria(G, 'Big ' + Date.now());
+  for (let i = 1; i <= 12; i++) {
+    estoque.addProduto(G, cBig.id, { nome: 'Item ' + i, valor: i, controlarQtd: true, quantidade: 5, descricao: 'descrição longa do item ' + i + ' com detalhes '.repeat(10) + String(i) });
+  }
+  const p0 = estoquePanel.publicoProdutos(G, cBig.id, 0);
+  const desc0 = p0.embeds[0].data.description || '';
+  assert.ok(desc0.length <= 4096, 'página 0 produtos não estoura 4096');
+  assert.ok(desc0.includes('Item 1'), 'página 0 tem Item 1');
+  assert.ok(!desc0.includes('Item 6'), 'página 0 não tem Item 6');
+  const ids0 = p0.components.map((r) => r.components.map((c) => c.data.custom_id));
+  const flat0 = ids0.flat();
+  assert.ok(flat0.includes(`estfixo:pnext:${cBig.id}:1`) || flat0.includes('estfixo:next:'), 'página 0 produtos tem navegação');
+  // página 2 pega os últimos 2
+  const p2 = estoquePanel.publicoProdutos(G, cBig.id, 2);
+  const desc2 = p2.embeds[0].data.description || '';
+  assert.ok(desc2.includes('Item 12'), 'página 2 tem Item 12');
+  assert.ok(!desc2.includes('Item 1\n') && !desc2.includes('**Item 1**'), 'página 2 não recomeça do Item 1');
+  assert.ok(p2.embeds[0].data.title.includes('(3/3)'), 'título produtos mostra 3/3');
+
+  const fs = require('node:fs');
+  const path = require('node:path');
+  try { fs.rmSync(path.join(__dirname, '..', 'data', 'estoque', `${G}.json`)); } catch {}
+  console.log('teste paginação pública OK');
+}
+
+try {
+  testePublicoPaginado();
+} catch (e) {
+  console.error('FALHA teste paginação pública:', e.message);
+  process.exit(1);
+}
+
 testeNavegacao();
 console.log('SUITE PAGINACAO + NAVEGACAO OK');
