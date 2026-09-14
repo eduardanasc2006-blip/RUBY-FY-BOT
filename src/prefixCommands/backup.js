@@ -37,12 +37,13 @@ module.exports = {
     // Por-guild diretamente
     backup.dados.estoque = ler(path.join('estoque', `${guildId}.json`));
     backup.dados.autorespostas = ler(path.join('autorespostas', `${guildId}.json`));
+    backup.dados.painel_estoque = ler(path.join('painel_estoque', `${guildId}.json`));
 
-    // Globais (puxa apenas o que corresponde a esta guild quando o arquivo é por-guild)
+    // Arquivos por-guild (chave { [guildId]: ... }) — puxa só a entrada desta guild
     const selecionarDaGuild = (obj) => {
       if (!obj) return null;
       if (obj[guildId] !== undefined) return obj[guildId];
-      return obj;
+      return null;
     };
     for (const [nome, caminho] of [
       ['carrinhos', 'carrinhos.json'],
@@ -50,21 +51,29 @@ module.exports = {
       ['proofs', 'proofs.json'],
       ['permissoes', 'permissoes.json'],
       ['welcome', 'welcome.json'],
-      ['panel', 'panel.json'],
-      ['painel_estoque', 'painel_estoque.json'],
       ['canal_avisos', 'canal_avisos.json'],
-      ['ctt_conteudos', 'ctt_conteudos.json'],
+      ['metas', 'metas.json'],
+      ['compras', 'compras.json'],
+      ['log_compras', 'log_compras.json'],
+      ['canal_comandos', 'canal_comandos.json'],
+      ['modelos_embed', 'modelos_embed.json'],
     ]) {
       backup.dados[nome] = selecionarDaGuild(ler(caminho));
     }
+    // Comandos personalizados por-guild
+    backup.dados.comandos_custom = ler(path.join('comandos_custom', `${guildId}.json`));
+    // Painel de conversão/taxas é GLOBAL por decisão do dono — incluir inteiro.
+    backup.dados.panel = ler('panel.json');
 
     // Painéis fixos por-guild (data/paineis/<guildId>.json e subpastas se houver)
     const paineisDir = path.join(DATA, 'paineis');
     try {
       const paineisArq = path.join(paineisDir, `${guildId}.json`);
-      backup.dados.paineis = JSON.parse(fs.readFileSync(paineisArq, 'utf8'));
+      const paineis = JSON.parse(fs.readFileSync(paineisArq, 'utf8'));
+      backup.dados.paineis = paineis;
     } catch {
-      backup.dados.paineis = null;
+      // Tenta o caminho legado global
+      backup.dados.paineis = ler('painel_categoria.json');
     }
 
     const arquivo = new AttachmentBuilder(

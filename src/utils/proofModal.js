@@ -29,22 +29,29 @@ function opcoesProdutos(guildId) {
 
 // Rascunho do fluxo em dois passos: modal (numero/produto/valor) → painel
 // com selects (cliente/canal/produto) → confirmar. Modal não aceita select menus.
-// Key: `${userId}`  value: { urls, nomes, numero, produto, valor, clienteId, canalId }
+// Key: `${guildId}:${userId}`  value: { urls, nomes, numero, produto, valor, clienteId, canalId }
+// O guildId entra na chave para o mesmo admin usar /proof em servidores diferentes
+// sem misturar os fluxos.
 const fluxos = new Map();
 
-function salvarFluxo(userId, dados) {
-  fluxos.set(userId, dados);
+function chaveFluxo(guildId, userId) {
+  return `${guildId || 'dm'}:${userId}`;
+}
+
+function salvarFluxo(guildId, userId, dados) {
+  const chave = chaveFluxo(guildId, userId);
+  fluxos.set(chave, dados);
   const timer = setTimeout(() => {
-    if (fluxos.get(userId) === dados) fluxos.delete(userId);
+    if (fluxos.get(chave) === dados) fluxos.delete(chave);
   }, 10 * 60 * 1000);
   timer.unref?.();
   return dados;
 }
-function obterFluxo(userId) {
-  return fluxos.get(userId) || null;
+function obterFluxo(guildId, userId) {
+  return fluxos.get(chaveFluxo(guildId, userId)) || null;
 }
-function limparFluxo(userId) {
-  fluxos.delete(userId);
+function limparFluxo(guildId, userId) {
+  fluxos.delete(chaveFluxo(guildId, userId));
 }
 
 // Cria o modal de /proof (só campos de texto; cliente/canal ficam nos selects).

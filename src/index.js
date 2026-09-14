@@ -282,7 +282,7 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ content: '🔒 Somente administradores ou equipe autorizada.', flags: MessageFlags.Ephemeral });
     }
 
-    const rascunho = proofStore.obterRascunho(interaction.user.id);
+    const rascunho = proofStore.obterRascunho(interaction.guildId, interaction.user.id);
     if (!rascunho?.urls?.length) {
       return interaction.reply({
         content: '❌ Suas imagens expiraram. Envie `!proof` novamente anexando as imagens.',
@@ -303,7 +303,7 @@ client.on('interactionCreate', async (interaction) => {
     }
     const guildId = interaction.guildId;
 
-    const rascunho = proofStore.obterRascunho(interaction.user.id);
+    const rascunho = proofStore.obterRascunho(interaction.guildId, interaction.user.id);
     const urls = rascunho?.urls || [];
     if (!urls.length) {
       return respostaPrivada({ content: '❌ Suas imagens expiraram. Anexe novamente no `/proof`.', });
@@ -318,7 +318,7 @@ client.on('interactionCreate', async (interaction) => {
     const valor = (interaction.fields.getTextInputValue('valor') || '').trim();
 
     // Canal padrão já entra escolhido (o usuário pode trocar no select)
-    const dados = salvarFluxo(interaction.user.id, {
+    const dados = salvarFluxo(interaction.guildId, interaction.user.id, {
       urls,
       nomes: rascunho.nomes || [],
       numero,
@@ -337,7 +337,7 @@ client.on('interactionCreate', async (interaction) => {
     const autorizado = interaction.guild && comandoPode(interaction.member, interaction.user.id, 'comprar');
     if (!autorizado) return interaction.reply({ content: '🔒 Somente administradores ou equipe autorizada.', flags: MessageFlags.Ephemeral });
 
-    const dados = obterFluxo(interaction.user.id);
+    const dados = obterFluxo(interaction.guildId, interaction.user.id);
     if (!dados) {
       return interaction.reply({ content: '❌ Sessão expirada. Envie `/proof` ou `!proof` novamente com as imagens.', flags: MessageFlags.Ephemeral });
     }
@@ -373,7 +373,7 @@ client.on('interactionCreate', async (interaction) => {
 
   // ---- Botão "Fora do Discord": pede o nome do cliente/plataforma ----
   if (interaction.isButton() && interaction.customId === 'proofsel:plataforma') {
-    const dados = obterFluxo(interaction.user.id);
+    const dados = obterFluxo(interaction.guildId, interaction.user.id);
     if (!dados) {
       return interaction.reply({ content: '❌ Sessão expirada. Envie `/proof` ou `!proof` novamente com as imagens.', flags: MessageFlags.Ephemeral });
     }
@@ -386,7 +386,7 @@ client.on('interactionCreate', async (interaction) => {
     if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'comprar')) {
       return respostaPrivada({ content: '🔒 Somente administradores ou equipe autorizada.' });
     }
-    const dados = obterFluxo(interaction.user.id);
+    const dados = obterFluxo(interaction.guildId, interaction.user.id);
     if (!dados) {
       return respostaPrivada({ content: '❌ Sessão expirada. Envie `/proof` ou `!proof` novamente com as imagens.' });
     }
@@ -415,7 +415,7 @@ client.on('interactionCreate', async (interaction) => {
     if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'comprar')) {
       return respostaPrivada({ content: '🔒 Somente administradores ou equipe autorizada.' });
     }
-    const dados = obterFluxo(interaction.user.id);
+    const dados = obterFluxo(interaction.guildId, interaction.user.id);
     if (!dados) {
       return respostaPrivada({ content: '❌ Sessão expirada. Envie `/proof` ou `!proof` novamente com as imagens.', });
     }
@@ -460,13 +460,13 @@ client.on('interactionCreate', async (interaction) => {
     } catch (e) {
       postado = false;
       console.error('[ProofModal] Erro ao postar:', e?.message || e);
-      limparFluxo(interaction.user.id);
-      proofStore.limparRascunho(interaction.user.id);
+      limparFluxo(interaction.guildId, interaction.user.id);
+      proofStore.limparRascunho(interaction.guildId, interaction.user.id);
       return respostaPrivada({ content: '❌ Erro ao postar o proof: ' + (e?.message || 'erro desconhecido'), });
     }
 
-    limparFluxo(interaction.user.id);
-    proofStore.limparRascunho(interaction.user.id);
+    limparFluxo(interaction.guildId, interaction.user.id);
+    proofStore.limparRascunho(interaction.guildId, interaction.user.id);
 
     if (postado) {
       return respostaPrivada({
@@ -477,8 +477,8 @@ client.on('interactionCreate', async (interaction) => {
 
   // ---- Botão cancelar do painel de proof ----
   if (interaction.isButton() && interaction.customId === 'proofsel:cancelar') {
-    limparFluxo(interaction.user.id);
-    proofStore.limparRascunho(interaction.user.id);
+    limparFluxo(interaction.guildId, interaction.user.id);
+    proofStore.limparRascunho(interaction.guildId, interaction.user.id);
     return interaction.update({ content: '❌ Proof cancelado.', embeds: [], components: [] });
   }
 
@@ -829,11 +829,7 @@ client.on('interactionCreate', async (interaction) => {
           } catch {}
         }
         delete cats[msgId];
-        const fsX = require('node:fs');
-        const pathX = require('node:path');
-        const CATEGORIA_FILE = pathX.join(__dirname, '..', 'data', 'painel_categoria.json');
-        fsX.mkdirSync(pathX.dirname(CATEGORIA_FILE), { recursive: true });
-        fsX.writeFileSync(CATEGORIA_FILE, JSON.stringify(cats, null, 2));
+        painelCenter.salvarCategoria(interaction.guildId, msgId, null, null);
         await interaction.update(buildPainelCentral(interaction.guildId));
         return interaction.followUp({
           content: `✅ Painel fixo da categoria **${catId}** removido.`,
@@ -1096,7 +1092,7 @@ client.on('interactionCreate', async (interaction) => {
         painelCategoria.refresh(client).catch(() => {});
         // Aviso de esgotado em background (nao trava a resposta)
         if (p && p.quantidade === 0) {
-          avisar(client, `⚠️ **${p.nome}** esgotou no estoque!`).catch(() => {});
+          avisar(client, interaction.guildId, `⚠️ **${p.nome}** esgotou no estoque!`).catch(() => {});
         }
         return responder({
           content: `📦 Venda registrada: **${p.nome}** agora tem **${p.quantidade}** em estoque.`,
@@ -1281,7 +1277,7 @@ client.on('interactionCreate', async (interaction) => {
         painelCategoria.refresh(client).catch(() => {});
         // Avisa quando o produto esgota
         if (p && p.quantidade === 0) {
-          avisar(client, `⚠️ **${p.nome}** esgotou no estoque!`).catch(() => {});
+          avisar(client, interaction.guildId, `⚠️ **${p.nome}** esgotou no estoque!`).catch(() => {});
         }
         return voltarMenu(
           p ? `✅ **${p.nome}** agora tem **${p.quantidade}** em estoque.` : '❌ Produto não encontrado ou sem controle de quantidade.'
@@ -3222,13 +3218,18 @@ async function cargoDaInteracao(interaction, roleId) {
 }
 
 // Avalia as metas do servidor contra os dados previstos do cliente (apos a venda).
+// Só devolve metas cujo cargo AINDA NÃO foi conquistado pelo cliente — uma meta já
+// atingida não volta como "nova conquista" em compras futuras.
 function metasConquistadas(guildId, clienteId, valor) {
   const dados = comprasStore.dadosDoCliente(guildId, clienteId);
   const novasVendas = (dados.vendas || 0) + 1;
   const novoGasto = (dados.gasto || 0) + (valor ||  0);
+  const cargosJaConquistados = comprasStore.cargosDoCliente(guildId, clienteId) || [];
   const conquistadas = [];
   for (const m of metasStoreCompra.listaMetas(guildId)) {
     if (!m || !m.cargoId) continue;
+    const cargoRef = m.cargoNome || `<@&${m.cargoId}>`;
+    if (cargosJaConquistados.includes(cargoRef)) continue; // já tem esse cargo — ignora
     const atingiu = m.tipo === 'valor'
       ? novoGasto >= (m.meta || 0)
       : novasVendas >= (m.meta || 0);

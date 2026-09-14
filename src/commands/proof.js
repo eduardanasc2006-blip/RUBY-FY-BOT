@@ -36,7 +36,7 @@ module.exports = {
     }
 
     // Guarda as imagens do anexo para quando o modal for enviado (modal não carrega anexos)
-    proofStore.salvarRascunho(interaction.user.id, {
+    proofStore.salvarRascunho(interaction.guildId, interaction.user.id, {
       urls: imagens.map((a) => a.url),
       nomes: imagens.map((a) => a.name),
       canalPadrao: proofStore.obter(interaction.guildId),

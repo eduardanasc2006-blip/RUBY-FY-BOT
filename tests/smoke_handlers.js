@@ -296,7 +296,7 @@ async function testarInteracoes() {
 
   // botão do !proof abre o modal (precisa de rascunho)
   proofStore.definir(guild.id, canal.id);
-  proofStore.salvarRascunho(author.id, { urls: ["https://cdn.discordapp.com/attachments/1/1/a.png"], nomes: ["a.png"], canalPadrao: canal.id });
+  proofStore.salvarRascunho(guild.id, author.id, { urls: ["https://cdn.discordapp.com/attachments/1/1/a.png"], nomes: ["a.png"], canalPadrao: canal.id });
   {
     const e = await emitir("button", "proofiniciar");
     if (interacaoValida(e) && canal.ultimoModal?.data?.custom_id === "proofmodal") {
@@ -307,8 +307,8 @@ async function testarInteracoes() {
       falhas++;
     }
   }
-  proofStore.limparRascunho(author.id);
-  proofStore.salvarRascunho(author.id, {
+  proofStore.limparRascunho(guild.id, author.id);
+  proofStore.salvarRascunho(guild.id, author.id, {
     urls: ["https://cdn.discordapp.com/attachments/1/1/a.png", "https://cdn.discordapp.com/attachments/1/1/b.png"],
     nomes: ["a.png", "b.png"],
     canalPadrao: canal.id,
@@ -346,7 +346,7 @@ async function testarInteracoes() {
     }
   }
   // --- Fluxo com cliente "fora do Discord" (nome de plataforma) ---
-  proofStore.salvarRascunho(author.id, {
+  proofStore.salvarRascunho(guild.id, author.id, {
     urls: ["https://cdn.discordapp.com/attachments/1/1/c.png"],
     nomes: ["c.png"],
     canalPadrao: canal.id,
@@ -393,7 +393,7 @@ async function testarInteracoes() {
   }
 
   // sem rascunho (imagens expiradas) deve responder erro, sem crash
-  proofStore.limparRascunho(author.id);
+  proofStore.limparRascunho(guild.id, author.id);
   {
     const e = await emitir("modal", "proofmodal", { campos: { numero: "27", produto: "X", valor: "" } });
     if (interacaoValida(e)) registrar("proofmodal sem rascunho", true); else falhas++;

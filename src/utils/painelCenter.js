@@ -27,28 +27,40 @@ function arquivoGuild(guildId) {
   return path.join(PAINEIS_DIR, `${guildId || 'global'}.json`);
 }
 
-// Carrega os registros por-guild, migrando o legado global na primeira vez.
-function carregarRegistros(guildId) {
-  const def = { conversao: null, estoque: null, categorias: {} };
-  if (!guildId) {
-    return {
-      conversao: carregarJson(PANEL_FILE),
-      estoque: carregarJson(ESTOQUE_FILE),
-      categorias: carregarJson(CATEGORIA_FILE) || {},
-    };
-  }
+// Migração do legado global: só acontece UMA vez. O primeiro servidor com
+// acesso recebe os dados do legado e os globais são aposentados (renomeados para
+// .migrado), para os demais servidores NÃO herdarem dados de outro.
+function migrarLegadoPara(guildId) {
   const arq = arquivoGuild(guildId);
-  const local = carregarJson(arq);
-  if (local) return { ...def, ...local };
-  // Migração única do legado global (se existir)
-  const legado = { conversao: carregarJson(PANEL_FILE), estoque: carregarJson(ESTOQUE_FILE), categorias: carregarJson(CATEGORIA_FILE) || {} };
+  const legado = {
+    conversao: carregarJson(PANEL_FILE),
+    estoque: carregarJson(ESTOQUE_FILE),
+    categorias: carregarJson(CATEGORIA_FILE) || {},
+  };
   let temLegado = false;
   for (const k of ['conversao', 'estoque']) if (legado[k]) temLegado = true;
   if (Object.keys(legado.categorias).length) temLegado = true;
-  if (temLegado) {
-    salvarJson(arq, legado);
-    return legado;
+  if (!temLegado) return null;
+  salvarJson(arq, legado);
+  // Aposenta os globais de estoque/categoria imediatamente, para não vazar para
+  // outras guilds. O PANEL_FILE (painel de conversão) é GLOBAL por decisão do dono
+  // e fica intacto (é usado pelo panelStore para o painel fixo de taxas).
+  for (const f of [ESTOQUE_FILE, CATEGORIA_FILE]) {
+    try { nodeFs.renameSync(f, `${f}.migrado`); } catch {}
   }
+  return legado;
+}
+
+// Carrega os registros por-guild. O legado global é migrado no máximo uma vez;
+// depois disso cada guilda tem o próprio arquivo.
+function carregarRegistros(guildId) {
+  const def = { conversao: null, estoque: null, categorias: {} };
+  if (!guildId) return { ...def };
+  const arq = arquivoGuild(guildId);
+  const local = carregarJson(arq);
+  if (local) return { ...def, ...local };
+  const legado = migrarLegadoPara(guildId);
+  if (legado) return { ...def, ...legado };
   salvarJson(arq, def);
   return def;
 }
@@ -168,24 +180,23 @@ module.exports = {
     const registros = carregarRegistros(guildId);
     registros.conversao = ref;
     salvarJson(arquivoGuild(guildId), registros);
-    // Mantém o legado global atualizado também (compatibilidade com versões antigas)
-    salvarJson(PANEL_FILE, ref);
+    // NÃO espelha mais no legado global (vazava referência entre servidores).
   },
   salvarEstoque: (guildId, ref) => {
     const registros = carregarRegistros(guildId);
     registros.estoque = ref;
     salvarJson(arquivoGuild(guildId), registros);
-    salvarJson(ESTOQUE_FILE, ref);
+    // NÃO espelha mais no legado global (vazava referência entre servidores).
   },
   salvarCategoria: (guildId, msgId, catId, channelId) => {
     const registros = carregarRegistros(guildId);
     registros.categorias = registros.categorias || {};
-    registros.categorias[msgId] = { catId, channelId };
+    if (!catId) {
+      delete registros.categorias[msgId];
+    } else {
+      registros.categorias[msgId] = { catId, channelId };
+    }
     salvarJson(arquivoGuild(guildId), registros);
-    // Espelha no legado global para compatibilidade
-    const cats = carregarJson(CATEGORIA_FILE) || {};
-    cats[msgId] = { catId, channelId };
-    salvarJson(CATEGORIA_FILE, cats);
   },
   privar,
 };

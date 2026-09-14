@@ -1,4 +1,4 @@
-const { definir, carregar } = require('../utils/avisos');
+const { definir } = require('../utils/avisos');
 const { comandoPode } = require('../utils/permissions');
 const { isAdmin } = require('./settaxa');
 
@@ -13,7 +13,7 @@ module.exports = {
     }
 
     const canal = message.mentions?.channels?.first() || message.channel;
-    definir(canal.id);
+    definir(message.guildId, canal.id);
 
     return message.reply(`✅ Avisos de estoque serão enviados em ${canal}.`);
   },

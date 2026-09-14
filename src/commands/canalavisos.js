@@ -22,7 +22,7 @@ module.exports = {
     if (!canal || !canal.isTextBased() || !canal.isSendable?.()) {
       return interaction.reply({ content: `❌ ${canal ? 'Este canal não é de texto.' : 'Canal inválido.'} Use um canal de texto.`, flags: MessageFlags.Ephemeral });
     }
-    definir(canal.id);
+    definir(interaction.guildId, canal.id);
     return interaction.reply({ content: `✅ Avisos de estoque serão enviados em ${canal}.`, flags: MessageFlags.Ephemeral });
   },
 };

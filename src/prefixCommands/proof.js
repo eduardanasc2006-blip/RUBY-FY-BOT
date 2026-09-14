@@ -32,7 +32,7 @@ module.exports = {
       valor: partes[2] || '',
     };
 
-    proofStore.salvarRascunho(message.author.id, {
+    proofStore.salvarRascunho(message.guildId, message.author.id, {
       urls: imagens.map((a) => a.url),
       nomes: imagens.map((a) => a.name),
       canalPadrao: proofStore.obter(message.guildId),

@@ -38,25 +38,32 @@ function desativar(guildId) {
 }
 
 // Rascunhos de proof em memória (imagens anexadas no /proof aguardando o modal).
-// key: `${userId}`  value: { urls: [], canalPadrao: string|null }
+// key: `${guildId}:${userId}`  value: { urls: [], canalPadrao: string|null }
+// O guildId entra na chave para o mesmo admin poder usar o /proof em servidores
+// diferentes sem misturar os rascunhos.
 const rascunhos = new Map();
 
-function salvarRascunho(userId, rascunho) {
-  rascunhos.set(userId, rascunho);
+function chaveRascunho(guildId, userId) {
+  return `${guildId || 'dm'}:${userId}`;
+}
+
+function salvarRascunho(guildId, userId, rascunho) {
+  const chave = chaveRascunho(guildId, userId);
+  rascunhos.set(chave, rascunho);
   // Expira em 10min para não acumular se o admin abandonar o modal.
   // .unref() para não segurar o processo do bot (nem testes) aberto esperando o timer.
   const timer = setTimeout(() => {
-    if (rascunhos.get(userId) === rascunho) rascunhos.delete(userId);
+    if (rascunhos.get(chave) === rascunho) rascunhos.delete(chave);
   }, 10 * 60 * 1000);
   timer.unref?.();
 }
 
-function obterRascunho(userId) {
-  return rascunhos.get(userId) || null;
+function obterRascunho(guildId, userId) {
+  return rascunhos.get(chaveRascunho(guildId, userId)) || null;
 }
 
-function limparRascunho(userId) {
-  rascunhos.delete(userId);
+function limparRascunho(guildId, userId) {
+  rascunhos.delete(chaveRascunho(guildId, userId));
 }
 
 module.exports = { obter, definir, desativar, salvarRascunho, obterRascunho, limparRascunho };

@@ -183,7 +183,7 @@ function esperar(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
   // ---- Caso de erro: canal.send falha (ex: URL de anexo expirada) ----
   // Deve responder UMA vez com erro e limpar o fluxo, sem tentar duplicar resposta.
-  proofStore.salvarRascunho("222222222222222222", {
+  proofStore.salvarRascunho(GUILD_ID, "222222222222222222", {
     urls: ["https://cdn.discordapp.com/attachments/1/1/x.png"],
     nomes: ["x.png"],
     canalPadrao: canal.id,

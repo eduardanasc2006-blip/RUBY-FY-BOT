@@ -25,12 +25,12 @@ try {
   assert.strictEqual(proofStore.obter(''), null, 'guildId vazio não guarda');
 
   // Rascunho (imagens aguardando o modal)
-  proofStore.salvarRascunho('u-teste', { urls: ['https://x/1.png'], nomes: ['1.png'], canalPadrao: '987654321' });
-  const r = proofStore.obterRascunho('u-teste');
+  proofStore.salvarRascunho('g-test', 'u-teste', { urls: ['https://x/1.png'], nomes: ['1.png'], canalPadrao: '987654321' });
+  const r = proofStore.obterRascunho('g-test', 'u-teste');
   assert.ok(r && r.urls.length === 1, 'rascunho salvo com urls');
   assert.strictEqual(r.canalPadrao, '987654321', 'rascunho guarda canalPadrao');
-  proofStore.limparRascunho('u-teste');
-  assert.strictEqual(proofStore.obterRascunho('u-teste'), null, 'rascunho limpo');
+  proofStore.limparRascunho('g-test', 'u-teste');
+  assert.strictEqual(proofStore.obterRascunho('g-test', 'u-teste'), null, 'rascunho limpo');
 
   // buildProofModal monta modal com 3 campos de texto (canal/cliente viraram selects)
   proofStore.definir(GUILD, '987654321');
