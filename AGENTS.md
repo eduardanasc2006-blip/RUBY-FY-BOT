@@ -25,6 +25,24 @@
 - ⚠️ **Botão privado (`cttopen`)**: o clique envia **todos os conteúdos configurados em sequência, numa única resposta efêmera** — sem paginação, sem "Página X", sem botões de voltar/fechar. `buildConteudoPrivado` (em `embedPainel.js`) mapeia `paginasValidas` para `embeds[]` e só acrescenta o botão "✏️ Editar conteúdos" para o dono (custom id `cttopen:...:editar:<autorId>`).. Handler em `src/index.js` chama `buildConteudoPrivado(dados.paginas || [], 0,...)` — o `paginaIdx`/navegação por `:pag:`/`:fechar:` foi removido (commit `e4d0fe8`). Novo teste: `tests/embedConteudoPrivado.test.js`.
 - Cor herdada nos botoes privados: as embeds efemeras usam a mesma cor da embed publicada (`estado.cor`), salva no payload do `cttStore` na publicacao via `botoesEmLinhas(..., cor)` e aplicada por `resolverCor(cor)` no `buildConteudoPrivado(..., cor)` — em vez do lilas padrao.
 
+## Isolamento por servidor (guildId) — auditoria 2026-09-14
+- Todo dado persistente é por-guild. Padrões:
+  - Arquivo por guild: `data/estoque/<guildId>.json`, `data/autorespostas/<guildId>.json`, `data/comandos_custom/<guildId>.json`, `data/paineis/<guildId>.json`, `data/compras.json` (chave `{ [guildId]: {...} }`), `data/metas.json`, `data/log_compras.json`, `data/canal_comandos.json`, `data/canal_avisos.json`, `data/modelos_embed.json`.
+  - `proofStore`/`proofModal` (rascunhos/fluxos em memória): chave `${guildId}:${userId}` (funções agora recebem `guildId` primeiro: `salvarRascunho(guildId, userId, d)`, `obterRascunho(guildId, userId)`, `salvarFluxo(guildId, userId, d)`, etc.).
+  - `painelCenter`: **NÃO** espelha mais em `data/painel_estoque.json`/`data/painel_categoria.json` globais. O legado global migra UMA vez (renomeado `.migrado`) para o primeiro servidor que acessar; `PANEL_FILE` (`data/panel.json`) é GLOBAL intencional (painel de conversão fixo do `panelStore`). `salvarCategoria(guildId, msgId, null, null)` REMOVE a categoria.
+  - `avisos` (canal de avisos de esgotamento): `{ [guildId]: canalId }`; `avisar(client, guildId, texto)`.
+  - `metasConquistadas(guildId, clienteId, valor)` filtra cargos que o cliente **já conquistou** (meta não reaparece em compras futuras) — mantido cumulativo.
+  - Backup (`!backup`): exporta por-guild; `selecionarDaGuild(obj)` retorna `obj[guildId]` OU null — arquivos com chave que não é guildId (ex. `lock_estados.json` por channelId, `ctt_conteudos.json` por token) NÃO entram no backup por-guild (evita vazar dado de outro servidor).
+- Testes: `tests/isolamento.test.js` (53 checks) e `tests/permissoes_isolamento.test.js` (37 checks).
+
+## Sistema de permissões (auditado 2026-09-14 — completo e por-guild)
+- Mecanismo: `src/utils/permissions.js` — `GRUPOS` mapeiam comandos→grupo; `comandoPode(member, userId, comando)` libera para: `ADMIN_IDS` (env) → `member.permissions.has(Administrator)` → cargo no grupo da guild. Config fica em `data/permissoes.json` (`{ [guildId]: { grupos: {...} } }`).
+- `comandoDoCustomId(interaction)` em `src/index.js` mapeia customId de botão/modal → comando; `permitido(interaction)` aplica `comandoPode`. Handler `estadm:`/`estmodal:`→configestoque, `painelcenter:`→painel, `cfg:`/`cfgmodal:`→configtaxa, `autoresp:`→autoresposta, `metaspainel:`/`metasmodal:`→metas, etc.
+- Comandos com proteção por `isAdmin||eDono` (owner/Administrator apenas, NÃO grupo): `permissoes`, `canalcomando`. Comandos com proteção por `comandoPode` (grupo): `configestoque`, `painelestoque`, `painelcategoria`, `metas`, `settaxa`/`configtaxa`, `backup`, `limpar`/`lock`/`unlock`/`canalavisos`, `rolegive`, `embed`/`mensagem`/`modelos`, `autoresposta`, `criarcomando`, `gerenciarcomandos`.
+- ⚠️ `comprar` (comando do CLIENTE) NÃO tem checagem de permissão no comando em si (cliente comum compra). Mas os handlers ADMIN que "confirmam/cancelam pedido" e o fluxo `/proof` usam `comandoPode(...,'comprar')` (grupo vendas) — isto é, quem tem cargo no grupo `vendas` pode confirmar/cancelar/proof. Não trocar por `comandoDoCustomId` — `comp:*` não é mapeado para grupo (de propósito) e `proof*` é protegido explicitamente.
+- `estoque` (consulta pública) e `estfixo:` (painel público) NÃO são restritos (clientes precisam ver). Não adicionar permissão a eles.
+- Testes de regressão em `tests/permissoes_isolamento.test.js`: isolamento por-guild, usuário comum bloqueado, owner/admin passam, cargo só vale no servidor configurado.
+
 ## Estrutura
 - `src/commands/*.js` — comandos slash (deploy via deploy-commands.js).
 - `src/prefixCommands/*.js` — comandos prefixo `!`.
