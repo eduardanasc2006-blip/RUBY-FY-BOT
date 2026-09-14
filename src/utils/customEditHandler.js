@@ -1,10 +1,14 @@
 const { Events, MessageFlags } = require('discord.js');
 const custom = require('./customCommands');
 const { modalEditar } = require('./customEditPanel');
+const { comandoPode } = require('./permissions');
 
 function registrar(client) {
   client.on(Events.InteractionCreate, async (interaction) => {
     try {
+      if (interaction.customId && interaction.customId.startsWith('gerencmd:') && !comandoPode(interaction.member, interaction.user.id, 'gerenciarcomandos')) {
+        return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+      }
       if (interaction.isAnySelectMenu() && interaction.customId === 'gerencmd:editar') {
         const nome = interaction.values[0];
         const cmd = custom.obter(interaction.guildId, nome);

@@ -1416,6 +1416,12 @@ client.on('interactionCreate', async (interaction) => {
 // ----- Excluir comando personalizado via caixinha (select) do /gerenciarcomandos -----
 client.on('interactionCreate', async (interaction) => {
   try {
+    // O painel do /gerenciarcomandos so aparece para quem tem permissao, mas o
+    // handler tambem revalida no servidor (defesa em profundidade contra uso
+    // manual de customId).
+    if (interaction.customId && interaction.customId.startsWith('gerencmd:') && !permitido(interaction)) {
+      return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+    }
     if (interaction.isAnySelectMenu && interaction.isAnySelectMenu() && interaction.customId === 'gerencmd:excluir') {
       const custom = require('./utils/customCommands');
       const nome = interaction.values[0];
@@ -1471,6 +1477,13 @@ function cacheCriacao(interaction, palavra, resposta) {
 // ----- Editar auto-resposta via select/modal (!autoresposta / /autoresposta) -----
 client.on('interactionCreate', async (interaction) => {
   try {
+    // Qualquer botao/select/modal do painel de auto-respostas exige a mesma
+    // permissao do comando. O painel via !autoresposta e uma mensagem publica,
+    // entao sem esta checagem qualquer membro poderia editar/apagar as
+    // auto-respostas do servidor clicando nos botoes.
+    if (interaction.customId && interaction.customId.startsWith('autoresp') && !permitido(interaction)) {
+      return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
+    }
     if (interaction.isButton() && interaction.customId === 'autoresp:voltar') {
       const { painelCentral } = require('./utils/autoRespostaPanel');
       const menu = painelCentral(interaction.guildId, interaction.guild);
@@ -2911,7 +2924,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
           conf
         );
         welcomePainel.limparSessaoWelcome(
-          donoId
+          donoId,
+          interaction.guildId
         );
         return interaction.reply({
           content: 'Salvo com sucesso.',

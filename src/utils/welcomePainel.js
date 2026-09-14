@@ -15,17 +15,36 @@ const { linhaSelecaoCanalDe } = require('./channelPicker');
 
 const sessoesWelcome = new Map();
 
-function getSessaoWelcome(userId, guildId) {
-  if (!sessoesWelcome.has(userId)) {
-    const salvo = welcomeStore.obter(guildId);
-    const config = salvo ? JSON.parse(JSON.stringify(salvo)) : welcomeStore.padrao();
-    sessoesWelcome.set(userId, { guildId, config });
+// Sessao por (usuario, servidor): o mesmo admin editando o painel em dois
+// servidores nao pode carregar/sobrescrever a configuracao de um no outro.
+function findSessaoWelcome(userId, guildId) {
+  for (const [chave, sessao] of sessoesWelcome) {
+    if (sessao.userId === userId && sessao.guildId === guildId) return { chave, sessao };
   }
-  return sessoesWelcome.get(userId);
+  return null;
 }
 
-function limparSessaoWelcome(userId) {
-  sessoesWelcome.delete(userId);
+function getSessaoWelcome(userId, guildId) {
+  const existente = findSessaoWelcome(userId, guildId);
+  if (existente) return existente.sessao;
+  const salvo = welcomeStore.obter(guildId);
+  const config = salvo ? JSON.parse(JSON.stringify(salvo)) : welcomeStore.padrao();
+  const chave = `${userId}:${guildId}`;
+  const sessao = { userId, guildId, config };
+  sessoesWelcome.set(chave, sessao);
+  return sessao;
+}
+
+function limparSessaoWelcome(userId, guildId) {
+  if (guildId) {
+    const existente = findSessaoWelcome(userId, guildId);
+    if (existente) sessoesWelcome.delete(existente.chave);
+  } else {
+    // Sem guildId informado (chamada antiga), remove todas as sessoes do usuario.
+    for (const [chave, sessao] of sessoesWelcome) {
+      if (sessao.userId === userId) sessoesWelcome.delete(chave);
+    }
+  }
 }
 
 // Monta a embed de boas-vindas a partir da config.
