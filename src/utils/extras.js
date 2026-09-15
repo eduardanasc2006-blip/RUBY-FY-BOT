@@ -177,40 +177,55 @@ function registrar(client) {
         if (!canal || !canal.isTextBased() || !canal.permissionsFor(interaction.guild.members.me)?.has('SendMessages')) {
           return interaction.reply({ content: '❌ Canal não encontrado ou sem permissão de envio para mim.', flags: MessageFlags.Ephemeral });
        }
+        // ACK imediato: o envio de imagens (download) pode demorar e
+        // estourar o limite de 3s da interação. Sem o defer, o Discord
+        // mostra "o aplicativo não respondeu".
+        await interaction.deferUpdate().catch(() => {});
         const estado = getSessao(donoId);
         const conteudo = estado.mensagem || null;
-        const arquivos = (estado.imagens || []).slice(0, 10).map((url) => ({ attachment: url }));
+        const urls = (estado.imagens || []).slice(0, 10);
+        let enviou = 0;
+        let falhou = 0;
+        const enviar = async (payload) => {
+          try {
+            await canal.send(payload);
+            enviou++;
+          } catch {
+            falhou++;
+          }
+        };
         try {
           if (conteudo && conteudo.length > 2000) {
-            // Texto longo: divide em fatias de até 2000 (anexos vão na última).
-            const fatias = [];
+            // Texto longo: divide em fatias de até 2000.
             for (let i = 0; i < conteudo.length; i += 2000) {
-              fatias.push(conteudo.slice(i, i + 2000));
+              await enviar({ content: conteudo.slice(i, i + 2000), allowedMentions: { parse: [] } });
             }
-            for (let i = 0; i < fatias.length; i++) {
-              const ultima = i === fatias.length - 1;
-              await canal.send({
-                content: fatias[i],
-                files: ultima ? arquivos : [],
-                allowedMentions: { parse: [] },
-              });
-            }
-          } else {
-            await canal.send({ content: conteudo, files: arquivos, allowedMentions: { parse: [] } });
+          } else if (conteudo) {
+            await enviar({ content: conteudo, allowedMentions: { parse: [] } });
+          }
+          // Cada imagem vai em mensagem própria: se uma URL estiver inválida
+          // ou expirada, as demais ainda são publicadas (o Discord rejeita o
+          // envio INTEIRO se qualquer attachment falhar).
+          for (const url of urls) {
+            await enviar({ files: [url], allowedMentions: { parse: [] } });
           }
         } catch (e) {
           console.error('[Mensagem] Falha ao publicar:', e?.message || e);
-          return interaction.reply({ content: `❌ Não consegui publicar em <#${canal.id}>. Verifique minhas permissões no canal.`, flags: MessageFlags.Ephemeral });
+          try { await interaction.editReply({ content: `❌ Não consegui publicar em <#${canal.id}>. Verifique minhas permissões no canal.`, embeds: [], components: [] }); } catch {}
+          return;
         }
+        // Se havia texto e nenhum envio de imagem funcionou, considera sucesso só se o texto foi.
         limparSessao(donoId);
-        return interaction.update({ content: `✅ Mensagem publicada em <#${canal.id}>!`, embeds: [], components: [] });
+        const relatorio = falhou ? ` (${falhou} imagem(ns) falharam — verifique as URLs)` : '';
+        try { await interaction.editReply({ content: `✅ Mensagem publicada em <#${canal.id}>!${relatorio}`, embeds: [], components: [] }); } catch {}
       }
     } catch (error) {
       console.error('[Mensagem] Erro:', error);
       try {
-        if (!interaction.replied && !interaction.deferred) {
-
-          await interaction.reply({ content: '❌ Ocorreu um erro.', flags: MessageFlags.Ephemeral });
+        if (interaction.replied || interaction.deferred) {
+          await interaction.followUp({ content: '❌ Ocorreu um erro.', flags: MessageFlags.Ephemeral }).catch(() => {});
+        } else if (interaction.isRepliable?.()) {
+          await interaction.reply({ content: '❌ Ocorreu um erro.', flags: MessageFlags.Ephemeral }).catch(() => {});
         }
       } catch {}
     }
