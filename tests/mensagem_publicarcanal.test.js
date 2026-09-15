@@ -63,6 +63,7 @@ function emitirMsgCanal(sessaoAntes, mundo, log) {
   const sessao = getSessao(mundo.author.id);
   sessao.mensagem = sessaoAntes.mensagem ?? null;
   sessao.imagens = [...(sessaoAntes.imagens || [])];
+  sessao.layout = sessaoAntes.layout || 'lado';
 
   const inter = {
     customId: `msgcanal:${mundo.author.id}:atual`,
@@ -96,20 +97,20 @@ function emitirMsgCanal(sessaoAntes, mundo, log) {
 (async () => {
   const resultados = [];
 
-  // --- Caso 1: publica com 2 imagens validas ---
+  // --- Caso 1: (baixo) publica com 2 imagens validas ---
   {
     const log = [];
     const mundo = fazerMundo(async (p) => { log.push("canal.send"); return { id: "m" }; });
-    emitirMsgCanal({ mensagem: "Ola", imagens: ["https://a.com/1.png", "https://a.com/2.png"] }, mundo, log);
+    emitirMsgCanal({ mensagem: "Ola", imagens: ["https://a.com/1.png", "https://a.com/2.png"], layout: "baixo" }, mundo, log);
     await flush(); await flush(); await flush();
     // 1 send do texto + 2 sends de imagem
     const sends = log.filter((x) => x === "canal.send").length;
     const ok = sends === 3 && log.includes("deferUpdate") && log.some((x) => x.startsWith("editReply") && x.includes("publicada") && !x.includes("falharam"));
-    console.log(`1) 2 imagens validas (${sends} sends):`, ok ? "OK" : "FALHOU: " + log.join(" | "));
+    console.log(`1) baixo, 2 imagens validas (${sends} sends):`, ok ? "OK" : "FALHOU: " + log.join(" | "));
     resultados.push(["2 imagens validas", ok]);
   }
 
-  // --- Caso 2: 1 imagem valida + 1 invalida (send falha na segunda) ---
+  // --- Caso 2: (baixo) 1 imagem valida + 1 invalida (send falha na segunda) ---
   {
     const log = [];
     let vez = 0;
@@ -119,22 +120,22 @@ function emitirMsgCanal(sessaoAntes, mundo, log) {
       if (vez === 2) throw new Error("URL invalida");
       return { id: "m" };
     });
-    emitirMsgCanal({ mensagem: "Ola", imagens: ["https://a.com/1.png", "https://invalida.com/x.png"] }, mundo, log);
+    emitirMsgCanal({ mensagem: "Ola", imagens: ["https://a.com/1.png", "https://invalida.com/x.png"], layout: "baixo" }, mundo, log);
     await flush(); await flush(); await flush();
     // 1 send do texto + 1 send imagem OK + 1 send imagem que falha
     const ok = log.includes("deferUpdate") && log.some((x) => x.startsWith("editReply") && x.includes("falharam"));
-    console.log("2) imagem invalida na 2a:", ok ? "OK (continua e reporta)" : "FALHOU: " + log.join(" | "));
+    console.log("2) baixo, imagem invalida na 2a:", ok ? "OK (continua e reporta)" : "FALHOU: " + log.join(" | "));
     resultados.push(["imagem invalida", ok]);
   }
 
-  // --- Caso 3: todas as imagens invalidas ---
+  // --- Caso 3: (baixo) todas as imagens invalidas ---
   {
     const log = [];
     const mundo = fazerMundo(async (p) => { log.push("canal.send"); throw new Error("URL invalida"); });
-    emitirMsgCanal({ mensagem: "Ola", imagens: ["https://invalida.com/x.png"] }, mundo, log);
+    emitirMsgCanal({ mensagem: "Ola", imagens: ["https://invalida.com/x.png"], layout: "baixo" }, mundo, log);
     await flush(); await flush();
     const ok = log.includes("deferUpdate") && log.some((x) => x.startsWith("editReply") && x.includes("falharam"));
-    console.log("3) imagens invalidas:", ok ? "OK (reporta)" : "FALHOU: " + log.join(" | "));
+    console.log("3) baixo, imagens invalidas:", ok ? "OK (reporta)" : "FALHOU: " + log.join(" | "));
     resultados.push(["imagens invalidas", ok]);
   }
 
@@ -147,6 +148,50 @@ function emitirMsgCanal(sessaoAntes, mundo, log) {
     const ok = log.includes("deferUpdate") && log.some((x) => x.startsWith("editReply") && x.includes("publicada"));
     console.log("4) so texto:", ok ? "OK" : "FALHOU: " + log.join(" | "));
     resultados.push(["so texto", ok]);
+  }
+
+  // --- Caso 4.1: layout lado a lado, texto+2 imagens validas = 1 send unico ---
+  {
+    const log = [];
+    const mundo = fazerMundo(async () => { log.push("canal.send"); return { id: "m" }; });
+    emitirMsgCanal({ mensagem: "Ola", imagens: ["https://a.com/1.png", "https://a.com/2.png"], layout: "lado" }, mundo, log);
+    await flush(); await flush(); await flush();
+    const sends = log.filter((x) => x === "canal.send").length;
+    const ok = sends === 1 && log.includes("deferUpdate") && log.some((x) => x.startsWith("editReply") && x.includes("publicada") && !x.includes("falharam"));
+    console.log(`4.1) lado a lado (${sends} send):`, ok ? "OK" : "FALHOU: " + log.join(" | "));
+    resultados.push(["lado a lado", ok]);
+  }
+
+  // --- Caso 4.2: layout baixo (empilhadas), texto+2 imagens = 1 texto + 2 imgs ---
+  {
+    const log = [];
+    const mundo = fazerMundo(async () => { log.push("canal.send"); return { id: "m" }; });
+    emitirMsgCanal({ mensagem: "Ola", imagens: ["https://a.com/1.png", "https://a.com/2.png"], layout: "baixo" }, mundo, log);
+    await flush(); await flush(); await flush();
+    const sends = log.filter((x) => x === "canal.send").length;
+    const ok = sends === 3 && log.includes("deferUpdate") && log.some((x) => x.startsWith("editReply") && x.includes("publicada") && !x.includes("falharam"));
+    console.log(`4.2) uma abaixo da outra (${sends} sends):`, ok ? "OK" : "FALHOU: " + log.join(" | "));
+    resultados.push(["empilhadas", ok]);
+  }
+
+  // --- Caso 4.3: layout lado com URL invalida no lote -> fallback 1 a 1 ---
+  {
+    const log = [];
+    let vez = 0;
+    const mundo = fazerMundo(async () => {
+      vez++;
+      log.push(`canal.send(${vez})`);
+      // lote(1) e a 2a imagem no fallback(4) são inválidos
+      if (vez === 1 || vez === 4) throw new Error("URL invalida");
+      return { id: "m" };
+    });
+    emitirMsgCanal({ mensagem: "X", imagens: ["https://ok.com/1.png", "https://invalida.com/2.png"], layout: "lado" }, mundo, log);
+    await flush(); await flush(); await flush(); await flush();
+    // lote(1) falha -> texto(2) + img1(3) + img2(4, falha)
+    const sends = log.filter((x) => /canal\.send\(\d+\)/.test(x)).length;
+    const ok = sends === 4 && log.some((x) => x.startsWith("editReply") && x.includes("falharam"));
+    console.log(`4.3) lado c/ URL invalida (${sends} sends, fallback):`, ok ? "OK" : "FALHOU: " + log.join(" | "));
+    resultados.push(["lado fallback", ok]);
   }
 
   const falhas = resultados.filter((r) => !r[1]).length;

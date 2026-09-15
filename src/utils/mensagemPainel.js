@@ -4,7 +4,7 @@ const sessoes = new Map();
 
 function getSessao(userId) {
   if (!sessoes.has(userId)) {
-    const sessao = { mensagem: null, imagens: [], tipo: 'normal' };
+    const sessao = { mensagem: null, imagens: [], tipo: 'normal', layout: 'lado' };
     sessoes.set(userId, sessao);
     return sessao;
   }
@@ -16,6 +16,11 @@ function getSessao(userId) {
     delete sessao.imagem;
   }
   if (!Array.isArray(sessao.imagens)) sessao.imagens = [];
+  // Migracao para layout (nova opção) — default: lado a lado
+  if (!sessao.layout) sessao.layout = 'lado';
+  // Estado sem layout ja usado como empilhado? Se a sessao existia antes,
+  // preserva, senao usa lado
+  if (!['lado', 'baixo'].includes(sessao.layout)) sessao.layout = 'lado';
   return sessao;
 }
 
@@ -65,6 +70,7 @@ function buildPainel(userId, tipo = 'normal') {
       [
         estado.mensagem ? `📝 Mensagem: ${estado.mensagem.slice(0, 80)}${estado.mensagem.length > 80 ? '…' : ''}` : '📝 Mensagem: *(vazia)*',
         imgs.length ? `🖼️ Imagens: ${imgs.length} anexada(s) — adicione mais por link no 🖼️` : '🖼️ Imagens: *(nenhuma)*',
+        `📐 Layout: ${estado.layout === 'baixo' ? 'uma abaixo da outra' : 'lado a lado (grade)'}`,
       ].join('\n')
     );
 
@@ -76,6 +82,10 @@ function buildPainel(userId, tipo = 'normal') {
     new ButtonBuilder().setCustomId(`msgpainel:cancelar:${userId}`).setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
   );
 
+  const linhaLayout = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId(`msgpainel:layout:${userId}`).setLabel(`📐 Layout: ${estado.layout === 'baixo' ? 'uma abaixo da outra' : 'lado a lado'}`).setStyle(estado.layout === 'baixo' ? ButtonStyle.Secondary : ButtonStyle.Primary)
+  );
+
   // content só quando o texto cabe no limite do Discord (2000). Senão, o
   // painel mostra o resumo na embed (o texto completo fica na sessão para
   // a publicação final) — evita erro 400 do Discord que deixava a
@@ -85,7 +95,7 @@ function buildPainel(userId, tipo = 'normal') {
   return {
     embeds: [resumo],
     content: textoCurto,
-    components: [linha1],
+    components: imgs.length ? [linha1, linhaLayout] : [linha1],
   };
 }
 
@@ -110,11 +120,12 @@ function buildPreview(userId) {
   // content limitado a 2000 (mesma proteção do buildPainel)
   const textoCurto = estado.mensagem && estado.mensagem.length <= 2000 ? estado.mensagem : null;
   const previewDesc = (estado.mensagem || '_Sem texto_').slice(0, 2000);
+  const layoutLabel = estado.layout === 'baixo' ? 'uma abaixo da outra' : 'lado a lado (grade)';
 
   return {
     content: textoCurto,
     embeds: [new EmbedBuilder().setColor(0xbeb6ff).setDescription(
-      `${previewDesc}\n\n🖼️ **${imgs.length} imagem(ns) serão anexadas na publicação.**`
+      `${previewDesc}\n\n🖼️ **${imgs.length} imagem(ns) serão anexadas na publicação** — layout: **${layoutLabel}**.`
     )],
     components: [botoes],
   };

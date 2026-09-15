@@ -72,6 +72,7 @@ function baseInteracao(tipo) {
     update: async (p) => { responderamContador++; ultima = { __tipo: "update", ...p }; },
     reply: async (p) => { responderamContador++; ultima = { __tipo: "reply", ...p }; },
     deferReply: async () => { inter.deferred = true; responderamContador++; ultima = { __tipo: "deferReply" }; },
+    deferUpdate: async () => { inter.deferred = true; responderamContador++; ultima = { __tipo: "deferUpdate" }; },
     followUp: async (p) => { responderamContador++; ultima = { __tipo: "followUp", ...p }; },
     showModal: async (m) => { responderamContador++; ultima = { __tipo: "modal", modal: m }; },
     editReply: async (p) => { responderamContador++; ultima = { __tipo: "editReply", ...p }; },
@@ -117,6 +118,21 @@ const flush = () => new Promise((r) => setImmediate(r));
   client.emit("interactionCreate", interacaoCustom(`msgmodal:mensagem:${author.id}`, "modal", { campos: { valor: "Ola mundo" } }));
   await flush();
   console.log("3) Modal salva:", ultima?.__tipo === "update" ? "OK" : "FALHOU: " + JSON.stringify(ultima));
+
+  // 3.5) Toggle de layout: default 'lado' -> alterna para 'baixo'
+  const { getSessao } = require("../src/utils/mensagemPainel");
+  const totalAntes = ultima && ultima.content ? ultima.content.includes("Layout") : false;
+  client.emit("interactionCreate", interacaoCustom(`msgpainel:layout:${author.id}`, "button"));
+  await flush();
+  const sessaoAposToggle = getSessao(author.id);
+  const toggleOk = sessaoAposToggle.layout === "baixo" && String(ultima?.embeds?.[0]?.data?.description || "").includes("uma abaixo da outra");
+  console.log("3.5) Toggle layout p/ baixo:", toggleOk ? "OK" : "FALHOU: " + JSON.stringify(ultima));
+  // volta para lado
+  client.emit("interactionCreate", interacaoCustom(`msgpainel:layout:${author.id}`, "button"));
+  await flush();
+  const sessaoVolta = getSessao(author.id);
+  const voltaOk = sessaoVolta.layout === "lado";
+  console.log("3.6) Toggle layout de volta p/ lado:", voltaOk ? "OK" : "FALHOU: layout=" + sessaoVolta.layout);
 
   // 4) Preview
   client.emit("interactionCreate", interacaoCustom(`msgpainel:preview:${author.id}`, "button"));

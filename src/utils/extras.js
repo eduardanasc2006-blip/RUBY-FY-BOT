@@ -108,6 +108,10 @@ function registrar(client) {
         if (acao === 'imagem') return abrirModal('imagem', '🖼️ Imagem', 'URL da imagem (ou vazio para remover)');
         if (acao === 'preview') return interaction.update(buildPreview(donoId, interaction.guildId));
         if (acao === 'voltar') return interaction.update(buildPainel(donoId, interaction.guildId));
+        if (acao === 'layout') {
+          estado.layout = estado.layout === 'baixo' ? 'lado' : 'baixo';
+          return interaction.update(buildPainel(donoId, interaction.guildId));
+        }
         if (acao === 'publicar') {
           if (!estado.mensagem && !(estado.imagens || []).length) {
 
@@ -184,14 +188,17 @@ function registrar(client) {
         const estado = getSessao(donoId);
         const conteudo = estado.mensagem || null;
         const urls = (estado.imagens || []).slice(0, 10);
+        const juntos = estado.layout === 'lado';
         let enviou = 0;
         let falhou = 0;
         const enviar = async (payload) => {
           try {
             await canal.send(payload);
             enviou++;
+            return true;
           } catch {
             falhou++;
+            return false;
           }
         };
         try {
@@ -200,14 +207,47 @@ function registrar(client) {
             for (let i = 0; i < conteudo.length; i += 2000) {
               await enviar({ content: conteudo.slice(i, i + 2000), allowedMentions: { parse: [] } });
             }
+            // Anexos vão na última fatia
+            if (urls.length) {
+              await enviar({ files: urls, allowedMentions: { parse: [] } });
+            }
           } else if (conteudo) {
-            await enviar({ content: conteudo, allowedMentions: { parse: [] } });
+            if (juntos && urls.length) {
+              // Lado a lado: texto + todas as imagens numa única mensagem
+              // (o Discord renderiza as imagens em grade).
+              const ok = await enviar({ content: conteudo, files: urls, allowedMentions: { parse: [] } });
+              // Uma URL inválida rejeita o lote inteiro: salva enviando o
+              // texto sozinho e cada imagem em separado.
+              if (!ok) {
+                // O lote foi rejeitado: desconta a falha do lote e reenvia o
+                // texto sozinho + cada imagem separada.
+                falhou--;
+                await enviar({ content: conteudo, allowedMentions: { parse: [] } });
+                for (const url of urls) {
+                  await enviar({ files: [url], allowedMentions: { parse: [] } });
+                }
+              }
+            } else {
+              await enviar({ content: conteudo, allowedMentions: { parse: [] } });
+            }
           }
-          // Cada imagem vai em mensagem própria: se uma URL estiver inválida
-          // ou expirada, as demais ainda são publicadas (o Discord rejeita o
-          // envio INTEIRO se qualquer attachment falhar).
-          for (const url of urls) {
-            await enviar({ files: [url], allowedMentions: { parse: [] } });
+          if (juntos) {
+            // Lado a lado: se o texto não foi enviado junto, envia as imagens juntas.
+            if (!conteudo && urls.length) {
+              const ok = await enviar({ files: urls, allowedMentions: { parse: [] } });
+              if (!ok) {
+                // Lote rejeitado: salva uma a uma.
+                for (const url of urls) {
+                  await enviar({ files: [url], allowedMentions: { parse: [] } });
+                }
+              }
+            }
+          } else {
+            // Uma abaixo da outra: cada imagem em mensagem própria, para que
+            // uma URL inválida não derrube as demais.
+            for (const url of urls) {
+              await enviar({ files: [url], allowedMentions: { parse: [] } });
+            }
           }
         } catch (e) {
           console.error('[Mensagem] Falha ao publicar:', e?.message || e);
@@ -216,7 +256,7 @@ function registrar(client) {
         }
         // Se havia texto e nenhum envio de imagem funcionou, considera sucesso só se o texto foi.
         limparSessao(donoId);
-        const relatorio = falhou ? ` (${falhou} imagem(ns) falharam — verifique as URLs)` : '';
+        const relatorio = falhou ? ` (${falhou} envio(s) falharam — verifique as URLs das imagens)` : '';
         try { await interaction.editReply({ content: `✅ Mensagem publicada em <#${canal.id}>!${relatorio}`, embeds: [], components: [] }); } catch {}
       }
     } catch (error) {
