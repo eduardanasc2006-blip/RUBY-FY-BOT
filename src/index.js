@@ -191,36 +191,38 @@ client.on('error', (error) => {
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
-  const command = client.commands.get(interaction.commandName);
-
-  if (!command) return; // Comandos personalizados agora sao prefixo (!) e nao slash (/)
-
-  // Restrição de canal (mesma regra dos prefix): admins/cargos passam, usuário
-  // comum limitado aos canais configurados via /canalcomando.
-  if (interaction.guild && interaction.channel) {
-    const { podeUsarNoCanal } = require('./utils/permissions');
-    const canaisCheck = podeUsarNoCanal(
-      interaction.channelId,
-      interaction.guildId,
-      interaction.member,
-      interaction.user.id,
-      command.data.name
-    );
-    if (!canaisCheck.ok) {
-      return interaction.reply({ content: canaisCheck.msg, flags: MessageFlags.Ephemeral });
-    }
-  }
-
   try {
+    const command = client.commands.get(interaction.commandName);
+
+    if (!command) return; // Comandos personalizados agora sao prefixo (!) e nao slash (/)
+
+    // Restrição de canal (mesma regra dos prefix): admins/cargos passam, usuário
+    // comum limitado aos canais configurados via /canalcomando.
+    if (interaction.guild && interaction.channel) {
+      const { podeUsarNoCanal } = require('./utils/permissions');
+      const canaisCheck = podeUsarNoCanal(
+        interaction.channelId,
+        interaction.guildId,
+        interaction.member,
+        interaction.user.id,
+        command.data.name
+      );
+      if (!canaisCheck.ok) {
+        return interaction.reply({ content: canaisCheck.msg, flags: MessageFlags.Ephemeral });
+      }
+    }
+
     await command.execute(interaction);
   } catch (error) {
     console.error(error);
-    const mensagem = { content: '❌ Ocorreu um erro ao executar este comando.', flags: MessageFlags.Ephemeral };
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp(mensagem);
-    } else {
-      await interaction.reply(mensagem);
-    }
+    try {
+      const mensagem = { content: '❌ Ocorreu um erro ao executar este comando.', flags: MessageFlags.Ephemeral };
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp(mensagem);
+      } else {
+        await interaction.reply(mensagem);
+      }
+    } catch {}
   }
 });
 
@@ -767,9 +769,11 @@ client.on('interactionCreate', async (interaction) => {
         if (!embed) {
           return interaction.reply({ content: `❌ Categoria **${catId}** não encontrada.`, flags: MessageFlags.Ephemeral });
         }
+        // O envio no canal pode demorar >3s; responde imediatamente e edita depois.
+        await interaction.deferUpdate().catch(() => {});
         const msg = await interaction.channel.send({ embeds: [embed] });
         painelCategoria.salvar(msg.id, catId, interaction.channel.id, interaction.guildId);
-        await interaction.update(buildPainelCentral(interaction.guildId));
+        await interaction.editReply(buildPainelCentral(interaction.guildId)).catch(() => {});
         return interaction.followUp({
           content: `✅ Painel da categoria **${catId}** publicado no canal atual.`,
           flags: MessageFlags.Ephemeral,
@@ -791,6 +795,8 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.update(buildPainelCentral(interaction.guildId));
       }
       if (alvo === 'remconversao-confirm' || alvo === 'remestoque-confirm') {
+        // Buscar/apagar a mensagem antiga pode demorar >3s; responde já.
+        await interaction.deferUpdate().catch(() => {});
         const ref = alvo.startsWith('remconversao') ? painelCenter.readConversao(interaction.guildId) : painelCenter.readEstoque(interaction.guildId);
         if (ref) {
           try {
@@ -801,7 +807,7 @@ client.on('interactionCreate', async (interaction) => {
         }
         if (alvo.startsWith('remconversao')) painelCenter.salvarConversao(interaction.guildId, null);
         else painelCenter.salvarEstoque(interaction.guildId, null);
-        await interaction.update(buildPainelCentral(interaction.guildId));
+        await interaction.editReply(buildPainelCentral(interaction.guildId)).catch(() => {});
         return interaction.followUp({
           content: `✅ Painel fixo ${alvo.startsWith('remconversao') ? 'de conversão' : 'de estoque'} removido.`,
           flags: MessageFlags.Ephemeral,
@@ -819,6 +825,8 @@ client.on('interactionCreate', async (interaction) => {
       }
       if (alvo === 'remcategoria-confirm') {
         const [, , msgId, catId] = interaction.customId.split(':');
+        // Buscar/apagar a mensagem antiga pode demorar >3s; responde já.
+        await interaction.deferUpdate().catch(() => {});
         const cats = painelCenter.readCategorias(interaction.guildId);
         const info = cats[msgId];
         if (info && typeof info === 'object' && info.canal) {
@@ -830,7 +838,7 @@ client.on('interactionCreate', async (interaction) => {
         }
         delete cats[msgId];
         painelCenter.salvarCategoria(interaction.guildId, msgId, null, null);
-        await interaction.update(buildPainelCentral(interaction.guildId));
+        await interaction.editReply(buildPainelCentral(interaction.guildId)).catch(() => {});
         return interaction.followUp({
           content: `✅ Painel fixo da categoria **${catId}** removido.`,
           flags: MessageFlags.Ephemeral,
@@ -863,23 +871,27 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       if (tipo === 'conversao') {
+        // Publicar/atualizar no canal pode demorar >3s; responde já e edita depois.
+        await interaction.deferUpdate().catch(() => {});
         const { atualizado } = await publishOrUpdatePanel(canal);
         const embedNovo = new EmbedBuilder()
           .setColor(0xbeb6ff)
           .setDescription(atualizado
             ? `✅ Painel de conversão **atualizado** em <#${canal.id}>.`
             : `✅ Painel de conversão **publicado** em <#${canal.id}>! Qualquer pessoa pode usar os botões.`);
-        return interaction.update({ embeds: [embedNovo], components: [] });
+        return interaction.editReply({ embeds: [embedNovo], components: [] });
       }
 
       if (tipo === 'estoque') {
+        // Publicar/atualizar no canal pode demorar >3s; responde já e edita depois.
+        await interaction.deferUpdate().catch(() => {});
         const { atualizado } = await publicarOuAtualizar(canal);
         const embedNovo = new EmbedBuilder()
           .setColor(0xbeb6ff)
           .setDescription(atualizado
             ? `✅ Painel de estoque **atualizado** em <#${canal.id}>.`
             : `✅ Painel de estoque **publicado** em <#${canal.id}>! Qualquer pessoa pode clicar nas categorias — cada um vê de forma privada.`);
-        return interaction.update({ embeds: [embedNovo], components: [] });
+        return interaction.editReply({ embeds: [embedNovo], components: [] });
       }
 
       return interaction.update({ content: '❌ Tipo desconhecido.', embeds: [], components: [] });
@@ -1953,6 +1965,11 @@ client.on('interactionCreate', async (interaction) => {
     });
   } catch (error) {
     console.error('[CanalComandoModal] Erro:', error?.message || error);
+    try {
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: '❌ Ocorreu um erro. Tente novamente.', flags: MessageFlags.Ephemeral });
+      }
+    } catch {}
   }
 });
 
@@ -2763,6 +2780,11 @@ client.on('interactionCreate', async (interaction) => {
 
   } catch (error) {
     console.error('[modelos] Erro:', error);
+    try {
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: '❌ Ocorreu um erro. Tente novamente.', flags: MessageFlags.Ephemeral });
+      }
+    } catch {}
   }
 });
 
@@ -2790,6 +2812,11 @@ client.on('interactionCreate', async (interaction) => {
     }
   } catch (error) {
     console.error('[modeloscat] Erro:', error);
+    try {
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: '❌ Ocorreu um erro. Tente novamente.', flags: MessageFlags.Ephemeral });
+      }
+    } catch {}
   }
 });
 
@@ -3499,16 +3526,19 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         // ----- Confirmacao do pagamento (uma unica vez) -----
+        // Dar cargo/metas envolve buscar membro e adicionar cargo (rede); pode
+        // passar dos 3s. Responde já e edita a mensagem depois.
+        await interaction.deferUpdate().catch(() => {});
         const produto = estoqueCompras.produto(guildId, pedido.catId, pedido.prodId);
         if (produto && produto.controlarQtd) {
           const reservadosOutros = pedidoStore.reservado(guildId, pedido.catId, pedido.prodId) - pedido.quantidade;
           const disponivelReal = (produto.quantidade ||  0) - reservadosOutros;
           if (disponivelReal < pedido.quantidade) {
 
-            return interaction.reply({
+            return interaction.editReply({
               content: '❌ Estoque insuficiente para este pedido agora.. Peça ao cliente para aguardar reposição ou cancele o pedido.',
-              flags: MessageFlags.Ephemeral,
-            });
+              components: [],
+            }).catch(() => {});
           }
           estoqueCompras.setQuantidade(guildId, pedido.catId, pedido.prodId, (produto.quantidade ||  0) - pedido.quantidade);
         }
@@ -3557,7 +3587,7 @@ client.on('interactionCreate', async (interaction) => {
           }
         }
 
-        return interaction.update(mensagemPedido(guildId, pedidoStore.obter(guildId, pedidoId)));
+        return interaction.editReply(mensagemPedido(guildId, pedidoStore.obter(guildId, pedidoId))).catch(() => {});
       }
 
       return interaction.reply({ content: '❌ Ação desconhecida.', flags: MessageFlags.Ephemeral });

@@ -9,7 +9,12 @@ const guild = { id: guildId, name: "Teste", members: { me: member } };
 const channel = {
   id: "333", name: "vendas", guildId, guild, isTextBased: () => true,
   isThread: () => false, isVoiceBased: () => false,
-  send: async () => ({ id: "m1", channelId: "333" }), client: {},
+  send: async () => ({ id: "m1", channelId: "333", channel: { id: "333" }, edit: async () => {} }),
+  client: {
+    channels: {
+      fetch: async () => ({ id: "333", messages: { fetch: async () => ({ id: "m1", channelId: "333", edit: async () => {} }) } }),
+    },
+  },
   permissionsFor: () => ({ has: () => true }),
 };
 function makeCache(iterable) {
@@ -22,7 +27,6 @@ function makeCache(iterable) {
 const cache = makeCache([[channel.id, channel]]);
 channel.position = 0; channel.parent = null;
 guild.channels = { cache };
-channel.client = {};
 let capturado = null;
 const loginOriginal = Client.prototype.login;
 Client.prototype.login = async function () { capturado = this; return "local"; };
@@ -43,6 +47,8 @@ function base(customId, extra = {}) {
     channel, message: { flags: { has: () => false } },
     reply: async (p) => { base.ultima = p; return p; },
     update: async (p) => { base.ultima = p; return p; },
+    deferUpdate: async () => { base.deferred = true; },
+    editReply: async (p) => { base.ultima = p; return p; },
     followUp: async (p) => { base.ultimaF = p; return p; },
     showModal: async (m) => { base.ultimoModal = m; return m; },
     ...extra,
@@ -50,6 +56,8 @@ function base(customId, extra = {}) {
 }
 function btn(customId) { return base(customId, { isButton: () => true }); }
 function selectMenu(customId, values) { return base(customId, { isStringSelectMenu: () => true, values }); }
+// client.emit não aguarda a callback async; dá um tick para o handler terminar.
+const flush = () => new Promise((r) => setImmediate(r));
 (async () => {
   const pCenter = require("../src/utils/painelCenter");
 
@@ -58,13 +66,16 @@ function selectMenu(customId, values) { return base(customId, { isStringSelectMe
   console.log("1) Painel central por-guild:", resp.embeds.length > 0 ? "OK" : "FALHOU");
 
   // 2) Clicar "📦 Estoque" -> deve mostrar seletor de canal, NÃO "Ação desconhecida"
-  await client.emit("interactionCreate", btn("painelcenter:estoque"));
+  client.emit("interactionCreate", btn("painelcenter:estoque"));
+  await flush();
   const c1 = base.ultima && (base.ultima.content || (base.ultima.embeds && base.ultima.embeds.length ? "(embed)" : ""));
   const passou1 = !String(c1).includes("Ação desconhecida");
   console.log("2) Clique 'Estoque' -> seletor de canal (sem ação desconhecida):", passou1 ? "OK" : "FALHOU: " + c1);
 
   // 3) Clicar "📌 Canal atual"
-  await client.emit("interactionCreate", btn("painelcenter:selcanal:estoque:atual"));
+  client.emit("interactionCreate", btn("painelcenter:selcanal:estoque:atual"));
+  await flush();
+  await flush();
   const c2 = base.ultima && (base.ultima.content || (base.ultima.embeds && base.ultima.embeds.length ? "(embed)" : ""));
   const passou2 = !String(c2).includes("Ação desconhecida") && !String(c2).includes("Ocorreu um erro");
   console.log("3) Clique 'Canal atual' -> publica painel:", passou2 ? "OK" : "FALHOU: " + c2);
@@ -77,7 +88,9 @@ function selectMenu(customId, values) { return base(customId, { isStringSelectMe
   console.log("4) Registro por-guild salvo (painel_estoque):", passou4 ? "OK" : "FALHOU");
 
   // 5) Selecionar um canal via select menu
-  await client.emit("interactionCreate", selectMenu("painelcenter:selcanal:conversao", ["333"]));
+  client.emit("interactionCreate", selectMenu("painelcenter:selcanal:conversao", ["333"]));
+  await flush();
+  await flush();
   const c5 = base.ultima && (base.ultima.content || (base.ultima.embeds && base.ultima.embeds.length ? "(embed)" : ""));
   const passou5 = !String(c5).includes("Ação desconhecida") && !String(c5).includes("Ocorreu um erro");
   console.log("5) Select menu conversao sem erro:", passou5 ? "OK" : "FALHOU");
