@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const { comandoPode } = require('../utils/permissions');
+const { linhaSelecaoCanalDe } = require('../utils/channelPicker');
 const path = require('node:path');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const estoque = require('../utils/estoque');
@@ -94,6 +95,22 @@ function construirPainelSelecao(guildId, pag = 0) {
   return { embeds: [embed], components: linhas };
 }
 
+function construirSelecaoCanal(guild, catId, canalAtualId = null) {
+  const cat = estoque.categoria(guild?.id, catId);
+  const catNome = cat ? `${cat.emoji ? cat.emoji + ' ' : '📦 '}**${cat.nome}**` : `\`${catId}\``;
+  const embed = new EmbedBuilder()
+    .setColor(0xbeb6ff)
+    .setTitle('📌 Você quer publicar essa categoria em qual canal?')
+    .setDescription(
+      `${catNome}\n\nEscolha um canal no menu abaixo, use **Canal atual** para publicar aqui, ou **Cancelar** para voltar.`
+    );
+  const picker = linhaSelecaoCanalDe(guild, `painelcat:${catId}:canal`, canalAtualId || null, '📣 Publicar em…');
+  if (!picker.canais.length) {
+    return { embeds: [embed.setDescription(`${catNome}\n\n❌ Nenhum canal de texto disponível para eu enviar mensagens.`)], components: [] };
+  }
+  return { embeds: [embed], components: [picker.row, picker.botoes] };
+}
+
 function numeroPagina(pag, total) {
   if (typeof pag !== 'number' || !Number.isFinite(pag)) return 0;
   if (total <= 1) return 0;
@@ -171,4 +188,5 @@ module.exports = {
   buildCategoria,
   salvar,
   construirPainelSelecao,
+  construirSelecaoCanal,
 };

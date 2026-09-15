@@ -886,7 +886,7 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     // ----- fixar painel de categoria (selecao visual do !painelcategoria) -----
-    if (interaction.isButton() && interaction.customId.startsWith('painelcat:')) {
+    if ((interaction.isButton() || interaction.isStringSelectMenu()) && interaction.customId.startsWith('painelcat:')) {
       if (!permitido(interaction)) {
         return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
       }
@@ -900,6 +900,49 @@ client.on('interactionCreate', async (interaction) => {
       if (catId === 'gercat') {
         return interaction.update(estoquePanel.adminGerenciarCategorias(interaction.guildId));
       }
+
+      // Painel de categoria: ao clicar na categoria, abre o seletor de canal
+      // (em vez de publicar direto no canal atual).
+      if (partes[2] === 'canal') {
+        if (interaction.isButton() && partes[3] === 'cancelar') {
+          return interaction.update(painelCategoria.construirPainelSelecao(interaction.guildId));
+        }
+        // Defer imediato: o envio no canal pode demorar >3s e o interaction expirar.
+        await interaction.deferUpdate().catch(() => {});
+        const responder = async (payload) => {
+          try {
+            if (interaction.deferred) return await interaction.editReply(payload);
+            return await interaction.update(payload);
+          } catch {}
+        };
+
+        let canal = null;
+        if (!interaction.channel) {
+          return responder({ content: '❌ Não consegui identificar o canal.', embeds: [], components: [] });
+        }
+        if (interaction.isStringSelectMenu()) {
+          canal = interaction.guild?.channels.cache.get((interaction.values || [])[0] || '') || null;
+        } else if (partes[3] === 'atual') {
+          canal = interaction.channel;
+        }
+        if (!canal || !canal.isTextBased() || !canal.permissionsFor(interaction.guild?.members.me)?.has('SendMessages')) {
+          return responder({ content: `❌ Não posso publicar em ${canal ? `<#${canal.id}>` : 'nenhum canal'}. Verifique minha permissão de envio.`, embeds: [], components: [] });
+        }
+
+        const embed = painelCategoria.buildCategoria(interaction.guildId, catId);
+        if (!embed) {
+          return responder({ content: `❌ Categoria \`${catId}\` não encontrada.`, embeds: [], components: [] });
+        }
+        try {
+          const msg = await canal.send({ embeds: [embed] });
+          painelCategoria.salvar(msg.id, catId, canal.id, interaction.guildId);
+        } catch (sendError) {
+          console.error('[PainelCategoria] Falha ao enviar:', sendError?.message || sendError);
+          return responder({ content: `❌ Não consegui enviar em <#${canal.id}>. Verifique minha permissão nesse canal.`, embeds: [], components: [] });
+        }
+        return responder({ content: `✅ Painel da categoria **${catId}** fixado em <#${canal.id}>.`, embeds: [], components: [] });
+      }
+
       if (!interaction.channel) {
         return interaction.reply({ content: '❌ Não consegui identificar o canal.', flags: MessageFlags.Ephemeral });
       }
@@ -907,9 +950,8 @@ client.on('interactionCreate', async (interaction) => {
       if (!embed) {
         return interaction.reply({ content: '❌ Categoria não encontrada.', flags: MessageFlags.Ephemeral });
       }
-      const msg = await interaction.channel.send({ embeds: [embed] });
-      painelCategoria.salvar(msg.id, catId, interaction.channel.id, interaction.guildId);
-      return interaction.reply({ content: `✅ Painel da categoria **${catId}** fixado no canal.`, flags: MessageFlags.Ephemeral });
+      // Agora sempre pergunta em qual canal publicar (seletor visual).
+      return interaction.update(painelCategoria.construirSelecaoCanal(interaction.guild, catId, interaction.channel?.id || null));
     }
 
     // ----- admin: estadm:* -----
