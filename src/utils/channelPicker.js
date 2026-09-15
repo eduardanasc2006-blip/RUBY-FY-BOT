@@ -22,30 +22,34 @@ function canaisPublicaveis(guild) {
 // Retorna { row, botoes, canais } para adicionar aos componentes.
 function linhaSelecaoCanalDe(guild, callbackId, canalAtualId = null, rotulo = '📣 Publicar em…') {
   const canais = canaisPublicaveis(guild);
-  const select = new StringSelectMenuBuilder()
-    .setCustomId(callbackId)
-    .setPlaceholder(rotulo)
-    .setMinValues(1)
-    .setMaxValues(1)
-    .addOptions(
-      canais.map((c) => ({
-        label: (canalAtualId && c.id === canalAtualId ? '📌 ' : '') + (c.name.length > 95 ? c.name.slice(0, 92) + '…' : c.name),
-        description: canalAtualId && c.id === canalAtualId ? 'Canal atual' : `#${c.parent?.name || 'sem categoria'}`.slice(0, 100),
-        value: c.id,
-      }))
-    );
-
-  const row = new ActionRowBuilder().addComponents(select);
+  let row = null;
+  if (canais.length) {
+    const select = new StringSelectMenuBuilder()
+      .setCustomId(callbackId)
+      .setPlaceholder(rotulo)
+      .setMinValues(1)
+      .setMaxValues(1)
+      .addOptions(
+        canais.map((c) => ({
+          label: (canalAtualId && c.id === canalAtualId ? '📌 ' : '') + (c.name.length > 95 ? c.name.slice(0, 92) + '…' : c.name),
+          description: canalAtualId && c.id === canalAtualId ? 'Canal atual' : `#${c.parent?.name || 'sem categoria'}`.slice(0, 100),
+          value: c.id,
+        }))
+      );
+    row = new ActionRowBuilder().addComponents(select);
+  }
   const botoes = new ActionRowBuilder();
   if (canalAtualId) {
     botoes.addComponents(
       new ButtonBuilder().setCustomId(`${callbackId}:atual`).setLabel('📌 Canal atual').setStyle(ButtonStyle.Primary)
     );
   }
-  botoes.addComponents(
-    new ButtonBuilder().setCustomId(`${callbackId}:cancelar`).setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
-  );
-  return { select, row, botoes, canais };
+  if (canais.length) {
+    botoes.addComponents(
+      new ButtonBuilder().setCustomId(`${callbackId}:cancelar`).setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
+    );
+  }
+  return { row, botoes, canais };
 }
 
 // Resolve o canal escolhido a partir de um interaction (select ou botão).

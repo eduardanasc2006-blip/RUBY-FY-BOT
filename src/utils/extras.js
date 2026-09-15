@@ -121,7 +121,7 @@ function registrar(client) {
           return interaction.update({
             content: '🗂️ **Onde deseja publicar?**\n_Selecione um canal abaixo ou use **📌 Canal atual**._',
             embeds: preview ? [new EmbedBuilder().setColor(0xbeb6ff).setDescription('👁️ Isto será publicado:'), preview] : [new EmbedBuilder().setColor(0xbeb6ff).setDescription('👁️ Isto será publicado:')],
-            components: [canais.row, canais.botoes],
+            components: canais.row ? [canais.row, canais.botoes] : [canais.botoes],
           });
         }
         if (acao === 'cancelar') {
