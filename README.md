@@ -42,7 +42,7 @@ Todos funcionam com **prefixo `!`** (`!robux 1000`) e também como **slash comma
 | `!estoque` / `/estoque` | Mostra o estoque (painel público; busca por nome com argumentos) |
 | `!configestoque` / `/configestoque` | Painel de configuração do estoque (categorias, produtos, quantidades, vender, ativar/desativar, remover) |
 | `!painelestoque` / `/painelestoque` | Publica/atualiza o painel fixo de estoque no canal |
-| `!painelcategoria` / `/painelcategoria` | Fixa no canal os produtos de uma categoria |
+| `!painelcategoria` / `/painelcategoria` | Fixa no canal os produtos de uma categoria (escolhe em qual canal publicar) |
 | `!canalavisos` / `/canalavisos` | Canal onde avisar quando um produto esgota |
 | `!comprar` / `/comprar` | Fluxo de compra (carrinho) |
 | `!cliente` / `/cliente` | Consulta de pedidos do cliente |

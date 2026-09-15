@@ -7,7 +7,7 @@ const { isAdmin } = require('../prefixCommands/settaxa');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('painelcategoria')
-    .setDescription('Fixa no canal os produtos de uma categoria (admin)')
+    .setDescription('Fixa no canal os produtos de uma categoria — escolhe o canal (admin)')
     .addStringOption((option) =>
       option
         .setName('categoria')

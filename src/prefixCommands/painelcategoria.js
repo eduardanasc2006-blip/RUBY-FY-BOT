@@ -120,8 +120,8 @@ function numeroPagina(pag, total) {
 
 module.exports = {
   name: 'painelcategoria',
-  description: 'Fixa no canal os produtos de uma categoria (restrito a administradores)',
-  usage: '!painelcategoria <categoria>',
+  description: 'Fixa no canal os produtos de uma categoria, escolhendo o canal (restrito a administradores)',
+  usage: '!painelcategoria <categoria> [#canal]',
 
   async execute(message, args) {
     if (!message.guild || !comandoPode(message.member, message.author.id, 'painelcategoria')) {
