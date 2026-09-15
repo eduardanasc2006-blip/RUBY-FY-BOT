@@ -46,6 +46,17 @@ module.exports = {
       sessao.mensagem = texto.trim();
     }
 
-    return interaction.reply({ ...buildPainel(interaction.user.id), flags: MessageFlags.Ephemeral });
+    // deferReply garante ACK imediato (<3s) mesmo se o buildPainel ou o reply
+    // demorar no host; o painel chega logo em seguida via editReply.
+    const painel = buildPainel(interaction.user.id);
+    if (interaction.deferred) return interaction.editReply(painel);
+    if (interaction.replied) return interaction.followUp(painel);
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(() => {});
+    return interaction.editReply(painel).catch(async () => {
+      // Se o editReply falhar (ex.: payload inválido), garante que o usuário
+      // ao menos receba a resposta via followUp — nunca deixa a interação sem
+      // resposta ("fica carregando").
+      try { await interaction.followUp(painel); } catch {}
+    });
   },
 };

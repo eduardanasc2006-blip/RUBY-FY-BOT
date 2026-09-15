@@ -76,9 +76,15 @@ function buildPainel(userId, tipo = 'normal') {
     new ButtonBuilder().setCustomId(`msgpainel:cancelar:${userId}`).setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
   );
 
+  // content só quando o texto cabe no limite do Discord (2000). Senão, o
+  // painel mostra o resumo na embed (o texto completo fica na sessão para
+  // a publicação final) — evita erro 400 do Discord que deixava a
+  // interação sem resposta ("aplicativo não respondeu"/"fica carregando").
+  const textoCurto = estado.mensagem && estado.mensagem.length <= 2000 ? estado.mensagem : null;
+
   return {
     embeds: [resumo],
-    content: estado.mensagem || null,
+    content: textoCurto,
     components: [linha1],
   };
 }
@@ -101,10 +107,14 @@ function buildPreview(userId) {
     new ButtonBuilder().setCustomId(`msgpainel:cancelar:${userId}`).setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
   );
 
+  // content limitado a 2000 (mesma proteção do buildPainel)
+  const textoCurto = estado.mensagem && estado.mensagem.length <= 2000 ? estado.mensagem : null;
+  const previewDesc = (estado.mensagem || '_Sem texto_').slice(0, 2000);
+
   return {
-    content: estado.mensagem || null,
+    content: textoCurto,
     embeds: [new EmbedBuilder().setColor(0xbeb6ff).setDescription(
-      `${estado.mensagem || '_Sem texto_'}\n\n🖼️ **${imgs.length} imagem(ns) serão anexadas na publicação.**`
+      `${previewDesc}\n\n🖼️ **${imgs.length} imagem(ns) serão anexadas na publicação.**`
     )],
     components: [botoes],
   };

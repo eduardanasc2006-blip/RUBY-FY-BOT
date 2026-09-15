@@ -194,7 +194,16 @@ client.on('interactionCreate', async (interaction) => {
   try {
     const command = client.commands.get(interaction.commandName);
 
-    if (!command) return; // Comandos personalizados agora sao prefixo (!) e nao slash (/)
+    if (!command) {
+      // Comandos personalizados agora sao prefixo (!) e nao slash (/). Se o
+      // slash foi registrado mas o handler nao existe nesta instancia (zip
+      // desatualizado), respondemos aviso em vez de deixar a interacao sem
+      // resposta ("aplicativo nao respondeu" / "fica carregando").
+      return interaction.reply({
+        content: '❌ Este comando não está disponível nesta versão do bot. Atualize o ZIP no host e rode `node deploy-commands.js`.',
+        flags: MessageFlags.Ephemeral,
+      }).catch(() => {});
+    }
 
     // Restrição de canal (mesma regra dos prefix): admins/cargos passam, usuário
     // comum limitado aos canais configurados via /canalcomando.
@@ -218,7 +227,7 @@ client.on('interactionCreate', async (interaction) => {
     try {
       const mensagem = { content: '❌ Ocorreu um erro ao executar este comando.', flags: MessageFlags.Ephemeral };
       if (interaction.replied || interaction.deferred) {
-        await interaction.followUp(mensagem);
+        await interaction.followUp(mensagem).catch(() => {});
       } else {
         await interaction.reply(mensagem);
       }

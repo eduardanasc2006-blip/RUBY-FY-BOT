@@ -181,11 +181,27 @@ function registrar(client) {
         const conteudo = estado.mensagem || null;
         const arquivos = (estado.imagens || []).slice(0, 10).map((url) => ({ attachment: url }));
         try {
+          if (conteudo && conteudo.length > 2000) {
+            // Texto longo: divide em fatias de até 2000 (anexos vão na última).
+            const fatias = [];
+            for (let i = 0; i < conteudo.length; i += 2000) {
+              fatias.push(conteudo.slice(i, i + 2000));
+            }
+            for (let i = 0; i < fatias.length; i++) {
+              const ultima = i === fatias.length - 1;
+              await canal.send({
+                content: fatias[i],
+                files: ultima ? arquivos : [],
+                allowedMentions: { parse: [] },
+              });
+            }
+          } else {
             await canal.send({ content: conteudo, files: arquivos, allowedMentions: { parse: [] } });
-          } catch (e) {
-            console.error('[Mensagem] Falha ao publicar:', e?.message || e);
-            return interaction.reply({ content: `❌ Não consegui publicar em <#${canal.id}>. Verifique minhas permissões no canal.`, flags: MessageFlags.Ephemeral });
           }
+        } catch (e) {
+          console.error('[Mensagem] Falha ao publicar:', e?.message || e);
+          return interaction.reply({ content: `❌ Não consegui publicar em <#${canal.id}>. Verifique minhas permissões no canal.`, flags: MessageFlags.Ephemeral });
+        }
         limparSessao(donoId);
         return interaction.update({ content: `✅ Mensagem publicada em <#${canal.id}>!`, embeds: [], components: [] });
       }
