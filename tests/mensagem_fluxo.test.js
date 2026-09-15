@@ -51,7 +51,7 @@ const author = { id: "111111111111111111", bot: false, username: "admin-teste" }
 
 let ultima = null;
 function interacaoDe(customId, tipo = "button", extras = {}) {
-  return {
+  const inter = {
     customId,
     user: author,
     member: membro,
@@ -73,12 +73,14 @@ function interacaoDe(customId, tipo = "button", extras = {}) {
     replied: false,
     update: async (p) => { ultima = p; },
     reply: async (p) => { ultima = p; },
-    deferReply: async () => {},
+    deferReply: async () => { inter.deferred = true; },
+    deferUpdate: async () => { inter.deferred = true; },
     followUp: async (p) => { ultima = p; },
     showModal: async (m) => { ultima = { modal: m }; },
-    editReply: async (p) => { ultima = p; },
+    editReply: async (p) => { inter.replied = true; ultima = p; },
     client,
   };
+  return inter;
 }
 const flush = () => new Promise((r) => setImmediate(r));
 
