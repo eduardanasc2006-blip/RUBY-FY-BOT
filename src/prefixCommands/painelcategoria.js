@@ -26,16 +26,18 @@ function buildCategoria(guildId, catId) {
   const linhas = cat.produtos
     .filter((p) => p.ativo)
     .map((p) => {
+      const disp = p.controlarQtd ? (p.quantidade > 0 ? '🟢' : '🔴') : '🟢';
       const qtd = p.controlarQtd ? `${p.quantidade}x` : '';
       const desc = p.descricao ? ` — _${p.descricao}_` : '';
-      return `${qtd ? qtd + ' ' : ''}**${p.nome}** — ${formatBRL(p.valor)}${desc}`;
+      return `${disp} **${p.nome}** — ${formatBRL(p.valor)}${qtd ? ` • ${qtd}` : ''}${desc}`;
     });
+  const legenda = '🟢 Disponível • 🔴 Esgotado';
 
   return new EmbedBuilder()
     .setColor(0xbeb6ff)
     .setTitle(`${emoji}${cat.nome}`)
     .setDescription(
-      `${cat.descricao ? `*${cat.descricao}*\n\n` : ''}${linhas.length ? linhas.join('\n') : 'Nenhum produto disponível.'}`
+      `${cat.descricao ? `*${cat.descricao}*\n\n` : ''}${linhas.length ? linhas.join('\n') + '\n\n' + legenda : 'Nenhum produto disponível.'}`
     )
     .setFooter({ text: '*valor por unidade*' });
 }
