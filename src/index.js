@@ -84,13 +84,23 @@ if (!process.env.DISCORD_TOKEN) {
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
+    // GatewayIntentBits.GuildMembers removido: baixava TODOS os membros de
+    // todos os servidores para a RAM (estourava os 100MB). Sem ele, o cache
+    // só guarda o que for buscado pontualmente (fetch individual, memberCount
+    // continua disponível via metadata do guild).
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent,
   ],
   // Necessário para receber mensagens e interações em DM (canal parcial)
   partials: [Partials.Channel],
+  // Sweepers: limpa automaticamente do cache mensagens e reações antigas,
+  // impedindo que a RAM cresça sem limite com o uso.
+  sweepers: {
+    messages: { interval: 300, filter: () => (msg) => !msg.pinned && Date.now() - msg.createdTimestamp > 3600_000 },
+    reactions: { interval: 600, filter: () => () => true },
+    presence: { interval: 600, filter: () => () => true },
+  },
 });
 
 // O bot registra um listener de interactionCreate por feature (painéis, lock/unlock,
@@ -3721,5 +3731,17 @@ client.on('interactionCreate', async (interaction) => {
 extrasHandlers.registrar(client);
 const customEditHandlers = require('./utils/customEditHandler');
 customEditHandlers.registrar(client);
+
+// Sem o intent GuildMembers, guild.members.me fica vazio até um fetch. Fazer o
+// fetch individual do próprio bot por servidor no boot preenche o cache sem
+// baixar a lista completa de membros (economiza RAM — cabe nos 100MB).
+client.once('ready', () => {
+  console.log(`✅ Bot on-line como ${client.user?.tag} em ${client.guilds.cache.size} servidores.`);
+  const botId = client.user?.id;
+  if (!botId) return;
+  for (const guild of client.guilds.cache.values()) {
+    guild.members.fetch(botId).catch(() => {});
+  }
+});
 
 client.login(process.env.DISCORD_TOKEN);
