@@ -3475,34 +3475,21 @@ client.on('interactionCreate', async (interaction) => {
             return interaction.reply({ content: '❌ Estoque insuficiente agora. A quantidade reservada pode ter mudado. Tente novamente.', flags: MessageFlags.Ephemeral });
           }
         }
-        const pedido = pedidoStore.criar(guildId, {
-          clienteId: interaction.user.id,
-          clienteTag: interaction.user.globalName || interaction.user.username || null,
-          catId, prodId,
-          itemNome: p.nome,
+        // Adiciona ao carrinho em vez de criar o pedido imediatamente.
+        // A finalização (e a reserva de estoque) só acontece em comp:finalizar.
+        carrinhoStore.adicionar(guildId, interaction.user.id, {
+          catId,
+          prodId,
+          nome: p.nome,
           quantidade: qtd,
-          valor: Math.round((p.valor ||  0) * qtd * 100) / 100,
+          valorUnitario: p.valor || 0,
         });
-        logComprasStore.enviar(interaction.client, guildId, {
-          titulo: '📥 Pedido criado',
-          descricao: `**#${pedido.id}** está aguardando confirmação do pagamento.`,
-          cor: 0xf1c40f,
-          grupos: [
-            [
-              { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
-            ],
-            [
-              { name: '📦 Item', value: pedido.itemNome, inline: true },
-              { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
-            ],
-            [
-              { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
-              { name: '⏳ Status', value: 'Aguardando confirmação do pagamento', inline: true },
-            ],
-          ],
-          timestamp: true,
+        return interaction.reply({
+          content: `✅ **${qtd}× ${p.nome}** adicionado ao carrinho!`,
+          embeds: [montarCarrinho(guildId, interaction.user.id).embeds[0]],
+          components: montarCarrinho(guildId, interaction.user.id).components,
+          flags: MessageFlags.Ephemeral,
         });
-        return interaction.update(mensagemPedido(guildId, pedido));
       }
 
       if (acao === 'confirmar' || acao === 'cancelar') {

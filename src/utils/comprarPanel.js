@@ -91,7 +91,7 @@ function escolherQuantidade(guildId, catId, prodId) {
     .setDescription(
       `**Preço:** ${formatBRL(p.valor)} cada\n` +
       `**Disponível:** ${disponivel === null ? 'ilimitado' : `${disponivel} unidade(s)`}\n\n` +
-      'Selecione a quantidade ou **adicione ao carrinho** para escolher mais produtos depois:'
+      'Clique na quantidade para **adicionar ao carrinho** e continuar comprando:'
     );
   if (disponivel !== null && disponivel <=  0) {
     embed.setDescription(`**${p.nome}** está esgotado no momento.`);
