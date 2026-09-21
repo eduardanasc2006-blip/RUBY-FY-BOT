@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { escolherCategoria } = require('../utils/comprarPanel');
+const carrinhoStore = require('../utils/carrinhoStore');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -13,6 +14,18 @@ module.exports = {
         flags: MessageFlags.Ephemeral,
       });
     }
-    return interaction.reply(escolherCategoria(interaction.guildId));
+    // Registra a posse da mensagem publica do painel: os botoes de quantidade
+    // so editam o carrinho de quem iniciou o /comprar.
+    const conteudo = escolherCategoria(interaction.guildId, interaction.user.id);
+    try {
+      const enviada = await interaction.reply({ ...conteudo, fetchReply: true });
+      if (enviada?.id) {
+        carrinhoStore.setRef(interaction.guildId, interaction.user.id, interaction.channelId, enviada.id);
+      }
+      return enviada;
+    } catch {
+      // Sem fetchReply (interacao expirada/DM): mantem o painel funcionando.
+      return interaction.reply(conteudo).catch(() => {});
+    }
   },
 };

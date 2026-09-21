@@ -21,7 +21,41 @@ function salvar() {
 function sessao(guildId, userId) {
   if (!dados[guildId]) dados[guildId] = {};
   if (!dados[guildId][userId]) dados[guildId][userId] = { itens: [] };
+  if (!Array.isArray(dados[guildId][userId].itens)) dados[guildId][userId].itens = [];
   return dados[guildId][userId];
+}
+
+// Referência da mensagem pública do carrinho no ticket (canal + mensagem), para
+// editar a mesma mensagem em vez de enviar uma nova a cada ação.
+function ref(guildId, userId) {
+  const s = sessao(guildId, userId);
+  return { canalId: s.canalId || null, msgId: s.msgId || null };
+}
+
+function setRef(guildId, userId, canalId, msgId) {
+  // Nunca "rouba" um painel que ja pertence a outro usuario: sem isso um
+  // intruso com acesso ao ticket poderia reassumir o painel publico do cliente.
+  if (msgId) {
+    const donoAtual = donoDoPainel(guildId, msgId);
+    if (donoAtual && donoAtual !== userId) return ref(guildId, userId);
+  }
+  const s = sessao(guildId, userId);
+  s.canalId = canalId || null;
+  s.msgId = msgId || null;
+  salvar();
+  return ref(guildId, userId);
+}
+
+// Descobre o dono do carrinho pela mensagem publica do painel no ticket.
+// Serve para bloquear quem nao e o cliente dono, sem criar outro sistema de permissao.
+function donoDoPainel(guildId, msgId) {
+  if (!guildId || !msgId) return null;
+  const guild = dados[guildId];
+  if (!guild) return null;
+  for (const [userId, s] of Object.entries(guild)) {
+    if (s && s.msgId === msgId) return userId;
+  }
+  return null;
 }
 
 function listar(guildId, userId) {
@@ -42,7 +76,8 @@ function adicionar(guildId, userId, { catId, prodId, nome, quantidade, valorUnit
 }
 
 function limpar(guildId, userId) {
-  sessao(guildId, userId).itens = [];
+  const s = sessao(guildId, userId);
+  s.itens = [];
   salvar();
 }
 
@@ -58,4 +93,4 @@ function total(guildId, userId) {
   return Math.round(itens.reduce((acc, i) => acc + (i.valorUnitario || 0) * i.quantidade, 0) * 100) / 100;
 }
 
-module.exports = { listar, adicionar, limpar, remover, total, sessao };
+module.exports = { listar, adicionar, limpar, remover, total, sessao, ref, setRef, donoDoPainel };

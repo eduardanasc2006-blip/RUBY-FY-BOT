@@ -152,7 +152,7 @@ client.once(Events.ClientReady, () => {
       const { REST, Routes } = require('discord.js');
       const clientId = client.application?.id || process.env.CLIENT_ID;
       if (!process.env.DISCORD_TOKEN || !clientId) return;
-      const PUBLICOS = new Set(['ajuda', 'estoque', 'gamepass', 'reais', 'robux', 'taxa', 'calc']);
+      const PUBLICOS = new Set(['ajuda', 'estoque', 'gamepass', 'reais', 'robux', 'taxa', 'calc', 'comprar']);
       const commands = [];
       const commandsPath = pathDeploy.join(__dirname, 'commands');
       for (const file of fsDeploy.readdirSync(commandsPath).filter((f) => f.endsWith('.js'))) {
@@ -1772,6 +1772,9 @@ const { setCargo, eDono, comandoPode } = require('./utils/permissions');
 // permitindo que o sistema de permissões por cargo restrinja botões/menus.
 function comandoDoCustomId(interaction) {
   const id = interaction.customId || '';
+  // O select de remover item do carrinho (/comprar) nao representa um comando
+  // administrativo: a posse do carrinho e validada no proprio handler.
+  if (id === 'comp:removeritem') return null;
   if (id.startsWith('estadm:') || id.startsWith('estmodal:')) return 'configestoque';
   if (id.startsWith('estfixo:')) return 'estoque';
   if (id.startsWith('painelcenter:')) return 'painel';
@@ -3300,9 +3303,10 @@ if (interaction.isStringSelectMenu() || interaction.isButton()) {
 
 
 // ----- Compra: painel /comprar, pedidos, confirmacao/cancelamento e metas -----
-const { escolherCategoria, escolherProduto, escolherQuantidade, modalQuantidade, montarCarrinho, finalizarCarrinho, mensagemPedido } = require('./utils/comprarPanel');
+const { escolherCategoria, escolherProduto, escolherQuantidade, modalQuantidade, montarCarrinho, finalizarCarrinho, mensagemPedido, confirmacaoCancelamento, itensDoPedido } = require('./utils/comprarPanel');
 const carrinhoStore = require('./utils/carrinhoStore');
 const pedidoStore = require('./utils/pedidoStore');
+const pedidoComprasStore = require('./utils/pedidoComprasStore');
 const estoqueCompras = require('./utils/estoque');
 const comprasStore = require('./utils/comprasStore');
 const logComprasStore = require('./utils/logComprasStore');
@@ -3355,11 +3359,50 @@ client.on('interactionCreate', async (interaction) => {
         return interaction.reply({ content: '❌ Isso só funciona no servidor.', flags: MessageFlags.Ephemeral });
       }
 
+      // O painel e publico no ticket, mas so o cliente que iniciou pode alterar
+      // o carrinho. O dono vem da referencia registrada no /comprar (sem criar
+      // novo sistema de permissao). Painel sem dono registrado nao e de ninguem.
+      //
+      // So as acoes que EDITAM a mensagem compartilhada do painel precisam do
+      // dono (evita um intruso trocar o painel do cliente). addcarrinho/
+      // modaldigitar sao auto-escopados (modal do proprio usuario).
+      const msgIdAtual = interaction.message?.id || null;
+      const donoPainel = carrinhoStore.donoDoPainel(guildId, msgIdAtual);
+      const acoesDoDono = ['cat', 'voltar', 'prod', 'carrinho', 'removeritem', 'limpar', 'finalizar', 'qtd'];
+      if (acoesDoDono.includes(acao)) {
+        if (!donoPainel) {
+          return interaction.reply({
+            content: '🔒 Não foi possível identificar o dono deste carrinho. Abra o painel novamente com `/comprar`.',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+        if (donoPainel !== interaction.user.id) {
+          return interaction.reply({
+            content: '🔒 Este carrinho pertence a outro usuário. Você pode visualizar, mas não alterar.',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+      }
+
+      // Publica o carrinho no ticket: edita a propria mensagem do painel
+      // (sem spam de mensagens). O modal nao pode editar, entao responde uma
+      // nova mensagem publica e passa a referencia-la.
+      async function publicarCarrinho() {
+        const conteudo = montarCarrinho(guildId, interaction.user.id);
+        if (interaction.isModalSubmit()) {
+          const enviada = await interaction.reply({ ...conteudo, fetchReply: true });
+          carrinhoStore.setRef(guildId, interaction.user.id, interaction.channelId, enviada.id);
+          return;
+        }
+        await interaction.update(conteudo);
+        carrinhoStore.setRef(guildId, interaction.user.id, interaction.channelId, interaction.message?.id || null);
+      }
+
       if (acao === 'cat') {
-        return interaction.update(escolherProduto(guildId, partes[2]));
+        return interaction.update(escolherProduto(guildId, partes[2], interaction.user.id));
       }
       if (acao === 'voltar') {
-        return interaction.update(escolherCategoria(guildId));
+        return interaction.update(escolherCategoria(guildId, interaction.user.id));
       }
       if (acao === 'prod') {
         return interaction.update(escolherQuantidade(guildId, partes[2], partes[3]));
@@ -3373,9 +3416,19 @@ client.on('interactionCreate', async (interaction) => {
         carrinhoStore.remover(guildId, interaction.user.id, partes[2], partes[3]);
         return interaction.update(montarCarrinho(guildId, interaction.user.id));
       }
+      // Select do carrinho: remove apenas o item escolhido.
+      if (acao === 'removeritem') {
+        const escolhido = String(interaction.values?.[0] || '');
+        const [catId, prodId] = escolhido.split(':');
+        if (!catId || !prodId) {
+          return interaction.reply({ content: '❌ Item inválido.', flags: MessageFlags.Ephemeral });
+        }
+        carrinhoStore.remover(guildId, interaction.user.id, catId, prodId);
+        return publicarCarrinho();
+      }
       if (acao === 'limpar') {
         carrinhoStore.limpar(guildId, interaction.user.id);
-        return interaction.update(montarCarrinho(guildId, interaction.user.id));
+        return publicarCarrinho();
       }
       if (acao === 'addcarrinho') {
         const catId = partes[2];
@@ -3393,42 +3446,39 @@ client.on('interactionCreate', async (interaction) => {
         if (!itens.length) {
           return interaction.reply({ content: '❌ Seu carrinho está vazio.', flags: MessageFlags.Ephemeral });
         }
-        const criados = finalizarCarrinho(guildId, interaction.user.id, interaction.user.globalName || interaction.user.username || null);
-        if (!criados.length) {
-          return interaction.reply({ content: '❌ Não foi possível finalizar: itens podem ter ficado sem estoque.', flags: MessageFlags.Ephemeral });
-        }
-        // Envia um log por pedido criado (dividido em embeds menores p/ leitura fácil)
-        for (const pedido of criados) {
-          logComprasStore.enviar(interaction.client, guildId, {
-            titulo: '📥 Pedido criado',
-            descricao: `**#${pedido.id}** está aguardando confirmação do pagamento.`,
-            cor: 0xf1c40f,
-            grupos: [
-              [
-                { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
-              ],
-              [
-                { name: '📦 Item', value: pedido.itemNome, inline: true },
-                { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
-              ],
-              [
-                { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
-                { name: '⏳ Status', value: 'Aguardando confirmação do pagamento', inline: true },
-              ],
-            ],
-            timestamp: true,
-          });
+        const pedido = finalizarCarrinho(guildId, interaction.user.id, interaction.user.globalName || interaction.user.username || null);
+        if (!pedido) {
+          return interaction.reply({ content: '❌ Não foi possível finalizar: itens podem ter ficado sem estoque ou desativados.', flags: MessageFlags.Ephemeral });
         }
 
-        // Resposta com todos os pedidos pendentes (um por embed)
-        const embeds = criados.map((p) => mensagemPedido(guildId, p));
-        const listas = embeds.map((e) => e.embeds[0]);
-        return interaction.reply({
-          content: `✅ **${criados.length} pedido(s) criado(s)!** Aguardando confirmação do pagamento.`,
-          embeds: listas,
-          components: [], // sem botoes aqui, cada pedido sera confirmado/cancelado pelos botoes no log
-          flags: MessageFlags.Ephemeral,
+        // O pedido continua sendo registrado no canal de logs (historico).
+        logComprasStore.enviar(interaction.client, guildId, {
+          titulo: '📥 Pedido criado',
+          descricao: `**#${pedido.id}** está aguardando confirmação do pagamento.`,
+          cor: 0xf1c40f,
+          grupos: [
+            [
+              { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
+            ],
+            [
+              { name: '📦 Itens', value: pedido.itemNome, inline: true },
+              { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
+            ],
+            [
+              { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
+              { name: '🟡 Status', value: 'Aguardando pagamento', inline: true },
+            ],
+          ],
+          timestamp: true,
         });
+
+        // O pedido aparece no ticket (publico): reaproveita a mensagem do carrinho.
+        const conteudoPedido = mensagemPedido(guildId, pedido, interaction.channelId);
+        await interaction.update(conteudoPedido).catch(async () => {
+          await interaction.reply({ ...conteudoPedido, fetchReply: true }).catch(() => {});
+        });
+        carrinhoStore.setRef(guildId, interaction.user.id, null, null);
+        return;
       }
 
       // Modal de quantidade personalizada (adicionar ao carrinho)
@@ -3437,14 +3487,14 @@ client.on('interactionCreate', async (interaction) => {
         const prodId = partes[3];
         const qtd = parseInt(interaction.fields.getTextInputValue('quantidade'), 10) || 0;
         const p = estoqueCompras.produto(guildId, catId, prodId);
-        if (!p || qtd <= 0) {
-          return interaction.reply({ content: '❌ Quantidade inválida.', flags: MessageFlags.Ephemeral });
+        if (!p || !p.ativo || qtd <= 0) {
+          return interaction.reply({ content: '❌ Produto indisponível ou quantidade inválida.', flags: MessageFlags.Ephemeral });
         }
-        if (p.controlarQtd) {
-          const disponivel = pedidoStore.disponivel(guildId, p);
-          if (disponivel < qtd) {
-            return interaction.reply({ content: '❌ Estoque insuficiente agora.', flags: MessageFlags.Ephemeral });
-          }
+        const jaNoCarrinho = carrinhoStore.listar(guildId, interaction.user.id)
+          .filter((i) => i.catId === catId && i.prodId === prodId)
+          .reduce((acc, i) => acc + i.quantidade, 0);
+        if (p.controlarQtd && pedidoStore.disponivel(guildId, p, catId, prodId) < jaNoCarrinho + qtd) {
+          return interaction.reply({ content: '❌ Estoque insuficiente agora.', flags: MessageFlags.Ephemeral });
         }
         carrinhoStore.adicionar(guildId, interaction.user.id, {
           catId,
@@ -3453,12 +3503,7 @@ client.on('interactionCreate', async (interaction) => {
           quantidade: qtd,
           valorUnitario: p.valor || 0,
         });
-        return interaction.reply({
-          content: `✅ **${qtd}× ${p.nome}** adicionado ao carrinho!`,
-          embeds: [montarCarrinho(guildId, interaction.user.id).embeds[0]],
-          components: montarCarrinho(guildId, interaction.user.id).components,
-          flags: MessageFlags.Ephemeral,
-        });
+        return publicarCarrinho();
       }
 
       if (acao === 'qtd') {
@@ -3466,14 +3511,16 @@ client.on('interactionCreate', async (interaction) => {
         const prodId = partes[3];
         const qtd = parseInt(partes[4], 10) || 0;
         const p = estoqueCompras.produto(guildId, catId, prodId);
-        if (!p || qtd <= 0) {
-          return interaction.reply({ content: '❌ Produto ou quantidade inválida.', flags: MessageFlags.Ephemeral });
+        if (!p || !p.ativo || qtd <= 0) {
+          return interaction.reply({ content: '❌ Produto indisponível ou quantidade inválida.', flags: MessageFlags.Ephemeral });
         }
-        if (p.controlarQtd) {
-          const disponivel = pedidoStore.disponivel(guildId, p);
-          if (disponivel < qtd) {
-            return interaction.reply({ content: '❌ Estoque insuficiente agora. A quantidade reservada pode ter mudado. Tente novamente.', flags: MessageFlags.Ephemeral });
-          }
+        // Valida somando o que ja esta no carrinho: a reserva de estoque so
+        // acontece na finalizacao, entao a checagem aqui usa o disponivel atual.
+        const jaNoCarrinho = carrinhoStore.listar(guildId, interaction.user.id)
+          .filter((i) => i.catId === catId && i.prodId === prodId)
+          .reduce((acc, i) => acc + i.quantidade, 0);
+        if (p.controlarQtd && pedidoStore.disponivel(guildId, p, catId, prodId) < jaNoCarrinho + qtd) {
+          return interaction.reply({ content: '❌ Estoque insuficiente agora. A quantidade reservada pode ter mudado. Tente novamente.', flags: MessageFlags.Ephemeral });
         }
         // Adiciona ao carrinho em vez de criar o pedido imediatamente.
         // A finalização (e a reserva de estoque) só acontece em comp:finalizar.
@@ -3484,15 +3531,80 @@ client.on('interactionCreate', async (interaction) => {
           quantidade: qtd,
           valorUnitario: p.valor || 0,
         });
-        return interaction.reply({
-          content: `✅ **${qtd}× ${p.nome}** adicionado ao carrinho!`,
-          embeds: [montarCarrinho(guildId, interaction.user.id).embeds[0]],
-          components: montarCarrinho(guildId, interaction.user.id).components,
-          flags: MessageFlags.Ephemeral,
-        });
+        return publicarCarrinho();
       }
 
-      if (acao === 'confirmar' || acao === 'cancelar') {
+      // ----- Cancelar pedido (pede confirmacao antes) -----
+      if (acao === 'cancelar') {
+        if (!comandoPode(interaction.member, interaction.user.id, 'comprar')) {
+          return interaction.reply({
+            content: '🔒 Somente administradores ou equipe autorizada podem confirmar ou cancelar pedidos.',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+        const pedido = pedidoStore.obter(guildId, partes[2]);
+        if (!pedido) {
+          return interaction.reply({ content: '❌ Pedido não encontrado.', flags: MessageFlags.Ephemeral });
+        }
+        if (pedido.status !== 'pendente') {
+          return interaction.reply({
+            content: '❌ Este pedido já foi processado (não é mais possível alterá-lo).',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+        return interaction.update(confirmacaoCancelamento(pedido.id));
+      }
+
+      // Volta da confirmacao para o pedido, sem cancelar.
+      if (acao === 'voltcanc') {
+        const pedido = pedidoStore.obter(guildId, partes[2]);
+        if (!pedido) {
+          return interaction.reply({ content: '❌ Pedido não encontrado.', flags: MessageFlags.Ephemeral });
+        }
+        return interaction.update(mensagemPedido(guildId, pedido, interaction.channelId));
+      }
+
+      // Cancelamento confirmado: libera a reserva (pedido deixa de ser pendente).
+      if (acao === 'confcanc') {
+        if (!comandoPode(interaction.member, interaction.user.id, 'comprar')) {
+          return interaction.reply({
+            content: '🔒 Somente administradores ou equipe autorizada podem confirmar ou cancelar pedidos.',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+        const pedidoId = partes[2];
+        const pedido = pedidoStore.obter(guildId, pedidoId);
+        if (!pedido) {
+          return interaction.reply({ content: '❌ Pedido não encontrado.', flags: MessageFlags.Ephemeral });
+        }
+        if (pedido.status !== 'pendente') {
+          return interaction.reply({
+            content: '❌ Este pedido já foi processado (não é mais possível alterá-lo).',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+        pedidoStore.atualizar(guildId, pedidoId, {
+          status: 'cancelado',
+          canceladoEm: Date.now(),
+          canceladoPor: interaction.user.id,
+        });
+        logComprasStore.enviar(interaction.client, guildId, {
+          titulo: '❌ Pedido cancelado',
+          descricao: `**#${pedido.id}** foi cancelado — reserva liberada, nenhuma venda registrada.`,
+          cor: 0xe74c3c,
+          campos: [
+            { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
+            { name: '📦 Itens', value: pedido.itemNome, inline: true },
+            { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
+            { name: '👮 Cancelado por', value: `<@${interaction.user.id}>`, inline: true },
+          ],
+          timestamp: true,
+        });
+        return interaction.update(mensagemPedido(guildId, pedidoStore.obter(guildId, pedidoId), interaction.channelId));
+      }
+
+      // ----- Confirmacao do pagamento (uma unica vez) -----
+      if (acao === 'confirmar') {
         if (!comandoPode(interaction.member, interaction.user.id, 'comprar')) {
           return interaction.reply({
             content: '🔒 Somente administradores ou equipe autorizada podem confirmar ou cancelar pedidos.',
@@ -3511,42 +3623,25 @@ client.on('interactionCreate', async (interaction) => {
           });
         }
 
-        if (acao === 'cancelar') {
-          pedidoStore.atualizar(guildId, pedidoId, {
-            status: 'cancelado',
-            canceladoEm: Date.now(),
-          });
-          logComprasStore.enviar(interaction.client, guildId, {
-            titulo: '❌ Pedido cancelado',
-            descricao: `**#${pedido.id}** foi cancelado — reserva liberada, nenhuma venda registrada.`,
-            cor: 0xe74c3c,
-            campos: [
-              { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
-              { name: '📦 Item', value: pedido.itemNome, inline: true },
-              { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
-              { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
-            ],
-            timestamp: true,
-          });
-          return interaction.update(mensagemPedido(guildId, pedidoStore.obter(guildId, pedidoId)));
-        }
-
-        // ----- Confirmacao do pagamento (uma unica vez) -----
         // Dar cargo/metas envolve buscar membro e adicionar cargo (rede); pode
         // passar dos 3s. Responde já e edita a mensagem depois.
         await interaction.deferUpdate().catch(() => {});
-        const produto = estoqueCompras.produto(guildId, pedido.catId, pedido.prodId);
-        if (produto && produto.controlarQtd) {
-          const reservadosOutros = pedidoStore.reservado(guildId, pedido.catId, pedido.prodId) - pedido.quantidade;
-          const disponivelReal = (produto.quantidade ||  0) - reservadosOutros;
-          if (disponivelReal < pedido.quantidade) {
 
-            return interaction.editReply({
-              content: '❌ Estoque insuficiente para este pedido agora.. Peça ao cliente para aguardar reposição ou cancele o pedido.',
-              components: [],
-            }).catch(() => {});
-          }
-          estoqueCompras.setQuantidade(guildId, pedido.catId, pedido.prodId, (produto.quantidade ||  0) - pedido.quantidade);
+        // Baixa de estoque conforme a logica existente, item por item.
+        let semEstoque = false;
+        for (const item of itensDoPedido(pedido)) {
+          const produto = estoqueCompras.produto(guildId, item.catId, item.prodId);
+          if (!produto || !produto.controlarQtd) continue;
+          const reservadosOutros = pedidoStore.reservado(guildId, item.catId, item.prodId) - item.quantidade;
+          const disponivelReal = (produto.quantidade || 0) - reservadosOutros;
+          if (disponivelReal < item.quantidade) { semEstoque = true; break; }
+          estoqueCompras.setQuantidade(guildId, item.catId, item.prodId, (produto.quantidade || 0) - item.quantidade);
+        }
+        if (semEstoque) {
+          return interaction.editReply({
+            content: '❌ Estoque insuficiente para este pedido agora. Peça ao cliente para aguardar reposição ou cancele o pedido.',
+            components: [],
+          }).catch(() => {});
         }
 
         const conquistadas = metasConquistadas(guildId, pedido.clienteId, pedido.valor);
@@ -3562,15 +3657,14 @@ client.on('interactionCreate', async (interaction) => {
           cor: 0x2ecc71,
           campos: [
             { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
-            { name: '📦 Item', value: pedido.itemNome, inline: true },
-            { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
+            { name: '📦 Itens', value: pedido.itemNome, inline: true },
             { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
             { name: '👮 Confirmado por', value: `<@${interaction.user.id}>`, inline: true },
           ],
           timestamp: true,
         });
 
-        // Adiciona os cargos conquistados（acumulativo, sem remover nenhum）
+        // Adiciona os cargos conquistados(acumulativo, sem remover nenhum)
         if (conquistadas.length) {
           const membroAlvo = interaction.guild?.members?.cache?.get(pedido.clienteId) ||
             (await interaction.guild?.members?.fetch(pedido.clienteId).catch(() => null));
@@ -3593,7 +3687,7 @@ client.on('interactionCreate', async (interaction) => {
           }
         }
 
-        return interaction.editReply(mensagemPedido(guildId, pedidoStore.obter(guildId, pedidoId))).catch(() => {});
+        return interaction.editReply(mensagemPedido(guildId, pedidoStore.obter(guildId, pedidoId), interaction.channelId)).catch(() => {});
       }
 
       return interaction.reply({ content: '❌ Ação desconhecida.', flags: MessageFlags.Ephemeral });

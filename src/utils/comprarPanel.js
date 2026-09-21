@@ -1,7 +1,8 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, EmbedBuilder } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, EmbedBuilder, StringSelectMenuBuilder } = require('discord.js');
 const estoque = require('./estoque');
 const pedidoStore = require('./pedidoStore');
 const carrinhoStore = require('./carrinhoStore');
+const pedidoComprasStore = require('./pedidoComprasStore');
 const { formatBRL } = require('./robuxConverter');
 
 const COR = 0xbeb6ff;
@@ -20,16 +21,27 @@ function btn(id, label, style, emoji) {
   return b;
 }
 
+// Linha de resumo do carrinho exibida nas telas de escolha (o cliente lembra
+// do que ja adicionou sem precisar abrir o carrinho).
+function resumoCarrinho(guildId, userId) {
+  if (!userId) return '';
+  const itens = carrinhoStore.listar(guildId, userId);
+  if (!itens.length) return '';
+  return `\n\n🛒 *No carrinho:* ${itens.map((i) => `${i.nome} × ${i.quantidade}`).join(', ')}` +
+    ` — **${formatBRL(carrinhoStore.total(guildId, userId))}**`;
+}
+
 // ----- Tela 1: selecionar categoria -----
 
-function escolherCategoria(guildId) {
+function escolherCategoria(guildId, userId) {
   const cats = estoque.categorias(guildId).filter((c) => c.produtos.some((p) => p.ativo));
   const embed = new EmbedBuilder()
     .setColor(COR)
     .setTitle('🛒 Comprar — Passo 1 de  3')
     .setDescription(
       cats.length
-        ? '**Selecione a categoria do produto que deseja comprar:**'
+        ? '**Selecione a categoria do produto que deseja comprar:**' +
+          resumoCarrinho(guildId, userId)
         : '*Nenhum produto disponível no momento.*'
     );
   const linhas = [];
@@ -49,16 +61,16 @@ function escolherCategoria(guildId) {
 
 // ----- Tela 2: selecionar produto -----
 
-function escolherProduto(guildId, catId) {
+function escolherProduto(guildId, catId, userId) {
   const cat = estoque.categoria(guildId, catId);
-  if (!cat) return escolherCategoria(guildId);
+  if (!cat) return escolherCategoria(guildId, userId);
   const produtos = cat.produtos.filter((p) => p.ativo);
   const embed = new EmbedBuilder()
     .setColor(COR)
     .setTitle(`${cat.emoji || '📦'} ${cat.nome} — Passo 2 de 3`)
     .setDescription(
       produtos.length
-        ? '**Selecione o produto desejado:**'
+        ? '**Selecione o produto desejado:**' + resumoCarrinho(guildId, userId)
         : '*Nenhum produto disponível nesta categoria.*'
     );
   const linhas = [];
@@ -67,7 +79,7 @@ function escolherProduto(guildId, catId) {
       linhas.push(new ActionRowBuilder());
     }
     const s = estoque.status(p);
-    const disp = p.controlarQtd ? ` ${pedidoStore.disponivel(guildId, p)}` : ' ilimitado';
+    const disp = p.controlarQtd ? ` ${pedidoStore.disponivel(guildId, p, catId, p.id)}` : ' ilimitado';
     linhas[linhas.length -  1].addComponents(
       btn(`comp:prod:${catId}:${p.id}`, `${p.nome} — ${formatBRL(p.valor)} (${s.emoji}${disp})`, ButtonStyle.Primary)
     );
@@ -84,7 +96,7 @@ function escolherProduto(guildId, catId) {
 function escolherQuantidade(guildId, catId, prodId) {
   const p = estoque.produto(guildId, catId, prodId);
   if (!p) return escolherCategoria(guildId);
-  const disponivel = pedidoStore.disponivel(guildId, p);
+  const disponivel = pedidoStore.disponivel(guildId, p, catId, p.id);
   const embed = new EmbedBuilder()
     .setColor(COR)
     .setTitle(`🔢 ${p.nome} — Passo 3 de  3`)
@@ -154,108 +166,195 @@ function montarCarrinho(guildId, userId) {
 
   const embed = new EmbedBuilder()
     .setColor(COR)
-    .setTitle('🛒 Carrinho')
+    .setTitle('🛒 CARRINHO')
     .setDescription(
       itens.length
         ? itens.map((i) => `**${i.nome}** × ${i.quantidade} — ${formatBRL((i.valorUnitario || 0) * i.quantidade)}`).join('\n') +
-          `\n\n**Total: ${formatBRL(total)}**`
+          `\n\n💰 **Total: ${formatBRL(total)}**`
         : '*Carrinho vazio. Adicione itens pelo painel de compra.*'
     );
 
   const linhas = [];
   if (itens.length) {
-    // Botões de remover item (máx 5 por linha; no máx 4 linhas, senão estoura ActionRow)
-    const exibidos = itens.slice(0, 20);
-    for (let i = 0; i < exibidos.length; i++) {
-      if (i % 5 === 0) linhas.push(new ActionRowBuilder());
-      linhas[linhas.length - 1].addComponents(
-        btn(`comp:rem:${exibidos[i].catId}:${exibidos[i].prodId}`, `✖ ${exibidos[i].nome}`, ButtonStyle.Danger)
-      );
-    }
-    linhas.push(row(
-      btn('comp:finalizar', '✅ Finalizar compra', ButtonStyle.Success, '✅'),
-      btn(`comp:voltar`, '🎁 Escolher mais produtos', ButtonStyle.Primary),
-      btn('comp:limpar', '🗑️ Limpar carrinho', ButtonStyle.Danger, '🗑️')
-    ));
-  } else {
-    linhas.push(row(
-      btn('comp:voltar', '🎁 Escolher produtos', ButtonStyle.Primary)
-    ));
+    // Um select para remover itens: evita dezenas de botões quando o carrinho
+    // tem muitos produtos (limite de 5 ActionRows por mensagem).
+    const opcoes = itens.slice(0, 25).map((i) => ({
+      label: `${i.nome} × ${i.quantidade}`.slice(0, 100),
+      description: formatBRL((i.valorUnitario || 0) * i.quantidade),
+      value: `${i.catId}:${i.prodId}`,
+    }));
+    linhas.push(
+      new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId('comp:removeritem')
+          .setPlaceholder('🗑️ Remover um item do carrinho')
+          .setMinValues(1)
+          .setMaxValues(1)
+          .addOptions(opcoes)
+      )
+    );
   }
-  if (linhas.length > 5) {
-    // Se ainda passou de 5 linhas, mantém só as ações de finalizar/limpar
-    linhas.splice(0, linhas.length - 5);
-  }
+  linhas.push(row(
+    btn('comp:voltar', '🎁 Escolher mais produtos', ButtonStyle.Primary),
+    btn('comp:limpar', '🧹 Limpar carrinho', ButtonStyle.Danger),
+    btn('comp:finalizar', '✅ Finalizar compra', ButtonStyle.Success)
+  ));
   return { embeds: [embed], components: linhas };
 }
 
-// ----- Finalizar o carrinho: cria um pedido por item -----
-function finalizarCarrinho(guildId, userId, clienteTag) {
-  const itens = carrinhoStore.listar(guildId, userId);
-  const criados = [];
-  for (const item of itens) {
-    const p = estoque.produto(guildId, item.catId, item.prodId);
-    if (!p) continue;
-    // Reserva (se controlar quantidade)
-    if (p.controlarQtd) {
-      const disp = pedidoStore.disponivel(guildId, p);
-      if (disp < item.quantidade) continue;
-    }
-    const pedido = pedidoStore.criar(guildId, {
-      clienteId: userId,
-      clienteTag,
-      catId: item.catId,
-      prodId: item.prodId,
-      itemNome: item.nome,
-      quantidade: item.quantidade,
-      valor: Math.round((item.valorUnitario || 0) * item.quantidade * 100) / 100,
-    });
-    criados.push(pedido);
-  }
-  // Limpa o carrinho após tentativa
-  carrinhoStore.limpar(guildId, userId);
-  return criados;
+// Referência da mensagem pública do carrinho no ticket (para edit posterior).
+function painelRef(guildId, userId) {
+  return carrinhoStore.ref(guildId, userId);
 }
 
-// ----- Mensagem do pedido pendente -----
+// ----- Finalizar o carrinho: cria UM pedido com todos os itens -----
+function finalizarCarrinho(guildId, userId, clienteTag) {
+  const itens = carrinhoStore.listar(guildId, userId);
+  if (!itens.length) return null;
 
-function mensagemPedido(guildId, pedido) {
+  // Valida cada item antes de criar o pedido: nada e reservado se algum item
+  // saiu do estoque, foi desativado ou nao tem quantidade disponivel.
+  const validos = [];
+  for (const item of itens) {
+    const p = estoque.produto(guildId, item.catId, item.prodId);
+    if (!p || !p.ativo) continue;
+    if (p.controlarQtd && pedidoStore.disponivel(guildId, p, item.catId, item.prodId) < item.quantidade) continue;
+    validos.push({
+      catId: item.catId,
+      prodId: item.prodId,
+      nome: p.nome,
+      quantidade: item.quantidade,
+      valorUnitario: p.valor || 0,
+    });
+  }
+  if (!validos.length) return null;
+
+  const valor = Math.round(validos.reduce((acc, i) => acc + i.valorUnitario * i.quantidade, 0) * 100) / 100;
+  const pedido = pedidoStore.criar(guildId, {
+    clienteId: userId,
+    clienteTag,
+    itens: validos,
+    itemNome: validos.map((i) => `${i.nome} × ${i.quantidade}`).join(', '),
+    quantidade: validos.reduce((acc, i) => acc + i.quantidade, 0),
+    valor,
+  });
+
+  // Limpa o carrinho após tentativa
+  carrinhoStore.limpar(guildId, userId);
+  return pedido;
+}
+
+// ----- Mensagem do pedido publica no ticket -----
+
+// Itens do pedido (compativel com pedidos antigos, criados antes de existir `itens[]`).
+function itensDoPedido(p) {
+  if (Array.isArray(p?.itens) && p.itens.length) return p.itens;
+  return [{
+    catId: p.catId,
+    prodId: p.prodId,
+    nome: p.itemNome,
+    quantidade: p.quantidade,
+    valorUnitario: p.quantidade ? Math.round(((p.valor || 0) / p.quantidade) * 100) / 100 : p.valor || 0,
+  }];
+}
+
+// Mensagem do ticket. O canalId e usado para trocar {canal} na mensagem de
+// pagamento configurada via /setcomprar.
+function mensagemPedido(guildId, pedido, canalId) {
   const p = pedidoStore.obter(guildId, pedido.id);
   if (!p) return { content: '❌ Pedido não encontrado.', embeds: [], components: [] };
+  const itens = itensDoPedido(p);
   const embed = new EmbedBuilder()
     .setColor(COR)
-    .setTitle('🛒 PEDIDO PENDENTE')
-    .addFields({ name: '👤 Cliente', value: `${p.clienteTag || `<@${p.clienteId}>`} (\`${p.clienteId}\`)` })
-    .addFields(
-      { name: '📦 Item', value: p.itemNome, inline: true },
-      { name: '🔢 Quantidade', value: String(p.quantidade), inline: true },
-      { name: '💰 Valor', value: formatBRL(p.valor), inline: true }
+    .setTitle(`🧾 PEDIDO #${p.id}`)
+    .setDescription(
+      itens.map((i) => `**${i.nome}** × ${i.quantidade} — ${formatBRL((i.valorUnitario || 0) * i.quantidade)}`).join('\n') +
+      `\n\n💰 **Total: ${formatBRL(p.valor)}**\n${statusTexto(p.status)}`
     )
-    .addFields({ name: '⏳ Status', value: statusTexto(p.status) });
+    .addFields({ name: '👤 Cliente', value: `${p.clienteTag || `<@${p.clienteId}>`} (\`${p.clienteId}\`)`, inline: true });
+
+  // Instrucoes de pagamento apenas enquanto o pedido aguarda pagamento.
+  if (p.status === 'pendente') {
+    embed.addFields({ name: '💳 Pagamento', value: pedidoComprasStore.mensagem(guildId, { total: p.valor, canalId }) });
+  } else {
+    embed.addFields({ name: '🔎 Registro', value: registroDoPedido(p) });
+  }
+
   return {
     embeds: [embed],
     components: componentesDoPedido(p),
   };
 }
 
+// Linha de auditoria (quem confirmou/cancelou e quando) mostrada no ticket.
+function registroDoPedido(p) {
+  if (p.status === 'confirmado') {
+    const quando = p.confirmadoEm ? `<t:${Math.floor(p.confirmadoEm / 1000)}:f>` : '—';
+    return `Confirmado por <@${p.confirmadoPor}> em ${quando}`;
+  }
+  if (p.status === 'cancelado') {
+    const quando = p.canceladoEm ? `<t:${Math.floor(p.canceladoEm / 1000)}:f>` : '—';
+    const por = p.canceladoPor ? ` por <@${p.canceladoPor}>` : '';
+    return `Cancelado${por} em ${quando} — reserva liberada`;
+  }
+  return statusTexto(p.status);
+}
+
 function statusTexto(status) {
   switch (status) {
-    case 'pendente': return '⏳ Aguardando confirmação do pagamento';
-    case 'confirmado': return '✅ Pagamento confirmado';
-    case 'cancelado': return '❌ Cancelado';
+    case 'pendente': return '🟡 Aguardando pagamento';
+    case 'confirmado': return '🟢 Pago';
+    case 'cancelado': return '❌ Pedido cancelado';
     default: return String(status || '');
   }
 }
 
+// Botoes de acao do pedido. Confirmar/cancelar ficam no ticket para a equipe
+// (permissao de Vendas e pedidos, validada no handler).
 function componentesDoPedido(p) {
   if (p.status === 'pendente') {
     return [
       row(
         btn(`comp:confirmar:${p.id}`, 'Confirmar pagamento', ButtonStyle.Success, '🟢'),
-        btn(`comp:cancelar:${p.id}`, 'Cancelar pedido', ButtonStyle.Danger, '🔴')
+        btn(`comp:cancelar:${p.id}`, 'Cancelar pedido', ButtonStyle.Danger, '❌')
       ),
     ];
   }
   return [];
 }
-module.exports = { escolherCategoria, escolherProduto, escolherQuantidade, modalQuantidade, montarCarrinho, finalizarCarrinho, mensagemPedido, statusTexto, componentesDoPedido };
+
+// Confirmacao do cancelamento (o cancelamento so acontece em comp:confcanc).
+function confirmacaoCancelamento(pedidoId) {
+  const embed = new EmbedBuilder()
+    .setColor(0xe74c3c)
+    .setTitle('⚠️ Cancelar pedido')
+    .setDescription(
+      `Tem certeza que deseja cancelar o pedido **#${pedidoId}**?\n\n` +
+      'Isso irá liberar a reserva do estoque.'
+    );
+  return {
+    embeds: [embed],
+    components: [
+      row(
+        btn(`comp:confcanc:${pedidoId}`, 'Sim, cancelar', ButtonStyle.Danger, '✅'),
+        btn(`comp:voltcanc:${pedidoId}`, 'Não', ButtonStyle.Secondary, '🔙')
+      ),
+    ],
+  };
+}
+
+module.exports = {
+  escolherCategoria,
+  escolherProduto,
+  escolherQuantidade,
+  modalQuantidade,
+  resumoCarrinho,
+  montarCarrinho,
+  painelRef,
+  finalizarCarrinho,
+  mensagemPedido,
+  confirmacaoCancelamento,
+  itensDoPedido,
+  statusTexto,
+  componentesDoPedido,
+};

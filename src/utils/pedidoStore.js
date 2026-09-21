@@ -27,15 +27,16 @@ function novoId(guildId) {
   return String(n);
 }
 
-function criar(guildId, { clienteId, clienteTag, canalId, msgId, catId, prodId, itemNome, quantidade, valor }) {
+function criar(guildId, { clienteId, clienteTag, canalId, msgId, catId, prodId, itemNome, quantidade, valor, itens = null }) {
   const pedido = {
     id: novoId(guildId),
     clienteId,
     clienteTag,
     canalId,
     msgId,
-    catId,
-    prodId,
+    catId: catId || (itens && itens[0] ? itens[0].catId : null),
+    prodId: prodId || (itens && itens[0] ? itens[0].prodId : null),
+    itens: itens || null,
     itemNome,
     quantidade,
     valor,
@@ -44,6 +45,7 @@ function criar(guildId, { clienteId, clienteTag, canalId, msgId, catId, prodId, 
     confirmadoEm: null,
     canceladoEm: null,
     confirmadoPor: null,
+    canceladoPor: null,
   };
   lista(guildId).push(pedido);
   salvar();
@@ -63,18 +65,30 @@ function atualizar(guildId, pedidoId, mudancas) {
 }
 
 // Soma as quantidades reservadas em pedidos pendentes de um produto.
+// Pedidos novos guardam a lista `itens[]`; pedidos antigos tinham um item so.
 function reservado(guildId, catId, prodId) {
-
-  return lista(guildId)
-    .filter((p) => p.status === 'pendente' && p.catId === catId && p.prodId === prodId)
-    .reduce((acc, p) => acc + (p.quantidade || 0), 0);
+  let total = 0;
+  for (const p of lista(guildId)) {
+    if (p.status !== 'pendente') continue;
+    if (Array.isArray(p.itens) && p.itens.length) {
+      for (const i of p.itens) {
+        if (i.catId === catId && i.prodId === prodId) total += i.quantidade || 0;
+      }
+    } else if (p.catId === catId && p.prodId === prodId) {
+      total += p.quantidade || 0;
+    }
+  }
+  return total;
 }
 
 // Quantidade efetivamente compravel: estoque real - reservado em pendentes.
-
-function disponivel(guildId, p) {
+// O produto do estoque nao guarda catId/prodId, entao o chamador informa os ids.
+function disponivel(guildId, p, catId, prodId) {
   if (!p || !p.controlarQtd) return null;
-  const pends = reservado(guildId, p.catId, p.prodId);
+  const cId = catId || p.catId;
+  const pId = prodId || p.prodId;
+  if (!cId || !pId) return p.quantidade;
+  const pends = reservado(guildId, cId, pId);
   return Math.max(0, p.quantidade - pends);
 }
 

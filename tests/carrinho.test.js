@@ -45,17 +45,21 @@ try {
   estoque.addCategoria(GUILD, 'cat-b');
   estoque.addProduto(GUILD, 'cat-b', { nome: 'Item 2', valor: 10, controlarQtd: false, quantidade: 0 });
 
-  const criados = finalizarCarrinho(GUILD, USER, 'teste');
-  assert.strictEqual(criados.length, 2, '2 pedidos criados');
+  const criado = finalizarCarrinho(GUILD, USER, 'teste');
+  assert.ok(criado && criado.id, 'pedido criado com id');
+  assert.strictEqual(criado.itens.length, 2, 'pedido agrupa os 2 itens do carrinho');
   assert.strictEqual(carrinhoStore.listar(GUILD, USER).length, 0, 'carrinho limpo após finalizar');
 
-  // Pedidos criados têm id sequencial
-  assert.strictEqual(criados[0].clienteId, USER, 'cliente correto');
-  assert.strictEqual(criados[0].status, 'pendente', 'status pendente');
+  // Pedido criado agrupa os itens e mantém o cliente/status
+  assert.strictEqual(criado.clienteId, USER, 'cliente correto');
+  assert.strictEqual(criado.status, 'pendente', 'status pendente');
+  assert.strictEqual(criado.valor, 35, "valor total 35 (5*5 + 10)");
+  const nomesItens = criado.itens.map((i) => i.nome).sort();
+  assert.deepStrictEqual(nomesItens, ['Item 1', 'Item 2'], 'os dois itens no mesmo pedido');
 
   // doCliente filtra por status
   const doCliente = pedidoStore.doCliente(GUILD, USER, 'pendente');
-  assert.strictEqual(doCliente.length, 2, '2 pedidos pendentes do cliente');
+  assert.strictEqual(doCliente.length, 1, '1 pedido pendente do cliente');
 
   console.log('testes carrinho OK');
 } finally {

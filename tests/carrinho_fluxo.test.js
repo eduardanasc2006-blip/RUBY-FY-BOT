@@ -85,11 +85,20 @@ try {
   const nomes2 = itens.map((i) => i.nome).sort();
   assert.deepStrictEqual(nomes2, ['Ghostblade', 'Saw'], 'Ghostblade + Saw no carrinho');
 
-  // A tela do carrinho mostra os itens e botões de ações (remover/finalizar/limpar)
+  // A tela do carrinho mostra os itens (embed) e o select de remoção + ações
   const tela = montarCarrinho(GUILD, USER);
+  const descricao = tela.embeds[0].data.description || '';
+  assert.ok(descricao.includes('Ghostblade'), 'carrinho lista Ghostblade');
+  assert.ok(descricao.includes('Saw'), 'carrinho lista Saw');
+  assert.ok(descricao.includes('Total'), 'carrinho mostra o total');
+  // O select de remover item e montado como ActionRow (type 1) na 1a linha
+  const select = tela.components[0].toJSON().components[0];
+  assert.strictEqual(select.type, 3, 'select e um StringSelect (type 3)');
+  assert.strictEqual(select.custom_id, 'comp:removeritem', 'select de remover item');
+  const valoresSelect = (select.options || []).map((o) => o.value);
+  assert.ok(valoresSelect.includes('espadas:ghostblade'), 'select lista Ghostblade para remover');
+  assert.ok(valoresSelect.includes('espadas:saw'), 'select lista Saw para remover');
   const labels = JSON.stringify(tela.components.map((r) => r.components.map((b) => b.data.label)));
-  assert.ok(labels.includes('Ghostblade'), 'carrinho lista Ghostblade');
-  assert.ok(labels.includes('Saw'), 'carrinho lista Saw');
   assert.ok(labels.includes('Finalizar'), 'carrinho tem botão finalizar');
   assert.ok(labels.includes('Limpar'), 'carrinho tem botão limpar');
   assert.ok(labels.includes('Escolher mais'), 'carrinho tem botão escolher mais');
@@ -106,12 +115,14 @@ try {
   itens = carrinhoStore.listar(GUILD, USER);
   assert.strictEqual(itens.length, 2, '2 itens antes de finalizar');
 
-  const criados = finalizarCarrinho(GUILD, USER, 'teste');
-  assert.strictEqual(criados.length, 2, '2 pedidos criados na finalização');
+  const criado = finalizarCarrinho(GUILD, USER, 'teste');
+  assert.ok(criado && criado.id, 'pedido criado na finalização');
+  assert.strictEqual(criado.itens.length, 2, 'os 2 itens ficam no mesmo pedido');
   assert.strictEqual(carrinhoStore.listar(GUILD, USER).length, 0, 'carrinho limpo após finalizar');
-  assert.strictEqual(criados[0].status, 'pendente', 'pedidos pendentes');
-  assert.strictEqual(criados.find((c) => c.itemNome === 'Cookieblade').quantidade, 1, 'Cookieblade 1x');
-  assert.strictEqual(criados.find((c) => c.itemNome === 'Ghostblade').quantidade, 2, 'Ghostblade 2x');
+  assert.strictEqual(criado.status, 'pendente', 'pedido pendente');
+  assert.strictEqual(criado.itens.find((i) => i.nome === 'Cookieblade').quantidade, 1, 'Cookieblade 1x');
+  assert.strictEqual(criado.itens.find((i) => i.nome === 'Ghostblade').quantidade, 2, 'Ghostblade 2x');
+  assert.strictEqual(criado.valor, 9, 'total 1*3 + 2*3 = 9');
 
   console.log('testes fluxo carrinho OK');
 } finally {
