@@ -183,8 +183,8 @@ function montarCarrinho(guildId, userId) {
 
   const linhas = [];
   if (itens.length) {
-    // Um select para remover itens: evita dezenas de botões quando o carrinho
-    // tem muitos produtos (limite de 5 ActionRows por mensagem).
+    // Um select para escolher o item a editar: evita dezenas de botoes quando o
+    // carrinho tem muitos produtos (limite de 5 ActionRows por mensagem).
     const opcoes = itens.slice(0, 25).map((i) => ({
       label: `${i.nome} × ${i.quantidade}`.slice(0, 100),
       description: formatBRL((i.valorUnitario || 0) * i.quantidade),
@@ -193,8 +193,8 @@ function montarCarrinho(guildId, userId) {
     linhas.push(
       new ActionRowBuilder().addComponents(
         new StringSelectMenuBuilder()
-          .setCustomId('comp:removeritem')
-          .setPlaceholder('🗑️ Remover um item do carrinho')
+          .setCustomId('comp:iteditar')
+          .setPlaceholder('🛒 Selecione um produto para editar')
           .setMinValues(1)
           .setMaxValues(1)
           .addOptions(opcoes)
@@ -207,6 +207,38 @@ function montarCarrinho(guildId, userId) {
     btn('comp:finalizar', '✅ Finalizar compra', ButtonStyle.Success)
   ));
   return { embeds: [embed], components: linhas };
+}
+
+// ----- Tela: acoes de um item do carrinho (aumentar/diminuir/remover) -----
+// O estado viaja no customId (comp:*qtd*:catId:prodId): sem sessao extra.
+function editarItemCarrinho(guildId, userId, catId, prodId, aviso = null) {
+  const item = carrinhoStore.listar(guildId, userId).find((i) => i.catId === catId && i.prodId === prodId);
+  // Item sumiu (removido em outro lugar): volta para o carrinho sem quebrar.
+  if (!item) return montarCarrinho(guildId, userId);
+
+  const embed = new EmbedBuilder()
+    .setColor(COR)
+    .setTitle('🛒 CARRINHO')
+    .setDescription(
+      (aviso ? `${aviso}\n\n` : '') +
+      `**${item.nome}** × ${item.quantidade} — ${formatBRL((item.valorUnitario || 0) * item.quantidade)}\n\n` +
+      `💰 **Total do carrinho: ${formatBRL(carrinhoStore.total(guildId, userId))}**`
+    )
+    .setFooter({ text: `O que deseja fazer com ${item.nome}?` });
+
+  return {
+    embeds: [embed],
+    components: [
+      row(
+        btn(`comp:qmais:${catId}:${prodId}`, '➕ Aumentar quantidade', ButtonStyle.Success),
+        btn(`comp:qmenos:${catId}:${prodId}`, '➖ Diminuir quantidade', ButtonStyle.Secondary),
+      ),
+      row(
+        btn(`comp:qrem:${catId}:${prodId}`, '🗑️ Remover produto', ButtonStyle.Danger),
+        btn('comp:carrinho', '🔙 Voltar ao carrinho', ButtonStyle.Secondary),
+      ),
+    ],
+  };
 }
 
 // Referência da mensagem pública do carrinho no ticket (para edit posterior).
@@ -415,6 +447,7 @@ module.exports = {
   modalQuantidade,
   resumoCarrinho,
   montarCarrinho,
+  editarItemCarrinho,
   painelRef,
   finalizarCarrinho,
   mensagemPedido,

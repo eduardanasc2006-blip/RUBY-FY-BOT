@@ -88,9 +88,31 @@ function remover(guildId, userId, catId, prodId) {
   return s.itens;
 }
 
+// Soma `delta` a quantidade de um item do carrinho (ex.: +1/-1).
+// A quantidade nunca fica abaixo de 1: para retirar o produto use remover().
+// Retorna { ok, item, motivo } para o chamador avisar o cliente.
+function alterarQuantidade(guildId, userId, catId, prodId, delta) {
+  const s = sessao(guildId, userId);
+  const item = s.itens.find((i) => i.catId === catId && i.prodId === prodId);
+  if (!item) return { ok: false, motivo: 'ausente', item: null };
+  const nova = (item.quantidade || 0) + delta;
+  if (nova < 1) return { ok: false, motivo: 'minimo', item };
+  item.quantidade = nova;
+  salvar();
+  return { ok: true, motivo: null, item };
+}
+
+// Quantidade que o cliente ja tem deste produto no carrinho (o carrinho guarda
+// uma unica entrada por produto, mas a soma cobre dados antigos duplicados).
+function quantidadeNoCarrinho(guildId, userId, catId, prodId) {
+  return listar(guildId, userId)
+    .filter((i) => i.catId === catId && i.prodId === prodId)
+    .reduce((acc, i) => acc + (i.quantidade || 0), 0);
+}
+
 function total(guildId, userId) {
   const itens = listar(guildId, userId);
   return Math.round(itens.reduce((acc, i) => acc + (i.valorUnitario || 0) * i.quantidade, 0) * 100) / 100;
 }
 
-module.exports = { listar, adicionar, limpar, remover, total, sessao, ref, setRef, donoDoPainel };
+module.exports = { listar, adicionar, limpar, remover, alterarQuantidade, quantidadeNoCarrinho, total, sessao, ref, setRef, donoDoPainel };

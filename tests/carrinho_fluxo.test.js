@@ -91,17 +91,59 @@ try {
   assert.ok(descricao.includes('Ghostblade'), 'carrinho lista Ghostblade');
   assert.ok(descricao.includes('Saw'), 'carrinho lista Saw');
   assert.ok(descricao.includes('Total'), 'carrinho mostra o total');
-  // O select de remover item e montado como ActionRow (type 1) na 1a linha
+  // O select de editar item e montado como ActionRow (type 1) na 1a linha
   const select = tela.components[0].toJSON().components[0];
   assert.strictEqual(select.type, 3, 'select e um StringSelect (type 3)');
-  assert.strictEqual(select.custom_id, 'comp:removeritem', 'select de remover item');
+  assert.strictEqual(select.custom_id, 'comp:iteditar', 'select de editar item do carrinho');
   const valoresSelect = (select.options || []).map((o) => o.value);
-  assert.ok(valoresSelect.includes('espadas:ghostblade'), 'select lista Ghostblade para remover');
-  assert.ok(valoresSelect.includes('espadas:saw'), 'select lista Saw para remover');
+  assert.ok(valoresSelect.includes('espadas:ghostblade'), 'select lista Ghostblade para editar');
+  assert.ok(valoresSelect.includes('espadas:saw'), 'select lista Saw para editar');
   const labels = JSON.stringify(tela.components.map((r) => r.components.map((b) => b.data.label)));
   assert.ok(labels.includes('Finalizar'), 'carrinho tem botão finalizar');
   assert.ok(labels.includes('Limpar'), 'carrinho tem botão limpar');
   assert.ok(labels.includes('Escolher mais'), 'carrinho tem botão escolher mais');
+
+  // A tela de acoes do item oferece aumentar/diminuir/remover (sem estourar linhas)
+  const { editarItemCarrinho } = require('../src/utils/comprarPanel');
+  const acoes = editarItemCarrinho(GUILD, USER, 'espadas', 'ghostblade');
+  const idsAcoes = acoes.components.flatMap((r) => r.components.map((b) => b.data.custom_id));
+  assert.ok(idsAcoes.includes('comp:qmais:espadas:ghostblade'), 'acao aumentar');
+  assert.ok(idsAcoes.includes('comp:qmenos:espadas:ghostblade'), 'acao diminuir');
+  assert.ok(idsAcoes.includes('comp:qrem:espadas:ghostblade'), 'acao remover');
+  assert.ok(acoes.components.length <= 5, 'respeita o limite de 5 ActionRows');
+  assert.ok((acoes.embeds[0].data.footer?.text || '').includes('Ghostblade'), 'footer indica o item');
+
+  // Aumentar/diminuir mexem no carrinho e recalculam o total
+  const qtdAntes = carrinhoStore.listar(GUILD, USER).find((i) => i.prodId === 'ghostblade').quantidade;
+  carrinhoStore.alterarQuantidade(GUILD, USER, 'espadas', 'ghostblade', 1);
+  assert.strictEqual(
+    carrinhoStore.listar(GUILD, USER).find((i) => i.prodId === 'ghostblade').quantidade,
+    qtdAntes + 1,
+    'aumentou 1'
+  );
+  carrinhoStore.alterarQuantidade(GUILD, USER, 'espadas', 'ghostblade', -1);
+  assert.strictEqual(
+    carrinhoStore.listar(GUILD, USER).find((i) => i.prodId === 'ghostblade').quantidade,
+    qtdAntes,
+    'diminuiu 1'
+  );
+  // Deixa o item em 1 e confirma que nao desce para 0 (operacao recusada)
+  carrinhoStore.alterarQuantidade(GUILD, USER, 'espadas', 'ghostblade', 1 - qtdAntes);
+  assert.strictEqual(
+    carrinhoStore.listar(GUILD, USER).find((i) => i.prodId === 'ghostblade').quantidade,
+    1,
+    'chegou em 1'
+  );
+  const rMin = carrinhoStore.alterarQuantidade(GUILD, USER, 'espadas', 'ghostblade', -1);
+  assert.strictEqual(rMin.ok, false, 'diminuir de 1 e recusado');
+  assert.strictEqual(rMin.motivo, 'minimo', 'motivo minimo');
+  assert.strictEqual(
+    carrinhoStore.listar(GUILD, USER).find((i) => i.prodId === 'ghostblade').quantidade,
+    1,
+    'segue em 1 (nunca 0)'
+  );
+  // Volta a quantidade original para o resto do teste
+  carrinhoStore.alterarQuantidade(GUILD, USER, 'espadas', 'ghostblade', qtdAntes - 1);
 
   // Passo 12 e 13: limpar carrinho remove todos os itens
   carrinhoStore.limpar(GUILD, USER);

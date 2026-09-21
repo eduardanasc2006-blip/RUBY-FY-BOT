@@ -3303,7 +3303,7 @@ if (interaction.isStringSelectMenu() || interaction.isButton()) {
 
 
 // ----- Compra: painel /comprar, pedidos, confirmacao/cancelamento e metas -----
-const { escolherCategoria, escolherProduto, escolherQuantidade, modalQuantidade, montarCarrinho, finalizarCarrinho, mensagemPedido, confirmacaoCancelamento, itensDoPedido, logDoPedido } = require('./utils/comprarPanel');
+const { escolherCategoria, escolherProduto, escolherQuantidade, modalQuantidade, montarCarrinho, editarItemCarrinho, finalizarCarrinho, mensagemPedido, confirmacaoCancelamento, itensDoPedido, logDoPedido } = require('./utils/comprarPanel');
 const carrinhoStore = require('./utils/carrinhoStore');
 const pedidoStore = require('./utils/pedidoStore');
 const pedidoComprasStore = require('./utils/pedidoComprasStore');
@@ -3368,7 +3368,7 @@ client.on('interactionCreate', async (interaction) => {
       // modaldigitar sao auto-escopados (modal do proprio usuario).
       const msgIdAtual = interaction.message?.id || null;
       const donoPainel = carrinhoStore.donoDoPainel(guildId, msgIdAtual);
-      const acoesDoDono = ['cat', 'voltar', 'prod', 'carrinho', 'removeritem', 'limpar', 'finalizar', 'qtd'];
+      const acoesDoDono = ['cat', 'voltar', 'prod', 'carrinho', 'removeritem', 'iteditar', 'limpar', 'finalizar', 'qtd', 'qmais', 'qmenos', 'qrem'];
       if (acoesDoDono.includes(acao)) {
         if (!donoPainel) {
           return interaction.reply({
@@ -3416,7 +3416,16 @@ client.on('interactionCreate', async (interaction) => {
         carrinhoStore.remover(guildId, interaction.user.id, partes[2], partes[3]);
         return interaction.update(montarCarrinho(guildId, interaction.user.id));
       }
-      // Select do carrinho: remove apenas o item escolhido.
+      // Select do carrinho (formato atual): seleciona o item e abre as acoes.
+      if (acao === 'iteditar') {
+        const escolhido = String(interaction.values?.[0] || '');
+        const [catId, prodId] = escolhido.split(':');
+        if (!catId || !prodId) {
+          return interaction.reply({ content: '❌ Item inválido.', flags: MessageFlags.Ephemeral });
+        }
+        return interaction.update(editarItemCarrinho(guildId, interaction.user.id, catId, prodId));
+      }
+      // Select antigo (mensagens ja publicadas nos tickets): remove o item.
       if (acao === 'removeritem') {
         const escolhido = String(interaction.values?.[0] || '');
         const [catId, prodId] = escolhido.split(':');
@@ -3424,6 +3433,44 @@ client.on('interactionCreate', async (interaction) => {
           return interaction.reply({ content: '❌ Item inválido.', flags: MessageFlags.Ephemeral });
         }
         carrinhoStore.remover(guildId, interaction.user.id, catId, prodId);
+        return publicarCarrinho();
+      }
+
+      // ----- Editar a quantidade de um item do carrinho -----
+      // A reserva de estoque continua acontecendo so em comp:finalizar.
+      if (acao === 'qmais' || acao === 'qmenos') {
+        const catId = partes[2];
+        const prodId = partes[3];
+        const p = estoqueCompras.produto(guildId, catId, prodId);
+        if (!p || !p.ativo) {
+          return interaction.reply({ content: '❌ Produto não encontrado ou desativado.', flags: MessageFlags.Ephemeral });
+        }
+        if (acao === 'qmais' && p.controlarQtd) {
+          // Disponivel ja desconta as reservas pendentes; somamos o que o proprio
+          // cliente ja tem no carrinho para validar a nova quantidade.
+          const noCarrinho = carrinhoStore.quantidadeNoCarrinho(guildId, interaction.user.id, catId, prodId);
+          const disponivel = pedidoStore.disponivel(guildId, p, catId, prodId);
+          if (disponivel !== null && noCarrinho + 1 > disponivel) {
+            return interaction.update(editarItemCarrinho(
+              guildId, interaction.user.id, catId, prodId,
+              '❌ Estoque insuficiente para adicionar essa quantidade.'
+            ));
+          }
+        }
+        const r = carrinhoStore.alterarQuantidade(guildId, interaction.user.id, catId, prodId, acao === 'qmais' ? 1 : -1);
+        if (!r.ok && r.motivo === 'minimo') {
+          return interaction.update(editarItemCarrinho(
+            guildId, interaction.user.id, catId, prodId,
+            '❌ A quantidade mínima é 1. Para retirar o produto, use 🗑️ **Remover produto**.'
+          ));
+        }
+        if (!r.ok) {
+          return interaction.update(montarCarrinho(guildId, interaction.user.id));
+        }
+        return interaction.update(editarItemCarrinho(guildId, interaction.user.id, catId, prodId));
+      }
+      if (acao === 'qrem') {
+        carrinhoStore.remover(guildId, interaction.user.id, partes[2], partes[3]);
         return publicarCarrinho();
       }
       if (acao === 'limpar') {
@@ -3772,6 +3819,157 @@ client.on('interactionCreate', async (interaction) => {
 });
 
 
+// ----- Encomendas (/encomenda) -----
+// Fluxo SEPARADO do /comprar: listener proprio (customId `enc:`), sem tocar em
+// nada do fluxo de compras. Nao reserva/baixa estoque e nao registra venda.
+const { escolherCategoria: encCategoria, escolherProduto: encProduto, escolherQuantidade: encQuantidade, resumoEncomenda, mensagemEncomenda, confirmacaoCancelamentoEncomenda, logDaEncomenda } = require('./utils/encomendaPanel');
+const encomendaStore = require('./utils/encomendaStore');
+
+client.on('interactionCreate', async (interaction) => {
+  try {
+    const id = interaction.customId || '';
+    if (!id.startsWith('enc:')) return;
+
+    const partes = id.split(':');
+    const acao = partes[1];
+    const guildId = interaction.guildId || '';
+
+    if (!interaction.guild) {
+      return interaction.reply({ content: '❌ Isso só funciona no servidor.', flags: MessageFlags.Ephemeral });
+    }
+
+    // Acoes administrativas: mesma permissao de vendas/pedidos do /comprar
+    // (grupo `vendas`), verificada A CADA clique — nao apenas quando o painel
+    // foi criado. O cliente nao consegue iniciar/receber/entregar/cancelar.
+    const acoesEquipe = ['iniciar', 'recebido', 'entregar', 'cancelar', 'confcanc'];
+    if (acoesEquipe.includes(acao)) {
+      if (!comandoPode(interaction.member, interaction.user.id, 'comprar')) {
+        return interaction.reply({
+          content: '🔒 Somente administradores ou equipe autorizada podem gerenciar encomendas.',
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+    }
+
+    // Acoes de edicao do painel publico: so quem iniciou o /encomenda pode
+    // navegar/confirmar (painel sem dono registrado nao pertence a ninguem).
+    const msgIdAtual = interaction.message?.id || null;
+    const acoesDoDono = ['cat', 'prod', 'voltar', 'qtd', 'conf'];
+    if (acoesDoDono.includes(acao)) {
+      const dono = encomendaStore.donoDoPainel(guildId, msgIdAtual);
+      if (!dono) {
+        return interaction.reply({
+          content: '🔒 Não foi possível identificar o dono desta encomenda. Abra o painel novamente com `/encomenda`.',
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+      if (dono !== interaction.user.id) {
+        return interaction.reply({
+          content: '🔒 Esta encomenda pertence a outro usuário. Você pode visualizar, mas não alterar.',
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+    }
+
+    // ----- Navegacao de criacao -----
+    if (acao === 'cat') return interaction.update(encProduto(guildId, partes[2]));
+    if (acao === 'voltar') return interaction.update(encCategoria(guildId));
+    if (acao === 'prod') return interaction.update(encQuantidade(guildId, partes[2], partes[3]));
+
+    if (acao === 'qtd') {
+      const catId = partes[2];
+      const prodId = partes[3];
+      const qtd = parseInt(partes[4], 10);
+      const p = estoqueCompras.produto(guildId, catId, prodId);
+      if (!p || !p.ativo || !Number.isFinite(qtd) || qtd < 1) {
+        return interaction.reply({ content: '❌ Item indisponível ou quantidade inválida.', flags: MessageFlags.Ephemeral });
+      }
+      const resumo = resumoEncomenda(guildId, { catId, prodId, quantidade: qtd, clienteId: interaction.user.id });
+      if (!resumo) return interaction.update(encCategoria(guildId));
+      return interaction.update(resumo);
+    }
+
+    // ----- Confirmar a encomenda (cria o registro publico no ticket) -----
+    if (acao === 'conf') {
+      const catId = partes[2];
+      const prodId = partes[3];
+      const qtd = parseInt(partes[4], 10);
+      const p = estoqueCompras.produto(guildId, catId, prodId);
+      if (!p || !p.ativo || !Number.isFinite(qtd) || qtd < 1) {
+        return interaction.reply({ content: '❌ Item indisponível ou quantidade inválida.', flags: MessageFlags.Ephemeral });
+      }
+      const enc = encomendaStore.criar(guildId, {
+        clienteId: interaction.user.id,
+        clienteTag: interaction.user.globalName || interaction.user.username || null,
+        catId,
+        prodId,
+        itemNome: p.nome,
+        quantidade: qtd,
+        valorUnitario: p.valor || 0,
+        canalId: interaction.channelId,
+        msgId: interaction.message?.id || null,
+      });
+      await interaction.update(mensagemEncomenda(guildId, enc));
+      logComprasStore.enviar(interaction.client, guildId, logDaEncomenda(enc, { acao: 'criada' }));
+      return;
+    }
+
+    // ----- Etapas da equipe -----
+    if (acao === 'iniciar' || acao === 'recebido' || acao === 'entregar') {
+      const encId = partes[2];
+      const enc = encomendaStore.obter(guildId, encId);
+      if (!enc) return interaction.reply({ content: '❌ Encomenda não encontrada.', flags: MessageFlags.Ephemeral });
+      // Cada acao so vale na etapa correspondente (impede pular/inverter etapas).
+      const esperado = { iniciar: 'aguardando', recebido: 'em_andamento', entregar: 'item_recebido' }[acao];
+      if (enc.status !== esperado) {
+        return interaction.reply({ content: '❌ Esta ação não corresponde ao estado atual da encomenda.', flags: MessageFlags.Ephemeral });
+      }
+      const r = encomendaStore.avancar(guildId, encId, interaction.user.id);
+      if (!r.ok) return interaction.reply({ content: '❌ Não foi possível avançar esta encomenda.', flags: MessageFlags.Ephemeral });
+      await interaction.update(mensagemEncomenda(guildId, r.encomenda));
+      const evento = { iniciar: 'iniciada', recebido: 'recebida', entregar: 'entregue' }[acao];
+      logComprasStore.enviar(interaction.client, guildId, logDaEncomenda(r.encomenda, { acao: evento, por: interaction.user.id }));
+      return;
+    }
+
+    // ----- Cancelamento (com confirmacao) -----
+    if (acao === 'cancelar') {
+      const enc = encomendaStore.obter(guildId, partes[2]);
+      if (!enc) return interaction.reply({ content: '❌ Encomenda não encontrada.', flags: MessageFlags.Ephemeral });
+      if (enc.status === 'cancelada' || enc.status === 'entregue') {
+        return interaction.reply({ content: '❌ Esta encomenda já foi finalizada (não é mais possível alterá-la).', flags: MessageFlags.Ephemeral });
+      }
+      return interaction.update(confirmacaoCancelamentoEncomenda({ ...enc, guildId }));
+    }
+    if (acao === 'voltcanc') {
+      const enc = encomendaStore.obter(guildId, partes[2]);
+      if (!enc) return interaction.reply({ content: '❌ Encomenda não encontrada.', flags: MessageFlags.Ephemeral });
+      return interaction.update(mensagemEncomenda(guildId, enc));
+    }
+    if (acao === 'confcanc') {
+      const encId = partes[2];
+      const r = encomendaStore.cancelar(guildId, encId, interaction.user.id);
+      if (!r.ok) {
+        const msg = r.motivo === 'ja_cancelada' ? '❌ Esta encomenda já foi cancelada.'
+          : r.motivo === 'ja_entregue' ? '❌ Esta encomenda já foi entregue.'
+            : '❌ Encomenda não encontrada.';
+        return interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
+      }
+      await interaction.update(mensagemEncomenda(guildId, r.encomenda));
+      logComprasStore.enviar(interaction.client, guildId, logDaEncomenda(r.encomenda, { acao: 'cancelada', por: interaction.user.id }));
+      return;
+    }
+
+    return interaction.reply({ content: '❌ Ação desconhecida.', flags: MessageFlags.Ephemeral });
+  } catch (error) {
+    console.error('[Encomenda] Erro na interação:', error?.message || error);
+    try {
+      if (interaction.isRepliable() && !interaction.deferred && !interaction.replied) {
+        return interaction.reply({ content: '❌ Ocorreu um erro ao processar esta interação.', flags: MessageFlags.Ephemeral });
+      }
+    } catch {}
+  }
+});
 extrasHandlers.registrar(client);
 const customEditHandlers = require('./utils/customEditHandler');
 customEditHandlers.registrar(client);
