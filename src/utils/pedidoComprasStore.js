@@ -10,6 +10,9 @@ const customCommands = require('./customCommands');
 const FILE = path.join(__dirname, '..', '..', 'data', 'pedido_compras.json');
 
 const MENSAGEM_PADRAO = 'Use `!pix` para realizar o pagamento e envie o comprovante neste ticket.';
+// Padrao usado quando ha chave PIX configurada: assim /setcomprar pix:... ja
+// mostra a chave no pedido mesmo sem 'mensagem:' personalizada.
+const MENSAGEM_PADRAO_COM_PIX = '💳 Envie **{total}** via PIX para `{pix}` e mande o comprovante neste ticket ({canal}).';
 const LIMITE_MENSAGEM = 1024;
 
 let dados = {};
@@ -36,8 +39,12 @@ function obter(guildId) {
 }
 
 // Texto configurado (ou o padrao quando o servidor nao personalizou).
+// O padrao e dinamico: se houver chave PIX configurada, ele JA inclui {pix},
+// para que definir so o pix (sem 'mensagem:') tenha efeito visivel no pedido.
 function obterMensagem(guildId) {
-  return obter(guildId).mensagem || MENSAGEM_PADRAO;
+  const propria = obter(guildId).mensagem;
+  if (propria) return propria;
+  return chavePixEfetiva(guildId) ? MENSAGEM_PADRAO_COM_PIX : MENSAGEM_PADRAO;
 }
 
 function obterPix(guildId) {
@@ -93,13 +100,16 @@ function aplicarVariaveis(texto, { total, canalId, pix } = {}) {
   const totalFmt = typeof total === 'number'
     ? `R$ ${total.toFixed(2).replace('.', ',')}`
     : (total || '');
-  let saida = String(texto || '')
+  // Sem chave PIX configurada, {pix} vira a instrucao `!pix` em vez de virar
+  // vazio: assim a frase personalizada continua legivel e o cliente tem o
+  // caminho para pegar a chave.
+  const pixFmt = pix || '`!pix`';
+  return String(texto || '')
     .replaceAll('{total}', totalFmt)
     .replaceAll('{canal}', canalId ? `<#${canalId}>` : 'este ticket')
-    .replaceAll('{pix}', pix || '');
-  // {pix} sem chave configurada deixa a linha quebrada/feia: remove sobras.
-  saida = saida.replace(/[ \t]*(?:para|via)\s+(?=\n|$)/gi, '').replace(/[ \t]{2,}/g, ' ');
-  return saida.trim() || MENSAGEM_PADRAO;
+    .replaceAll('{pix}', pixFmt)
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim() || MENSAGEM_PADRAO;
 }
 
 // Mensagem final de pagamento de um pedido.

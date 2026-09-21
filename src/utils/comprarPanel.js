@@ -109,7 +109,14 @@ function escolherQuantidade(guildId, catId, prodId) {
     embed.setDescription(`**${p.nome}** está esgotado no momento.`);
     return {
       embeds: [embed],
-      components: [row(btn(`comp:prod:${catId}:${p.id}`, '⬅️ Voltar aos produtos', ButtonStyle.Secondary))],
+      // comp:cat volta para a LISTA de produtos da categoria (comp:prod reabriria
+      // a tela de quantidade do mesmo produto, criando um loop).
+      components: [
+        row(
+          btn(`comp:cat:${catId}`, '⬅️ Voltar aos produtos', ButtonStyle.Secondary),
+          btn('comp:voltar', '🏠 Voltar às categorias', ButtonStyle.Secondary)
+        ),
+      ],
     };
   }
   const quantidades = [];
@@ -134,7 +141,7 @@ function escolherQuantidade(guildId, catId, prodId) {
     btn(`comp:addcarrinho:${catId}:${p.id}`, '🛒 Adicionar ao carrinho', ButtonStyle.Primary, '🛒'),
     btn(`comp:carrinho`, 'Ver carrinho', ButtonStyle.Secondary)
   ));
-  linhas.push(row(btn(`comp:prod:${catId}:${p.id}`, '⬅️ Voltar aos produtos', ButtonStyle.Secondary)));
+  linhas.push(row(btn(`comp:cat:${catId}`, '⬅️ Voltar aos produtos', ButtonStyle.Secondary)));
   return {
   embeds: [embed],
   components: linhas,
@@ -246,6 +253,40 @@ function finalizarCarrinho(guildId, userId, clienteTag) {
 
 // ----- Mensagem do pedido publica no ticket -----
 
+// Log do pedido no canal de logs: UMA embed por evento (nada de separar em
+// varias), com todos os campos do pedido em ordem fixa e legivel.
+// `acao` define titulo/cor e quem registrou (confirmou/cancelou).
+function logDoPedido(pedido, { acao = 'criado', por = null } = {}) {
+  const cabecalhos = {
+    criado: { titulo: '📥 Pedido criado', cor: 0xf1c40f },
+    confirmado: { titulo: '✅ Pedido confirmado', cor: 0x2ecc71 },
+    cancelado: { titulo: '❌ Pedido cancelado', cor: 0xe74c3c },
+  };
+  const { titulo, cor } = cabecalhos[acao] || cabecalhos.criado;
+  const itens = itensDoPedido(pedido);
+
+  const campos = [
+    { name: '🆔 Pedido', value: `\`#${pedido.id}\``, inline: true },
+    { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
+    { name: '💰 Total', value: formatBRL(pedido.valor), inline: true },
+    { name: '📦 Itens', value: itens.map((i) => `**${i.nome}** × ${i.quantidade} — ${formatBRL((i.valorUnitario || 0) * i.quantidade)}`).join('\n') },
+  ];
+
+  if (acao === 'criado') {
+    campos.push({ name: '🟡 Status', value: 'Aguardando pagamento', inline: true });
+  } else {
+    campos.push({ name: acao === 'confirmado' ? '🟢 Status' : '❌ Status', value: acao === 'confirmado' ? 'Pago' : 'Cancelado', inline: true });
+    const quando = acao === 'confirmado' ? pedido.confirmadoEm : pedido.canceladoEm;
+    campos.push({
+      name: acao === 'confirmado' ? '👮 Confirmado por' : '👮 Cancelado por',
+      value: `<@${por || (acao === 'confirmado' ? pedido.confirmadoPor : pedido.canceladoPor)}>${quando ? ` — <t:${Math.floor(quando / 1000)}:f>` : ''}`,
+      inline: true,
+    });
+  }
+
+  return { titulo, cor, campos, timestamp: true };
+}
+
 // Itens do pedido (compativel com pedidos antigos, criados antes de existir `itens[]`).
 function itensDoPedido(p) {
   if (Array.isArray(p?.itens) && p.itens.length) return p.itens;
@@ -355,6 +396,7 @@ module.exports = {
   mensagemPedido,
   confirmacaoCancelamento,
   itensDoPedido,
+  logDoPedido,
   statusTexto,
   componentesDoPedido,
 };

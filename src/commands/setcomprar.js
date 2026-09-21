@@ -69,8 +69,13 @@ module.exports = {
     }
 
     const preview = pedidoComprasStore.mensagem(guildId, { total: 9, canalId: interaction.channelId });
+    const conf = pedidoComprasStore.obter(guildId);
+    let extra = '';
+    if (pix !== null && pix !== undefined && !conf.mensagem) {
+      extra = '\n*Nenhuma `mensagem:` personalizada salva — usando a mensagem padrão com a chave PIX acima. Use `/setcomprar mensagem:...` para personalizar.*';
+    }
     return interaction.reply({
-      content: `✅ Configuração de compra salva neste servidor.\n**Exemplo:** ${preview}`,
+      content: `✅ Configuração de compra salva neste servidor.\n**Exemplo:** ${preview}${extra}`,
       flags: MessageFlags.Ephemeral,
     });
   },

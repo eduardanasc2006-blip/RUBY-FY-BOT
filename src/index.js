@@ -3303,7 +3303,7 @@ if (interaction.isStringSelectMenu() || interaction.isButton()) {
 
 
 // ----- Compra: painel /comprar, pedidos, confirmacao/cancelamento e metas -----
-const { escolherCategoria, escolherProduto, escolherQuantidade, modalQuantidade, montarCarrinho, finalizarCarrinho, mensagemPedido, confirmacaoCancelamento, itensDoPedido } = require('./utils/comprarPanel');
+const { escolherCategoria, escolherProduto, escolherQuantidade, modalQuantidade, montarCarrinho, finalizarCarrinho, mensagemPedido, confirmacaoCancelamento, itensDoPedido, logDoPedido } = require('./utils/comprarPanel');
 const carrinhoStore = require('./utils/carrinhoStore');
 const pedidoStore = require('./utils/pedidoStore');
 const pedidoComprasStore = require('./utils/pedidoComprasStore');
@@ -3452,25 +3452,8 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         // O pedido continua sendo registrado no canal de logs (historico).
-        logComprasStore.enviar(interaction.client, guildId, {
-          titulo: '📥 Pedido criado',
-          descricao: `**#${pedido.id}** está aguardando confirmação do pagamento.`,
-          cor: 0xf1c40f,
-          grupos: [
-            [
-              { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
-            ],
-            [
-              { name: '📦 Itens', value: pedido.itemNome, inline: true },
-              { name: '🔢 Quantidade', value: String(pedido.quantidade), inline: true },
-            ],
-            [
-              { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
-              { name: '🟡 Status', value: 'Aguardando pagamento', inline: true },
-            ],
-          ],
-          timestamp: true,
-        });
+        const logCriado = logDoPedido(pedido, { acao: 'criado' });
+        logComprasStore.enviar(interaction.client, guildId, logCriado);
 
         // O pedido aparece no ticket (publico): reaproveita a mensagem do carrinho.
         const conteudoPedido = mensagemPedido(guildId, pedido, interaction.channelId);
@@ -3588,18 +3571,8 @@ client.on('interactionCreate', async (interaction) => {
           canceladoEm: Date.now(),
           canceladoPor: interaction.user.id,
         });
-        logComprasStore.enviar(interaction.client, guildId, {
-          titulo: '❌ Pedido cancelado',
-          descricao: `**#${pedido.id}** foi cancelado — reserva liberada, nenhuma venda registrada.`,
-          cor: 0xe74c3c,
-          campos: [
-            { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
-            { name: '📦 Itens', value: pedido.itemNome, inline: true },
-            { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
-            { name: '👮 Cancelado por', value: `<@${interaction.user.id}>`, inline: true },
-          ],
-          timestamp: true,
-        });
+        const logCancelado = logDoPedido(pedido, { acao: 'cancelado', por: interaction.user.id });
+        logComprasStore.enviar(interaction.client, guildId, logCancelado);
         return interaction.update(mensagemPedido(guildId, pedidoStore.obter(guildId, pedidoId), interaction.channelId));
       }
 
@@ -3651,18 +3624,8 @@ client.on('interactionCreate', async (interaction) => {
           confirmadoEm: Date.now(),
           confirmadoPor: interaction.user.id,
         });
-        logComprasStore.enviar(interaction.client, guildId, {
-          titulo: '✅ Pedido confirmado',
-          descricao: `**#${pedido.id}** pagamento confirmado e venda registrada.`,
-          cor: 0x2ecc71,
-          campos: [
-            { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
-            { name: '📦 Itens', value: pedido.itemNome, inline: true },
-            { name: '💰 Valor', value: `R$ ${pedido.valor.toFixed(2).replace('.', ',')}`, inline: true },
-            { name: '👮 Confirmado por', value: `<@${interaction.user.id}>`, inline: true },
-          ],
-          timestamp: true,
-        });
+        const logConfirmado = logDoPedido(pedido, { acao: 'confirmado', por: interaction.user.id });
+        logComprasStore.enviar(interaction.client, guildId, logConfirmado);
 
         // Adiciona os cargos conquistados(acumulativo, sem remover nenhum)
         if (conquistadas.length) {

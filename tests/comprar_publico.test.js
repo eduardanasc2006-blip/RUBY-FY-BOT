@@ -27,7 +27,7 @@ const comprasStore = require('../src/utils/comprasStore');
 const pedidoComprasStore = require('../src/utils/pedidoComprasStore');
 const logComprasStore = require('../src/utils/logComprasStore');
 const estoque = require('../src/utils/estoque');
-const { montarCarrinho, escolherCategoria, finalizarCarrinho, mensagemPedido, itensDoPedido } = require('../src/utils/comprarPanel');
+const { montarCarrinho, escolherCategoria, escolherProduto, escolherQuantidade, finalizarCarrinho, mensagemPedido, itensDoPedido } = require('../src/utils/comprarPanel');
 const { formatBRL } = require('../src/utils/robuxConverter');
 
 const GUILD = 'g-comprar-publico';
@@ -529,6 +529,72 @@ function cadastrar(catNome, catId, prodNome, valor, qtd) {
     assert.strictEqual(itens.length, 1, 'um item');
     assert.strictEqual(itens[0].nome, 'Testando', 'nome preservado');
     assert.strictEqual(itens[0].valorUnitario, 3, 'valor unitario derivado');
+  });
+
+  // ----- regressao: botao "Voltar aos produtos" no produto esgotado -----
+  // Antes usava comp:prod:cat:prod, que reabre a tela de quantidade do MESMO
+  // produto (loop). Tem de voltar para a LISTA de produtos (comp:cat).
+  check('TESTE 17: produto esgotado oferece volta para a lista de produtos', () => {
+    const G = GUILD + '-esgotado';
+    estoque.addCategoria(G, 'Blades');
+    const cat = estoque.categorias(G)[0];
+    estoque.addProduto(G, cat.id, { nome: 'Sumida', valor: 5, controlarQtd: true, quantidade: 0 });
+    const prod = estoque.categorias(G)[0].produtos[0];
+    const tela = escolherQuantidade(G, cat.id, prod.id);
+    const ids = tela.components.flatMap((r) => r.components.map((c) => c.data.custom_id));
+    assert.ok(ids.includes(`comp:cat:${cat.id}`), 'tem botao voltar para a categoria');
+    assert.ok(!ids.includes(`comp:prod:${cat.id}:${prod.id}`), 'nao volta para o proprio produto (loop)');
+    // O destino comp:cat realmente abre a lista de produtos:
+    const lista = escolherProduto(G, cat.id, 'u1');
+    assert.ok(lista.embeds[0].data.title.includes('Passo 2'), 'comp:cat abre a lista de produtos');
+    require('node:fs').rmSync(require('node:path').join(__dirname, '..', 'data', 'estoque', `${G}.json`), { force: true });
+  });
+
+  // ----- regressao: {pix} do /setcomprar aparecia vazio -----
+  // Definir so a chave PIX (sem 'mensagem:') tinha de refletir no pedido.
+  check('TESTE 18: definir so o pix ja mostra a chave na mensagem', () => {
+    const G = GUILD + '-pix';
+    pedidoComprasStore.limpar(G);
+    pedidoComprasStore.definirPix(G, 'chave@teste.com');
+    const msg = pedidoComprasStore.mensagem(G, { total: 9, canalId: CANAL });
+    assert.ok(msg.includes('chave@teste.com'), 'chave PIX visivel sem mensagem personalizada');
+    assert.ok(!msg.includes('{pix}'), 'variavel {pix} substituida');
+    pedidoComprasStore.limpar(G);
+  });
+
+  check('TESTE 18b: {pix} sem chave nao quebra a frase', () => {
+    const G = GUILD + '-pix2';
+    pedidoComprasStore.limpar(G);
+    pedidoComprasStore.definirMensagem(G, 'Pague {total} via PIX para {pix} e mande em {canal}');
+    const msg = pedidoComprasStore.mensagem(G, { total: 9, canalId: CANAL });
+    assert.ok(!/para\s+(?:e|no|em|\n|$)/i.test(msg), 'sem "para" orfao: ' + msg);
+    assert.ok(msg.includes('`!pix`'), 'aponta o caminho para pegar a chave');
+    assert.ok(msg.includes('R$ 9,00'), 'total aplicado');
+    pedidoComprasStore.limpar(G);
+  });
+
+  // ----- regressao: log em UMA embed -----
+  check('TESTE 19: log de pedido criado vai em uma unica embed', () => {
+    const { logDoPedido } = require('../src/utils/comprarPanel');
+    const pedido = {
+      id: '99', clienteId: CLIENTE, clienteTag: 'c#1', valor: 9,
+      itens: [
+        { nome: 'Cookieblade', quantidade: 1, valorUnitario: 6 },
+        { nome: 'Ghostblade', quantidade: 2, valorUnitario: 1.5 },
+      ],
+    };
+    for (const acao of ['criado', 'confirmado', 'cancelado']) {
+      const l = logDoPedido(pedido, { acao, por: ATENDENTE });
+      const embeds = logComprasStore.montarEmbeds(l);
+      assert.strictEqual(embeds.length, 1, `${acao}: uma embed`);
+      const campos = embeds[0].data.fields.map((f) => f.name);
+      assert.ok(campos.includes('🆔 Pedido'), `${acao}: mostra o id`);
+      assert.ok(campos.includes('📦 Itens'), `${acao}: mostra os itens`);
+      assert.ok(campos.includes('💰 Total'), `${acao}: mostra o total`);
+      if (acao !== 'criado') {
+        assert.ok(campos.some((n) => n.includes('por')), `${acao}: registra o autor`);
+      }
+    }
   });
 
   // ----- limpeza -----
