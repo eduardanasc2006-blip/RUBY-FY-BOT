@@ -253,38 +253,62 @@ function finalizarCarrinho(guildId, userId, clienteTag) {
 
 // ----- Mensagem do pedido publica no ticket -----
 
-// Log do pedido no canal de logs: UMA embed por evento (nada de separar em
-// varias), com todos os campos do pedido em ordem fixa e legivel.
+// Formata a data no padrao "21/09/2026 às 16:57" (horario de Brasilia).
+function dataLog(ts) {
+  if (!ts) return '—';
+  try {
+    const d = new Date(ts);
+    const data = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    const hora = d.toLocaleTimeString('pt-BR', {
+      timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit',
+    });
+    return `${data} às ${hora}`;
+  } catch {
+    return new Date(ts).toLocaleString('pt-BR');
+  }
+}
+
+// Log do pedido no canal de logs: UMA embed por evento, com o corpo montado na
+// DESCRICAO — o Discord nao renderiza markdown em titulo nem em nome de campo,
+// entao e na descricao que os rotulos ficam realmente em negrito.
 // `acao` define titulo/cor e quem registrou (confirmou/cancelou).
 function logDoPedido(pedido, { acao = 'criado', por = null } = {}) {
   const cabecalhos = {
-    criado: { titulo: '📥 Pedido criado', cor: 0xf1c40f },
-    confirmado: { titulo: '✅ Pedido confirmado', cor: 0x2ecc71 },
-    cancelado: { titulo: '❌ Pedido cancelado', cor: 0xe74c3c },
+    criado: { titulo: '🟡 PEDIDO CRIADO', cor: 0xf1c40f },
+    confirmado: { titulo: '🟢 PEDIDO PAGO', cor: 0x2ecc71 },
+    cancelado: { titulo: '🔴 PEDIDO CANCELADO', cor: 0xe74c3c },
   };
   const { titulo, cor } = cabecalhos[acao] || cabecalhos.criado;
   const itens = itensDoPedido(pedido);
 
-  const campos = [
-    { name: '🆔 Pedido', value: `\`#${pedido.id}\``, inline: true },
-    { name: '👤 Cliente', value: `${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`)`, inline: true },
-    { name: '💰 Total', value: formatBRL(pedido.valor), inline: true },
-    { name: '📦 Itens', value: itens.map((i) => `**${i.nome}** × ${i.quantidade} — ${formatBRL((i.valorUnitario || 0) * i.quantidade)}`).join('\n') },
+  const itensTxt = itens.length === 1
+    ? `${itens[0].nome} × ${itens[0].quantidade} — ${formatBRL((itens[0].valorUnitario || 0) * itens[0].quantidade)}`
+    : '\n' + itens.map((i) => `${i.nome} × ${i.quantidade} — ${formatBRL((i.valorUnitario || 0) * i.quantidade)}`).join('\n');
+
+  const linhas = [
+    `🧾 **Pedido:** #${pedido.id}`,
+    `👤 **Cliente:** <@${pedido.clienteId}>`,
+    `🪪 **ID do cliente:** \`${pedido.clienteId}\``,
+    '',
+    `📦 **Itens:** ${itensTxt}`,
+    `💰 **Total:** **${formatBRL(pedido.valor)}**`,
   ];
 
   if (acao === 'criado') {
-    campos.push({ name: '🟡 Status', value: 'Aguardando pagamento', inline: true });
+    linhas.push('🟡 **Status:** Aguardando pagamento');
   } else {
-    campos.push({ name: acao === 'confirmado' ? '🟢 Status' : '❌ Status', value: acao === 'confirmado' ? 'Pago' : 'Cancelado', inline: true });
+    const autor = por || (acao === 'confirmado' ? pedido.confirmadoPor : pedido.canceladoPor);
     const quando = acao === 'confirmado' ? pedido.confirmadoEm : pedido.canceladoEm;
-    campos.push({
-      name: acao === 'confirmado' ? '👮 Confirmado por' : '👮 Cancelado por',
-      value: `<@${por || (acao === 'confirmado' ? pedido.confirmadoPor : pedido.canceladoPor)}>${quando ? ` — <t:${Math.floor(quando / 1000)}:f>` : ''}`,
-      inline: true,
-    });
+    linhas.push(acao === 'confirmado' ? '🟢 **Status:** Pago' : '🔴 **Status:** Cancelado');
+    linhas.push(
+      `${acao === 'confirmado' ? '👮 **Confirmado por:**' : '👮 **Cancelado por:**'} <@${autor}>`
+    );
+    linhas.push(`🕐 **Data:** ${dataLog(quando)}`);
   }
 
-  return { titulo, cor, campos, timestamp: true };
+  if (acao === 'criado') linhas.push(`🕐 **Data:** ${dataLog(pedido.criadoEm)}`);
+
+  return { titulo, descricao: linhas.join('\n'), cor, campos: [], timestamp: true };
 }
 
 // Itens do pedido (compativel com pedidos antigos, criados antes de existir `itens[]`).

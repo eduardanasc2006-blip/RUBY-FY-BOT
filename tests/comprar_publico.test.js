@@ -356,8 +356,12 @@ function cadastrar(catNome, catId, prodNome, valor, qtd) {
   });
 
   check('TESTE 7c: log de "pedido criado" foi registrado', () => {
-    const log = logsEnviados.find((l) => JSON.stringify(l.embeds?.[0]?.data?.title || '').includes('Pedido criado'));
+    const log = logsEnviados.find((l) => /pedido criado/i.test(l.embeds?.[0]?.data?.title || ''));
     assert.ok(log, 'log de pedido criado enviado');
+    const d = log.embeds[0].data.description || '';
+    assert.ok(d.includes('**Pedido:**'), 'rotulo do pedido');
+    assert.ok(d.includes(`\`${CLIENTE}\``), 'ID do cliente em crases');
+    assert.ok(d.includes('Aguardando pagamento'), 'status aguardando pagamento');
   });
 
   // ===== TESTE 9: cliente nao pode confirmar o proprio pagamento =====
@@ -385,10 +389,14 @@ function cadastrar(catNome, catId, prodNome, valor, qtd) {
     assert.strictEqual((ultimoEditReply.components || []).length, 0, 'sem botoes apos confirmar');
   });
 
-  check('TESTE 10b: log de "Pedido confirmado" com o atendente', () => {
-    const log = logsEnviados.find((l) => JSON.stringify(l.embeds?.[0]?.data?.title || '').includes('Pedido confirmado'));
+  check('TESTE 10b: log de "Pedido pago" com o atendente', () => {
+    const log = logsEnviados.find((l) => /pedido pago/i.test(l.embeds?.[0]?.data?.title || ''));
     assert.ok(log, 'log enviado');
-    assert.ok(JSON.stringify(log.embeds[0].data.fields).includes(ATENDENTE), 'registrou quem confirmou');
+    const d = log.embeds[0].data.description || '';
+    assert.ok(d.includes(ATENDENTE), 'registrou quem confirmou');
+    assert.ok(d.includes('**Status:** Pago'), 'status pago');
+    assert.ok(d.includes('**Confirmado por:**'), 'rotulo de confirmacao');
+    assert.ok(d.includes('**Data:**'), 'registrou data');
   });
 
   // ===== TESTE 11: confirmar duas vezes nao duplica =====
@@ -427,8 +435,13 @@ function cadastrar(catNome, catId, prodNome, valor, qtd) {
     assert.strictEqual(p.canceladoPor, ATENDENTE, 'registrou quem cancelou');
     assert.ok(p.canceladoEm, 'registrou data/hora');
     assert.strictEqual(pedidoStore.reservado(GUILD, 'espadas', 'ghostblade'), reservadoAntes - 2, 'reserva liberada');
-    const log = logsEnviados.find((l) => JSON.stringify(l.embeds?.[0]?.data?.title || '').includes('Pedido cancelado'));
+    const log = logsEnviados.find((l) => /pedido cancelado/i.test(l.embeds?.[0]?.data?.title || ''));
     assert.ok(log, 'log de cancelamento');
+    const d = log.embeds[0].data.description || '';
+    assert.ok(d.includes('**Status:** Cancelado'), 'status cancelado');
+    assert.ok(d.includes('**Cancelado por:**'), 'rotulo de cancelamento');
+    assert.ok(d.includes(ATENDENTE), 'registrou quem cancelou');
+    assert.ok(d.includes('**Data:**'), 'registrou data');
   });
 
   // ===== TESTE 13: cancelar duas vezes =====
@@ -574,25 +587,45 @@ function cadastrar(catNome, catId, prodNome, valor, qtd) {
   });
 
   // ----- regressao: log em UMA embed -----
-  check('TESTE 19: log de pedido criado vai em uma unica embed', () => {
+  check('TESTE 19: log de pedido vai em uma unica embed no formato novo', () => {
     const { logDoPedido } = require('../src/utils/comprarPanel');
     const pedido = {
-      id: '99', clienteId: CLIENTE, clienteTag: 'c#1', valor: 9,
+      id: '99', clienteId: CLIENTE, clienteTag: 'c#1', valor: 9, criadoEm: Date.now(),
       itens: [
         { nome: 'Cookieblade', quantidade: 1, valorUnitario: 6 },
         { nome: 'Ghostblade', quantidade: 2, valorUnitario: 1.5 },
       ],
     };
+    const titulos = { criado: /pedido criado/i, confirmado: /pedido pago/i, cancelado: /pedido cancelado/i };
+    // formatBRL usa espaco nao-quebravel (NBSP) depois do "R$": normaliza antes de comparar.
+    const norm = (s) => (s || '').replace(/\u00a0/g, ' ');
     for (const acao of ['criado', 'confirmado', 'cancelado']) {
-      const l = logDoPedido(pedido, { acao, por: ATENDENTE });
+      const p = { ...pedido };
+      if (acao === 'confirmado') { p.confirmadoPor = ATENDENTE; p.confirmadoEm = Date.now(); }
+      if (acao === 'cancelado') { p.canceladoPor = ATENDENTE; p.canceladoEm = Date.now(); }
+      const l = logDoPedido(p, { acao, por: ATENDENTE });
       const embeds = logComprasStore.montarEmbeds(l);
       assert.strictEqual(embeds.length, 1, `${acao}: uma embed`);
-      const campos = embeds[0].data.fields.map((f) => f.name);
-      assert.ok(campos.includes('🆔 Pedido'), `${acao}: mostra o id`);
-      assert.ok(campos.includes('📦 Itens'), `${acao}: mostra os itens`);
-      assert.ok(campos.includes('💰 Total'), `${acao}: mostra o total`);
-      if (acao !== 'criado') {
-        assert.ok(campos.some((n) => n.includes('por')), `${acao}: registra o autor`);
+      const d = norm(embeds[0].data.description);
+      assert.ok(titulos[acao].test(embeds[0].data.title), `${acao}: titulo`);
+      assert.ok(d.includes(`#${pedido.id}`), `${acao}: id do pedido`);
+      assert.ok(d.includes(`<@${CLIENTE}>`), `${acao}: menciona o cliente`);
+      assert.ok(d.includes(`\`${CLIENTE}\``), `${acao}: ID em crases`);
+      assert.ok(d.includes('📦 **Itens:**'), `${acao}: itens`);
+      assert.ok(d.includes('Cookieblade × 1 — R$ 6,00'), `${acao}: item 1 detalhado`);
+      assert.ok(d.includes('Ghostblade × 2 — R$ 3,00'), `${acao}: item 2 detalhado`);
+      assert.ok(d.includes('💰 **Total:** **R$ 9,00**'), `${acao}: total em negrito`);
+      assert.ok(d.includes('🕐 **Data:**'), `${acao}: data`);
+      // Linha em branco SO entre o bloco cliente/ID e os itens (indice 3).
+      const linhas = d.split('\n');
+      assert.strictEqual(linhas[3].trim(), '', `${acao}: linha em branco depois do ID`);
+      const vazias = linhas.map((l, i) => (l.trim() === '' ? i : -1)).filter((i) => i !== -1);
+      assert.deepStrictEqual(vazias, [3], `${acao}: so a linha 3 em branco`);
+      if (acao === 'criado') {
+        assert.ok(d.includes('🟡 **Status:** Aguardando pagamento'), 'status pendente');
+      } else {
+        assert.ok(d.includes(acao === 'confirmado' ? '🟢 **Status:** Pago' : '🔴 **Status:** Cancelado'), `${acao}: status`);
+        assert.ok(d.includes(acao === 'confirmado' ? '👮 **Confirmado por:**' : '👮 **Cancelado por:**'), `${acao}: autor`);
       }
     }
   });
