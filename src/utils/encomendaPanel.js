@@ -118,7 +118,7 @@ function resumoEncomenda(guildId, { catId, prodId, quantidade, clienteId }) {
       `💳 **Entrada (50%):** ${formatBRL(calc.entrada)}\n` +
       `💵 **Restante (50%):** ${formatBRL(calc.restante)}\n\n` +
       `⏳ **Prazo:** até ${encomendaStore.PRAZO_HORAS}h\n\n` +
-      '*Confirme para abrir a encomenda. A entrada é paga ao iniciar a encomenda.*'
+      '*Confirme para abrir a encomenda. A entrada de 50% deve ser paga antes do início da encomenda. A equipe confere o comprovante manualmente.*'
     );
   return {
     embeds: [embed],
@@ -192,7 +192,7 @@ function confirmacaoCancelamentoEncomenda(e) {
       `Tem certeza que deseja cancelar a encomenda **#${atual.id}**?\n\n` +
       (atual.status === 'aguardando'
         ? '*A encomenda ainda não foi iniciada.*'
-        : '*A entrada não é reembolsável após o início da encomenda.*')
+        : '*A encomenda já foi iniciada. Confirme se deseja cancelar.*')
     );
   return {
     embeds: [embed],

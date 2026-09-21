@@ -609,6 +609,24 @@ function semearEstoque(guildId = GUILD) {
     encomendaStore.removerDaGuild(G);
   });
 
+  check('ENC 31: textos nao afirmam politica de reembolso nem pagamento no inicio', () => {
+    const { resumoEncomenda, confirmacaoCancelamentoEncomenda } = require('../src/utils/encomendaPanel');
+    // Resumo: entrada deve ser paga ANTES do inicio (e conferida manualmente).
+    const resumo = resumoEncomenda(GUILD, { catId: CAT, prodId: PROD, quantidade: 1, clienteId: CLIENTE });
+    const r = resumo.embeds[0].data.description || '';
+    assert.ok(!/paga ao iniciar/i.test(r), 'nao diz que a entrada e paga ao iniciar');
+    assert.ok(/antes do início/i.test(r), 'diz que a entrada e paga antes do inicio');
+    assert.ok(/confere o comprovante/i.test(r), 'diz que a equipe confere manualmente');
+
+    // Cancelamento: nenhuma afirmacao sobre reembolso.
+    for (const st of ['aguardando', 'em_andamento', 'item_recebido']) {
+      const m = confirmacaoCancelamentoEncomenda({ guildId: GUILD, id: '1', status: st });
+      const d = m.embeds[0].data.description || '';
+      assert.ok(!/reembols/i.test(d), `${st}: nao afirma politica de reembolso`);
+      assert.ok(/Tem certeza/.test(d), `${st}: pede confirmacao`);
+    }
+  });
+
   check('ENC 30: painel/embed da encomenda nao afirma pagamento', () => {
     const { mensagemEncomenda } = require('../src/utils/encomendaPanel');
     const e = encomendaStore.obter(GUILD, encId);
