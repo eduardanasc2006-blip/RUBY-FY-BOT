@@ -11,9 +11,8 @@ if (!process.env.DISCORD_TOKEN || !process.env.CLIENT_ID) {
 // Comandos públicos (não admin): disponíveis também como "User Install" ([1]).
 // É isso que permite usá-los na DM (/, não só !). Contextos: 0 guild, 1 DM,
 // 2 grupos. Comandos admin ficam só no servidor (Guild Install) por segurança.
-const PUBLICOS = new Set([
-  'ajuda', 'estoque', 'gamepass', 'reais', 'robux', 'taxa', 'calc', 'comprar', 'encomenda',
-]);
+// A lista vive em src/config/comandosPublicos.js para não divergir do sync do boot.
+const PUBLICOS = require('./src/config/comandosPublicos');
 
 const commands = [];
 const nomesNativos = new Set();

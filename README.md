@@ -45,7 +45,10 @@ Todos funcionam com **prefixo `!`** (`!robux 1000`) e também como **slash comma
 | `!painelcategoria` / `/painelcategoria` | Fixa no canal os produtos de uma categoria (escolhe em qual canal publicar) |
 | `!canalavisos` / `/canalavisos` | Canal onde avisar quando um produto esgota |
 | `!comprar` / `/comprar` | Fluxo de compra (carrinho) |
-| `!cliente` / `/cliente` | Consulta de pedidos do cliente |
+| `!cliente` / `/cliente` | Mostra os cargos de cliente conquistados |
+| `!venda` / `/venda` | Lança uma venda feita **fora do `/comprar`** (pix direto, DM) e credita no gasto do cliente e nas metas |
+| `!encomenda` / `/encomenda` | Solicita um item fora do estoque imediato (encomenda) |
+| `!metas` / `/metas` | Configura metas de cargos por valor gasto ou quantidade de vendas |
 
 ### Conversão (admin)
 

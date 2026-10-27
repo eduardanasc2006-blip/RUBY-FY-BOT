@@ -152,7 +152,7 @@ client.once(Events.ClientReady, () => {
       const { REST, Routes } = require('discord.js');
       const clientId = client.application?.id || process.env.CLIENT_ID;
       if (!process.env.DISCORD_TOKEN || !clientId) return;
-      const PUBLICOS = new Set(['ajuda', 'estoque', 'gamepass', 'reais', 'robux', 'taxa', 'calc', 'comprar', 'encomenda']);
+      const PUBLICOS = require('./config/comandosPublicos');
       const commands = [];
       const commandsPath = pathDeploy.join(__dirname, 'commands');
       for (const file of fsDeploy.readdirSync(commandsPath).filter((f) => f.endsWith('.js'))) {
@@ -3323,26 +3323,9 @@ async function cargoDaInteracao(interaction, roleId) {
   return role;
 }
 
-// Avalia as metas do servidor contra os dados previstos do cliente (apos a venda).
-// Só devolve metas cujo cargo AINDA NÃO foi conquistado pelo cliente — uma meta já
-// atingida não volta como "nova conquista" em compras futuras.
-function metasConquistadas(guildId, clienteId, valor) {
-  const dados = comprasStore.dadosDoCliente(guildId, clienteId);
-  const novasVendas = (dados.vendas || 0) + 1;
-  const novoGasto = (dados.gasto || 0) + (valor ||  0);
-  const cargosJaConquistados = comprasStore.cargosDoCliente(guildId, clienteId) || [];
-  const conquistadas = [];
-  for (const m of metasStoreCompra.listaMetas(guildId)) {
-    if (!m || !m.cargoId) continue;
-    const cargoRef = m.cargoNome || `<@&${m.cargoId}>`;
-    if (cargosJaConquistados.includes(cargoRef)) continue; // já tem esse cargo — ignora
-    const atingiu = m.tipo === 'valor'
-      ? novoGasto >= (m.meta || 0)
-      : novasVendas >= (m.meta || 0);
-    if (atingiu) conquistadas.push(m);
-  }
-  return conquistadas;
-}
+// Avaliação das metas e concessão dos cargos: lógica compartilhada com o
+// lançamento manual de venda (!venda / /venda) em src/utils/metasVenda.js.
+const { metasConquistadas, concederCargosDasMetas } = require('./utils/metasVenda');
 
 client.on('interactionCreate', async (interaction) => {
   try {
@@ -3675,27 +3658,14 @@ client.on('interactionCreate', async (interaction) => {
         logComprasStore.enviar(interaction.client, guildId, logConfirmado);
 
         // Adiciona os cargos conquistados(acumulativo, sem remover nenhum)
-        if (conquistadas.length) {
-          const membroAlvo = interaction.guild?.members?.cache?.get(pedido.clienteId) ||
-            (await interaction.guild?.members?.fetch(pedido.clienteId).catch(() => null));
-          for (const m of conquistadas) {
-            try {
-              if (membroAlvo) await membroAlvo.roles.add(m.cargoId);
-              logComprasStore.enviar(interaction.client, guildId, {
-                titulo: '🏆 Meta atingida',
-                descricao: `**${m.cargoNome || `<@&${m.cargoId}>`}** concedido a ${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`).`,
-                cor: 0x9b59b6,
-                campos: [
-                  { name: '🎯 Meta', value: m.tipoDescricao || m.tipo || '—', inline: true },
-                  { name: '🎯 Requisito', value: `${m.meta ?? ''}`, inline: true },
-                ],
-                timestamp: true,
-              });
-            } catch (e) {
-              console.error('[Compra] Falha ao adicionar cargo:', e?.message || e);
-            }
-          }
-        }
+        await concederCargosDasMetas(
+          interaction.client,
+          interaction.guild,
+          guildId,
+          pedido.clienteId,
+          conquistadas,
+          pedido.clienteTag
+        );
 
         return interaction.editReply(mensagemPedido(guildId, pedidoStore.obter(guildId, pedidoId), interaction.channelId)).catch(() => {});
       }
