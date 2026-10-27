@@ -1,6 +1,8 @@
-# Dockerfile para build correto no DisCloud/builder genérico.
-# node:20-slim (em vez de node:20) reduz o download da imagem base
-# em ~85% — evita o erro "context deadline exceeded" (timeout) do builder.
+# Dockerfile para build LOCAL (docker build/run) e fallback.
+# ATENCAO: a Discloud NAO usa este arquivo — ela monta o ambiente a partir do
+# discloud.config (VERSION=20 define o Node; o install das deps e feito por ela).
+# Este arquivo existe so para quem roda o bot em container na propria maquina.
+# node:20-slim reduz o download da imagem base em ~85% vs node:20.
 FROM node:20-slim
 
 WORKDIR /home/node
