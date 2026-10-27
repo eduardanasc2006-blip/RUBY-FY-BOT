@@ -713,13 +713,22 @@ const { avisar } = require('./utils/avisos');
 
 client.on('interactionCreate', async (interaction) => {
   try {
-    // ----- painel fixo de estoque: estfixo:cat:<id> e estfixo:voltar -----
+    // ----- painel fixo de estoque: estfixo:* (botões e menus de seleção) -----
     // Clique no PAINEL PUBLICO -> responde ephemeral (so quem clicou ve)
     // Clique DENTRO da resposta ephemeral -> EDITA a mesma mensagem
-    if (interaction.isButton() && interaction.customId.startsWith('estfixo:')) {
+    if ((interaction.isButton() || interaction.isStringSelectMenu()) && interaction.customId.startsWith('estfixo:')) {
       const partes = interaction.customId.split(':');
       const acao = partes[1];
       const dentroDeEphemeral = Boolean(interaction.message?.flags?.has?.('Ephemeral'));
+
+      // Select de categoria: abre os produtos da categoria escolhida
+      if (acao === 'selcat') {
+        const catId = (interaction.values || [])[0] || null;
+        if (!catId) return;
+        const payload = estoquePanel.publicoProdutos(interaction.guildId, catId);
+        if (dentroDeEphemeral) return interaction.update(payload);
+        return interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
+      }
 
       // Navegação entre páginas de categoria (lista de categorias)
       if (acao === 'prevcat' || acao === 'nextcat') {
@@ -985,13 +994,35 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.update(painelCategoria.construirSelecaoCanal(interaction.guild, catId, interaction.channel?.id || null));
     }
 
-    // ----- admin: estadm:* -----
-    if (interaction.isButton() && interaction.customId.startsWith('estadm:')) {
+    // ----- admin: estadm:* (botões e menus de seleção) -----
+    if ((interaction.isButton() || interaction.isStringSelectMenu()) && interaction.customId.startsWith('estadm:')) {
       if (!permitido(interaction)) {
         return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
       }
-      const partes = interaction.customId.split(':');
-      const acao = partes[1];
+      let partes = interaction.customId.split(':');
+      let acao = partes[1];
+
+      // Menus de seleção do admin (categoria/produto): traduz para a ação
+      // equivalente que o fluxo já conhece, para não duplicar a lógica.
+      //   estadm:selcat:<acao>:<pag>          -> acao espera a categoria em partes[2]
+      //   estadm:selprod:<acao>:<catId>:<pag> -> acao espera categoria/produto em partes[2]/[3]
+      if (acao === 'selcat' || acao === 'selprod') {
+        const escolhido = (interaction.values || [])[0] || null;
+        if (!escolhido) {
+          return interaction.reply({ content: '❌ Seleção inválida.', flags: MessageFlags.Ephemeral });
+        }
+        if (acao === 'selcat') {
+          acao = partes[2];
+          partes = ['estadm', acao, escolhido];
+        } else {
+          const catId = partes[3];
+          if (!catId) {
+            return interaction.reply({ content: '❌ Categoria não encontrada.', flags: MessageFlags.Ephemeral });
+          }
+          acao = partes[2];
+          partes = ['estadm', acao, catId, escolhido];
+        }
+      }
 
       if (acao === 'menu') return interaction.update(estoquePanel.adminMenu(interaction.guildId));
       if (acao === 'lista') return interaction.update(estoquePanel.adminLista(interaction.guildId));
@@ -3351,7 +3382,7 @@ client.on('interactionCreate', async (interaction) => {
       // modaldigitar sao auto-escopados (modal do proprio usuario).
       const msgIdAtual = interaction.message?.id || null;
       const donoPainel = carrinhoStore.donoDoPainel(guildId, msgIdAtual);
-      const acoesDoDono = ['cat', 'voltar', 'prod', 'carrinho', 'removeritem', 'iteditar', 'limpar', 'finalizar', 'qtd', 'qmais', 'qmenos', 'qrem'];
+      const acoesDoDono = ['cat', 'voltar', 'prod', 'carrinho', 'removeritem', 'iteditar', 'limpar', 'finalizar', 'qtd', 'qmais', 'qmenos', 'qrem', 'selcat', 'selprod', 'catpag', 'prodpag'];
       if (acoesDoDono.includes(acao)) {
         if (!donoPainel) {
           return interaction.reply({
@@ -3389,6 +3420,29 @@ client.on('interactionCreate', async (interaction) => {
       }
       if (acao === 'prod') {
         return interaction.update(escolherQuantidade(guildId, partes[2], partes[3]));
+      }
+
+      // ----- Menus de seleção (categoria/produto) -----
+      if (acao === 'selcat') {
+        const catId = (interaction.values || [])[0] || null;
+        if (!catId) {
+          return interaction.reply({ content: '❌ Categoria inválida.', flags: MessageFlags.Ephemeral });
+        }
+        return interaction.update(escolherProduto(guildId, catId, interaction.user.id));
+      }
+      if (acao === 'selprod') {
+        const catId = partes[2];
+        const prodId = (interaction.values || [])[0] || null;
+        if (!catId || !prodId) {
+          return interaction.reply({ content: '❌ Produto inválido.', flags: MessageFlags.Ephemeral });
+        }
+        return interaction.update(escolherQuantidade(guildId, catId, prodId));
+      }
+      if (acao === 'catpag') {
+        return interaction.update(escolherCategoria(guildId, interaction.user.id, parseInt(partes[2] || '0', 10)));
+      }
+      if (acao === 'prodpag') {
+        return interaction.update(escolherProduto(guildId, partes[2], interaction.user.id, parseInt(partes[3] || '0', 10)));
       }
 
       // ----- Carrinho -----

@@ -39,12 +39,12 @@ A maioria funciona com **prefixo `!`** (`!robux 1000`) **e** como **slash comman
 
 | Comando | Descrição |
 | --- | --- |
-| `!estoque` / `/estoque` | Mostra o estoque (painel público; busca por nome com argumentos) |
-| `!configestoque` / `/configestoque` | Painel de configuração do estoque (categorias, produtos, quantidades, vender, ativar/desativar, remover) |
+| `!estoque` / `/estoque` | Mostra o estoque (painel público; categorias em **menu de seleção** paginado) |
+| `!configestoque` / `/configestoque` | Painel de configuração do estoque (categorias/produtos em **menu de seleção**; quantidades, vender, ativar/desativar, remover) |
 | `!painelestoque` / `/painelestoque` | Publica/atualiza o painel fixo de estoque no canal |
 | `!painelcategoria` / `/painelcategoria` | Fixa no canal os produtos de uma categoria (escolhe em qual canal publicar) |
 | `!canalavisos` / `/canalavisos` | Canal onde avisar quando um produto esgota |
-| `/comprar` | Fluxo de compra (carrinho) |
+| `/comprar` | Fluxo de compra (carrinho) — categoria e produto escolhidos por **menu de seleção**, sem limite de 15 itens |
 | `/cliente` | Mostra os cargos de cliente conquistados |
 | `!venda` / `/venda` | Lança uma venda feita **fora do `/comprar`** (pix direto, DM) e credita no gasto do cliente e nas metas |
 | `/encomenda` | Solicita um item fora do estoque imediato (encomenda) |

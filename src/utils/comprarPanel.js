@@ -3,9 +3,21 @@ const estoque = require('./estoque');
 const pedidoStore = require('./pedidoStore');
 const carrinhoStore = require('./carrinhoStore');
 const pedidoComprasStore = require('./pedidoComprasStore');
+const { sanitizarEmoji } = require('./sanitizarEmoji');
 const { formatBRL } = require('./robuxConverter');
 
 const COR = 0xbeb6ff;
+
+// Menus de seleção (categoria/produto): até 25 opções por página, o limite do
+// Discord. Antes eram botões e a tela cortava em 15 itens — categoria com mais
+// produtos ficava com o resto inacessível.
+const POR_PAGINA_COMPRAR = 25;
+
+function numeroPagina(pag, total) {
+  if (typeof pag !== 'number' || !Number.isFinite(pag)) return 0;
+  if (total <= 1) return 0;
+  return Math.min(Math.max(0, Math.floor(pag)), total - 1);
+}
 
 function row(...btns) {
   return new ActionRowBuilder().addComponents(...btns);
@@ -33,61 +45,113 @@ function resumoCarrinho(guildId, userId) {
 
 // ----- Tela 1: selecionar categoria -----
 
-function escolherCategoria(guildId, userId) {
+// Menu de seleção: cabe 25 opções por página (limite do Discord), contra 15
+// botões antes. O select fica sozinho na linha (exigência da API).
+function selectCategorias(cats, pag) {
+  const opcoes = cats.map((c) => {
+    const opt = { label: c.nome.slice(0, 100), value: c.id };
+    const e = sanitizarEmoji(c.emoji);
+    if (e) opt.emoji = e;
+    return opt;
+  });
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(`comp:selcat:${pag}`)
+      .setPlaceholder('🛒 Selecione a categoria do produto')
+      .setMinValues(1)
+      .setMaxValues(1)
+      .addOptions(opcoes)
+  );
+}
+
+function escolherCategoria(guildId, userId, pag = 0) {
   const cats = estoque.categorias(guildId).filter((c) => c.produtos.some((p) => p.ativo));
+  const totalPaginas = Math.max(1, Math.ceil(cats.length / POR_PAGINA_COMPRAR));
+  const paginaAtual = numeroPagina(pag, totalPaginas);
+  const visiveis = cats.slice(paginaAtual * POR_PAGINA_COMPRAR, (paginaAtual + 1) * POR_PAGINA_COMPRAR);
+
   const embed = new EmbedBuilder()
     .setColor(COR)
-    .setTitle('🛒 Comprar — Passo 1 de  3')
+    .setTitle(
+      cats.length > POR_PAGINA_COMPRAR
+        ? `🛒 Comprar — Passo 1 de 3 (${paginaAtual + 1}/${totalPaginas})`
+        : '🛒 Comprar — Passo 1 de 3'
+    )
     .setDescription(
       cats.length
         ? '**Selecione a categoria do produto que deseja comprar:**' +
           resumoCarrinho(guildId, userId)
         : '*Nenhum produto disponível no momento.*'
     );
-  const linhas = [];
-  cats.slice(0,  15).forEach((c) => {
-    if (linhas.length ===  0 || linhas[linhas.length -  1].components.length ===  5) {
-      linhas.push(new ActionRowBuilder());
-    }
-    linhas[linhas.length -  1].addComponents(
-      btn(`comp:cat:${c.id}`, `${c.emoji || '📦'} ${c.nome}`, ButtonStyle.Primary)
-    );
-  });
+
+  const components = [];
+  if (visiveis.length) components.push(selectCategorias(visiveis, paginaAtual));
+  const nav = [];
+  if (paginaAtual > 0) nav.push(btn(`comp:catpag:${paginaAtual - 1}`, '◀️ Anterior', ButtonStyle.Secondary));
+  if (paginaAtual < totalPaginas - 1) nav.push(btn(`comp:catpag:${paginaAtual + 1}`, 'Próxima ▶️', ButtonStyle.Secondary));
+  if (nav.length) components.push(row(...nav));
+
   return {
     embeds: [embed],
-    components: linhas,
+    components,
   };
 }
 
 // ----- Tela 2: selecionar produto -----
 
-function escolherProduto(guildId, catId, userId) {
+function escolherProduto(guildId, catId, userId, pag = 0) {
   const cat = estoque.categoria(guildId, catId);
   if (!cat) return escolherCategoria(guildId, userId);
   const produtos = cat.produtos.filter((p) => p.ativo);
+  const totalPaginas = Math.max(1, Math.ceil(produtos.length / POR_PAGINA_COMPRAR));
+  const paginaAtual = numeroPagina(pag, totalPaginas);
+  const visiveis = produtos.slice(paginaAtual * POR_PAGINA_COMPRAR, (paginaAtual + 1) * POR_PAGINA_COMPRAR);
+
   const embed = new EmbedBuilder()
     .setColor(COR)
-    .setTitle(`${cat.emoji || '📦'} ${cat.nome} — Passo 2 de 3`)
+    .setTitle(
+      produtos.length > POR_PAGINA_COMPRAR
+        ? `${cat.emoji || '📦'} ${cat.nome} — Passo 2 de 3 (${paginaAtual + 1}/${totalPaginas})`
+        : `${cat.emoji || '📦'} ${cat.nome} — Passo 2 de 3`
+    )
     .setDescription(
       produtos.length
         ? '**Selecione o produto desejado:**' + resumoCarrinho(guildId, userId)
         : '*Nenhum produto disponível nesta categoria.*'
     );
-  const linhas = [];
-  produtos.slice(0, 15).forEach((p) => {
-    if (linhas.length ===  0 || linhas[linhas.length -  1].components.length ===  5) {
-      linhas.push(new ActionRowBuilder());
-    }
-    const s = estoque.status(p);
-    const disp = p.controlarQtd ? ` ${pedidoStore.disponivel(guildId, p, catId, p.id)}` : ' ilimitado';
-    linhas[linhas.length -  1].addComponents(
-      btn(`comp:prod:${catId}:${p.id}`, `${p.nome} — ${formatBRL(p.valor)} (${s.emoji}${disp})`, ButtonStyle.Primary)
+
+  const components = [];
+  if (visiveis.length) {
+    const opcoes = visiveis.map((p) => {
+      const s = estoque.status(p);
+      const disp = p.controlarQtd ? ` • ${pedidoStore.disponivel(guildId, p, catId, p.id)} disp.` : '';
+      return {
+        label: `${p.nome} — ${formatBRL(p.valor)}`.slice(0, 100),
+        value: p.id,
+        description: `${s.emoji} ${s.texto}${disp}`.slice(0, 100),
+      };
+    });
+    components.push(
+      new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId(`comp:selprod:${catId}:${paginaAtual}`)
+          .setPlaceholder('🛒 Selecione o produto desejado')
+          .setMinValues(1)
+          .setMaxValues(1)
+          .addOptions(opcoes)
+      )
     );
-  });
-  linhas.push(row(btn('comp:voltar', '⬅️ Voltar às categorias', ButtonStyle.Secondary)));
+  }
+
+  const nav = [];
+  if (paginaAtual > 0) nav.push(btn(`comp:prodpag:${catId}:${paginaAtual - 1}`, '◀️ Produtos', ButtonStyle.Secondary));
+  nav.push(btn('comp:voltar', '⬅️ Voltar às categorias', ButtonStyle.Secondary));
+  if (paginaAtual < totalPaginas - 1) nav.push(btn(`comp:prodpag:${catId}:${paginaAtual + 1}`, 'Produtos ▶️', ButtonStyle.Secondary));
+  components.push(row(...nav));
+
   return {
     embeds: [embed],
-    components: linhas,
+    components,
   };
 }
 
