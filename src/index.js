@@ -384,12 +384,12 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ content: '❌ Sessão expirada. Envie `/proof` ou `!proof` novamente com as imagens.', flags: MessageFlags.Ephemeral });
     }
 
-    if (interaction.isChannelSelectMenu && interaction.customId === 'proofsel:canal') {
+    if (interaction.isChannelSelectMenu() && interaction.customId === 'proofsel:canal') {
       dados.canalId = interaction.values[0] || null;
-    } else if (interaction.isUserSelectMenu && interaction.customId === 'proofsel:cliente') {
+    } else if (interaction.isUserSelectMenu() && interaction.customId === 'proofsel:cliente') {
       dados.clienteId = interaction.values[0] || null;
       dados.clienteNome = null; // selecionado por @ — limpa nome externo
-    } else if (interaction.isStringSelectMenu && interaction.customId === 'proofsel:produto') {
+    } else if (interaction.isStringSelectMenu() && interaction.customId === 'proofsel:produto') {
       // Busca apenas o nome do produto no estoque (não altera quantidade/estoque)
       const prodId = interaction.values[0] || null;
       if (prodId) {
@@ -403,15 +403,15 @@ client.on('interactionCreate', async (interaction) => {
     }
 
     const painel = buildProofFormulario(interaction.user.id, interaction.guild, dados);
-    if (interaction.isChannelSelectMenu || interaction.isUserSelectMenu || interaction.isStringSelectMenu) {
+    if (interaction.isChannelSelectMenu() || interaction.isUserSelectMenu() || interaction.isStringSelectMenu()) {
       return interaction.update(painel);
     }
     return interaction.reply(painel);
   };
 
-  if (interaction.isChannelSelectMenu && interaction.customId === 'proofsel:canal') return handlerProofSel(interaction);
-  if (interaction.isUserSelectMenu && interaction.customId === 'proofsel:cliente') return handlerProofSel(interaction);
-  if (interaction.isStringSelectMenu && interaction.customId === 'proofsel:produto') return handlerProofSel(interaction);
+  if (interaction.isChannelSelectMenu() && interaction.customId === 'proofsel:canal') return handlerProofSel(interaction);
+  if (interaction.isUserSelectMenu() && interaction.customId === 'proofsel:cliente') return handlerProofSel(interaction);
+  if (interaction.isStringSelectMenu() && interaction.customId === 'proofsel:produto') return handlerProofSel(interaction);
 
   // ---- Botão "Fora do Discord": pede o nome do cliente/plataforma ----
   if (interaction.isButton() && interaction.customId === 'proofsel:plataforma') {
@@ -1547,7 +1547,7 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.customId && interaction.customId.startsWith('gerencmd:') && !permitido(interaction)) {
       return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
     }
-    if (interaction.isAnySelectMenu && interaction.isAnySelectMenu() && interaction.customId === 'gerencmd:excluir') {
+    if (interaction.isAnySelectMenu() && interaction.customId === 'gerencmd:excluir') {
       const custom = require('./utils/customCommands');
       const nome = interaction.values[0];
       return interaction.update(
@@ -1616,7 +1616,7 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.update({ content: menu.content, components: menu.components });
     }
 
-    if (interaction.isChannelSelectMenu && interaction.isChannelSelectMenu() && interaction.customId === 'autoresp:pickcanais') {
+    if (interaction.isChannelSelectMenu() && interaction.customId === 'autoresp:pickcanais') {
       const store = require('./utils/autoRespostaStore');
       const dados = autorespCriacaoCache.get(interaction.user.id + ':' + interaction.guildId);
       if (!dados) return interaction.update({ content: '❌ Sessão expirada. Execute /autoresposta ou !autoresposta novamente.', components: [] });
@@ -1639,7 +1639,7 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.update({ content: res.ok ? '✅ ' + res.msg : '❌ ' + res.msg, components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('autoresp:voltar').setLabel('⬅️ Voltar ao menu').setStyle(ButtonStyle.Secondary))] });
     }
 
-    if (interaction.isAnySelectMenu && interaction.isAnySelectMenu() && interaction.customId === 'autoresp:editar') {
+    if (interaction.isAnySelectMenu() && interaction.customId === 'autoresp:editar') {
       const store = require('./utils/autoRespostaStore');
       const { modalEditar } = require('./utils/autoRespostaPanel');
       const palavra = interaction.values[0];
@@ -1705,7 +1705,7 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.reply({ content: '🧹 Lista de canais comum limpa — responde em **qualquer canal**.', flags: MessageFlags.Ephemeral });
     }
 
-    if (interaction.isAnySelectMenu && interaction.isAnySelectMenu() && interaction.customId === 'autoresp:acao') {
+    if (interaction.isAnySelectMenu() && interaction.customId === 'autoresp:acao') {
       const { ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
       const store = require('./utils/autoRespostaStore');
       const { modalAdicionar, menuEditar, selectRemover, painelCentral } = require('./utils/autoRespostaPanel');
