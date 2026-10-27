@@ -61,7 +61,7 @@ const GRUPOS = [
     id: 'vendas',
     nome: '🛒 Vendas e pedidos',
     descricao: 'Gerenciar pedidos.. metas e perfil de clientes.',
-    comandos: ['comprar', 'metas', 'cliente'],
+    comandos: ['comprar', 'metas', 'cliente', 'venda'],
   },
   {
     id: 'backup',

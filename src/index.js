@@ -6,24 +6,30 @@ const path = require('node:path');
 // respostas quando o host/Discloud sobe o processo duas vezes, ex.: MAIN +
 // START apontando para o mesmo arquivo, ou restart sem matar o processo antigo).
 const LOCK_FILE = path.join(__dirname, '..', '.bot.lock');
+const LOCK_MAX_IDADE_MS = 10 * 60 * 1000; // lock mais velho que isso e considerado obsoleto
 function tentarObterLock() {
   try {
     const pid = Number(fs.readFileSync(LOCK_FILE, 'utf8'));
-    if (pid > 0 && pid !== process.pid) {
+    // PID 1 e o init do container: process.kill(1, 0) sempre "existe" no Linux,
+    // entao nunca pode ser tratado como outra instancia. Um lock com PID 1 veio
+    // de um restart/reconnect anterior (ex.: Discloud) e deve ser reutilizado.
+    if (pid > 1 && pid !== process.pid) {
+      let vivo = false;
       try {
         process.kill(pid, 0); // só checa se o processo existe, sem matar
-        // No Discloud o Node roda como PID 1 (init do container). Se o lock
-        // guardou o PID 1 de uma execucao anterior (ex.: restart/reconnect sem
-        // o handler de exit rodar), process.kill(1, 0) sempre devolve sucesso
-        // no Linux — mesmo para o proprio processo, causando falso positivo de
-        // "outra instancia". Por isso, se o PID do lock e o nosso proprio PID
-        // (checado acima no `pid !== process.pid`), assumimos o lock normalmente.
-        if (process.kill(pid, 0)) {
+        vivo = true;
+      } catch {
+        vivo = false; // PID antigo morto → pode assumir o lock
+      }
+      // Mesmo com o PID vivo, um lock antigo (ex.: PID reciclado pelo sistema)
+      // nao deve bloquear o boot para sempre.
+      if (vivo) {
+        const idade = Date.now() - fs.statSync(LOCK_FILE).mtimeMs;
+        if (idade < LOCK_MAX_IDADE_MS) {
           console.error(`⚠️ Outra instância do bot já está rodando (PID ${pid}). Encerrando para evitar respostas duplicadas.`);
           return false;
         }
-      } catch {
-        // PID antigo morto → pode assumir o lock
+        console.error(`⚠️ Lock obsoleto do PID ${pid} (${Math.round(idade / 1000)}s). Assumindo o controle.`);
       }
     }
   } catch {}
@@ -61,6 +67,7 @@ const {
   ModalBuilder,
   Partials,
   MessageFlags,
+  Options,
   PermissionFlagsBits,
   TextInputBuilder,
   TextInputStyle,
@@ -94,6 +101,21 @@ const client = new Client({
   ],
   // Necessário para receber mensagens e interações em DM (canal parcial)
   partials: [Partials.Channel],
+  // Teto para os caches internos: sem isso o discord.js guarda tudo que passa
+  // (mensagens, membros, reações) e o RSS passa dos 100MB do plano, fazendo a
+  // Discloud matar o processo (app "fica carregando" e cai sem log).
+  makeCache: Options.cacheWithLimits({
+    ...Options.DefaultMakeCacheSettings,
+    MessageManager: 25,
+    PresenceManager: 0,
+    GuildMemberManager: { maxSize: 50, keepOverLimit: (m) => m.id === client.user?.id },
+    GuildBanManager: 0,
+    GuildInviteManager: 0,
+    ReactionManager: 0,
+    ReactionUserManager: 0,
+    StageInstanceManager: 0,
+    VoiceStateManager: 0,
+  }),
   // Sweepers: limpa automaticamente do cache mensagens e reações antigas,
   // impedindo que a RAM cresça sem limite com o uso.
   sweepers: {
@@ -152,7 +174,7 @@ client.once(Events.ClientReady, () => {
       const { REST, Routes } = require('discord.js');
       const clientId = client.application?.id || process.env.CLIENT_ID;
       if (!process.env.DISCORD_TOKEN || !clientId) return;
-      const PUBLICOS = new Set(['ajuda', 'estoque', 'gamepass', 'reais', 'robux', 'taxa', 'calc', 'comprar']);
+      const PUBLICOS = require('./config/comandosPublicos');
       const commands = [];
       const commandsPath = pathDeploy.join(__dirname, 'commands');
       for (const file of fsDeploy.readdirSync(commandsPath).filter((f) => f.endsWith('.js'))) {
@@ -713,13 +735,22 @@ const { avisar } = require('./utils/avisos');
 
 client.on('interactionCreate', async (interaction) => {
   try {
-    // ----- painel fixo de estoque: estfixo:cat:<id> e estfixo:voltar -----
+    // ----- painel fixo de estoque: estfixo:* (botões e menus de seleção) -----
     // Clique no PAINEL PUBLICO -> responde ephemeral (so quem clicou ve)
     // Clique DENTRO da resposta ephemeral -> EDITA a mesma mensagem
-    if (interaction.isButton() && interaction.customId.startsWith('estfixo:')) {
+    if ((interaction.isButton() || interaction.isStringSelectMenu()) && interaction.customId.startsWith('estfixo:')) {
       const partes = interaction.customId.split(':');
       const acao = partes[1];
       const dentroDeEphemeral = Boolean(interaction.message?.flags?.has?.('Ephemeral'));
+
+      // Select de categoria: abre os produtos da categoria escolhida
+      if (acao === 'selcat') {
+        const catId = (interaction.values || [])[0] || null;
+        if (!catId) return;
+        const payload = estoquePanel.publicoProdutos(interaction.guildId, catId);
+        if (dentroDeEphemeral) return interaction.update(payload);
+        return interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
+      }
 
       // Navegação entre páginas de categoria (lista de categorias)
       if (acao === 'prevcat' || acao === 'nextcat') {
@@ -985,13 +1016,35 @@ client.on('interactionCreate', async (interaction) => {
       return interaction.update(painelCategoria.construirSelecaoCanal(interaction.guild, catId, interaction.channel?.id || null));
     }
 
-    // ----- admin: estadm:* -----
-    if (interaction.isButton() && interaction.customId.startsWith('estadm:')) {
+    // ----- admin: estadm:* (botões e menus de seleção) -----
+    if ((interaction.isButton() || interaction.isStringSelectMenu()) && interaction.customId.startsWith('estadm:')) {
       if (!permitido(interaction)) {
         return interaction.reply({ content: '🔒 Somente administradores.', flags: MessageFlags.Ephemeral });
       }
-      const partes = interaction.customId.split(':');
-      const acao = partes[1];
+      let partes = interaction.customId.split(':');
+      let acao = partes[1];
+
+      // Menus de seleção do admin (categoria/produto): traduz para a ação
+      // equivalente que o fluxo já conhece, para não duplicar a lógica.
+      //   estadm:selcat:<acao>:<pag>          -> acao espera a categoria em partes[2]
+      //   estadm:selprod:<acao>:<catId>:<pag> -> acao espera categoria/produto em partes[2]/[3]
+      if (acao === 'selcat' || acao === 'selprod') {
+        const escolhido = (interaction.values || [])[0] || null;
+        if (!escolhido) {
+          return interaction.reply({ content: '❌ Seleção inválida.', flags: MessageFlags.Ephemeral });
+        }
+        if (acao === 'selcat') {
+          acao = partes[2];
+          partes = ['estadm', acao, escolhido];
+        } else {
+          const catId = partes[3];
+          if (!catId) {
+            return interaction.reply({ content: '❌ Categoria não encontrada.', flags: MessageFlags.Ephemeral });
+          }
+          acao = partes[2];
+          partes = ['estadm', acao, catId, escolhido];
+        }
+      }
 
       if (acao === 'menu') return interaction.update(estoquePanel.adminMenu(interaction.guildId));
       if (acao === 'lista') return interaction.update(estoquePanel.adminLista(interaction.guildId));
@@ -1936,7 +1989,7 @@ client.on('interactionCreate', async (interaction) => {
           new ActionRowBuilder().addComponents(
             new TextInputBuilder()
               .setCustomId('mensagem')
-              .setLabel('Mensagem ao usar fora dos canais (use {canais} p/ citar)')
+              .setLabel('Mensagem fora dos canais ({canais} = canais)')
               .setStyle(TextInputStyle.Paragraph)
               .setRequired(false)
               .setMaxLength(500)
@@ -3323,26 +3376,9 @@ async function cargoDaInteracao(interaction, roleId) {
   return role;
 }
 
-// Avalia as metas do servidor contra os dados previstos do cliente (apos a venda).
-// Só devolve metas cujo cargo AINDA NÃO foi conquistado pelo cliente — uma meta já
-// atingida não volta como "nova conquista" em compras futuras.
-function metasConquistadas(guildId, clienteId, valor) {
-  const dados = comprasStore.dadosDoCliente(guildId, clienteId);
-  const novasVendas = (dados.vendas || 0) + 1;
-  const novoGasto = (dados.gasto || 0) + (valor ||  0);
-  const cargosJaConquistados = comprasStore.cargosDoCliente(guildId, clienteId) || [];
-  const conquistadas = [];
-  for (const m of metasStoreCompra.listaMetas(guildId)) {
-    if (!m || !m.cargoId) continue;
-    const cargoRef = m.cargoNome || `<@&${m.cargoId}>`;
-    if (cargosJaConquistados.includes(cargoRef)) continue; // já tem esse cargo — ignora
-    const atingiu = m.tipo === 'valor'
-      ? novoGasto >= (m.meta || 0)
-      : novasVendas >= (m.meta || 0);
-    if (atingiu) conquistadas.push(m);
-  }
-  return conquistadas;
-}
+// Avaliação das metas e concessão dos cargos: lógica compartilhada com o
+// lançamento manual de venda (!venda / /venda) em src/utils/metasVenda.js.
+const { metasConquistadas, concederCargosDasMetas } = require('./utils/metasVenda');
 
 client.on('interactionCreate', async (interaction) => {
   try {
@@ -3368,7 +3404,7 @@ client.on('interactionCreate', async (interaction) => {
       // modaldigitar sao auto-escopados (modal do proprio usuario).
       const msgIdAtual = interaction.message?.id || null;
       const donoPainel = carrinhoStore.donoDoPainel(guildId, msgIdAtual);
-      const acoesDoDono = ['cat', 'voltar', 'prod', 'carrinho', 'removeritem', 'iteditar', 'limpar', 'finalizar', 'qtd', 'qmais', 'qmenos', 'qrem'];
+      const acoesDoDono = ['cat', 'voltar', 'prod', 'carrinho', 'removeritem', 'iteditar', 'limpar', 'finalizar', 'qtd', 'qmais', 'qmenos', 'qrem', 'selcat', 'selprod', 'catpag', 'prodpag'];
       if (acoesDoDono.includes(acao)) {
         if (!donoPainel) {
           return interaction.reply({
@@ -3406,6 +3442,29 @@ client.on('interactionCreate', async (interaction) => {
       }
       if (acao === 'prod') {
         return interaction.update(escolherQuantidade(guildId, partes[2], partes[3]));
+      }
+
+      // ----- Menus de seleção (categoria/produto) -----
+      if (acao === 'selcat') {
+        const catId = (interaction.values || [])[0] || null;
+        if (!catId) {
+          return interaction.reply({ content: '❌ Categoria inválida.', flags: MessageFlags.Ephemeral });
+        }
+        return interaction.update(escolherProduto(guildId, catId, interaction.user.id));
+      }
+      if (acao === 'selprod') {
+        const catId = partes[2];
+        const prodId = (interaction.values || [])[0] || null;
+        if (!catId || !prodId) {
+          return interaction.reply({ content: '❌ Produto inválido.', flags: MessageFlags.Ephemeral });
+        }
+        return interaction.update(escolherQuantidade(guildId, catId, prodId));
+      }
+      if (acao === 'catpag') {
+        return interaction.update(escolherCategoria(guildId, interaction.user.id, parseInt(partes[2] || '0', 10)));
+      }
+      if (acao === 'prodpag') {
+        return interaction.update(escolherProduto(guildId, partes[2], interaction.user.id, parseInt(partes[3] || '0', 10)));
       }
 
       // ----- Carrinho -----
@@ -3675,27 +3734,14 @@ client.on('interactionCreate', async (interaction) => {
         logComprasStore.enviar(interaction.client, guildId, logConfirmado);
 
         // Adiciona os cargos conquistados(acumulativo, sem remover nenhum)
-        if (conquistadas.length) {
-          const membroAlvo = interaction.guild?.members?.cache?.get(pedido.clienteId) ||
-            (await interaction.guild?.members?.fetch(pedido.clienteId).catch(() => null));
-          for (const m of conquistadas) {
-            try {
-              if (membroAlvo) await membroAlvo.roles.add(m.cargoId);
-              logComprasStore.enviar(interaction.client, guildId, {
-                titulo: '🏆 Meta atingida',
-                descricao: `**${m.cargoNome || `<@&${m.cargoId}>`}** concedido a ${pedido.clienteTag || `<@${pedido.clienteId}>`} (\`${pedido.clienteId}\`).`,
-                cor: 0x9b59b6,
-                campos: [
-                  { name: '🎯 Meta', value: m.tipoDescricao || m.tipo || '—', inline: true },
-                  { name: '🎯 Requisito', value: `${m.meta ?? ''}`, inline: true },
-                ],
-                timestamp: true,
-              });
-            } catch (e) {
-              console.error('[Compra] Falha ao adicionar cargo:', e?.message || e);
-            }
-          }
-        }
+        await concederCargosDasMetas(
+          interaction.client,
+          interaction.guild,
+          guildId,
+          pedido.clienteId,
+          conquistadas,
+          pedido.clienteTag
+        );
 
         return interaction.editReply(mensagemPedido(guildId, pedidoStore.obter(guildId, pedidoId), interaction.channelId)).catch(() => {});
       }
@@ -3986,4 +4032,16 @@ client.once('ready', () => {
   }
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.DISCORD_TOKEN).catch((error) => {
+  const codigo = error?.code || error?.message || error;
+  if (codigo === 'TokenInvalid' || String(codigo).includes('TokenInvalid')) {
+    console.error('❌ DISCORD_TOKEN inválido ou expirado. Gere um token novo no Developer Portal e atualize a variável DISCORD_TOKEN na Discloud.');
+  } else if (codigo === 'DisallowedIntents') {
+    console.error('❌ Intents privilegiadas desativadas. Ative "Message Content Intent" no Developer Portal.');
+  } else {
+    console.error('❌ Falha ao conectar no Discord:', codigo);
+  }
+  logErroRotulo('login', error);
+  // Sai com código != 0 para a Discloud marcar a app como falha e reiniciar.
+  process.exit(1);
+});

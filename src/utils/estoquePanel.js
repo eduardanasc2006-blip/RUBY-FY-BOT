@@ -1,5 +1,6 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, StringSelectMenuBuilder } = require('discord.js');
 const estoque = require('./estoque');
+const { sanitizarEmoji } = require('./sanitizarEmoji');
 const { formatBRL } = require('./robuxConverter');
 
 const COR = 0xbeb6ff;
@@ -9,7 +10,8 @@ function row(...btns) {
 }
 const btn = (id, label, style = ButtonStyle.Secondary, emoji) => {
   const b = new ButtonBuilder().setCustomId(id).setLabel(label).setStyle(style);
-  if (emoji) b.setEmoji(emoji);
+  const e = sanitizarEmoji(emoji);
+  if (e) b.setEmoji(e);
   return b;
 };
 
@@ -19,34 +21,54 @@ function emojiDa(c) {
   return c.emoji || '📦';
 }
 
-const POR_PAGINA_PUBLICO = 5;
+// Menu de seleção comporta até 25 opções por página (limite do Discord).
+const POR_PAGINA_CATS_PUBLICO = 25;
+// A lista de produtos é textual (preço, status, descrição): fica em 5 por
+// página para não estourar o limite de 4096 caracteres do embed.
+const POR_PAGINA_PRODUTOS_PUBLICO = 5;
+
+// Um select com as categorias da página. O Discord exige o select SOZINHO na
+// linha, então cada página tem no máximo uma linha de select + uma de botões.
+function selectCategorias(cats, pag) {
+  const opcoes = cats.map((c) => {
+    const total = (c.produtos || []).filter((p) => p.ativo).length;
+    const opt = { label: `${c.nome} (${total})`.slice(0, 100), value: c.id };
+    const e = sanitizarEmoji(c.emoji);
+    if (e) opt.emoji = e;
+    return opt;
+  });
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(`estfixo:selcat:${pag}`)
+      .setPlaceholder('📦 Selecione uma categoria para ver os produtos')
+      .setMinValues(1)
+      .setMaxValues(1)
+      .addOptions(opcoes)
+  );
+}
 
 function publicoCategorias(guildId, pag = 0) {
   const cats = estoque.categorias(guildId);
-  const totalPaginas = Math.max(1, Math.ceil(cats.length / POR_PAGINA_PUBLICO));
+  const totalPaginas = Math.max(1, Math.ceil(cats.length / POR_PAGINA_CATS_PUBLICO));
   const paginaAtual = numeroPagina(pag, totalPaginas);
-  const visiveis = cats.slice(paginaAtual * POR_PAGINA_PUBLICO, (paginaAtual + 1) * POR_PAGINA_PUBLICO);
+  const visiveis = cats.slice(paginaAtual * POR_PAGINA_CATS_PUBLICO, (paginaAtual + 1) * POR_PAGINA_CATS_PUBLICO);
 
   const embed = new EmbedBuilder()
     .setColor(COR)
     .setTitle(
-      cats.length > POR_PAGINA_PUBLICO
+      cats.length > POR_PAGINA_CATS_PUBLICO
         ? `☁️ Estoque — RUBY FY (${paginaAtual + 1}/${totalPaginas})`
         : '☁️ Estoque — RUBY FY'
     )
     .setDescription(
       cats.length
-        ? '**Selecione uma categoria abaixo para visualizar os produtos disponíveis.**'
+        ? '**Selecione uma categoria no menu abaixo para ver os produtos disponíveis.**'
         : '*Nenhum produto cadastrado no momento.*'
     )
     .setFooter({ text: '☁️ RUBY FY • Atualizado em tempo real' });
 
-  const linhas = visiveis.map((c) => {
-    const total = c.produtos.filter((p) => p.ativo).length;
-    return btn(`estfixo:cat:${c.id}`, `${emojiDa(c)} ${c.nome} (${total})`, ButtonStyle.Primary);
-  });
-
-  const components = linhas.length ? [row(...linhas)] : [];
+  const components = [];
+  if (visiveis.length) components.push(selectCategorias(visiveis, paginaAtual));
   const nav = [];
   if (paginaAtual > 0) nav.push(btn(`estfixo:prevcat:${paginaAtual - 1}`, '◀️ Anterior', ButtonStyle.Secondary));
   if (paginaAtual < totalPaginas - 1) nav.push(btn(`estfixo:nextcat:${paginaAtual + 1}`, 'Próxima ▶️', ButtonStyle.Secondary));
@@ -61,9 +83,9 @@ function publicoProdutos(guildId, catId, pagProduto = 0) {
   if (!cat) return publicoCategorias(guildId);
 
   const produtos = (cat.produtos || []).filter((p) => p);
-  const totalPaginas = Math.max(1, Math.ceil(produtos.length / POR_PAGINA_PUBLICO));
+  const totalPaginas = Math.max(1, Math.ceil(produtos.length / POR_PAGINA_PRODUTOS_PUBLICO));
   const paginaAtual = numeroPagina(pagProduto, totalPaginas);
-  const visiveis = produtos.slice(paginaAtual * POR_PAGINA_PUBLICO, (paginaAtual + 1) * POR_PAGINA_PUBLICO);
+  const visiveis = produtos.slice(paginaAtual * POR_PAGINA_PRODUTOS_PUBLICO, (paginaAtual + 1) * POR_PAGINA_PRODUTOS_PUBLICO);
 
   const linhas = visiveis.map((p) => {
     const s = estoque.status(p);
@@ -88,7 +110,7 @@ function publicoProdutos(guildId, catId, pagProduto = 0) {
   if (navProd.length) components.push(row(...navProd));
 
   const tituloCats = `${emojiDa(cat)} ${cat.nome}`;
-  const titulo = produtos.length > POR_PAGINA_PUBLICO
+  const titulo = produtos.length > POR_PAGINA_PRODUTOS_PUBLICO
     ? `${tituloCats} — produtos (${paginaAtual + 1}/${totalPaginas})`
     : tituloCats;
 
@@ -226,7 +248,8 @@ function adminGerCatDetalhe(guildId, catId) {
   };
 }
 
-// Lista de categorias para escolher (usada em vários fluxos admin), paginada
+// Lista de categorias para escolher (usada em vários fluxos admin). Menu de
+// seleção: 25 por página, contra 5 botões antes.
 function paginaNav(idPrefix, atual, total, params) {
   const nav = [];
   if (atual > 0) nav.push(btn(`estadm:${idPrefix}:${params}${atual - 1}`, '◀️ Anterior', ButtonStyle.Primary));
@@ -235,14 +258,18 @@ function paginaNav(idPrefix, atual, total, params) {
   return nav;
 }
 
-// Distribui botões em linhas de até 5
-function linhasDeBotoes(botoes, ultimaFila = true) {
-  const linhas = [];
-  for (let i = 0; i < botoes.length; i += 5) {
-    linhas.push(row(...botoes.slice(i, i + 5)));
-  }
-  return linhas;
+function menuSelecao(customId, placeholder, opcoes) {
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(customId)
+      .setPlaceholder(placeholder)
+      .setMinValues(1)
+      .setMaxValues(1)
+      .addOptions(opcoes)
+  );
 }
+
+const POR_PAGINA_ADMIN_SEL = 25;
 
 function adminEscolherCategoria(guildId, acao, pag = 0) {
   const cats = estoque.categorias(guildId);
@@ -253,21 +280,25 @@ function adminEscolherCategoria(guildId, acao, pag = 0) {
       components: [row(btn('estadm:menu', '⬅️ Voltar'))],
     };
   }
-  const totalPaginas = Math.max(1, Math.ceil(cats.length / 5));
+  const totalPaginas = Math.max(1, Math.ceil(cats.length / POR_PAGINA_ADMIN_SEL));
   const paginaAtual = numeroPagina(pag, totalPaginas);
-  const visiveis = cats.slice(paginaAtual * 5, paginaAtual * 5 + 5);
+  const visiveis = cats.slice(paginaAtual * POR_PAGINA_ADMIN_SEL, (paginaAtual + 1) * POR_PAGINA_ADMIN_SEL);
   const embed = new EmbedBuilder()
     .setColor(COR)
-    .setTitle(cats.length > 5 ? `⚙️ Escolha a categoria (${paginaAtual + 1}/${totalPaginas})` : '⚙️ Escolha a categoria');
-  const componentes = linhasDeBotoes(
-    visiveis.map((c) => btn(`estadm:${acao}:${c.id}`, `${emojiDa(c)} ${c.nome}`, ButtonStyle.Primary))
-  );
+    .setTitle(cats.length > POR_PAGINA_ADMIN_SEL ? `⚙️ Escolha a categoria (${paginaAtual + 1}/${totalPaginas})` : '⚙️ Escolha a categoria');
+  const opcoes = visiveis.map((c) => {
+    const opt = { label: `${c.nome} (${c.produtos.length})`.slice(0, 100), value: c.id };
+    const e = sanitizarEmoji(c.emoji);
+    if (e) opt.emoji = e;
+    return opt;
+  });
+  const componentes = [menuSelecao(`estadm:selcat:${acao}:${paginaAtual}`, '📦 Selecione a categoria', opcoes)];
   const nav = paginaNav('catpag', paginaAtual, totalPaginas, `${acao}:`);
   if (nav.length) componentes.push(row(...nav));
   return { embeds: [embed], components: componentes };
 }
 
-// Lista de produtos de uma categoria (para editar/remover/qtd/toggle/vender), paginada
+// Lista de produtos de uma categoria (para editar/remover/qtd/toggle/vender).
 function adminEscolherProduto(guildId, acao, catId, pag = 0) {
   const cat = estoque.categoria(guildId, catId);
   if (!cat) return adminMenu(guildId);
@@ -278,19 +309,26 @@ function adminEscolherProduto(guildId, acao, catId, pag = 0) {
       components: [row(btn('estadm:menu', '⬅️ Voltar'))],
     };
   }
-  const totalPaginas = Math.max(1, Math.ceil(cat.produtos.length / 5));
+  const totalPaginas = Math.max(1, Math.ceil(cat.produtos.length / POR_PAGINA_ADMIN_SEL));
   const paginaAtual = numeroPagina(pag, totalPaginas);
-  const visiveis = cat.produtos.slice(paginaAtual * 5, paginaAtual * 5 + 5);
+  const visiveis = cat.produtos.slice(paginaAtual * POR_PAGINA_ADMIN_SEL, (paginaAtual + 1) * POR_PAGINA_ADMIN_SEL);
   const embed = new EmbedBuilder()
     .setColor(COR)
     .setTitle(
-      cat.produtos.length > 5
+      cat.produtos.length > POR_PAGINA_ADMIN_SEL
         ? `⚙️ ${cat.nome} — escolha o produto (${paginaAtual + 1}/${totalPaginas})`
         : `⚙️ ${cat.nome} — escolha o produto`
     );
-  const componentes = linhasDeBotoes(
-    visiveis.map((p) => btn(`estadm:${acao}:${catId}:${p.id}`, p.nome, ButtonStyle.Primary))
-  );
+  const opcoes = visiveis.map((p) => {
+    const s = estoque.status(p);
+    const qtd = p.controlarQtd ? ` • ${p.quantidade ?? 0} un.` : '';
+    return {
+      label: `${p.nome} — ${formatBRL(p.valor)}`.slice(0, 100),
+      value: p.id,
+      description: `${s.emoji} ${s.texto}${qtd}`.slice(0, 100),
+    };
+  });
+  const componentes = [menuSelecao(`estadm:selprod:${acao}:${catId}:${paginaAtual}`, '📦 Selecione o produto', opcoes)];
   const nav = paginaNav('prodpag', paginaAtual, totalPaginas, `${acao}:${catId}:`);
   if (nav.length) componentes.push(row(...nav));
   return { embeds: [embed], components: componentes };

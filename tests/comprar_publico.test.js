@@ -224,8 +224,12 @@ function cadastrar(catNome, catId, prodNome, valor, qtd) {
     check('TESTE 1: /comprar responde com o painel de categorias (publico)', () => {
       assert.ok(ultimaResposta && Array.isArray(ultimaResposta.embeds), 'painel com embed');
       assert.ok(!(ultimaResposta.flags & MessageFlags.Ephemeral), 'sem resposta ephemeral');
-      const botoes = JSON.stringify(ultimaResposta.components.map((r) => r.toJSON()));
-      assert.ok(botoes.includes('comp:cat:doces'), 'botao de categoria doces');
+      const json = ultimaResposta.components.map((r) => r.toJSON());
+      const select = json.find((r) => r.components.some((c) => c.type === 3));
+      assert.ok(select, 'painel traz um menu de seleção de categoria');
+      assert.strictEqual(select.components.length, 1, 'select fica sozinho na linha');
+      assert.strictEqual(select.components[0].custom_id, 'comp:selcat:0', 'customId do select de categoria');
+      assert.ok(select.components[0].options.some((o) => o.value === 'doces'), 'categoria doces no menu');
     });
     check('TESTE 1b: /comprar registra a posse da mensagem do painel', () => {
       const r = carrinhoStore.ref(GUILD, CLIENTE);

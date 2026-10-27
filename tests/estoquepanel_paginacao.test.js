@@ -33,7 +33,7 @@ function testeNavegacao() {
 }
 
 // Paginação das telas de escolha de categoria/produto no painel de estoque.
-// Antes, só os 5 primeiros itens apareciam (slice(0,5)) e o resto ficava inacessível.
+// Agora usam menu de seleção: 25 opções por página, em vez de 5 botões.
 
 const GUILD = 'g-pag-test';
 const GID_PREFIX = 'categoria-pag';
@@ -44,36 +44,48 @@ try {
     estoque.addProduto(GUILD, cat.id, { nome: 'Produto ' + i, valor: i, controlarQtd: true, quantidade: 5 });
   }
 
-  // Página 0 mostra os 5 primeiros
+  // Página 0 mostra os 12 (cabe tudo em 25)
   const p0 = estoquePanel.adminEscolherProduto(GUILD, 'vender3', cat.id, 0);
-  const labels0 = p0.components[0].components.map((c) => c.data.label);
-  assert.deepStrictEqual(labels0, ['Produto 1', 'Produto 2', 'Produto 3', 'Produto 4', 'Produto 5'], 'página 0 = 5 primeiros');
-  assert.ok(p0.components[1].components.some((c) => c.data.label === 'Próxima ▶️'), 'página 0 tem Próxima');
-  assert.ok(!p0.components[1].components.some((c) => c.data.label === '◀️ Anterior'), 'página 0 não tem Anterior');
+  const sel0 = p0.components[0].toJSON();
+  assert.strictEqual(sel0.components[0].type, 3, 'escolha de produto traz um select');
+  assert.strictEqual(sel0.components[0].options.length, 12, 'página 0 mostra os 12 produtos');
+  assert.strictEqual(sel0.components[0].options[0].label.split(' — ')[0], 'Produto 1', 'primeiro é Produto 1');
+  assert.ok(
+    sel0.components[0].options.some((o) => o.value === 'produto-12'),
+    'produto-12 acessível no menu'
+  );
+  // 12 itens cabem numa página: só o select + a linha com "Voltar" (sem paginação)
+  assert.strictEqual(p0.components.length, 2, 'uma linha de select + uma de navegação');
+  const nav0ids = p0.components[1].components.map((c) => c.data.custom_id);
+  assert.deepStrictEqual(nav0ids, ['estadm:menu'], 'sem paginação quando tudo cabe');
+  // Custom id do select carrega ação, categoria e página
+  assert.strictEqual(sel0.components[0].custom_id, `estadm:selprod:vender3:${cat.id}:0`, 'customId do select de produto');
 
-  // Última página alcança o produto 11 e 12, incluindo o de id produto-12
-  const p2 = estoquePanel.adminEscolherProduto(GUILD, 'vender3', cat.id, 2);
-  assert.deepStrictEqual(p2.components[0].components.map((c) => c.data.label), ['Produto 11', 'Produto 12'], 'última página tem os últimos produtos');
-  assert.ok(p2.components[0].components.some((c) => c.data.custom_id === `estadm:vender3:${cat.id}:produto-12`), 'produto-12 acessível via página 2');
-  assert.ok(p2.embeds[0].data.title.includes('(3/3)'), 'título indica página 3/3');
-
-  // Custom ids de navegação corretos: estadm:prodpag:<acao>:<catId>:<pag>
+  // Com mais de 25 produtos, aí sim pagina
+  for (let i = 13; i <= 30; i++) {
+    estoque.addProduto(GUILD, cat.id, { nome: 'Produto ' + i, valor: i, controlarQtd: true, quantidade: 5 });
+  }
+  const p2 = estoquePanel.adminEscolherProduto(GUILD, 'vender3', cat.id, 1);
+  const sel1 = p2.components[0].toJSON();
+  assert.strictEqual(sel1.components[0].options.length, 5, 'página 1 tem os 5 restantes');
+  assert.ok(p2.embeds[0].data.title.includes('(2/2)'), 'título indica página 2/2');
   const nav = p2.components[1].components.map((c) => c.data.custom_id);
-  assert.ok(nav.includes(`estadm:prodpag:vender3:${cat.id}:1`), 'nav Anterior com customId correto');
+  assert.ok(nav.includes(`estadm:prodpag:vender3:${cat.id}:0`), 'nav Anterior com customId correto');
 
   // Clamping: página além do fim cai na última; NaN vira 0
   const p99 = estoquePanel.adminEscolherProduto(GUILD, 'vender3', cat.id, 99);
-  assert.strictEqual(p99.components[0].components[0].data.label, 'Produto 11', 'página 99 clampa para a última');
+  assert.strictEqual(p99.components[0].toJSON().components[0].options[0].label.split(' — ')[0], 'Produto 26', 'página 99 clampa para a última');
   const pNaN = estoquePanel.adminEscolherProduto(GUILD, 'vender3', cat.id, NaN);
-  assert.strictEqual(pNaN.components[0].components[0].data.label, 'Produto 1', 'NaN vira página 0');
+  assert.strictEqual(pNaN.components[0].toJSON().components[0].options[0].label.split(' — ')[0], 'Produto 1', 'NaN vira página 0');
 
-  // Paginação de categorias (8 categorias = 2 páginas)
+  // Paginação de categorias (8 categorias cabem numa página de 25)
   for (let i = 1; i <= 8; i++) estoque.addCategoria(GUILD, 'Cat ' + i);
   const c0 = estoquePanel.adminEscolherCategoria(GUILD, 'qtd2', 0);
-  assert.strictEqual(c0.components[0].components.length, 5, 'página 0 de categoria = 5');
-  assert.ok(c0.components[1].components.some((c) => c.data.custom_id.startsWith('estadm:catpag:qtd2:1')), 'nav categoria Próxima');
-  const c1 = estoquePanel.adminEscolherCategoria(GUILD, 'qtd2', 1);
-  assert.ok(c1.components[0].components.some((c) => c.data.label.includes('Cat 8')), 'categoria 8 acessível na página 1');
+  const csel0 = c0.components[0].toJSON();
+  assert.strictEqual(csel0.components[0].type, 3, 'escolha de categoria traz um select');
+  assert.strictEqual(csel0.components[0].options.length, 9, 'mostra as 9 categorias (1 + 8)');
+  assert.ok(csel0.components[0].options.some((o) => o.label.startsWith('Cat 8')), 'categoria 8 acessível');
+  assert.strictEqual(csel0.components[0].custom_id, 'estadm:selcat:qtd2:0', 'customId do select de categoria');
 
   console.log('testes estoquePanel paginação OK');
 } finally {
@@ -85,18 +97,23 @@ try {
   try { fs.rmSync(arquivo); } catch {}
 }
 
-// Paginação pública: lista de categorias e lista de produtos
+// Paginação pública: lista de categorias (select, 25 por página) e lista de
+// produtos (texto, 5 por página).
 function testePublicoPaginado() {
   const G = 'g-pub-pag-' + Date.now();
-  // 7 categorias -> página 0 = 5, página 1 = 2
-  for (let i = 1; i <= 7; i++) estoque.addCategoria(G, 'Pub Cat ' + i);
+  // 30 categorias -> página 0 = 25, página 1 = 5
+  for (let i = 1; i <= 30; i++) estoque.addCategoria(G, 'Pub Cat ' + i);
   const pc0 = estoquePanel.publicoCategorias(G, 0);
-  assert.strictEqual(pc0.components[0].components.length, 5, 'página 0 pública = 5 categorias');
+  const sel0 = pc0.components[0].toJSON();
+  assert.strictEqual(sel0.components[0].type, 3, 'página 0 pública traz um select');
+  assert.strictEqual(sel0.components[0].options.length, 25, 'select mostra 25 categorias');
   const nav0 = pc0.components[1].components.map((c) => c.data.custom_id);
   assert.ok(nav0.includes('estfixo:nextcat:1'), 'página 0 pública tem Próxima');
-  assert.ok(!nav0.includes('estfixo:prevcat'), 'página 0 pública não tem Anterior');
+  assert.ok(!nav0.includes('estfixo:prevcat:0'), 'página 0 pública não tem Anterior');
   const pc1 = estoquePanel.publicoCategorias(G, 1);
-  assert.strictEqual(pc1.components[0].components.length, 2, 'página 1 pública = 2 categorias');
+  const sel1 = pc1.components[0].toJSON();
+  assert.strictEqual(sel1.components[0].options.length, 5, 'página 1 pública = 5 categorias');
+  assert.strictEqual(sel1.components[0].custom_id, 'estfixo:selcat:1', 'select da página 1 carrega a página');
   assert.ok(pc1.components[1].components.some((c) => c.data.custom_id === 'estfixo:prevcat:0'), 'página 1 pública tem Anterior');
   assert.ok(pc1.embeds[0].data.title.includes('(2/2)'), 'título público mostra página 2/2');
 

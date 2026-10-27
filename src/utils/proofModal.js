@@ -139,17 +139,20 @@ function buildProofFormulario(userId, guild, dados) {
       .setChannelTypes([ChannelType.GuildText])
   );
 
+  // Um select menu precisa ficar SOZINHO na ActionRow (a API do Discord rejeita
+  // select + botao na mesma linha com 50035). Por isso o botao "Fora do Discord"
+  // fica na linha dos botoes, junto de Confirmar/Cancelar.
   const linhaCliente = new ActionRowBuilder().addComponents(
     new UserSelectMenuBuilder()
       .setCustomId('proofsel:cliente')
       .setPlaceholder(dados.clienteNome ? `Cliente: ${dados.clienteNome} (fora do Discord)` : 'Selecione o cliente (busca por @)')
       .setMinValues(0)
-      .setMaxValues(1),
-    new ButtonBuilder().setCustomId('proofsel:plataforma').setLabel('🌐 Fora do Discord').setStyle(ButtonStyle.Secondary)
+      .setMaxValues(1)
   );
 
   const linhaBotao = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId('proofsel:confirmar').setLabel('✅ Confirmar e postar').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId('proofsel:plataforma').setLabel('🌐 Fora do Discord').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('proofsel:cancelar').setLabel('❌ Cancelar').setStyle(ButtonStyle.Danger)
   );
   linhas.push(linhaCanal, linhaCliente, linhaBotao);
