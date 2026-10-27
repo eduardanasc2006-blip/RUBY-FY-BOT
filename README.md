@@ -100,9 +100,9 @@ As taxas por padrão ficam em `src/config/rates.js` e podem ser alteradas **em t
    - `DISCORD_TOKEN` = token do seu bot
    - `CLIENT_ID` = ID do aplicativo (opcional — o bot também usa `client.application.id`)
    - `ADMIN_IDS` = (opcional) IDs de administradores extras
-3. Inicie: `npm start` (registra os comandos e sobe o bot)
+3. Inicie: `npm start` (sobe o bot; os comandos são sincronizados no boot)
 
-> Os slash commands são **sincronizados automaticamente no boot** via `src/index.js` — não é preciso rodar `npm run deploy` manualmente na Discloud.
+> Os slash commands são **sincronizados automaticamente no boot** via `src/index.js` — não é preciso rodar `npm run deploy` manualmente, nem na Discloud nem local. Use `npm run deploy` só se quiser forçar um re-registro avulso.
 
 ## Deploy (Discloud)
 

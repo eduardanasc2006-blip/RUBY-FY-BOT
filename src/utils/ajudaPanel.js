@@ -171,7 +171,7 @@ const PAGINAS = {
       '*Depois de finalizar, o pedido fica `🟡 Aguardando pagamento` no ticket. Quem tem o grupo **🛒 Vendas e pedidos** usa `🟢 Confirmar pagamento` (vira `🟢 Pago` e baixa o estoque) ou `❌ Cancelar pedido` (libera a reserva).*',
       '',
       '➜ **/cliente <@usuário>**',
-      '*Mostra os cargos de cliente já conquistados.*',
+      '*Mostra os cargos de cliente já conquistados. A resposta é pública, visível para todos no canal.*',
       '',
       '➜ **/encomenda**',
       '*Solicita um item que não está no estoque imediato. Escolha categoria, item e quantidade, confira o resumo e confirme.*',

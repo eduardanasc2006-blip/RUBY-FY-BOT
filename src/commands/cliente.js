@@ -34,6 +34,7 @@ module.exports = {
         (cargos.length ? cargos.map((c) => `• ${c}`).join('\n') : '*Nenhum cargo conquistado ainda.*')
       );
 
-    return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+    // Resposta pública: o perfil do cliente é visível para todos no canal.
+    return interaction.reply({ embeds: [embed] });
   },
 };
