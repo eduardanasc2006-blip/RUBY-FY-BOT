@@ -6,24 +6,30 @@ const path = require('node:path');
 // respostas quando o host/Discloud sobe o processo duas vezes, ex.: MAIN +
 // START apontando para o mesmo arquivo, ou restart sem matar o processo antigo).
 const LOCK_FILE = path.join(__dirname, '..', '.bot.lock');
+const LOCK_MAX_IDADE_MS = 10 * 60 * 1000; // lock mais velho que isso e considerado obsoleto
 function tentarObterLock() {
   try {
     const pid = Number(fs.readFileSync(LOCK_FILE, 'utf8'));
-    if (pid > 0 && pid !== process.pid) {
+    // PID 1 e o init do container: process.kill(1, 0) sempre "existe" no Linux,
+    // entao nunca pode ser tratado como outra instancia. Um lock com PID 1 veio
+    // de um restart/reconnect anterior (ex.: Discloud) e deve ser reutilizado.
+    if (pid > 1 && pid !== process.pid) {
+      let vivo = false;
       try {
         process.kill(pid, 0); // só checa se o processo existe, sem matar
-        // No Discloud o Node roda como PID 1 (init do container). Se o lock
-        // guardou o PID 1 de uma execucao anterior (ex.: restart/reconnect sem
-        // o handler de exit rodar), process.kill(1, 0) sempre devolve sucesso
-        // no Linux — mesmo para o proprio processo, causando falso positivo de
-        // "outra instancia". Por isso, se o PID do lock e o nosso proprio PID
-        // (checado acima no `pid !== process.pid`), assumimos o lock normalmente.
-        if (process.kill(pid, 0)) {
+        vivo = true;
+      } catch {
+        vivo = false; // PID antigo morto → pode assumir o lock
+      }
+      // Mesmo com o PID vivo, um lock antigo (ex.: PID reciclado pelo sistema)
+      // nao deve bloquear o boot para sempre.
+      if (vivo) {
+        const idade = Date.now() - fs.statSync(LOCK_FILE).mtimeMs;
+        if (idade < LOCK_MAX_IDADE_MS) {
           console.error(`⚠️ Outra instância do bot já está rodando (PID ${pid}). Encerrando para evitar respostas duplicadas.`);
           return false;
         }
-      } catch {
-        // PID antigo morto → pode assumir o lock
+        console.error(`⚠️ Lock obsoleto do PID ${pid} (${Math.round(idade / 1000)}s). Assumindo o controle.`);
       }
     }
   } catch {}
@@ -61,6 +67,7 @@ const {
   ModalBuilder,
   Partials,
   MessageFlags,
+  Options,
   PermissionFlagsBits,
   TextInputBuilder,
   TextInputStyle,
@@ -94,6 +101,21 @@ const client = new Client({
   ],
   // Necessário para receber mensagens e interações em DM (canal parcial)
   partials: [Partials.Channel],
+  // Teto para os caches internos: sem isso o discord.js guarda tudo que passa
+  // (mensagens, membros, reações) e o RSS passa dos 100MB do plano, fazendo a
+  // Discloud matar o processo (app "fica carregando" e cai sem log).
+  makeCache: Options.cacheWithLimits({
+    ...Options.DefaultMakeCacheSettings,
+    MessageManager: 25,
+    PresenceManager: 0,
+    GuildMemberManager: { maxSize: 50, keepOverLimit: (m) => m.id === client.user?.id },
+    GuildBanManager: 0,
+    GuildInviteManager: 0,
+    ReactionManager: 0,
+    ReactionUserManager: 0,
+    StageInstanceManager: 0,
+    VoiceStateManager: 0,
+  }),
   // Sweepers: limpa automaticamente do cache mensagens e reações antigas,
   // impedindo que a RAM cresça sem limite com o uso.
   sweepers: {
@@ -1967,7 +1989,7 @@ client.on('interactionCreate', async (interaction) => {
           new ActionRowBuilder().addComponents(
             new TextInputBuilder()
               .setCustomId('mensagem')
-              .setLabel('Mensagem ao usar fora dos canais (use {canais} p/ citar)')
+              .setLabel('Mensagem fora dos canais ({canais} = canais)')
               .setStyle(TextInputStyle.Paragraph)
               .setRequired(false)
               .setMaxLength(500)
@@ -4010,4 +4032,16 @@ client.once('ready', () => {
   }
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.DISCORD_TOKEN).catch((error) => {
+  const codigo = error?.code || error?.message || error;
+  if (codigo === 'TokenInvalid' || String(codigo).includes('TokenInvalid')) {
+    console.error('❌ DISCORD_TOKEN inválido ou expirado. Gere um token novo no Developer Portal e atualize a variável DISCORD_TOKEN na Discloud.');
+  } else if (codigo === 'DisallowedIntents') {
+    console.error('❌ Intents privilegiadas desativadas. Ative "Message Content Intent" no Developer Portal.');
+  } else {
+    console.error('❌ Falha ao conectar no Discord:', codigo);
+  }
+  logErroRotulo('login', error);
+  // Sai com código != 0 para a Discloud marcar a app como falha e reiniciar.
+  process.exit(1);
+});

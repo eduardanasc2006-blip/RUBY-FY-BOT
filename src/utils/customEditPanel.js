@@ -70,7 +70,7 @@ function modalEditar(cmd) {
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
           .setCustomId('titulo')
-          .setLabel('Título da embed (opcional; vazio = sem título)')
+          .setLabel('Título da embed (vazio = sem título)')
           .setStyle(TextInputStyle.Short)
           .setRequired(false)
           .setMaxLength(256)
