@@ -152,7 +152,7 @@ client.once(Events.ClientReady, () => {
       const { REST, Routes } = require('discord.js');
       const clientId = client.application?.id || process.env.CLIENT_ID;
       if (!process.env.DISCORD_TOKEN || !clientId) return;
-      const PUBLICOS = new Set(['ajuda', 'estoque', 'gamepass', 'reais', 'robux', 'taxa', 'calc', 'comprar']);
+      const PUBLICOS = new Set(['ajuda', 'estoque', 'gamepass', 'reais', 'robux', 'taxa', 'calc', 'comprar', 'encomenda']);
       const commands = [];
       const commandsPath = pathDeploy.join(__dirname, 'commands');
       for (const file of fsDeploy.readdirSync(commandsPath).filter((f) => f.endsWith('.js'))) {
