@@ -9,9 +9,9 @@ Bot de Discord para **conversão de Robux ↔ Reais**, gerenciamento de **estoqu
   - **Painel fixo** no canal (qualquer membro clica numa categoria e vê os produtos de forma privada)
   - **Configuração paginada** (categorias/produtos) via `!configestoque`
 - 🛒 **Carrinho e compra** com finalização de pedido e log por produto
-- 🧾 **Proof (comprovante)**: comandos de postagem de comprovante e configuração via `!proof`/`!setproof`
+- 🧾 **Proof (comprovante)**: comandos de postagem de comprovante (`!proof`/`/proof`) e configuração via `/setproof`
 - 📨 **Embeds personalizadas** com editor visual (`!embed`): título, descrição, cor, imagem, thumbnail, autor, rodapé, fields, botões (link ou **privado** com conteúdo por clique), páginas de conteúdo privado
-- ⚡ **Metas por cargo** (`!metas`) — requisito de valor/quantidade de vendas para liberar cargo
+- ⚡ **Metas por cargo** (`/metas`) — requisito de valor/quantidade de vendas para liberar cargo
 - 👋 **Boas-vindas** (`!setwelcome`) com variáveis
 - 🤖 **Respostas automáticas** (`!autoresposta`) por palavra-chave
 - 🔒 **Permissões por cargo** (`!permissoes`) nos grupos de comandos
@@ -20,7 +20,7 @@ Bot de Discord para **conversão de Robux ↔ Reais**, gerenciamento de **estoqu
 
 ## Comandos
 
-Todos funcionam com **prefixo `!`** (`!robux 1000`) e também como **slash command** (`/robux valor:1000`).
+A maioria funciona com **prefixo `!`** (`!robux 1000`) **e** como **slash command** (`/robux valor:1000`). Quando um comando só tem uma das formas, a tabela mostra apenas a que existe.
 
 ### Conversão / utilidades
 
@@ -44,11 +44,11 @@ Todos funcionam com **prefixo `!`** (`!robux 1000`) e também como **slash comma
 | `!painelestoque` / `/painelestoque` | Publica/atualiza o painel fixo de estoque no canal |
 | `!painelcategoria` / `/painelcategoria` | Fixa no canal os produtos de uma categoria (escolhe em qual canal publicar) |
 | `!canalavisos` / `/canalavisos` | Canal onde avisar quando um produto esgota |
-| `!comprar` / `/comprar` | Fluxo de compra (carrinho) |
-| `!cliente` / `/cliente` | Mostra os cargos de cliente conquistados |
+| `/comprar` | Fluxo de compra (carrinho) |
+| `/cliente` | Mostra os cargos de cliente conquistados |
 | `!venda` / `/venda` | Lança uma venda feita **fora do `/comprar`** (pix direto, DM) e credita no gasto do cliente e nas metas |
-| `!encomenda` / `/encomenda` | Solicita um item fora do estoque imediato (encomenda) |
-| `!metas` / `/metas` | Configura metas de cargos por valor gasto ou quantidade de vendas |
+| `/encomenda` | Solicita um item fora do estoque imediato (encomenda) |
+| `/metas` | Configura metas de cargos por valor gasto ou quantidade de vendas |
 
 ### Conversão (admin)
 
@@ -69,7 +69,7 @@ Todos funcionam com **prefixo `!`** (`!robux 1000`) e também como **slash comma
 | `!criarcomando` / `/criarcomando` | Cria comando personalizado (resposta com copiáveis/links) |
 | `!gerenciarcomandos` / `/gerenciarcomandos` | Edita/remove comandos personalizados |
 | `!proof` / `/proof` | Posta comprovante (proof) com imagens e dados |
-| `!setproof` / `/setproof` | Configura o canal/log de proofs |
+| `/setproof` | Configura o canal/log de proofs |
 | `!canalcomando` / `/canalcomando` | Restringe comandos a canais específicos (admins e cargos autorizados passam em qualquer canal; a mensagem de bloqueio é personalizável e aceita `{canais}`) |
 
 ### Automação e moderação (admin)
