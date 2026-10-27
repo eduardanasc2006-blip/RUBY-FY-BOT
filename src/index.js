@@ -91,10 +91,10 @@ if (!process.env.DISCORD_TOKEN) {
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    // GatewayIntentBits.GuildMembers removido: baixava TODOS os membros de
-    // todos os servidores para a RAM (estourava os 100MB). Sem ele, o cache
-    // só guarda o que for buscado pontualmente (fetch individual, memberCount
-    // continua disponível via metadata do guild).
+    // GatewayIntentBits.GuildMembers removido de propósito: baixaria TODOS os
+    // membros de todos os servidores para a RAM sem necessidade. Sem ele, o
+    // cache só guarda o que for buscado pontualmente (fetch individual;
+    // memberCount continua disponível via metadata do guild).
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent,
@@ -102,8 +102,7 @@ const client = new Client({
   // Necessário para receber mensagens e interações em DM (canal parcial)
   partials: [Partials.Channel],
   // Teto para os caches internos: sem isso o discord.js guarda tudo que passa
-  // (mensagens, membros, reações) e o RSS passa dos 100MB do plano, fazendo a
-  // Discloud matar o processo (app "fica carregando" e cai sem log).
+  // (mensagens, membros, reações) e o RSS cresce sem limite com o uso.
   makeCache: Options.cacheWithLimits({
     ...Options.DefaultMakeCacheSettings,
     MessageManager: 25,
@@ -4020,9 +4019,9 @@ extrasHandlers.registrar(client);
 const customEditHandlers = require('./utils/customEditHandler');
 customEditHandlers.registrar(client);
 
-// Sem o intent GuildMembers, guild.members.me fica vazio até um fetch. Fazer o
-// fetch individual do próprio bot por servidor no boot preenche o cache sem
-// baixar a lista completa de membros (economiza RAM — cabe nos 100MB).
+// Sem o intent GuildMembers, guild.members.me fica vazio até um fetch. Buscar
+// só o próprio bot por servidor preenche o cache sem baixar a lista completa
+// de membros.
 client.once('ready', () => {
   console.log(`✅ Bot on-line como ${client.user?.tag} em ${client.guilds.cache.size} servidores.`);
   const botId = client.user?.id;
