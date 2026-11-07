@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { publicoCategorias } = require('../utils/estoquePanel');
 const estoque = require('../utils/estoque');
+const pedidoStore = require('../utils/pedidoStore');
 const { formatBRL } = require('../utils/robuxConverter');
 
 module.exports = {
@@ -24,8 +25,9 @@ module.exports = {
       for (const cat of estoque.categorias(interaction.guildId)) {
         for (const p of cat.produtos) {
           if (p.nome.toLowerCase().includes(alvo)) {
-            const s = estoque.status(p);
-            const qtd = p.controlarQtd && p.quantidade > 1 ? `\n📦 ${p.quantidade} unidades` : '';
+            const disp = p.controlarQtd ? pedidoStore.disponivel(interaction.guildId, p, cat.id, p.id) : null;
+            const s = estoque.status(p, disp);
+            const qtd = disp != null && disp > 1 ? `\n📦 ${disp} unidades` : '';
             resultados.push(
               `${s.emoji} **${p.nome}** *(${cat.nome})*\n💵 ${formatBRL(p.valor)}\n${s.texto}${qtd}`
             );

@@ -196,11 +196,14 @@ const estoque = {
   },
 
   // ----- status de exibição -----
-  status(p) {
+  // `qtdEfetiva` permite avaliar o status pela quantidade DISPONIVEL (estoque
+  // menos reservas de pedidos pendentes), em vez do total bruto do estoque.
+  status(p, qtdEfetiva) {
     if (!p.ativo) return { emoji: '🔴', texto: 'Indisponível' };
     if (!p.controlarQtd) return { emoji: '🟢', texto: 'Disponível' };
-    if (p.quantidade > 1) return { emoji: '🟢', texto: 'Disponível' };
-    if (p.quantidade === 1) return { emoji: '🟢', texto: 'Última unidade' };
+    const q = qtdEfetiva == null ? p.quantidade : qtdEfetiva;
+    if (q > 1) return { emoji: '🟢', texto: 'Disponível' };
+    if (q === 1) return { emoji: '🟢', texto: 'Última unidade' };
     return { emoji: '🔴', texto: 'Indisponível' };
   },
 };

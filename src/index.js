@@ -3556,6 +3556,19 @@ client.on('interactionCreate', async (interaction) => {
           return interaction.reply({ content: '❌ Não foi possível finalizar: itens podem ter ficado sem estoque ou desativados.', flags: MessageFlags.Ephemeral });
         }
 
+        // Avisa o cliente (em particular) sobre itens que saíram do carrinho por
+        // falta de estoque/desativação — antes eles sumiam em silêncio e o
+        // cliente só notava no total do pedido.
+        const noPedido = new Set(itensDoPedido(pedido).map((i) => `${i.catId}:${i.prodId}`));
+        const removidos = itens.filter((i) => !noPedido.has(`${i.catId}:${i.prodId}`));
+        if (removidos.length) {
+          const lista = removidos.map((i) => `• **${i.nome}** × ${i.quantidade}`).join('\n');
+          interaction.followUp({
+            content: '⚠️ Estes itens saíram do carrinho por falta de estoque e **não** entraram no pedido:\n' + lista,
+            flags: MessageFlags.Ephemeral,
+          }).catch(() => {});
+        }
+
         // O pedido continua sendo registrado no canal de logs (historico).
         const logCriado = logDoPedido(pedido, { acao: 'criado' });
         logComprasStore.enviar(interaction.client, guildId, logCriado);
@@ -3705,21 +3718,40 @@ client.on('interactionCreate', async (interaction) => {
         // passar dos 3s. Responde já e edita a mensagem depois.
         await interaction.deferUpdate().catch(() => {});
 
-        // Baixa de estoque conforme a logica existente, item por item.
+        // Baixa de estoque: valida TODOS os itens antes de baixar qualquer um.
+        // Antes a baixa era item por item e, se um item posterior estivesse sem
+        // estoque, os anteriores ja tinham sido baixados — o estoque vazava
+        // (baixa parcial) e o pedido nao era confirmado.
+        const itensConfirmar = itensDoPedido(pedido);
         let semEstoque = false;
-        for (const item of itensDoPedido(pedido)) {
+        for (const item of itensConfirmar) {
           const produto = estoqueCompras.produto(guildId, item.catId, item.prodId);
           if (!produto || !produto.controlarQtd) continue;
           const reservadosOutros = pedidoStore.reservado(guildId, item.catId, item.prodId) - item.quantidade;
           const disponivelReal = (produto.quantidade || 0) - reservadosOutros;
           if (disponivelReal < item.quantidade) { semEstoque = true; break; }
-          estoqueCompras.setQuantidade(guildId, item.catId, item.prodId, (produto.quantidade || 0) - item.quantidade);
         }
         if (semEstoque) {
           return interaction.editReply({
             content: '❌ Estoque insuficiente para este pedido agora. Peça ao cliente para aguardar reposição ou cancele o pedido.',
             components: [],
           }).catch(() => {});
+        }
+        for (const item of itensConfirmar) {
+          const produto = estoqueCompras.produto(guildId, item.catId, item.prodId);
+          if (!produto || !produto.controlarQtd) continue;
+          estoqueCompras.setQuantidade(guildId, item.catId, item.prodId, (produto.quantidade || 0) - item.quantidade);
+        }
+
+        // O estoque mudou: atualiza os paineis fixos e avisa quem esgotou
+        // (mesmo tratamento que o admin tem ao vender pelo painel).
+        refreshPainelEstoque(client).catch(() => {});
+        painelCategoria.refresh(client).catch(() => {});
+        for (const item of itensConfirmar) {
+          const produto = estoqueCompras.produto(guildId, item.catId, item.prodId);
+          if (produto && produto.controlarQtd && produto.quantidade === 0) {
+            avisar(client, guildId, `⚠️ **${produto.nome}** esgotou no estoque!`).catch(() => {});
+          }
         }
 
         const conquistadas = metasConquistadas(guildId, pedido.clienteId, pedido.valor);
