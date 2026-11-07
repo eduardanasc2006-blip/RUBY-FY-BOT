@@ -3776,6 +3776,9 @@ client.on('interactionCreate', async (interaction) => {
         metasStoreCompra.removerMeta(guildId, partes[2]);
         return interaction.update(buildMetasPainel(interaction.guild, userId));
       }
+      if (acao === 'pag') {
+        return interaction.update(buildMetasPainel(interaction.guild, userId, partes[2]));
+      }
       if (acao === 'refresh') {
         return interaction.update(buildMetasPainel(interaction.guild, userId));
       }
