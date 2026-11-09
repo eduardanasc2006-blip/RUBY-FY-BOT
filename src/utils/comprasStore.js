@@ -153,4 +153,60 @@ function removerLancamento(guildId, lancamentoId) {
   return lancamento;
 }
 
-module.exports = { base, somarPedido, addCargoMeta, cliente, registrarVenda, cargosDoCliente, dadosDoCliente, registrarVendaManual, obterLancamento, listarLancamentos, removerLancamento };
+// Remove UMA venda de um lançamento que tem várias (remoção parcial). Se o
+// lançamento tiver só 1 venda, remove o lançamento inteiro (igual a removerLancamento).
+// Devolve { removido: {id, valor, quantidade, descricao}, restante: {valor, quantidade}|null }.
+function removerVendaParcial(guildId, lancamentoId) {
+  const lista = lancamentos(guildId);
+  const l = lista.find((x) => x.id === lancamentoId);
+  if (!l) return null;
+
+  const q = Math.max(1, Number(l.quantidade) || 1);
+  if (q <= 1) {
+    const removido = removerLancamento(guildId, lancamentoId);
+    if (!removido) return null;
+    return {
+      removido: { id: removido.id, valor: removido.valor, quantidade: removido.quantidade || 1, descricao: removido.descricao },
+      restante: null,
+    };
+  }
+
+  // valor é o total do lançamento; a venda removida vale valor/quantidade.
+  const valorAntigo = Number(l.valor) || 0;
+  const valorNovo = Math.round(((valorAntigo * (q - 1)) / q) * 100) / 100;
+  const valorRemovido = Math.round((valorAntigo - valorNovo) * 100) / 100;
+
+  l.quantidade = q - 1;
+  l.valor = valorNovo;
+
+  const b = base(guildId);
+  const c = cliente(guildId, l.clienteId);
+  c.vendas = Math.max(0, (c.vendas || 0) - 1);
+  c.gasto = Math.max(0, Math.round(((c.gasto || 0) - valorRemovido) * 100) / 100);
+  b.pedidos = Math.max(0, (b.pedidos || 0) - 1);
+  b.gasto = Math.max(0, Math.round(((b.gasto || 0) - valorRemovido) * 100) / 100);
+  salvar();
+
+  return {
+    removido: { id: l.id, valor: valorRemovido, quantidade: 1, descricao: l.descricao },
+    restante: { valor: l.valor, quantidade: l.quantidade },
+  };
+}
+
+// Lista os clientes com compras (gasto/vendas), do que mais gastou para o que
+// menos gastou. Usado pelo painel admin /clientes.
+function listarClientes(guildId) {
+  const b = base(guildId);
+  const mapa = b.clientes || {};
+  return Object.entries(mapa)
+    .map(([clienteId, c]) => ({
+      clienteId,
+      vendas: c.vendas || 0,
+      gasto: c.gasto || 0,
+      cargos: c.cargos || [],
+    }))
+    .filter((c) => c.vendas > 0 || c.gasto > 0)
+    .sort((a, c) => c.gasto - a.gasto || c.vendas - a.vendas);
+}
+
+module.exports = { base, somarPedido, addCargoMeta, cliente, registrarVenda, cargosDoCliente, dadosDoCliente, registrarVendaManual, obterLancamento, listarLancamentos, removerLancamento, removerVendaParcial, listarClientes };

@@ -218,6 +218,8 @@ function painelRemoverLancamento(guildId, clienteId, pagina = 0) {
 }
 
 // Confirmação antes de remover (evita clique errado apagar a venda).
+// Quando o lançamento tem mais de 1 venda, oferece remover SÓ UMA venda ou o
+// lançamento inteiro.
 function confirmarRemocaoLancamento(guildId, clienteId, lancamentoId) {
   const l = comprasStore.obterLancamento(guildId, lancamentoId);
   if (!l) {
@@ -226,36 +228,49 @@ function confirmarRemocaoLancamento(guildId, clienteId, lancamentoId) {
       components: [],
     };
   }
-  const qtd = l.quantidade > 1 ? ` (${l.quantidade} vendas)` : '';
+  const q = Math.max(1, Number(l.quantidade) || 1);
   const embed = new EmbedBuilder()
     .setColor(0xe74c3c)
     .setTitle('⚠️ Remover lançamento')
     .setDescription(
-      `Confirma remover o lançamento **#${l.id}**?\n\n` +
-      `💰 Valor: **${formatBRL(l.valor)}**${qtd}\n` +
+      `Lançamento **#${l.id}**\n\n` +
+      `💰 Valor: **${formatBRL(l.valor)}**${q > 1 ? ` (${q} vendas de ${formatBRL(l.valor / q)})` : ''}\n` +
       `📅 ${dataLancamento(l.registradoEm)}` +
       (l.descricao ? `\n📝 ${l.descricao}` : '') +
-      '\n\n*O valor/vendas saem do gasto do cliente. Cargos já concedidos não são removidos.*'
+      (q > 1 ? '\n\nEscolha: remover **só 1 venda** ou o **lançamento inteiro**.' : '') +
+      '\n\n*Cargos já concedidos não são removidos.*'
     );
-  return {
-    embeds: [embed],
-    components: [new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId(`venda:confrem:${clienteId}:${l.id}`).setLabel('Sim, remover').setStyle(ButtonStyle.Danger),
-      new ButtonBuilder().setCustomId(`venda:listar:${clienteId}:0`).setLabel('Não').setStyle(ButtonStyle.Secondary)
-    )],
-  };
+
+  const botoes = [];
+  if (q > 1) {
+    botoes.push(new ButtonBuilder().setCustomId(`venda:confum:${clienteId}:${l.id}`).setLabel('Remover 1 venda').setStyle(ButtonStyle.Danger));
+    botoes.push(new ButtonBuilder().setCustomId(`venda:confrem:${clienteId}:${l.id}`).setLabel(`Remover tudo (${q})`).setStyle(ButtonStyle.Danger));
+  } else {
+    botoes.push(new ButtonBuilder().setCustomId(`venda:confrem:${clienteId}:${l.id}`).setLabel('Sim, remover').setStyle(ButtonStyle.Danger));
+  }
+  botoes.push(new ButtonBuilder().setCustomId(`venda:listar:${clienteId}:0`).setLabel('Não').setStyle(ButtonStyle.Secondary));
+
+  return { embeds: [embed], components: [new ActionRowBuilder().addComponents(...botoes)] };
 }
 
 // Embed de confirmação do que foi removido, com o novo gasto do cliente.
-function embedRemocaoFeita(removido, clienteId, resumo) {
-  const qtd = removido.quantidade > 1 ? ` (${removido.quantidade} vendas)` : '';
+// `resultado` = retorno de comprasStore.removerLancamento (lançamento) ou de
+// removerVendaParcial ({ removido, restante }).
+function embedRemocaoFeita(resultado, clienteId, resumo) {
+  const parcial = resultado && resultado.removido ? resultado.removido : resultado;
+  const restante = resultado && resultado.restante ? resultado.restante : null;
+  const qtd = parcial.quantidade > 1 ? ` (${parcial.quantidade} vendas)` : '';
+  const linhaRestante = restante
+    ? `\n↩️ Ainda restam **${restante.quantidade}** venda(s) deste lançamento, totalizando **${formatBRL(restante.valor)}**.`
+    : '';
   return new EmbedBuilder()
     .setColor(0x2ecc71)
     .setTitle('✅ Lançamento removido')
     .setDescription(
-      `Removido o lançamento **#${removido.id}**: **${formatBRL(removido.valor)}**${qtd}\n` +
-      (removido.descricao ? `📝 ${removido.descricao}\n` : '') +
-      `\n👤 Novo gasto de <@${clienteId}>: **${formatBRL(resumo.acumulado.gasto || 0)}** em **${resumo.acumulado.vendas || 0}** venda(s).`
+      `Removido **${formatBRL(parcial.valor)}**${qtd} do lançamento **#${parcial.id}**` +
+      (parcial.descricao ? ` (${parcial.descricao})` : '') +
+      '.' + linhaRestante +
+      `\n\n👤 Novo gasto de <@${clienteId}>: **${formatBRL(resumo.acumulado.gasto || 0)}** em **${resumo.acumulado.vendas || 0}** venda(s).`
     )
     .setFooter({ text: 'Cargos já conquistados não são removidos.' });
 }

@@ -28,6 +28,7 @@ const client = capturado;
 
 const comprasStore = require('../src/utils/comprasStore');
 const { painelRemoverLancamento, confirmarRemocaoLancamento } = require('../src/utils/vendaPanel');
+const { buildClientesPainel } = require('../src/utils/clientesPanel');
 
 const DATA = path.join(__dirname, '..', 'data');
 const GUILD = 'g-venda-remover';
@@ -166,7 +167,7 @@ async function emitir(tipo, customId, opts) {
   const alvo = comprasStore.listarLancamentos(GUILD, CLIENTE).find((l) => l.valor === 25.5);
   await emitir('select', `venda:remover:${CLIENTE}:0`, { values: [alvo.id] });
   check('selecionar um lançamento pede confirmação (não remove ainda)', () => {
-    assert.ok(/Confirma remover/i.test(ultimoUpdate.embeds[0].data.description || ''), 'pede confirmação');
+    assert.ok(/Remover lançamento/i.test(ultimoUpdate.embeds[0].data.title || ''), 'pede confirmação');
     assert.strictEqual(comprasStore.listarLancamentos(GUILD, CLIENTE).length, 2, 'nada removido ainda');
   });
 
@@ -203,6 +204,79 @@ async function emitir(tipo, customId, opts) {
     const r = comprasStore.removerLancamento(GUILD, restante.id);
     assert.ok(r && r.id === restante.id, 'devolveu o lançamento');
     assert.strictEqual(comprasStore.dadosDoCliente(GUILD, CLIENTE).gasto, 0, 'gasto zerado');
+  });
+
+  // ===== remoção PARCIAL (só 1 venda de um lançamento com várias) =====
+  limpar();
+  // "2 vendas de 1,90" -> valor total 3,80, quantidade 2.
+  const multi = comprasStore.registrarVendaManual(GUILD, CLIENTE, 3.8, { quantidade: 2, registradoPor: OPERADOR });
+  check('lançamento com várias vendas guarda valor total e quantidade', () => {
+    assert.strictEqual(multi.valor, 3.8, 'valor total');
+    assert.strictEqual(multi.quantidade, 2, 'quantidade');
+  });
+
+  const confMulti = confirmarRemocaoLancamento(GUILD, CLIENTE, multi.id);
+  check('confirmação de lançamento com várias vendas oferece remover só 1 ou tudo', () => {
+    const ids = confMulti.components[0].components.map((c) => c.data.custom_id);
+    assert.ok(ids.some((i) => i.startsWith('venda:confum:')), 'tem botão remover 1 venda');
+    assert.ok(ids.some((i) => i.startsWith('venda:confrem:')), 'tem botão remover tudo');
+  });
+
+  await emitir('button', `venda:confum:${CLIENTE}:${multi.id}`);
+  check('remover 1 venda corrige o gasto e mantém o lançamento', () => {
+    const d = comprasStore.dadosDoCliente(GUILD, CLIENTE);
+    assert.strictEqual(d.vendas, 1, 'caiu de 2 para 1 venda');
+    assert.strictEqual(d.gasto, 1.9, 'gasto caiu para 1,90');
+    const l = comprasStore.listarLancamentos(GUILD, CLIENTE)[0];
+    assert.ok(l, 'lançamento continua existindo');
+    assert.strictEqual(l.quantidade, 1, 'sobrou 1 venda');
+    assert.strictEqual(l.valor, 1.9, 'valor restante 1,90');
+  });
+  check('aviso informa quanto restou no lançamento', () => {
+    assert.ok(/restam/i.test(ultimoUpdate.embeds[0].data.description || ''), 'menciona o restante');
+  });
+
+  // Remover a última venda restante apaga o lançamento inteiro.
+  await emitir('button', `venda:confum:${CLIENTE}:${multi.id}`);
+  check('remover a última venda restante apaga o lançamento', () => {
+    assert.strictEqual(comprasStore.dadosDoCliente(GUILD, CLIENTE).gasto, 0, 'gasto zerado');
+    assert.strictEqual(comprasStore.listarLancamentos(GUILD, CLIENTE).length, 0, 'lançamento removido');
+  });
+
+  // ===== painel admin de clientes =====
+  limpar();
+  comprasStore.registrarVendaManual(GUILD, CLIENTE, 50, { registradoPor: OPERADOR });
+  comprasStore.registrarVendaManual(GUILD, OUTRO, 120, { quantidade: 3, registradoPor: OPERADOR });
+  const listaClientes = comprasStore.listarClientes(GUILD);
+  check('listarClientes devolve os clientes com compras, do maior gasto ao menor', () => {
+    assert.strictEqual(listaClientes.length, 2, 'dois clientes');
+    assert.strictEqual(listaClientes[0].clienteId, OUTRO, 'quem mais gastou vem primeiro');
+    assert.strictEqual(listaClientes[0].gasto, 120, 'gasto do primeiro');
+    assert.strictEqual(listaClientes[1].clienteId, CLIENTE, 'segundo');
+  });
+  check('listarClientes ignora quem nunca comprou', () => {
+    comprasStore.cliente(GUILD, '970000000000000009'); // cria registro zerado
+    const lista = comprasStore.listarClientes(GUILD);
+    assert.ok(!lista.some((c) => c.clienteId === '970000000000000009'), 'zerado fora da lista');
+  });
+
+  const painelClientes = buildClientesPainel(GUILD, 0);
+  check('painel de clientes mostra os números no embed', () => {
+    const desc = painelClientes.embeds[0].data.description || '';
+    assert.ok(desc.includes(`<@${OUTRO}>`), 'lista o cliente que gastou mais');
+    const campos = painelClientes.embeds[0].data.fields.map((f) => f.value).join(' ');
+    assert.ok(/170,00/.test(campos), 'mostra o total gasto (50 + 120)');
+    assert.ok(/4/.test(campos), 'mostra o total de vendas (1 + 3)');
+  });
+
+  await emitir('button', `clientes:pag:0`, { user: membroAdmin });
+  check('paginação do painel de clientes responde (update)', () => {
+    assert.ok(ultimoUpdate, 'chamou update');
+    assert.ok(ultimoUpdate.embeds?.length, 'tem embed');
+  });
+  await emitir('button', `clientes:pag:0`, { user: membroComum });
+  check('usuário comum não abre o painel de clientes', () => {
+    assert.ok(/🔒/.test(ultimaResposta?.content || ''), 'bloqueado');
   });
 
   // ----- limpeza -----

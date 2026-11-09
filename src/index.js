@@ -1843,6 +1843,7 @@ function comandoDoCustomId(interaction) {
   if (id.startsWith('custom:copy:')) return 'criarcomando';
   if (id.startsWith('metaspainel:') || id.startsWith('metasmodal:')) return 'metas';
   if (id.startsWith('venda:')) return 'venda';
+  if (id.startsWith('clientes:')) return 'clientes';
   return null;
 }
 function permitido(interaction) {
@@ -3959,11 +3960,59 @@ client.on('interactionCreate', async (interaction) => {
         )],
       });
     }
+
+    // Confirmou remover SÓ UMA venda de um lançamento com várias.
+    if (acao === 'confum' && interaction.isButton()) {
+      const lancamentoId = partes[3];
+      const resultado = comprasStore.removerVendaParcial(interaction.guildId, lancamentoId);
+      if (!resultado) {
+        return interaction.update({
+          embeds: [new EmbedBuilder().setColor(0xe74c3c).setDescription('❌ Lançamento não encontrado (talvez já removido).')],
+          components: [],
+        });
+      }
+      const resumo = resumoCliente(interaction.guildId, clienteId);
+      return interaction.update({
+        embeds: [embedRemocaoFeita(resultado, clienteId, resumo)],
+        components: [new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`venda:listar:${clienteId}:0`).setLabel('🗑️ Ver lista novamente').setStyle(ButtonStyle.Secondary)
+        )],
+      });
+    }
   } catch (error) {
     console.error('[venda:interaction]', error);
     try {
       if (interaction.isRepliable()) {
         if (interaction.deferred || interaction.replied) return;
+        return interaction.reply({ content: '❌ Ocorreu um erro ao processar esta interação.', flags: MessageFlags.Ephemeral });
+      }
+    } catch {}
+  }
+});
+
+
+// ----- Painel admin de clientes (customId `clientes:`) -----
+const { buildClientesPainel } = require('./utils/clientesPanel');
+
+client.on('interactionCreate', async (interaction) => {
+  try {
+    const id = interaction.customId || '';
+    if (!id.startsWith('clientes:')) return;
+    if (!interaction.isButton()) return;
+
+    if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'clientes')) {
+      return interaction.reply({
+        content: '🔒 Somente administradores ou equipe autorizada.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    const pagina = Number((id.split(':')[2] || '0')) || 0;
+    return interaction.update(buildClientesPainel(interaction.guildId, pagina));
+  } catch (error) {
+    console.error('[clientes:interaction]', error);
+    try {
+      if (interaction.isRepliable() && !interaction.deferred && !interaction.replied) {
         return interaction.reply({ content: '❌ Ocorreu um erro ao processar esta interação.', flags: MessageFlags.Ephemeral });
       }
     } catch {}
