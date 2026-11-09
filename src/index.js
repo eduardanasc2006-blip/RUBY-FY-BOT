@@ -1842,6 +1842,7 @@ function comandoDoCustomId(interaction) {
   if (id.startsWith('autoresp:')) return 'autoresposta';
   if (id.startsWith('custom:copy:')) return 'criarcomando';
   if (id.startsWith('metaspainel:') || id.startsWith('metasmodal:')) return 'metas';
+  if (id.startsWith('venda:')) return 'venda';
   return null;
 }
 function permitido(interaction) {
@@ -3889,6 +3890,77 @@ client.on('interactionCreate', async (interaction) => {
     }
   } catch (error) {
     console.error('[Comprar/Metas] Erro na interação:', error?.message || error);
+    try {
+      if (interaction.isRepliable()) {
+        if (interaction.deferred || interaction.replied) return;
+        return interaction.reply({ content: '❌ Ocorreu um erro ao processar esta interação.', flags: MessageFlags.Ephemeral });
+      }
+    } catch {}
+  }
+});
+
+
+// ----- Remoção de lançamento manual de venda (customId `venda:`) -----
+// Fluxo separado do /venda (que so lanca). Aqui a equipe desfaz um lancamento
+// que entrou a mais. A permissao (grupo `vendas`) e verificada a cada clique
+// via comandoDoCustomId -> 'venda', e o cliente alvo vem do proprio customId.
+const { painelRemoverLancamento, confirmarRemocaoLancamento, embedRemocaoFeita, resumoCliente } = require('./utils/vendaPanel');
+
+client.on('interactionCreate', async (interaction) => {
+  try {
+    const id = interaction.customId || '';
+    if (!id.startsWith('venda:')) return;
+
+    const partes = id.split(':');
+    const acao = partes[1];
+    const clienteId = partes[2];
+
+    if (!interaction.guild) {
+      return interaction.reply({ content: '❌ Isso só funciona no servidor.', flags: MessageFlags.Ephemeral });
+    }
+    if (!comandoPode(interaction.member, interaction.user.id, 'venda')) {
+      return interaction.reply({
+        content: '🔒 Somente administradores ou equipe autorizada podem remover lançamentos.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    // Paginação da lista.
+    if (acao === 'pag' && interaction.isButton()) {
+      return interaction.update(painelRemoverLancamento(interaction.guildId, clienteId, Number(partes[3]) || 0));
+    }
+
+    // Voltar para a lista.
+    if (acao === 'listar' && interaction.isButton()) {
+      return interaction.update(painelRemoverLancamento(interaction.guildId, clienteId, Number(partes[3]) || 0));
+    }
+
+    // Selecionou um lançamento: pede confirmação.
+    if (acao === 'remover' && interaction.isStringSelectMenu()) {
+      const lancamentoId = interaction.values[0];
+      return interaction.update(confirmarRemocaoLancamento(interaction.guildId, clienteId, lancamentoId));
+    }
+
+    // Confirmou a remoção.
+    if (acao === 'confrem' && interaction.isButton()) {
+      const lancamentoId = partes[3];
+      const removido = comprasStore.removerLancamento(interaction.guildId, lancamentoId);
+      if (!removido) {
+        return interaction.update({
+          embeds: [new EmbedBuilder().setColor(0xe74c3c).setDescription('❌ Lançamento não encontrado (talvez já removido).')],
+          components: [],
+        });
+      }
+      const resumo = resumoCliente(interaction.guildId, clienteId);
+      return interaction.update({
+        embeds: [embedRemocaoFeita(removido, clienteId, resumo)],
+        components: [new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`venda:listar:${clienteId}:0`).setLabel('🗑️ Ver lista novamente').setStyle(ButtonStyle.Secondary)
+        )],
+      });
+    }
+  } catch (error) {
+    console.error('[venda:interaction]', error);
     try {
       if (interaction.isRepliable()) {
         if (interaction.deferred || interaction.replied) return;

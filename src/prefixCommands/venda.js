@@ -1,12 +1,13 @@
 const { comandoPode } = require('../utils/permissions');
-const { parseValor, parseQuantidade, lancarVenda, resumoCliente, embedLancamento, embedResumoCliente } = require('../utils/vendaPanel');
+const { parseValor, parseQuantidade, lancarVenda, resumoCliente, embedLancamento, embedResumoCliente, painelRemoverLancamento } = require('../utils/vendaPanel');
 
 module.exports = {
   name: 'venda',
   description: 'Lança uma venda feita fora do /comprar (credita no gasto e nas metas)',
   usage:
     '!venda @cliente 10,50 [| descrição]\n' +
-    '!venda consultar @cliente  — mostra o gasto acumulado',
+    '!venda consultar @cliente  — mostra o gasto acumulado\n' +
+    '!venda remover @cliente    — lista e remove um lançamento manual',
 
   async execute(message, args) {
     if (!message.guild || !comandoPode(message.member, message.author.id, 'venda')) {
@@ -14,6 +15,17 @@ module.exports = {
     }
 
     const mencao = message.mentions?.users?.first() || null;
+
+    // !venda remover @cliente — lista os lançamentos manuais para remover um.
+    if (args[0] && ['remover', 'excluir', 'apagar'].includes(args[0].toLowerCase())) {
+      if (!mencao) {
+        return message.reply('❌ Marque o cliente: `!venda remover @cliente`.');
+      }
+      return message.reply({
+        ...painelRemoverLancamento(message.guildId, mencao.id, 0),
+        allowedMentions: { repliedUser: false },
+      });
+    }
 
     // !venda consultar @cliente — só consulta, não lança nada.
     if (args[0] && ['consultar', 'gasto', 'total'].includes(args[0].toLowerCase())) {

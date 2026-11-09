@@ -1,11 +1,11 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { comandoPode } = require('../utils/permissions');
-const { parseValor, parseQuantidade, lancarVenda, resumoCliente, embedLancamento, embedResumoCliente } = require('../utils/vendaPanel');
+const { parseValor, parseQuantidade, lancarVenda, resumoCliente, embedLancamento, embedResumoCliente, painelRemoverLancamento } = require('../utils/vendaPanel');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('venda')
-    .setDescription('Lança uma venda que aconteceu fora do /comprar (credita no gasto do cliente e nas metas)')
+    .setDescription('Lança ou remove uma venda feita fora do /comprar (credita no gasto do cliente e nas metas)')
     .addUserOption((o) =>
       o.setName('cliente').setDescription('Cliente que comprou (obrigatório ao lançar)').setRequired(false)
     )
@@ -31,6 +31,12 @@ module.exports = {
         .setName('consultar')
         .setDescription('Só consulta o gasto deste cliente, sem lançar nada')
         .setRequired(false)
+    )
+    .addUserOption((o) =>
+      o
+        .setName('remover')
+        .setDescription('Abre a lista de lançamentos manuais deste cliente para remover um')
+        .setRequired(false)
     ),
 
   async execute(interaction) {
@@ -47,6 +53,15 @@ module.exports = {
       const resumo = resumoCliente(interaction.guildId, consulta.id);
       return interaction.reply({
         embeds: [embedResumoCliente(consulta.id, resumo)],
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    // Modo remover: lista os lançamentos manuais do cliente para escolher um.
+    const remover = interaction.options.getUser('remover');
+    if (remover) {
+      return interaction.reply({
+        ...painelRemoverLancamento(interaction.guildId, remover.id, 0),
         flags: MessageFlags.Ephemeral,
       });
     }
