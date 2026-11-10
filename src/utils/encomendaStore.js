@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+const { escreverAtomico } = require('./escritaAtomica');
 const path = require('node:path');
 
 // Encomendas (fluxo separado do /comprar): pedidos de produtos que nao estao
@@ -36,7 +37,7 @@ try {
 
 function salvar() {
   fs.mkdirSync(path.dirname(FILE), { recursive: true });
-  fs.writeFileSync(FILE, JSON.stringify(dados, null, 2));
+  escreverAtomico(FILE, JSON.stringify(dados, null, 2));
 }
 
 function base(guildId) {

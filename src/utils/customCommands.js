@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+const { escreverAtomico } = require('./escritaAtomica');
 const path = require('node:path');
 
 const DIR = path.join(__dirname, '..', '..', 'data', 'comandos_custom');
@@ -23,7 +24,7 @@ function carregar(guildId) {
 
 function salvar(guildId, comandos) {
   fs.mkdirSync(DIR, { recursive: true });
-  fs.writeFileSync(arquivoDoGuild(guildId), JSON.stringify(comandos, null, 2));
+  escreverAtomico(arquivoDoGuild(guildId), JSON.stringify(comandos, null, 2));
 }
 
 // Comandos personalizados so existem dentro de um servidor (guildId. Em DM
@@ -66,7 +67,10 @@ const custom = {
         imagem: (dados.embed?.imagem || '' ).trim() || null,
         fields: Array.isArray(dados.embed?.fields) ? dados.embed.fields : [],
       },
-      ephemeral: !!dados.ephemeral,
+      // Controla se o clique no botão copiável responde em privado (só quem
+      // clica vê). Comandos antigos não têm o campo e continuam privados, para
+      // não vazar o conteúdo de quem já existia.
+      ephemeral: dados.ephemeral !== false,
       // itens: [{ nome, tipo: 'copiavel'|'link', valor }]
       copiaveis: (dados.copiaveis || []).map((c) => ({
         nome: c.nome,

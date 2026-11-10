@@ -1,10 +1,13 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
 const comprasStore = require('./comprasStore');
 const metasStore = require('./metasStore');
 const { metasConquistadas, concederCargosDasMetas } = require('./metasVenda');
 const { formatBRL } = require('./robuxConverter');
 
 const COR = 0xbeb6ff;
+// Lancamentos mostrados por pagina na lista de remocao (o Discord limita a 5
+// botoes por linha / 5 linhas por mensagem). Cabe 1 select (25 opcoes) + botoes.
+const LANCAMENTOS_POR_PAGINA = 20;
 
 // Aceita "10", "10,50", "R$ 10,50", "1.234,56" e devolve número em reais.
 // Retorna null quando não dá para interpretar.
@@ -140,4 +143,136 @@ function embedResumoCliente(clienteId, resumo) {
   return embed;
 }
 
-module.exports = { parseValor, parseQuantidade, lancarVenda, resumoCliente, embedLancamento, embedResumoCliente };
+// ----- Remoção de lançamentos manuais -----
+// Permite desfazer um lançamento que entrou a mais (valor digitado errado, venda
+// duplicada...). O valor/vendas sai do gasto do cliente; cargos já concedidos
+// NÃO são removidos (comportamento de comprasStore.removerLancamento).
+
+function dataLancamento(ts) {
+  if (!ts) return '—';
+  try {
+    const d = new Date(ts);
+    return d.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return new Date(ts).toLocaleString('pt-BR');
+  }
+}
+
+// Lista (paginada) os lançamentos manuais de um cliente, com um select para
+// escolher qual remover. Sem lançamentos, mostra aviso.
+function painelRemoverLancamento(guildId, clienteId, pagina = 0) {
+  const lancamentos = comprasStore.listarLancamentos(guildId, clienteId);
+  const totalPaginas = Math.max(1, Math.ceil(lancamentos.length / LANCAMENTOS_POR_PAGINA));
+  const paginaAtual = Math.min(Math.max(Number(pagina) || 0, 0), totalPaginas - 1);
+  const visiveis = lancamentos.slice(paginaAtual * LANCAMENTOS_POR_PAGINA, (paginaAtual + 1) * LANCAMENTOS_POR_PAGINA);
+  const total = lancamentos.reduce((s, l) => s + (l.valor || 0), 0);
+  const resumo = resumoCliente(guildId, clienteId);
+
+  const embed = new EmbedBuilder()
+    .setColor(COR)
+    .setTitle(totalPaginas > 1 ? `🗑️ Remover lançamento (${paginaAtual + 1}/${totalPaginas})` : '🗑️ Remover lançamento')
+    .setDescription(
+      `👤 Cliente: <@${clienteId}>\n\n` +
+      (lancamentos.length
+        ? 'Escolha no menu abaixo o lançamento que entrou **a mais** para remover.\n' +
+          '*O valor e as vendas saem do gasto do cliente. Cargos já conquistados não são removidos.*'
+        : '*Nenhum lançamento manual para este cliente.*')
+    )
+    .addFields(
+      { name: '💰 Gasto total', value: formatBRL(resumo.acumulado.gasto || 0), inline: true },
+      { name: '🛍️ Vendas', value: `${resumo.acumulado.vendas || 0}`, inline: true },
+      { name: '🧾 Lançado manualmente', value: `${formatBRL(total)} (${lancamentos.length})`, inline: true }
+    )
+    .setFooter({ text: 'Só lançamentos manuais (!venda / /venda) aparecem aqui.' });
+
+  if (!lancamentos.length) return { embeds: [embed], components: [] };
+
+  const opcoes = visiveis.map((l) => {
+    const qtd = l.quantidade > 1 ? ` (${l.quantidade}x)` : '';
+    return {
+      label: `#${l.id} — ${formatBRL(l.valor)}${qtd}`.slice(0, 100),
+      description: `${dataLancamento(l.registradoEm)}${l.descricao ? ` • ${l.descricao}` : ''}`.slice(0, 100),
+      value: l.id,
+    };
+  });
+
+  const components = [
+    new ActionRowBuilder().addComponents(
+      new StringSelectMenuBuilder()
+        .setCustomId(`venda:remover:${clienteId}:${paginaAtual}`)
+        .setPlaceholder('🗑️ Selecione o lançamento a remover')
+        .setMinValues(1)
+        .setMaxValues(1)
+        .addOptions(opcoes)
+    ),
+  ];
+
+  if (totalPaginas > 1) {
+    components.push(new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`venda:pag:${clienteId}:${paginaAtual - 1}`).setLabel('◀️ Anterior').setStyle(ButtonStyle.Primary).setDisabled(paginaAtual === 0),
+      new ButtonBuilder().setCustomId(`venda:pag:${clienteId}:${paginaAtual + 1}`).setLabel('Próxima ▶️').setStyle(ButtonStyle.Primary).setDisabled(paginaAtual >= totalPaginas - 1)
+    ));
+  }
+
+  return { embeds: [embed], components };
+}
+
+// Confirmação antes de remover (evita clique errado apagar a venda).
+// Quando o lançamento tem mais de 1 venda, oferece remover SÓ UMA venda ou o
+// lançamento inteiro.
+function confirmarRemocaoLancamento(guildId, clienteId, lancamentoId) {
+  const l = comprasStore.obterLancamento(guildId, lancamentoId);
+  if (!l) {
+    return {
+      embeds: [new EmbedBuilder().setColor(0xe74c3c).setDescription('❌ Lançamento não encontrado (talvez já removido).')],
+      components: [],
+    };
+  }
+  const q = Math.max(1, Number(l.quantidade) || 1);
+  const embed = new EmbedBuilder()
+    .setColor(0xe74c3c)
+    .setTitle('⚠️ Remover lançamento')
+    .setDescription(
+      `Lançamento **#${l.id}**\n\n` +
+      `💰 Valor: **${formatBRL(l.valor)}**${q > 1 ? ` (${q} vendas de ${formatBRL(l.valor / q)})` : ''}\n` +
+      `📅 ${dataLancamento(l.registradoEm)}` +
+      (l.descricao ? `\n📝 ${l.descricao}` : '') +
+      (q > 1 ? '\n\nEscolha: remover **só 1 venda** ou o **lançamento inteiro**.' : '') +
+      '\n\n*Cargos já concedidos não são removidos.*'
+    );
+
+  const botoes = [];
+  if (q > 1) {
+    botoes.push(new ButtonBuilder().setCustomId(`venda:confum:${clienteId}:${l.id}`).setLabel('Remover 1 venda').setStyle(ButtonStyle.Danger));
+    botoes.push(new ButtonBuilder().setCustomId(`venda:confrem:${clienteId}:${l.id}`).setLabel(`Remover tudo (${q})`).setStyle(ButtonStyle.Danger));
+  } else {
+    botoes.push(new ButtonBuilder().setCustomId(`venda:confrem:${clienteId}:${l.id}`).setLabel('Sim, remover').setStyle(ButtonStyle.Danger));
+  }
+  botoes.push(new ButtonBuilder().setCustomId(`venda:listar:${clienteId}:0`).setLabel('Não').setStyle(ButtonStyle.Secondary));
+
+  return { embeds: [embed], components: [new ActionRowBuilder().addComponents(...botoes)] };
+}
+
+// Embed de confirmação do que foi removido, com o novo gasto do cliente.
+// `resultado` = retorno de comprasStore.removerLancamento (lançamento) ou de
+// removerVendaParcial ({ removido, restante }).
+function embedRemocaoFeita(resultado, clienteId, resumo) {
+  const parcial = resultado && resultado.removido ? resultado.removido : resultado;
+  const restante = resultado && resultado.restante ? resultado.restante : null;
+  const qtd = parcial.quantidade > 1 ? ` (${parcial.quantidade} vendas)` : '';
+  const linhaRestante = restante
+    ? `\n↩️ Ainda restam **${restante.quantidade}** venda(s) deste lançamento, totalizando **${formatBRL(restante.valor)}**.`
+    : '';
+  return new EmbedBuilder()
+    .setColor(0x2ecc71)
+    .setTitle('✅ Lançamento removido')
+    .setDescription(
+      `Removido **${formatBRL(parcial.valor)}**${qtd} do lançamento **#${parcial.id}**` +
+      (parcial.descricao ? ` (${parcial.descricao})` : '') +
+      '.' + linhaRestante +
+      `\n\n👤 Novo gasto de <@${clienteId}>: **${formatBRL(resumo.acumulado.gasto || 0)}** em **${resumo.acumulado.vendas || 0}** venda(s).`
+    )
+    .setFooter({ text: 'Cargos já conquistados não são removidos.' });
+}
+
+module.exports = { parseValor, parseQuantidade, lancarVenda, resumoCliente, embedLancamento, embedResumoCliente, painelRemoverLancamento, confirmarRemocaoLancamento, embedRemocaoFeita };

@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+const { escreverAtomico } = require('./escritaAtomica');
 const path = require('node:path');
 
 // Canal de avisos por guild. Arquivo: data/canal_avisos.json
@@ -19,7 +20,7 @@ try {
 
 function salvar() {
   fs.mkdirSync(path.dirname(FILE), { recursive: true });
-  fs.writeFileSync(FILE, JSON.stringify(dados, null, 2));
+  escreverAtomico(FILE, JSON.stringify(dados, null, 2));
 }
 
 function carregar(guildId) {

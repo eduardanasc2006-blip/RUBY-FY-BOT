@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+const { escreverAtomico } = require('./escritaAtomica');
 const path = require('node:path');
 const { PermissionFlagsBits } = require('discord.js');
 
@@ -61,7 +62,7 @@ const GRUPOS = [
     id: 'vendas',
     nome: '🛒 Vendas e pedidos',
     descricao: 'Gerenciar pedidos.. metas e perfil de clientes.',
-    comandos: ['comprar', 'metas', 'cliente', 'venda'],
+    comandos: ['comprar', 'metas', 'cliente', 'clientes', 'venda'],
   },
   {
     id: 'backup',
@@ -92,7 +93,7 @@ function conf(guildId) {
 
 function salvar() {
   fs.mkdirSync(path.dirname(FILE), { recursive: true });
-  fs.writeFileSync(FILE, JSON.stringify(dados, null, 2));
+  escreverAtomico(FILE, JSON.stringify(dados, null, 2));
 }
 
 // Um usuario e dono se estiver em ADMIN_IDS (env).

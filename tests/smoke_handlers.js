@@ -60,13 +60,23 @@ const membro = {
 };
 membrosCache.set(membro.id, membro);
 const author = { id: "111111111111111111", bot: false, username: "admin-teste" };
+// DM simulada: registra o que foi enviado na DM do autor (para testar o ephemeral)
+author.dmEnviada = null;
+author.dmFalha = false;
+author.send = async (payload) => {
+  if (author.dmFalha) throw new Error("DM fechada");
+  author.dmEnviada = payload;
+  return { id: "dm1" };
+};
 function fazerMensagem(conteudo) {
   return {
     guild,
+    guildId: guild.id,
     member: membro,
     author,
     content: conteudo,
     channel: canal,
+    channelId: canal.id,
     mentions: { channels: { first: () => null }, roles: { first: () => null }, users: { first: () => null } },
     attachments: { first: () => undefined, values: () => [], size: 0, map: () => [] },
     reply: async (payload) => { canal.ultimaResposta = payload; return payload; },
@@ -282,6 +292,17 @@ async function testarInteracoes() {
     ["select", "metaspainel:tipo:edit:xxxx:xxxx:111111111111111111", { valores: ["valor"] }],
     ["modal", "metasmodal:add:vendas:xxxx:111111111111111111", { campos: { meta: "10" } }],
     ["modal", "metasmodal:edit:vendas:xxxx:xxxx:111111111111111111", { campos: { meta: "50" } }],
+    ["button", "venda:listar:111111111111111111:0"],
+    ["button", "venda:pag:111111111111111111:0"],
+    ["select", "venda:remover:111111111111111111:0", { valores: ["999999"] }],
+    ["button", "venda:confrem:111111111111111111:999999"],
+    ["button", "venda:confum:111111111111111111:999999"],
+    ["button", "clientes:lista:0"],
+    ["select", "clientes:sel:0", { valores: ["111111111111111111"] }],
+    ["button", "clientes:perfil:111111111111111111:0"],
+    ["button", "clientes:gerenciar:111111111111111111:0"],
+    ["button", "clientes:lancar:111111111111111111:0"],
+    ["modal", "clientes:lancarmodal:111111111111111111:0", { campos: { valor: "10,50", quantidade: "2", descricao: "teste" } }],
   ];
   let okTotal = 0;
   let falhas = 0;
@@ -404,6 +425,71 @@ async function testarInteracoes() {
     if (interacaoValida(e)) registrar("proofmodal sem rascunho", true); else falhas++;
   }
   proofStore.desativar(guild.id); // não deixar guild de teste no proofs.json real
+
+  // --- Comando personalizado: botão copiável responde ephemeral ABAIXO do comando ---
+  {
+    const custom = require("../src/utils/customCommands");
+    const { montarBotoes } = require("../src/utils/copiaveis");
+    // Comando com copiável (PIX): o clique deve responder ephemeral (só quem clica vê)
+    custom.criar(guild.id, "pixcopia", {
+      nome: "pixcopia",
+      descricao: "Chave PIX",
+      mensagem: "Clique no botão para copiar a chave PIX",
+      ephemeral: true,
+      copiaveis: [{ nome: "PIX", tipo: "copiavel", valor: "12345678900" }],
+      embed: null,
+    });
+    author.dmEnviada = null;
+    canal.ultimaResposta = null;
+    await client.emit("messageCreate", fazerMensagem("!pixcopia"));
+    const postouNoCanal = !!canal.ultimaResposta && !author.dmEnviada;
+    if (postouNoCanal) {
+      registrar("!pixcopia posta no canal (não vai pra DM)", true);
+      okTotal++;
+    } else {
+      registrar("!pixcopia", false, "canal=" + postouNoCanal + " dm=" + !!author.dmEnviada);
+      falhas++;
+    }
+
+    // clicar no botão copiável responde ephemeral (abaixo do comando)
+    canal.ultimaInteracao = null;
+    const e = await emitir("button", "custom:copy:pixcopia:0");
+    const flags = canal.ultimaInteracao?.flags;
+    const conteudo = canal.ultimaInteracao?.content;
+    if (!e.erro && conteudo === "12345678900" && flags) {
+      registrar("botão copiável PIX responde ephemeral abaixo do comando", true);
+      okTotal++;
+    } else {
+      registrar("copiável PIX ephemeral", false, "conteudo=" + conteudo + " flags=" + flags);
+      falhas++;
+    }
+
+    // Comando com botão de link responde no canal com o botão nativo
+    custom.criar(guild.id, "entregapub", {
+      nome: "entregapub",
+      descricao: "Entrega",
+      mensagem: "Clique para entrar",
+      ephemeral: false,
+      copiaveis: montarBotoes({ linkRotulo: "Entrar", linkUrl: "discord.gg/abc", copiaveis: [] }, 5),
+      embed: null,
+    });
+    author.dmEnviada = null;
+    canal.ultimaResposta = null;
+    await client.emit("messageCreate", fazerMensagem("!entregapub"));
+    const publicoNoCanal = !!canal.ultimaResposta && !author.dmEnviada;
+    const botaoLink = canal.ultimaResposta?.components?.[0]?.toJSON?.().components?.[0]?.style === 5;
+    if (publicoNoCanal && botaoLink) {
+      registrar("!entregapub público com botão de link no canal", true);
+      okTotal++;
+    } else {
+      registrar("!entregapub público", false, "canal=" + publicoNoCanal + " link=" + botaoLink);
+      falhas++;
+    }
+
+    // limpeza
+    custom.excluir(guild.id, "pixcopia");
+    custom.excluir(guild.id, "entregapub");
+  }
 
   console.log("\nInteracoes: " + okTotal + " ok," + falhas + " falhas");
   return falhas === 0;

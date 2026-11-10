@@ -60,9 +60,16 @@ module.exports = {
       if (!lista.length) {
         return interaction.editReply('📋 Nenhum comando personalizado criado ainda. Use /criarcomando.');
       }
-      const texto = lista.map((c, i) =>
-        '`' + (i + 1) + '`' + ' — ' + '**!' + c.nome + '**' + (c.descricao ? ' · ' + c.descricao : '') + (c.copiaveis.length ? ' · 📋 ' + c.copiaveis.length + ' copiável(is)' : '')
-      ).join('\n');
+      const texto = lista.map((c, i) => {
+        const links = (c.copiaveis || []).filter((b) => b.tipo === 'link').length;
+        const copias = (c.copiaveis || []).filter((b) => b.tipo !== 'link').length;
+        const marcas = [
+          links ? '🔗 ' + links : '',
+          copias ? '📋 ' + copias : '',
+          c.ephemeral ? '🔒' : '',
+        ].filter(Boolean).join(' ');
+        return '`' + (i + 1) + '`' + ' — ' + '**!' + c.nome + '**' + (c.descricao ? ' · ' + c.descricao : '') + (marcas ? ' · ' + marcas : '');
+      }).join('\n');
       const aviso = '\n\n_Use /criarcomando para adicionar._';
       return interaction.editReply('**Comandos personalizados (' + lista.length + '):**\n' + texto + aviso);
     }

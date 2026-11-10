@@ -1,4 +1,5 @@
 const fs = require(`node:fs`);
+const { escreverAtomico } = require('./escritaAtomica');
 const path = require(`node:path`);
 
 // ---- Configuração de boas-vindas por servidor ----
@@ -21,7 +22,7 @@ function carregar() {
 function salvarArquivo(dados) {
   const dir = path.dirname(FILE);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(FILE, JSON.stringify(dados, null, 2));
+  escreverAtomico(FILE, JSON.stringify(dados, null, 2));
 }
 
 // Migra uma config antiga salva pelo editor de embed comum (shape embedPainel)

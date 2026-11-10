@@ -1,4 +1,5 @@
 const metasStore = require('./metasStore');
+const { maiorIgual, arredondar } = require('./dinheiro');
 const comprasStore = require('./comprasStore');
 
 // Avaliação das metas de cargo do servidor — compartilhada entre o fluxo de
@@ -11,15 +12,16 @@ const comprasStore = require('./comprasStore');
 function metasConquistadas(guildId, clienteId, valor, quantidade = 1) {
   const dados = comprasStore.dadosDoCliente(guildId, clienteId);
   const novasVendas = (dados.vendas || 0) + quantidade;
-  const novoGasto = (dados.gasto || 0) + (valor || 0);
+  const novoGasto = arredondar((dados.gasto || 0) + (valor || 0));
   const cargosJaConquistados = comprasStore.cargosDoCliente(guildId, clienteId) || [];
   const conquistadas = [];
   for (const m of metasStore.listaMetas(guildId)) {
     if (!m || !m.cargoId) continue;
     const cargoRef = m.cargoNome || `<@&${m.cargoId}>`;
     if (cargosJaConquistados.includes(cargoRef)) continue; // já tem esse cargo — ignora
+    // Comparação em centavos: sem isso, 0,30 x3 (= 0.8999...) não fecharia a meta de 0,90.
     const atingiu = m.tipo === 'valor'
-      ? novoGasto >= (m.meta || 0)
+      ? maiorIgual(novoGasto, m.meta || 0)
       : novasVendas >= (m.meta || 0);
     if (atingiu) conquistadas.push(m);
   }

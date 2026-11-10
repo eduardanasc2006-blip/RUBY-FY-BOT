@@ -47,8 +47,9 @@ const COMANDOS = [
  { grupo: 'Compras', cmd: 'comprar', desc: 'Inicia uma compra pelos produtos do estoque.', admin: false },
  { grupo: 'Compras', cmd: 'encomenda', desc: 'Solicita um item fora do estoque imediato (encomenda).', admin: false },
  { grupo: 'Compras', cmd: 'cliente', desc: 'Mostra os cargos de cliente conquistados.', admin: false },
+ { grupo: 'Compras', cmd: 'clientes', desc: 'Lista os clientes com compras, o gasto e o número de vendas.', admin: true },
  { grupo: 'Compras', cmd: 'metas', desc: 'Configura metas de cargos para clientes.', admin: true },
- { grupo: 'Compras', cmd: 'venda', desc: 'Lança uma venda feita fora do /comprar (credita no gasto do cliente e nas metas).', admin: true },
+ { grupo: 'Compras', cmd: 'venda', desc: 'Lança ou remove uma venda feita fora do /comprar (credita no gasto do cliente e nas metas).', admin: true },
  { grupo: 'Painéis', cmd: 'painel', desc: 'Gerenciador central dos painéis fixos.', admin: true },
  { grupo: 'Painéis', cmd: 'tabela', desc: 'Publica o painel de conversão.', admin: true },
  { grupo: 'Painéis', cmd: 'painelestoque', desc: 'Fixa o painel de estoque.', admin: true },
@@ -170,8 +171,11 @@ const PAGINAS = {
       '➜ **Confirmar / cancelar pedido (equipe)**',
       '*Depois de finalizar, o pedido fica `🟡 Aguardando pagamento` no ticket. Quem tem o grupo **🛒 Vendas e pedidos** usa `🟢 Confirmar pagamento` (vira `🟢 Pago` e baixa o estoque) ou `❌ Cancelar pedido` (libera a reserva).*',
       '',
-      '➜ **/cliente <@usuário>**',
+      '➜ **/cliente <@usuário>** · **!cliente [@usuário]**',
       '*Mostra os cargos de cliente já conquistados. A resposta é pública, visível para todos no canal.*',
+      '',
+      '➜ **/clientes (adm)** · **!clientes (adm)**',
+      '*Painel de clientes: abre a lista de quem já comprou (gasto e nº de vendas). Selecione um cliente para ver a **página dele** (gasto, vendas, cargos, o que falta para as metas) e use **💸 Lançar venda** (atalho que abre um formulário) ou **⚙️ Gerenciar cliente** para ver/remover os lançamentos manuais.*',
       '',
       '➜ **/encomenda**',
       '*Solicita um item que não está no estoque imediato. Escolha categoria, item e quantidade, confira o resumo e confirme.*',
@@ -185,10 +189,12 @@ const PAGINAS = {
       '*Configura metas de cargos para clientes.*',
       '',
       '➜ **/venda (adm)**',
-      '*Lança uma venda que aconteceu **fora do /comprar** (pagou no pix direto, comprou por DM, etc). O valor entra no gasto do cliente e conta para as metas e cargos.*',
-      '`/venda cliente:@fulano valor:10,50` · opcionais: `quantidade`, `descricao` e `consultar` (só mostra o gasto, sem lançar).',
+      '*Lança, consulta ou remove uma venda que aconteceu **fora do /comprar** (pagou no pix direto, comprou por DM, etc).*',
+      '`/venda lancar cliente:@fulano valor:10,50` — lança (opcionais: `quantidade`, `descricao`).',
+      '`/venda consultar cliente:@fulano` — mostra o gasto acumulado, sem lançar.',
+      '`/venda remover cliente:@fulano` — abre a lista dos lançamentos manuais para escolher qual remover.',
       'Por prefixo: `!venda @fulano 10,50` · `!venda @fulano 10,50 2` (2 vendas) · `!venda @fulano 10,50 | pix fora do ticket`.',
-      'Para ver o gasto acumulado: `/venda consultar:@fulano` ou `!venda consultar @fulano`.',
+      '`!venda consultar @fulano` · `!venda remover @fulano` (abre a lista) · `!venda remover <id>` (remove pelo ID) · `!venda remover <id> uma` (remove só 1 venda).',
       '',
       '➜ **/setcomprar (adm)**',
       '*Define a mensagem de pagamento e a chave PIX usadas no pedido. Variáveis: `{total}`, `{pix}` e `{canal}`.*',
@@ -213,12 +219,21 @@ const PAGINAS = {
     if (lista.length === 0) {
       linhas.push('*Nenhum comando personalizado criado ainda.*', '');
       linhas.push('Use **/criarcomando (adm)** para criar o seu comando.', '');
-      linhas.push('Com **/criarcomando (adm)** você define nome, título da embed, descrição, mensagem, cor, imagem (URL **ou anexo**) e conteúdos copiáveis.', '');
+      linhas.push('Com **/criarcomando (adm)** você define nome, título da embed, descrição, mensagem, cor, imagem (URL **ou anexo**) e os botões.', '');
+      linhas.push('**Botão de link** (ex: comando de entrega): preencha `link_rotulo` (texto do botão) e `link_url` (ex: `discord.gg/abc`). Ao clicar, o usuário é levado direto ao link.', '');
+      linhas.push('**Botão copiável** (ex: PIX): use `copiaveis` no formato `nome:valor;` — ex: `PIX:12345678900; Instagram:rubyfy`. Ao clicar, o valor aparece **logo abaixo do comando** (privado por padrão: só quem clicou vê).', '');
+      linhas.push('**Privado ou público** (`ephemeral`): controla o clique no botão copiável. `sim` (padrão) = só quem clica vê; `não` = todos no canal veem.', '');
       linhas.push('Com **/gerenciarcomandos (adm)** você lista, edita ou exclui os já criados.');
       linhas.push('Os comandos criados são chamados com **!nome** (prefixo, não slash).');
     } else {
       for (const c of lista) {
-        const extras = c.copiaveis && c.copiaveis.length ? ` — 📋 ${c.copiaveis.length} copiável(is)` : '';
+        const links = (c.copiaveis || []).filter((b) => b.tipo === 'link').length;
+        const copias = (c.copiaveis || []).filter((b) => b.tipo !== 'link').length;
+        const extras = [
+          links ? ` — 🔗 ${links} link(s)` : '',
+          copias ? ` — 📋 ${copias} copiável(is)` : '',
+          c.ephemeral ? ' — 🔒 privado' : '',
+        ].join('');
         linhas.push(`➜ **!${c.nome}**${extras}`);
         if (c.descricao) linhas.push(`> *${c.descricao}*`);
         linhas.push('');
@@ -267,8 +282,12 @@ const PAGINAS = {
       '*Aprova ou cancela pedidos: confirme o pagamento ou cancele pelos botões `🟢 Confirmar pagamento` / `❌ Cancelar pedido` no proprio pedido do ticket.*',
       '',
       '➜ **/venda (adm)**',
-      '*Lança uma venda feita fora do /comprar (pagamento direto, DM, outro canal). Soma no gasto do cliente e nas metas de cargo.*',
-      '`/venda cliente:@fulano valor:10,50` — use `consultar:@fulano` para só ver o gasto acumulado.',
+      '*Lança, consulta ou remove uma venda feita fora do /comprar (pagamento direto, DM, outro canal). Soma no gasto do cliente e nas metas de cargo.*',
+      '`/venda lancar cliente:@fulano valor:10,50` · `/venda consultar cliente:@fulano` · `/venda remover cliente:@fulano`.',
+      'Por prefixo: `!venda @fulano 10,50` · `!venda consultar @fulano` · `!venda remover <id>`.',
+      '',
+      '➜ **/clientes (adm)** · **!clientes (adm)**',
+      '*Painel de clientes: lista quem já comprou (gasto e nº de vendas). Selecione um cliente para abrir a **página dele** (gasto, vendas, cargos, metas pendentes) e use **💸 Lançar venda** ou **⚙️ Gerenciar cliente**.*',
       '',
       '➜ **/setcomprar (adm)**',
       '*Define a mensagem de pagamento (`{total}`, `{pix}`, `{canal}`) e a chave PIX mostrada no pedido.*',

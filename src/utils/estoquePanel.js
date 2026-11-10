@@ -1,5 +1,6 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, StringSelectMenuBuilder } = require('discord.js');
 const estoque = require('./estoque');
+const pedidoStore = require('./pedidoStore');
 const { sanitizarEmoji } = require('./sanitizarEmoji');
 const { formatBRL } = require('./robuxConverter');
 
@@ -88,9 +89,10 @@ function publicoProdutos(guildId, catId, pagProduto = 0) {
   const visiveis = produtos.slice(paginaAtual * POR_PAGINA_PRODUTOS_PUBLICO, (paginaAtual + 1) * POR_PAGINA_PRODUTOS_PUBLICO);
 
   const linhas = visiveis.map((p) => {
-    const s = estoque.status(p);
+    const disp = p.controlarQtd ? pedidoStore.disponivel(guildId, p, catId, p.id) : null;
+    const s = estoque.status(p, disp);
     const qtd =
-      p.controlarQtd && p.quantidade > 1 ? `\n📦 ${p.quantidade} unidades` : '';
+      disp != null && disp > 1 ? `\n📦 ${disp} unidades` : '';
     const desc = p.descricao ? `\n_${p.descricao}_` : '';
     return `${s.emoji} **${p.nome}**\n💵 ${formatBRL(p.valor)}\n${s.texto}${qtd}${desc}`;
   });

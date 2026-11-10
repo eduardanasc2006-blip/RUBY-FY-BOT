@@ -1523,10 +1523,12 @@ client.on('interactionCreate', async (interaction) => {
       }
 
       const item = cmd.copiaveis[idx];
-      // Resposta ephemeral com o valor em texto puro (sem rotulo/backticks)
+      // Resposta com o valor em texto puro (sem rotulo/backticks). Por padrão
+      // vem ephemeral (só quem clicou vê, logo abaixo do comando); se o comando
+      // foi criado com ephemeral: não, responde público.
       return interaction.reply({
         content: item.valor,
-        flags: MessageFlags.Ephemeral,
+        flags: cmd.ephemeral ? MessageFlags.Ephemeral : undefined,
       });
     }
   } catch (error) {
@@ -1842,6 +1844,8 @@ function comandoDoCustomId(interaction) {
   if (id.startsWith('autoresp:')) return 'autoresposta';
   if (id.startsWith('custom:copy:')) return 'criarcomando';
   if (id.startsWith('metaspainel:') || id.startsWith('metasmodal:')) return 'metas';
+  if (id.startsWith('venda:')) return 'venda';
+  if (id.startsWith('clientes:')) return 'clientes';
   return null;
 }
 function permitido(interaction) {
@@ -3556,6 +3560,19 @@ client.on('interactionCreate', async (interaction) => {
           return interaction.reply({ content: '❌ Não foi possível finalizar: itens podem ter ficado sem estoque ou desativados.', flags: MessageFlags.Ephemeral });
         }
 
+        // Avisa o cliente (em particular) sobre itens que saíram do carrinho por
+        // falta de estoque/desativação — antes eles sumiam em silêncio e o
+        // cliente só notava no total do pedido.
+        const noPedido = new Set(itensDoPedido(pedido).map((i) => `${i.catId}:${i.prodId}`));
+        const removidos = itens.filter((i) => !noPedido.has(`${i.catId}:${i.prodId}`));
+        if (removidos.length) {
+          const lista = removidos.map((i) => `• **${i.nome}** × ${i.quantidade}`).join('\n');
+          interaction.followUp({
+            content: '⚠️ Estes itens saíram do carrinho por falta de estoque e **não** entraram no pedido:\n' + lista,
+            flags: MessageFlags.Ephemeral,
+          }).catch(() => {});
+        }
+
         // O pedido continua sendo registrado no canal de logs (historico).
         const logCriado = logDoPedido(pedido, { acao: 'criado' });
         logComprasStore.enviar(interaction.client, guildId, logCriado);
@@ -3705,21 +3722,40 @@ client.on('interactionCreate', async (interaction) => {
         // passar dos 3s. Responde já e edita a mensagem depois.
         await interaction.deferUpdate().catch(() => {});
 
-        // Baixa de estoque conforme a logica existente, item por item.
+        // Baixa de estoque: valida TODOS os itens antes de baixar qualquer um.
+        // Antes a baixa era item por item e, se um item posterior estivesse sem
+        // estoque, os anteriores ja tinham sido baixados — o estoque vazava
+        // (baixa parcial) e o pedido nao era confirmado.
+        const itensConfirmar = itensDoPedido(pedido);
         let semEstoque = false;
-        for (const item of itensDoPedido(pedido)) {
+        for (const item of itensConfirmar) {
           const produto = estoqueCompras.produto(guildId, item.catId, item.prodId);
           if (!produto || !produto.controlarQtd) continue;
           const reservadosOutros = pedidoStore.reservado(guildId, item.catId, item.prodId) - item.quantidade;
           const disponivelReal = (produto.quantidade || 0) - reservadosOutros;
           if (disponivelReal < item.quantidade) { semEstoque = true; break; }
-          estoqueCompras.setQuantidade(guildId, item.catId, item.prodId, (produto.quantidade || 0) - item.quantidade);
         }
         if (semEstoque) {
           return interaction.editReply({
             content: '❌ Estoque insuficiente para este pedido agora. Peça ao cliente para aguardar reposição ou cancele o pedido.',
             components: [],
           }).catch(() => {});
+        }
+        for (const item of itensConfirmar) {
+          const produto = estoqueCompras.produto(guildId, item.catId, item.prodId);
+          if (!produto || !produto.controlarQtd) continue;
+          estoqueCompras.setQuantidade(guildId, item.catId, item.prodId, (produto.quantidade || 0) - item.quantidade);
+        }
+
+        // O estoque mudou: atualiza os paineis fixos e avisa quem esgotou
+        // (mesmo tratamento que o admin tem ao vender pelo painel).
+        refreshPainelEstoque(client).catch(() => {});
+        painelCategoria.refresh(client).catch(() => {});
+        for (const item of itensConfirmar) {
+          const produto = estoqueCompras.produto(guildId, item.catId, item.prodId);
+          if (produto && produto.controlarQtd && produto.quantidade === 0) {
+            avisar(client, guildId, `⚠️ **${produto.nome}** esgotou no estoque!`).catch(() => {});
+          }
         }
 
         const conquistadas = metasConquistadas(guildId, pedido.clienteId, pedido.valor);
@@ -3775,6 +3811,9 @@ client.on('interactionCreate', async (interaction) => {
       if (acao === 'rm') {
         metasStoreCompra.removerMeta(guildId, partes[2]);
         return interaction.update(buildMetasPainel(interaction.guild, userId));
+      }
+      if (acao === 'pag') {
+        return interaction.update(buildMetasPainel(interaction.guild, userId, partes[2]));
       }
       if (acao === 'refresh') {
         return interaction.update(buildMetasPainel(interaction.guild, userId));
@@ -3857,6 +3896,180 @@ client.on('interactionCreate', async (interaction) => {
     try {
       if (interaction.isRepliable()) {
         if (interaction.deferred || interaction.replied) return;
+        return interaction.reply({ content: '❌ Ocorreu um erro ao processar esta interação.', flags: MessageFlags.Ephemeral });
+      }
+    } catch {}
+  }
+});
+
+
+// ----- Remoção de lançamento manual de venda (customId `venda:`) -----
+// Fluxo separado do /venda (que so lanca). Aqui a equipe desfaz um lancamento
+// que entrou a mais. A permissao (grupo `vendas`) e verificada a cada clique
+// via comandoDoCustomId -> 'venda', e o cliente alvo vem do proprio customId.
+const { painelRemoverLancamento, confirmarRemocaoLancamento, embedRemocaoFeita, resumoCliente } = require('./utils/vendaPanel');
+
+client.on('interactionCreate', async (interaction) => {
+  try {
+    const id = interaction.customId || '';
+    if (!id.startsWith('venda:')) return;
+
+    const partes = id.split(':');
+    const acao = partes[1];
+    const clienteId = partes[2];
+
+    if (!interaction.guild) {
+      return interaction.reply({ content: '❌ Isso só funciona no servidor.', flags: MessageFlags.Ephemeral });
+    }
+    if (!comandoPode(interaction.member, interaction.user.id, 'venda')) {
+      return interaction.reply({
+        content: '🔒 Somente administradores ou equipe autorizada podem remover lançamentos.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    // Paginação da lista.
+    if (acao === 'pag' && interaction.isButton()) {
+      return interaction.update(painelRemoverLancamento(interaction.guildId, clienteId, Number(partes[3]) || 0));
+    }
+
+    // Voltar para a lista.
+    if (acao === 'listar' && interaction.isButton()) {
+      return interaction.update(painelRemoverLancamento(interaction.guildId, clienteId, Number(partes[3]) || 0));
+    }
+
+    // Selecionou um lançamento: pede confirmação.
+    if (acao === 'remover' && interaction.isStringSelectMenu()) {
+      const lancamentoId = interaction.values[0];
+      return interaction.update(confirmarRemocaoLancamento(interaction.guildId, clienteId, lancamentoId));
+    }
+
+    // Confirmou a remoção.
+    if (acao === 'confrem' && interaction.isButton()) {
+      const lancamentoId = partes[3];
+      const removido = comprasStore.removerLancamento(interaction.guildId, lancamentoId);
+      if (!removido) {
+        return interaction.update({
+          embeds: [new EmbedBuilder().setColor(0xe74c3c).setDescription('❌ Lançamento não encontrado (talvez já removido).')],
+          components: [],
+        });
+      }
+      const resumo = resumoCliente(interaction.guildId, clienteId);
+      return interaction.update({
+        embeds: [embedRemocaoFeita(removido, clienteId, resumo)],
+        components: [new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`venda:listar:${clienteId}:0`).setLabel('🗑️ Ver lista novamente').setStyle(ButtonStyle.Secondary)
+        )],
+      });
+    }
+
+    // Confirmou remover SÓ UMA venda de um lançamento com várias.
+    if (acao === 'confum' && interaction.isButton()) {
+      const lancamentoId = partes[3];
+      const resultado = comprasStore.removerVendaParcial(interaction.guildId, lancamentoId);
+      if (!resultado) {
+        return interaction.update({
+          embeds: [new EmbedBuilder().setColor(0xe74c3c).setDescription('❌ Lançamento não encontrado (talvez já removido).')],
+          components: [],
+        });
+      }
+      const resumo = resumoCliente(interaction.guildId, clienteId);
+      return interaction.update({
+        embeds: [embedRemocaoFeita(resultado, clienteId, resumo)],
+        components: [new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId(`venda:listar:${clienteId}:0`).setLabel('🗑️ Ver lista novamente').setStyle(ButtonStyle.Secondary)
+        )],
+      });
+    }
+  } catch (error) {
+    console.error('[venda:interaction]', error);
+    try {
+      if (interaction.isRepliable()) {
+        if (interaction.deferred || interaction.replied) return;
+        return interaction.reply({ content: '❌ Ocorreu um erro ao processar esta interação.', flags: MessageFlags.Ephemeral });
+      }
+    } catch {}
+  }
+});
+
+
+// ----- Painel admin de clientes (customId `clientes:`) -----
+// Fluxo em 3 páginas: lista (select) -> perfil do cliente -> gerenciar.
+// Permissao (grupo `vendas`, comando `clientes`) checada a cada clique.
+const { buildListaClientes, buildPerfilCliente, buildGerenciarCliente, modalLancarVenda } = require('./utils/clientesPanel');
+const { lancarVenda, embedLancamento, parseValor, parseQuantidade } = require('./utils/vendaPanel');
+
+client.on('interactionCreate', async (interaction) => {
+  try {
+    const id = interaction.customId || '';
+    if (!id.startsWith('clientes:')) return;
+
+    if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'clientes')) {
+      return interaction.reply({
+        content: '🔒 Somente administradores ou equipe autorizada.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    const partes = id.split(':');
+    const acao = partes[1];
+
+    // Select de cliente na lista -> abre o perfil.
+    if (acao === 'sel' && interaction.isStringSelectMenu()) {
+      return interaction.update(buildPerfilCliente(interaction.guild, interaction.values[0], Number(partes[2]) || 0));
+    }
+
+    // Navegação da lista.
+    if (acao === 'lista' && interaction.isButton()) {
+      return interaction.update(buildListaClientes(interaction.guild, Number(partes[2]) || 0));
+    }
+
+    // Voltar ao perfil do cliente.
+    if (acao === 'perfil' && interaction.isButton()) {
+      return interaction.update(buildPerfilCliente(interaction.guild, partes[2], Number(partes[3]) || 0));
+    }
+
+    // Abrir o gerenciamento do cliente.
+    if (acao === 'gerenciar' && interaction.isButton()) {
+      return interaction.update(buildGerenciarCliente(interaction.guild, partes[2], Number(partes[3]) || 0));
+    }
+
+    // Botão "Lançar venda" -> abre o modal.
+    if (acao === 'lancar' && interaction.isButton()) {
+      return interaction.showModal(modalLancarVenda(partes[2], Number(partes[3]) || 0));
+    }
+
+    // Submit do modal -> lança a venda e reabre a página do cliente.
+    if (acao === 'lancarmodal' && interaction.isModalSubmit()) {
+      const clienteId = partes[2];
+      const pagina = Number(partes[3]) || 0;
+      const valor = parseValor(interaction.fields.getTextInputValue('valor'));
+      if (valor == null) {
+        return interaction.reply({ content: '❌ Valor inválido. Use um número, ex: `10,50`.', flags: MessageFlags.Ephemeral });
+      }
+      const quantidade = parseQuantidade(interaction.fields.getTextInputValue('quantidade'));
+      const descricao = (interaction.fields.getTextInputValue('descricao') || '').trim();
+
+      const { lancamento, conquistadas, acumulado } = await lancarVenda(interaction.client, interaction.guild, {
+        clienteId,
+        clienteTag: `<@${clienteId}>`,
+        valor,
+        quantidade,
+        descricao,
+        registradoPor: interaction.user.id,
+      });
+
+      await interaction.reply({
+        embeds: [embedLancamento(lancamento, conquistadas, acumulado, `<@${clienteId}>`)],
+        flags: MessageFlags.Ephemeral,
+      });
+      // Reabre a página do cliente com os dados já atualizados.
+      return interaction.followUp({ ...buildPerfilCliente(interaction.guild, clienteId, pagina), flags: MessageFlags.Ephemeral });
+    }
+  } catch (error) {
+    console.error('[clientes:interaction]', error);
+    try {
+      if (interaction.isRepliable() && !interaction.deferred && !interaction.replied) {
         return interaction.reply({ content: '❌ Ocorreu um erro ao processar esta interação.', flags: MessageFlags.Ephemeral });
       }
     } catch {}
