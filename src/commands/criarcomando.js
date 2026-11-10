@@ -3,6 +3,8 @@ const { camposValidos } = require('../utils/embedPainel');
 const { comandoPode } = require('../utils/permissions');
 const { isAdmin } = require('../prefixCommands/settaxa');
 const custom = require('../utils/customCommands');
+const { parseCopiaveis, montarBotoes } = require('../utils/copiaveis');
+const { normalizarUrl } = require('../utils/links');
 
 // Nomes de comandos nativos do bot (nao podem ser usado por comandos personalizados,
 // senao o comando nativo sempre "vence" e o personalizado fica sem funcionar)
@@ -32,7 +34,9 @@ module.exports = {
     .addStringOption((o) => o.setName('field2_nome').setDescription('Nome do 2º campo (opcional)').setRequired(false))
     .addStringOption((o) => o.setName('field2_valor').setDescription('Valor do 2º campo (opcional)').setRequired(false))
     .addBooleanOption((o) => o.setName('field2_inline').setDescription('2º campo em linha?').setRequired(false))
-    .addStringOption((o) => o.setName('copiaveis').setDescription('Itens: nome:tipo:valor; — tipo: copiavel ou link').setRequired(false)),
+    .addStringOption((o) => o.setName('link_rotulo').setDescription('Texto do botão de link (opcional; ex: Entrar no servidor)').setRequired(false))
+    .addStringOption((o) => o.setName('link_url').setDescription('URL do botão de link (opcional; ex: discord.gg/abc). Botão que redireciona ao clicar.').setRequired(false))
+    .addStringOption((o) => o.setName('copiaveis').setDescription('Itens copiáveis: nome:valor; (ou nome:copiavel:valor). Ex: PIX:12345678900').setRequired(false)),
 
   async execute(interaction) {
     if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'criarcomando')) {
@@ -72,68 +76,31 @@ module.exports = {
       return interaction.reply({ content: `❌ O comando \`${nome}\` já existe neste servidor. Use \`/gerenciarcomandos\` para editar.`, flags: MessageFlags.Ephemeral });
     }
 
-    // Parse copiaveis: "nome:tipo:valor" separados por ;
-    // tipo: copiavel (ou copia/copiar) | link
-    // Ex: "PIX:copiavel:12345678900; Instagram:link:https://instagram.com/rubyfy"
-    let linkInvalido = null;
-    const copiaveis = copiaveisBruto
-      .split(';')
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .map((s) => {
-        // Formato: nome:tipo:valor — mas URLs tem : (https://), entao pega os 2 primeiros e junta o resto
-        const idx1 = s.indexOf(':');
-        const idx2 = s.indexOf(':', idx1 + 1);
-        let nome;
-        let tipo;
-        let valor;
-        if (idx1 === -1) {
-          // Apenas o valor (sem nome:tipo:): rotulo generico, valor = a string inteira
-          nome = 'Copiar';
-          tipo = 'copiavel';
-          valor = s;
-        } else if (idx2 === -1) {
-          // nome:valor (copiavel por padrao)
-          nome = s.slice(0, idx1).trim();
-          tipo = 'copiavel';
-          valor = s.slice(idx1 + 1).trim();
-        } else {
-          // nome:tipo:valor
-          nome = s.slice(0, idx1).trim();
-          tipo = s.slice(idx1 + 1, idx2).trim().toLowerCase();
-          valor = s.slice(idx2 + 1).trim();
-        }
-        if (!nome || !valor) return null;
-        // Normaliza tipo
-        const tipoFinal = ['link', 'url'].includes(tipo) ? 'link' : 'copiavel';
-        let valorFinal = valor;
-        // Valida link: normaliza para https:// se nao tiver protocolo
-        if (tipoFinal === 'link') {
-          if (!/^https?:\/\//i.test(valorFinal)) valorFinal = 'https://' + valorFinal;
-          try {
-            new URL(valorFinal);
-          } catch {
-            if (!linkInvalido) linkInvalido = { nome };
-            return null;
-          }
-        }
-        return { nome, tipo: tipoFinal, valor: valorFinal };
-      })
-      .filter(Boolean);
-
-    if (linkInvalido) {
-      return interaction.reply({ content: `❌ O link \`${linkInvalido.nome}\` não é uma URL válida. Use formato: https://...`, flags: MessageFlags.Ephemeral });
-    }
-
-    // O Discord limita a 5 botoes por linha: limita a criacao p/ nao haver itens "fantasma"
-    // (criar mais de 5 criaria itens sem botao proprio, confundindo o painel).
+    // Copiaveis (botoes de copiar) + link dedicado (botao que abre uma URL).
+    // Formato dos copiaveis: "nome:valor" ou "nome:tipo:valor" separados por ";".
     const COPIAVEIS_MAX = 5;
-    if (copiaveis.length > COPIAVEIS_MAX) {
+    const { itens: copiaveisBase, linkInvalido, excedeu } = parseCopiaveis(copiaveisBruto, COPIAVEIS_MAX);
+    if (linkInvalido) {
+      return interaction.reply({ content: `❌ O link \`${linkInvalido.nome}\` não é uma URL válida (use http/https).`, flags: MessageFlags.Ephemeral });
+    }
+    if (excedeu) {
       return interaction.reply({
         content: `❌ Máximo de **${COPIAVEIS_MAX}** conteúdos copiáveis por comando (limite do Discord).`,
         flags: MessageFlags.Ephemeral,
       });
     }
+
+    // Botão de link dedicado (link_rotulo/link_url) — atalho pra criar comando de
+    // entrega sem saber o formato "nome:link:valor".
+    const linkRotuloBruto = (interaction.options.getString('link_rotulo') || '').trim();
+    const linkUrlBruto = (interaction.options.getString('link_url') || '').trim();
+    if (linkUrlBruto && !normalizarUrl(linkUrlBruto)) {
+      return interaction.reply({ content: '❌ A URL do botão de link é inválida (use http/https).', flags: MessageFlags.Ephemeral });
+    }
+    if (linkUrlBruto && !linkRotuloBruto) {
+      return interaction.reply({ content: '❌ Informe o **texto do botão** (`link_rotulo`) junto com a URL.', flags: MessageFlags.Ephemeral });
+    }
+    const copiaveis = montarBotoes({ linkRotulo: linkRotuloBruto, linkUrl: linkUrlBruto, copiaveis: copiaveisBase }, COPIAVEIS_MAX);
 
     const embed = (tituloEmbed || corEmbed || imagemEmbed || fieldsEmbed.length)
       ? { titulo: tituloEmbed, descricao: descricao, cor: corEmbed, imagem: imagemEmbed, fields: fieldsEmbed }
@@ -143,12 +110,12 @@ module.exports = {
       return interaction.reply({ content: '❌ Não consegui criar o comando.', flags: MessageFlags.Ephemeral });
     }
 
-    const aviso = copiaveis.length
-      ? `📋 ${copiaveis.length} conteúdo(s) copiável(is): ${copiaveis.map((c) => c.nome).join(', ')}`
-      : 'Sem conteúdo copiável.';
+    const botoes = copiaveis.map((c) => (c.tipo === 'link' ? `🔗 ${c.nome}` : `📋 ${c.nome}`));
+    const aviso = botoes.length ? `${botoes.length} botão(ões): ${botoes.join(', ')}` : 'Sem botões.';
+    const privado = ephemeral ? '\n🔒 Resposta **privada** (vai na DM de quem usar o comando).' : '';
 
     return interaction.reply({
-      content: `✅ Comando \`!${nome}\` criado!\n${aviso}\n` +
+      content: `✅ Comando \`!${nome}\` criado!\n${aviso}${privado}\n` +
         'Use **!comandos** para ver os comandos personalizados.',
       flags: MessageFlags.Ephemeral,
     });

@@ -96,6 +96,13 @@
 - Exige paridade funcional `!` ↔ `/`; slash deve reusar os mesmos editoress/handlers dos prefixos quando houver editor visual.
 - Prefixos com suporte a canal alvo (`!tabela`, `!painelcategoria`, `!painelestoque`) usam `message.mentions?.channels?.first() || message.channel` — cuidado com typo `mentions` (já corrigido; se voltar, quebra silenciosamente o envio no canal citado).
 
+## Comandos personalizados (`/criarcomando`)
+- **`ephemeral` = resposta na DM** (2026-11-11). Comandos personalizados são de **prefixo** (`!nome`), e mensagem de prefixo **não pode** ser ephemeral (limitação do Discord — só respostas de interação podem). Por isso a flag `ephemeral` era salva mas **ignorada**: o `!pix` privado vazava no canal. Agora, com `ephemeral: sim`, o bot envia a resposta na **DM do autor** e deixa um aviso curto no canal ("enviei na sua DM"); se a DM estiver fechada, avisa o erro no canal **sem vazar o conteúdo**. O clique no botão copiável continua ephemeral de verdade (é interação). Lógica no handler de `Events.MessageCreate` em `src/index.js`.
+- **Botão de link dedicado**: opções `link_rotulo` + `link_url` no `/criarcomando` geram um botão nativo (`ButtonStyle.Link`) que redireciona ao clicar — pensado para comando de entrega. Antes só dava para fazer isso pelo formato escondido `copiaveis` com `nome:link:valor`, que ninguém descobria. Os dois caminhos convivem: `montarBotoes` põe o link dedicado primeiro e depois os copiáveis.
+- **Validação de URL** (`src/utils/links.js`): só aceita `http`/`https`; sem protocolo assume `https://`. Antes, `mailto:x@y.com` virava `https://mailto:x@y.com` e `ftp://s` virava `https://ftp://s` — botões quebrados (a validação antiga só fazia `new URL()`, que aceita qualquer esquema).
+- **Parse de copiáveis compartilhado** (`src/utils/copiaveis.js`, `parseCopiaveis`): o `/criarcomando` e o modal de edição (`customEditHandler`) tinham o **mesmo parser duplicado**. Agora usam um só. Formato: `nome:valor;` ou `nome:link:url;` (máx. 5 botões).
+- Testes: `tests/custom_link.test.js` (URL, parse, botão link/copiável) e `tests/smoke_handlers.js` (ephemeral→DM, DM fechada, público com link). ⚠️ Nos fakes do smoke, `fazerMensagem` precisa de `guildId`/`channelId`, senão o `messageCreate` ignora a mensagem.
+
 ## Release
 - v1.1 = primeiro release construído direto do `git ls-files` do main (70 arquivos, zip completo p/ Discloud). Assets sem `.env`, `data/`, `node_modules`.
 - Publicar release: criar tag `ruby-fy-bot-vX.Y`, upload do zip via `https://uploads.github.com/.../releases/{id}/assets?name=...`.

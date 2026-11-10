@@ -61,7 +61,7 @@ function modalEditar(cmd) {
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
           .setCustomId('copiaveis')
-          .setLabel('Copiáveis: nome:tipo:valor (link ou copiar)')
+          .setLabel('Botões: nome:valor; (ou nome:link:url)')
           .setStyle(TextInputStyle.Paragraph)
           .setRequired(false)
           .setMaxLength(4000)

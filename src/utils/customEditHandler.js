@@ -2,6 +2,7 @@ const { Events, MessageFlags } = require('discord.js');
 const custom = require('./customCommands');
 const { modalEditar } = require('./customEditPanel');
 const { comandoPode } = require('./permissions');
+const { parseCopiaveis } = require('./copiaveis');
 
 function registrar(client) {
   client.on(Events.InteractionCreate, async (interaction) => {
@@ -33,50 +34,13 @@ function registrar(client) {
           return interaction.reply({ content: '❌ Nome inválido. Use apenas letras, números, _ ou -. (máx. 32).', flags: MessageFlags.Ephemeral });
         }
         let linkInvalido = null;
-        const copiaveis = copiaveisBruto
-          .split(';')
-          .map((s) => s.trim())
-          .filter(Boolean)
-          .map((s) => {
-            const idx1 = s.indexOf(':');
-            const idx2 = s.indexOf(':', idx1 + 1);
-            let nome, tipo, valor;
-            if (idx1 === -1) {
-              nome = 'Copiar';
-              tipo = 'copiavel';
-              valor = s;
-            } else if (idx2 === -1) {
-              nome = s.slice(0, idx1).trim();
-              tipo = 'copiavel';
-              valor = s.slice(idx1 + 1).trim();
-            } else {
-              nome = s.slice(0, idx1).trim();
-              tipo = s.slice(idx1 + 1, idx2).trim().toLowerCase();
-              valor = s.slice(idx2 + 1).trim();
-            }
-            if (!nome || !valor) return null;
-            const tipoFinal = ['link', 'url'].includes(tipo) ? 'link' : 'copiavel';
-            let valorFinal = valor;
-            if (tipoFinal === 'link') {
-              if (!/^https?:\/\//i.test(valorFinal)) valorFinal = 'https://' + valorFinal;
-              try {
-                new URL(valorFinal);
-              } catch {
-                if (!linkInvalido) linkInvalido = { nome };
-                return null;
-              }
-            }
-            return { nome, tipo: tipoFinal, valor: valorFinal };
-          })
-          .filter(Boolean);
+        const { itens: copiaveis, linkInvalido: inval, excedeu } = parseCopiaveis(copiaveisBruto, 5);
+        linkInvalido = inval;
         if (linkInvalido) {
-          return interaction.reply({ content: `❌ O link \`${linkInvalido.nome}\` não é uma URL válida. Use formato: https://...`, flags: MessageFlags.Ephemeral });
+          return interaction.reply({ content: `❌ O link \`${linkInvalido.nome}\` não é uma URL válida (use http/https).`, flags: MessageFlags.Ephemeral });
         }
-        const COPIAVEIS_MAX = 5;
-        if (copiaveis.length > COPIAVEIS_MAX) {
-
-
-          return interaction.reply({ content: `❌ Máximo de **${COPIAVEIS_MAX}** conteúdos copiáveis por comando (limite do Discord).`, flags: MessageFlags.Ephemeral });
+        if (excedeu) {
+          return interaction.reply({ content: `❌ Máximo de **5** conteúdos copiáveis por comando (limite do Discord).`, flags: MessageFlags.Ephemeral });
         }
         const slug = nomeNovo.toLowerCase().trim();
         if (slug !== nomeOriginal && custom.existe(interaction.guildId, slug)) {

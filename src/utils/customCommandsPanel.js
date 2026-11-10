@@ -28,11 +28,14 @@ function buildResposta(cmd) {
     const row = new ActionRowBuilder();
     cmd.copiaveis.slice(0, 5).forEach((c, i) => {
       if (c.tipo === 'link') {
-        // Botao nativo de link: abre a URL direto, sem handler
+        // Botao nativo de link: abre a URL direto, sem handler. So adiciona o
+        // icone de link se o rotulo ja nao comecar com um emoji (evita "🔗 🎁 ...").
+        const rotulo = String(c.nome || 'Abrir link').slice(0, 80);
+        const temEmoji = /^\p{Extended_Pictographic}/u.test(rotulo) || /^<a?:\w+:\d+>/.test(rotulo);
         row.addComponents(
           new ButtonBuilder()
             .setURL(c.valor)
-            .setLabel(`🔗 ${c.nome}`)
+            .setLabel(temEmoji ? rotulo : `🔗 ${rotulo}`)
             .setStyle(ButtonStyle.Link)
         );
       } else {

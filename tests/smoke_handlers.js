@@ -60,13 +60,23 @@ const membro = {
 };
 membrosCache.set(membro.id, membro);
 const author = { id: "111111111111111111", bot: false, username: "admin-teste" };
+// DM simulada: registra o que foi enviado na DM do autor (para testar o ephemeral)
+author.dmEnviada = null;
+author.dmFalha = false;
+author.send = async (payload) => {
+  if (author.dmFalha) throw new Error("DM fechada");
+  author.dmEnviada = payload;
+  return { id: "dm1" };
+};
 function fazerMensagem(conteudo) {
   return {
     guild,
+    guildId: guild.id,
     member: membro,
     author,
     content: conteudo,
     channel: canal,
+    channelId: canal.id,
     mentions: { channels: { first: () => null }, roles: { first: () => null }, users: { first: () => null } },
     attachments: { first: () => undefined, values: () => [], size: 0, map: () => [] },
     reply: async (payload) => { canal.ultimaResposta = payload; return payload; },
@@ -415,6 +425,76 @@ async function testarInteracoes() {
     if (interacaoValida(e)) registrar("proofmodal sem rascunho", true); else falhas++;
   }
   proofStore.desativar(guild.id); // não deixar guild de teste no proofs.json real
+
+  // --- Comando personalizado EPHEMERAL (!pix): deve ir para a DM, não pro canal ---
+  {
+    const custom = require("../src/utils/customCommands");
+    const { montarBotoes } = require("../src/utils/copiaveis");
+    // Cria um comando privado com um copiável (PIX)
+    custom.criar(guild.id, "pixpriv", {
+      nome: "pixpriv",
+      descricao: "Chave PIX privada",
+      mensagem: "Chave PIX para pagamento",
+      ephemeral: true,
+      copiaveis: [{ nome: "PIX", tipo: "copiavel", valor: "12345678900" }],
+      embed: null,
+    });
+    author.dmEnviada = null;
+    canal.ultimaResposta = null;
+    const msg = fazerMensagem("!pixpriv");
+    await client.emit("messageCreate", msg);
+    const foiPraDM = !!author.dmEnviada;
+    const naoVazouNoCanal = !canal.ultimaResposta;
+    if (foiPraDM && naoVazouNoCanal) {
+      registrar("!pixpriv ephemeral -> DM (não vaza no canal)", true);
+      okTotal++;
+    } else {
+      registrar("!pixpriv ephemeral", false, "foiPraDM=" + foiPraDM + " vazouNoCanal=" + !naoVazouNoCanal);
+      falhas++;
+    }
+
+    // DM fechada -> avisa erro no canal, sem mandar o conteúdo
+    author.dmFalha = true;
+    author.dmEnviada = null;
+    canal.ultimaResposta = null;
+    const msg2 = fazerMensagem("!pixpriv");
+    await client.emit("messageCreate", msg2);
+    const avisouErro = !!canal.ultimaResposta;
+    if (!author.dmEnviada && avisouErro) {
+      registrar("!pixpriv ephemeral com DM fechada -> avisa no canal", true);
+      okTotal++;
+    } else {
+      registrar("!pixpriv ephemeral DM fechada", false, "dm=" + !!author.dmEnviada + " aviso=" + avisouErro);
+      falhas++;
+    }
+    author.dmFalha = false;
+
+    // Comando PÚBLICO continua respondendo no canal
+    custom.criar(guild.id, "entregapub", {
+      nome: "entregapub",
+      descricao: "Entrega",
+      mensagem: "Clique para entrar",
+      ephemeral: false,
+      copiaveis: montarBotoes({ linkRotulo: "Entrar", linkUrl: "discord.gg/abc", copiaveis: [] }, 5),
+      embed: null,
+    });
+    author.dmEnviada = null;
+    canal.ultimaResposta = null;
+    await client.emit("messageCreate", fazerMensagem("!entregapub"));
+    const publicoNoCanal = !!canal.ultimaResposta && !author.dmEnviada;
+    const botaoLink = canal.ultimaResposta?.components?.[0]?.toJSON?.().components?.[0]?.style === 5;
+    if (publicoNoCanal && botaoLink) {
+      registrar("!entregapub público com botão de link no canal", true);
+      okTotal++;
+    } else {
+      registrar("!entregapub público", false, "canal=" + publicoNoCanal + " link=" + botaoLink);
+      falhas++;
+    }
+
+    // limpeza
+    custom.excluir(guild.id, "pixpriv");
+    custom.excluir(guild.id, "entregapub");
+  }
 
   console.log("\nInteracoes: " + okTotal + " ok," + falhas + " falhas");
   return falhas === 0;

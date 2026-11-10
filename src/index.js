@@ -2947,6 +2947,21 @@ client.on(Events.MessageCreate, async (message) => {
     if (cmdCustom) {
       try {
         const payload = buildResposta(cmdCustom);
+        // Comandos de prefixo não têm resposta ephemeral (limite do Discord). Para
+        // o !pix funcionar como privado, quando o comando é marcado como
+        // "ephemeral" a resposta vai para a DM de quem usou. Se a DM estiver
+        // fechada, avisa no canal sem vazar o conteúdo.
+        if (cmdCustom.ephemeral) {
+          try {
+            await message.author.send(payload);
+            if (message.channel.isSendable?.()) {
+              await message.channel.send(`📩 ${message.author}, enviei o conteúdo na sua DM.`);
+            }
+          } catch {
+            await message.reply('❌ Não consegui te mandar na DM (verifique se ela está aberta). O conteúdo **não** foi enviado aqui.');
+          }
+          return;
+        }
         return await message.reply(payload);
       } catch (error) {
         console.error('[Comando custom !]', error);

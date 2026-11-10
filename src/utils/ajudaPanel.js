@@ -219,12 +219,21 @@ const PAGINAS = {
     if (lista.length === 0) {
       linhas.push('*Nenhum comando personalizado criado ainda.*', '');
       linhas.push('Use **/criarcomando (adm)** para criar o seu comando.', '');
-      linhas.push('Com **/criarcomando (adm)** você define nome, título da embed, descrição, mensagem, cor, imagem (URL **ou anexo**) e conteúdos copiáveis.', '');
+      linhas.push('Com **/criarcomando (adm)** você define nome, título da embed, descrição, mensagem, cor, imagem (URL **ou anexo**) e os botões.', '');
+      linhas.push('**Botão de link** (ex: comando de entrega): preencha `link_rotulo` (texto do botão) e `link_url` (ex: `discord.gg/abc`). Ao clicar, o usuário é levado direto ao link.', '');
+      linhas.push('**Botões copiáveis** (ex: PIX): use `copiaveis` no formato `nome:valor;` — ex: `PIX:12345678900; Instagram:rubyfy`. Ao clicar, o valor aparece só para quem clicou.', '');
+      linhas.push('**Resposta privada** (`ephemeral: sim`): o comando responde na **DM** de quem usou, em vez do canal.', '');
       linhas.push('Com **/gerenciarcomandos (adm)** você lista, edita ou exclui os já criados.');
       linhas.push('Os comandos criados são chamados com **!nome** (prefixo, não slash).');
     } else {
       for (const c of lista) {
-        const extras = c.copiaveis && c.copiaveis.length ? ` — 📋 ${c.copiaveis.length} copiável(is)` : '';
+        const links = (c.copiaveis || []).filter((b) => b.tipo === 'link').length;
+        const copias = (c.copiaveis || []).filter((b) => b.tipo !== 'link').length;
+        const extras = [
+          links ? ` — 🔗 ${links} link(s)` : '',
+          copias ? ` — 📋 ${copias} copiável(is)` : '',
+          c.ephemeral ? ' — 🔒 privado' : '',
+        ].join('');
         linhas.push(`➜ **!${c.nome}**${extras}`);
         if (c.descricao) linhas.push(`> *${c.descricao}*`);
         linhas.push('');
