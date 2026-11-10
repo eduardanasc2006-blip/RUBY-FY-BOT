@@ -426,50 +426,45 @@ async function testarInteracoes() {
   }
   proofStore.desativar(guild.id); // não deixar guild de teste no proofs.json real
 
-  // --- Comando personalizado EPHEMERAL (!pix): deve ir para a DM, não pro canal ---
+  // --- Comando personalizado: botão copiável responde ephemeral ABAIXO do comando ---
   {
     const custom = require("../src/utils/customCommands");
     const { montarBotoes } = require("../src/utils/copiaveis");
-    // Cria um comando privado com um copiável (PIX)
-    custom.criar(guild.id, "pixpriv", {
-      nome: "pixpriv",
-      descricao: "Chave PIX privada",
-      mensagem: "Chave PIX para pagamento",
+    // Comando com copiável (PIX): o clique deve responder ephemeral (só quem clica vê)
+    custom.criar(guild.id, "pixcopia", {
+      nome: "pixcopia",
+      descricao: "Chave PIX",
+      mensagem: "Clique no botão para copiar a chave PIX",
       ephemeral: true,
       copiaveis: [{ nome: "PIX", tipo: "copiavel", valor: "12345678900" }],
       embed: null,
     });
     author.dmEnviada = null;
     canal.ultimaResposta = null;
-    const msg = fazerMensagem("!pixpriv");
-    await client.emit("messageCreate", msg);
-    const foiPraDM = !!author.dmEnviada;
-    const naoVazouNoCanal = !canal.ultimaResposta;
-    if (foiPraDM && naoVazouNoCanal) {
-      registrar("!pixpriv ephemeral -> DM (não vaza no canal)", true);
+    await client.emit("messageCreate", fazerMensagem("!pixcopia"));
+    const postouNoCanal = !!canal.ultimaResposta && !author.dmEnviada;
+    if (postouNoCanal) {
+      registrar("!pixcopia posta no canal (não vai pra DM)", true);
       okTotal++;
     } else {
-      registrar("!pixpriv ephemeral", false, "foiPraDM=" + foiPraDM + " vazouNoCanal=" + !naoVazouNoCanal);
+      registrar("!pixcopia", false, "canal=" + postouNoCanal + " dm=" + !!author.dmEnviada);
       falhas++;
     }
 
-    // DM fechada -> avisa erro no canal, sem mandar o conteúdo
-    author.dmFalha = true;
-    author.dmEnviada = null;
-    canal.ultimaResposta = null;
-    const msg2 = fazerMensagem("!pixpriv");
-    await client.emit("messageCreate", msg2);
-    const avisouErro = !!canal.ultimaResposta;
-    if (!author.dmEnviada && avisouErro) {
-      registrar("!pixpriv ephemeral com DM fechada -> avisa no canal", true);
+    // clicar no botão copiável responde ephemeral (abaixo do comando)
+    canal.ultimaInteracao = null;
+    const e = await emitir("button", "custom:copy:pixcopia:0");
+    const flags = canal.ultimaInteracao?.flags;
+    const conteudo = canal.ultimaInteracao?.content;
+    if (!e.erro && conteudo === "12345678900" && flags) {
+      registrar("botão copiável PIX responde ephemeral abaixo do comando", true);
       okTotal++;
     } else {
-      registrar("!pixpriv ephemeral DM fechada", false, "dm=" + !!author.dmEnviada + " aviso=" + avisouErro);
+      registrar("copiável PIX ephemeral", false, "conteudo=" + conteudo + " flags=" + flags);
       falhas++;
     }
-    author.dmFalha = false;
 
-    // Comando PÚBLICO continua respondendo no canal
+    // Comando com botão de link responde no canal com o botão nativo
     custom.criar(guild.id, "entregapub", {
       nome: "entregapub",
       descricao: "Entrega",
@@ -492,7 +487,7 @@ async function testarInteracoes() {
     }
 
     // limpeza
-    custom.excluir(guild.id, "pixpriv");
+    custom.excluir(guild.id, "pixcopia");
     custom.excluir(guild.id, "entregapub");
   }
 

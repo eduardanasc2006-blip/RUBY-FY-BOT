@@ -221,8 +221,8 @@ const PAGINAS = {
       linhas.push('Use **/criarcomando (adm)** para criar o seu comando.', '');
       linhas.push('Com **/criarcomando (adm)** você define nome, título da embed, descrição, mensagem, cor, imagem (URL **ou anexo**) e os botões.', '');
       linhas.push('**Botão de link** (ex: comando de entrega): preencha `link_rotulo` (texto do botão) e `link_url` (ex: `discord.gg/abc`). Ao clicar, o usuário é levado direto ao link.', '');
-      linhas.push('**Botões copiáveis** (ex: PIX): use `copiaveis` no formato `nome:valor;` — ex: `PIX:12345678900; Instagram:rubyfy`. Ao clicar, o valor aparece só para quem clicou.', '');
-      linhas.push('**Resposta privada** (`ephemeral: sim`): o comando responde na **DM** de quem usou, em vez do canal.', '');
+      linhas.push('**Botão copiável** (ex: PIX): use `copiaveis` no formato `nome:valor;` — ex: `PIX:12345678900; Instagram:rubyfy`. Ao clicar, o valor aparece **logo abaixo do comando** (privado por padrão: só quem clicou vê).', '');
+      linhas.push('**Privado ou público** (`ephemeral`): controla o clique no botão copiável. `sim` (padrão) = só quem clica vê; `não` = todos no canal veem.', '');
       linhas.push('Com **/gerenciarcomandos (adm)** você lista, edita ou exclui os já criados.');
       linhas.push('Os comandos criados são chamados com **!nome** (prefixo, não slash).');
     } else {

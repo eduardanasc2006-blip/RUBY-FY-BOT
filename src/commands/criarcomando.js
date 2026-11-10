@@ -23,7 +23,7 @@ module.exports = {
     .addStringOption((o) => o.setName('nome').setDescription('Nome do comando (pode usar espaço; vira - no !)').setRequired(true))
     .addStringOption((o) => o.setName('descricao').setDescription('Descrição do comando').setRequired(true))
     .addStringOption((o) => o.setName('mensagem').setDescription('Mensagem de resposta').setRequired(true))
-    .addBooleanOption((o) => o.setName('ephemeral').setDescription('Resposta privada (ephemeral)? Padrão: não (público)').setRequired(false))
+    .addBooleanOption((o) => o.setName('ephemeral').setDescription('Botão copiável responde em privado (só quem clica vê)? Padrão: sim').setRequired(false))
     .addStringOption((o) => o.setName('titulo').setDescription('Título da embed (opcional)').setRequired(false))
     .addStringOption((o) => o.setName('cor').setDescription('Cor: lilas, roxo, azul, verde, rosa, ou #hex (opcional)').setRequired(false))
     .addStringOption((o) => o.setName('imagem').setDescription('URL da imagem da embed (opcional)').setRequired(false))
@@ -46,7 +46,7 @@ module.exports = {
     const nome = interaction.options.getString('nome').trim();
     const descricao = interaction.options.getString('descricao').trim();
     const mensagem = interaction.options.getString('mensagem').trim();
-    const ephemeral = interaction.options.getBoolean('ephemeral') ?? false;
+    const ephemeral = interaction.options.getBoolean('ephemeral') ?? true;
     const copiaveisBruto = interaction.options.getString('copiaveis') || '';
     const tituloEmbed = (interaction.options.getString('titulo') || '' ).trim() || null;
     const corEmbed = (interaction.options.getString('cor') || '' ).trim() || null;
@@ -112,7 +112,7 @@ module.exports = {
 
     const botoes = copiaveis.map((c) => (c.tipo === 'link' ? `🔗 ${c.nome}` : `📋 ${c.nome}`));
     const aviso = botoes.length ? `${botoes.length} botão(ões): ${botoes.join(', ')}` : 'Sem botões.';
-    const privado = ephemeral ? '\n🔒 Resposta **privada** (vai na DM de quem usar o comando).' : '';
+    const privado = ephemeral ? '\n🔒 O botão copiável responde em **privado** (só quem clica vê).' : '\n🌐 O botão copiável responde em **público** (todos veem).';
 
     return interaction.reply({
       content: `✅ Comando \`!${nome}\` criado!\n${aviso}${privado}\n` +

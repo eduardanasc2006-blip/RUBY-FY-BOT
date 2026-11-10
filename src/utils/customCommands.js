@@ -67,7 +67,10 @@ const custom = {
         imagem: (dados.embed?.imagem || '' ).trim() || null,
         fields: Array.isArray(dados.embed?.fields) ? dados.embed.fields : [],
       },
-      ephemeral: !!dados.ephemeral,
+      // Controla se o clique no botão copiável responde em privado (só quem
+      // clica vê). Comandos antigos não têm o campo e continuam privados, para
+      // não vazar o conteúdo de quem já existia.
+      ephemeral: dados.ephemeral !== false,
       // itens: [{ nome, tipo: 'copiavel'|'link', valor }]
       copiaveis: (dados.copiaveis || []).map((c) => ({
         nome: c.nome,
