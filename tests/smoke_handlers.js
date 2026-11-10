@@ -291,6 +291,8 @@ async function testarInteracoes() {
     ["select", "clientes:sel:0", { valores: ["111111111111111111"] }],
     ["button", "clientes:perfil:111111111111111111:0"],
     ["button", "clientes:gerenciar:111111111111111111:0"],
+    ["button", "clientes:lancar:111111111111111111:0"],
+    ["modal", "clientes:lancarmodal:111111111111111111:0", { campos: { valor: "10,50", quantidade: "2", descricao: "teste" } }],
   ];
   let okTotal = 0;
   let falhas = 0;

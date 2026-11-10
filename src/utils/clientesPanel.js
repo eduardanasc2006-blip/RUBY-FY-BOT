@@ -1,4 +1,4 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, StringSelectMenuBuilder } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, StringSelectMenuBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const comprasStore = require('./comprasStore');
 const { formatBRL } = require('./robuxConverter');
 const { resumoCliente } = require('./vendaPanel');
@@ -117,12 +117,32 @@ function buildPerfilCliente(guild, clienteId, paginaVoltar = 0) {
 
   const components = [
     new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`clientes:lancar:${clienteId}:${paginaVoltar}`).setLabel('💸 Lançar venda').setStyle(ButtonStyle.Success),
       new ButtonBuilder().setCustomId(`clientes:gerenciar:${clienteId}:${paginaVoltar}`).setLabel('⚙️ Gerenciar cliente').setStyle(ButtonStyle.Primary),
       new ButtonBuilder().setCustomId(`clientes:lista:${paginaVoltar}`).setLabel('◀️ Voltar à lista').setStyle(ButtonStyle.Secondary)
     ),
   ];
 
   return { embeds: [embed], components };
+}
+
+// Modal para lançar uma venda direto da página do cliente (evita ter que digitar
+// o comando). Mesmos campos do /venda lancar.
+function modalLancarVenda(clienteId, paginaVoltar = 0) {
+  return new ModalBuilder()
+    .setCustomId(`clientes:lancarmodal:${clienteId}:${paginaVoltar}`)
+    .setTitle('💸 Lançar venda')
+    .addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId('valor').setLabel('Valor em reais (ex: 10,50)').setStyle(TextInputStyle.Short).setRequired(true).setMaxLength(20)
+      ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId('quantidade').setLabel('Quantas vendas contar (padrão: 1)').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(4)
+      ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder().setCustomId('descricao').setLabel('Descrição (opcional)').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(200)
+      )
+    );
 }
 
 // ----- Página 3: gerenciar o cliente -----
@@ -150,4 +170,4 @@ function buildGerenciarCliente(guild, clienteId, paginaVoltar = 0) {
   return { embeds: [embed], components };
 }
 
-module.exports = { buildListaClientes, buildPerfilCliente, buildGerenciarCliente, nomeCliente, CLIENTES_POR_PAGINA };
+module.exports = { buildListaClientes, buildPerfilCliente, buildGerenciarCliente, modalLancarVenda, nomeCliente, CLIENTES_POR_PAGINA };

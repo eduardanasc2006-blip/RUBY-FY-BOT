@@ -3994,7 +3994,8 @@ client.on('interactionCreate', async (interaction) => {
 // ----- Painel admin de clientes (customId `clientes:`) -----
 // Fluxo em 3 páginas: lista (select) -> perfil do cliente -> gerenciar.
 // Permissao (grupo `vendas`, comando `clientes`) checada a cada clique.
-const { buildListaClientes, buildPerfilCliente, buildGerenciarCliente } = require('./utils/clientesPanel');
+const { buildListaClientes, buildPerfilCliente, buildGerenciarCliente, modalLancarVenda } = require('./utils/clientesPanel');
+const { lancarVenda, embedLancamento, parseValor, parseQuantidade } = require('./utils/vendaPanel');
 
 client.on('interactionCreate', async (interaction) => {
   try {
@@ -4029,6 +4030,39 @@ client.on('interactionCreate', async (interaction) => {
     // Abrir o gerenciamento do cliente.
     if (acao === 'gerenciar' && interaction.isButton()) {
       return interaction.update(buildGerenciarCliente(interaction.guild, partes[2], Number(partes[3]) || 0));
+    }
+
+    // Botão "Lançar venda" -> abre o modal.
+    if (acao === 'lancar' && interaction.isButton()) {
+      return interaction.showModal(modalLancarVenda(partes[2], Number(partes[3]) || 0));
+    }
+
+    // Submit do modal -> lança a venda e reabre a página do cliente.
+    if (acao === 'lancarmodal' && interaction.isModalSubmit()) {
+      const clienteId = partes[2];
+      const pagina = Number(partes[3]) || 0;
+      const valor = parseValor(interaction.fields.getTextInputValue('valor'));
+      if (valor == null) {
+        return interaction.reply({ content: '❌ Valor inválido. Use um número, ex: `10,50`.', flags: MessageFlags.Ephemeral });
+      }
+      const quantidade = parseQuantidade(interaction.fields.getTextInputValue('quantidade'));
+      const descricao = (interaction.fields.getTextInputValue('descricao') || '').trim();
+
+      const { lancamento, conquistadas, acumulado } = await lancarVenda(interaction.client, interaction.guild, {
+        clienteId,
+        clienteTag: `<@${clienteId}>`,
+        valor,
+        quantidade,
+        descricao,
+        registradoPor: interaction.user.id,
+      });
+
+      await interaction.reply({
+        embeds: [embedLancamento(lancamento, conquistadas, acumulado, `<@${clienteId}>`)],
+        flags: MessageFlags.Ephemeral,
+      });
+      // Reabre a página do cliente com os dados já atualizados.
+      return interaction.followUp({ ...buildPerfilCliente(interaction.guild, clienteId, pagina), flags: MessageFlags.Ephemeral });
     }
   } catch (error) {
     console.error('[clientes:interaction]', error);

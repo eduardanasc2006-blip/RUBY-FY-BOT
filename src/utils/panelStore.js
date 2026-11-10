@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+const { escreverAtomico } = require('./escritaAtomica');
 const path = require('node:path');
 const { buildPanel } = require('./panel');
 
@@ -14,7 +15,7 @@ function loadPanelRef() {
 
 function savePanelRef(ref) {
   fs.mkdirSync(path.dirname(PANEL_FILE), { recursive: true });
-  fs.writeFileSync(PANEL_FILE, JSON.stringify(ref, null, 2));
+  escreverAtomico(PANEL_FILE, JSON.stringify(ref, null, 2));
 }
 
 // Edita o painel existente se ainda existir; senão publica um novo no canal.

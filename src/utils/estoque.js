@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+const { escreverAtomico } = require('./escritaAtomica');
 const path = require('node:path');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data', 'estoque');
@@ -28,7 +29,7 @@ function carregar(guildId) {
     if (migrarLegadoPara(guildId)) {
 
     } else {
-      fs.writeFileSync(arquivoDoGuild(guildId), JSON.stringify({ categorias: [] }, null, 2));
+      escreverAtomico(arquivoDoGuild(guildId), JSON.stringify({ categorias: [] }, null, 2));
     }
   }
   const dados = JSON.parse(fs.readFileSync(arquivoDoGuild(guildId), 'utf8'));
@@ -39,7 +40,7 @@ function carregar(guildId) {
 function salvar(guildId) {
   const dados = carregar(guildId);
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(arquivoDoGuild(guildId), JSON.stringify(dados, null, 2));
+  escreverAtomico(arquivoDoGuild(guildId), JSON.stringify(dados, null, 2));
 }
 
 // Gera um id simples a partir do nome (para customId de botões)

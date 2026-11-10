@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+const { escreverAtomico } = require('./escritaAtomica');
 const path = require('node:path');
 const { publicoCategorias } = require('./estoquePanel');
 
@@ -18,7 +19,7 @@ function carregar(guildId) {
 
 function salvar(guildId, ref) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(arquivoRef(guildId), JSON.stringify(ref, null, 2));
+  escreverAtomico(arquivoRef(guildId), JSON.stringify(ref, null, 2));
 }
 
 // Publica o painel fixo ou edita o existente. forcarNovo=true sempre publica novo.

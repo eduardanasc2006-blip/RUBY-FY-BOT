@@ -27,6 +27,7 @@ if (!capturado) throw new Error('nao capturou o client');
 const client = capturado;
 
 const comprasStore = require('../src/utils/comprasStore');
+const metasStore = require('../src/utils/metasStore');
 const { painelRemoverLancamento, confirmarRemocaoLancamento } = require('../src/utils/vendaPanel');
 const { buildListaClientes } = require('../src/utils/clientesPanel');
 
@@ -55,6 +56,7 @@ function limpar() {
   b.gasto = 0;
   b.clientes = {};
   b.lancamentos = [];
+  metasStore.listaMetas(GUILD).length = 0;
 }
 
 // ----- fakes -----
@@ -309,6 +311,35 @@ async function emitir(tipo, customId, opts) {
     const restante = comprasStore.listarLancamentos(GUILD, CLIENTE);
     assert.strictEqual(restante.length, 1, 'sobrou o outro lançamento');
     assert.strictEqual(comprasStore.dadosDoCliente(GUILD, CLIENTE).gasto, 10, 'gasto só do que sobrou');
+  });
+
+  // ===== dinheiro: erro de ponto flutuante não pode barrar metas =====
+  limpar();
+  const dinheiro = require('../src/utils/dinheiro');
+  check('arredondar corrige 0,10 + 0,20', () => {
+    assert.strictEqual(dinheiro.somar(0.1, 0.2), 0.3);
+  });
+  check('somar 3x 0,30 fecha 0,90 exato', () => {
+    let t = 0;
+    for (let i = 0; i < 3; i++) t = dinheiro.somar(t, 0.3);
+    assert.strictEqual(t, 0.9);
+  });
+  check('10x 0,10 fecha 1,00 exato', () => {
+    let t = 0;
+    for (let i = 0; i < 10; i++) t = dinheiro.somar(t, 0.1);
+    assert.strictEqual(t, 1);
+  });
+  comprasStore.registrarVendaManual(GUILD, CLIENTE, 0.3, {});
+  comprasStore.registrarVendaManual(GUILD, CLIENTE, 0.3, {});
+  comprasStore.registrarVendaManual(GUILD, CLIENTE, 0.3, {});
+  check('3 vendas de 0,30 somam exatamente 0,90 no gasto', () => {
+    assert.strictEqual(comprasStore.dadosDoCliente(GUILD, CLIENTE).gasto, 0.9);
+  });
+  metasStore.addMeta(GUILD, { cargoId: 'cargo-centavos', cargoNome: 'Centavos', tipo: 'valor', meta: 0.9 });
+  check('meta de 0,90 é concedida com 3x 0,30 (sem erro de float)', () => {
+    const { metasConquistadas } = require('../src/utils/metasVenda');
+    const r = metasConquistadas(GUILD, CLIENTE, 0, 1);
+    assert.ok(r.some((m) => m.cargoId === 'cargo-centavos'), 'meta de centavos concedida');
   });
 
   // ----- limpeza -----

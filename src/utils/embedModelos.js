@@ -1,4 +1,5 @@
 const fs = require("node:fs");
+const { escreverAtomico } = require('./escritaAtomica');
 const path2 = require("node:path");
 const crypto = require("node:crypto");
 
@@ -23,7 +24,7 @@ function carregar() {
 
 function salvar(todo) {
   fs.mkdirSync(path2.dirname(FILE), { recursive: true });
-   fs.writeFileSync(FILE, JSON.stringify(todo, null, 2));
+   escreverAtomico(FILE, JSON.stringify(todo, null, 2));
 }
 
 function baseGuild(todo, guildId) {

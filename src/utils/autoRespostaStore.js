@@ -1,4 +1,5 @@
 const fs = require("node:fs");
+const { escreverAtomico } = require('./escritaAtomica');
 const path = require("node:path");
 
 const DIR = path.join(__dirname, "..", "..", "data", "autorespostas");
@@ -18,7 +19,7 @@ function carregar(guildId) {
 
 function salvar(guildId, dados) {
   fs.mkdirSync(DIR, { recursive: true });
-  fs.writeFileSync(arquivoDoGuild(guildId), JSON.stringify(dados, null, 2));
+  escreverAtomico(arquivoDoGuild(guildId), JSON.stringify(dados, null, 2));
 }
 
 // Auto-respostas por servidor: cada guild tem suas palavras e seus canais.

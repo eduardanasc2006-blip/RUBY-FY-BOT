@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+const { escreverAtomico } = require('./escritaAtomica');
 const path = require('node:path');
 
 const FILE = path.join(__dirname, '..', '..', 'data', 'metas.json');
@@ -15,7 +16,7 @@ function salvar() {
   const dir = path.dirname(FILE);
   fs.mkdirSync(dir, { recursive: true });
   const texto = JSON.stringify(dados, null, 2);
-  fs.writeFileSync(FILE, texto);
+  escreverAtomico(FILE, texto);
 }
 
 function conf(guildId) {

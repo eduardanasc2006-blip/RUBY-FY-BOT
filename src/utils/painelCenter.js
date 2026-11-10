@@ -1,4 +1,5 @@
 const nodeFs = require('node:fs');
+const { escreverAtomico } = require('./escritaAtomica');
 const path = require('node:path');
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 
@@ -14,7 +15,7 @@ function carregarJson(file) {
 
 function salvarJson(file, dados) {
   nodeFs.mkdirSync(path.dirname(file), { recursive: true });
-  nodeFs.writeFileSync(file, JSON.stringify(dados, null, 2));
+  escreverAtomico(file, JSON.stringify(dados, null, 2));
 }
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
