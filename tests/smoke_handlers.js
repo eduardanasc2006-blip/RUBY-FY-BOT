@@ -282,6 +282,15 @@ async function testarInteracoes() {
     ["select", "metaspainel:tipo:edit:xxxx:xxxx:111111111111111111", { valores: ["valor"] }],
     ["modal", "metasmodal:add:vendas:xxxx:111111111111111111", { campos: { meta: "10" } }],
     ["modal", "metasmodal:edit:vendas:xxxx:xxxx:111111111111111111", { campos: { meta: "50" } }],
+    ["button", "venda:listar:111111111111111111:0"],
+    ["button", "venda:pag:111111111111111111:0"],
+    ["select", "venda:remover:111111111111111111:0", { valores: ["999999"] }],
+    ["button", "venda:confrem:111111111111111111:999999"],
+    ["button", "venda:confum:111111111111111111:999999"],
+    ["button", "clientes:lista:0"],
+    ["select", "clientes:sel:0", { valores: ["111111111111111111"] }],
+    ["button", "clientes:perfil:111111111111111111:0"],
+    ["button", "clientes:gerenciar:111111111111111111:0"],
   ];
   let okTotal = 0;
   let falhas = 0;

@@ -28,7 +28,7 @@ const client = capturado;
 
 const comprasStore = require('../src/utils/comprasStore');
 const { painelRemoverLancamento, confirmarRemocaoLancamento } = require('../src/utils/vendaPanel');
-const { buildClientesPainel } = require('../src/utils/clientesPanel');
+const { buildListaClientes } = require('../src/utils/clientesPanel');
 
 const DATA = path.join(__dirname, '..', 'data');
 const GUILD = 'g-venda-remover';
@@ -260,23 +260,55 @@ async function emitir(tipo, customId, opts) {
     assert.ok(!lista.some((c) => c.clienteId === '970000000000000009'), 'zerado fora da lista');
   });
 
-  const painelClientes = buildClientesPainel(GUILD, 0);
-  check('painel de clientes mostra os números no embed', () => {
-    const desc = painelClientes.embeds[0].data.description || '';
-    assert.ok(desc.includes(`<@${OUTRO}>`), 'lista o cliente que gastou mais');
-    const campos = painelClientes.embeds[0].data.fields.map((f) => f.value).join(' ');
+  const lista = buildListaClientes(guild, 0);
+  check('lista de clientes mostra os números no embed', () => {
+    const campos = lista.embeds[0].data.fields.map((f) => f.value).join(' ');
     assert.ok(/170,00/.test(campos), 'mostra o total gasto (50 + 120)');
     assert.ok(/4/.test(campos), 'mostra o total de vendas (1 + 3)');
+    assert.ok(lista.components[0].components[0].options.length === 2, 'select com os 2 clientes');
   });
 
-  await emitir('button', `clientes:pag:0`, { user: membroAdmin });
-  check('paginação do painel de clientes responde (update)', () => {
-    assert.ok(ultimoUpdate, 'chamou update');
-    assert.ok(ultimoUpdate.embeds?.length, 'tem embed');
+  // Selecionar um cliente abre a página dele.
+  await emitir('select', `clientes:sel:0`, { user: membroAdmin, values: [OUTRO] });
+  check('selecionar cliente abre a página dele', () => {
+    assert.ok(/PÁGINA DO CLIENTE/i.test(ultimoUpdate.embeds[0].data.title || ''), 'título da página do cliente');
+    assert.ok(JSON.stringify(ultimoUpdate).includes(OUTRO), 'mostra o cliente escolhido');
+    const ids = ultimoUpdate.components[0].components.map((c) => c.data.custom_id);
+    assert.ok(ids.some((i) => i.startsWith('clientes:gerenciar:')), 'tem botão Gerenciar cliente');
   });
-  await emitir('button', `clientes:pag:0`, { user: membroComum });
+
+  await emitir('button', `clientes:gerenciar:${OUTRO}:0`, { user: membroAdmin });
+  check('gerenciar cliente abre a página de gerenciamento', () => {
+    assert.ok(/GERENCIAR CLIENTE/i.test(ultimoUpdate.embeds[0].data.title || ''), 'título de gerenciar');
+    const ids = ultimoUpdate.components[0].components.map((c) => c.data.custom_id);
+    assert.ok(ids.some((i) => i.startsWith('venda:listar:')), 'leva para ver/remover lançamentos');
+  });
+
+  await emitir('button', `clientes:perfil:${OUTRO}:0`, { user: membroAdmin });
+  check('voltar ao perfil do cliente', () => {
+    assert.ok(/PÁGINA DO CLIENTE/i.test(ultimoUpdate.embeds[0].data.title || ''), 'voltou ao perfil');
+  });
+
+  await emitir('button', `clientes:lista:0`, { user: membroAdmin });
+  check('voltar à lista de clientes', () => {
+    assert.ok(/CLIENTES/i.test(ultimoUpdate.embeds[0].data.title || ''), 'voltou à lista');
+  });
+
+  await emitir('button', `clientes:lista:0`, { user: membroComum });
   check('usuário comum não abre o painel de clientes', () => {
     assert.ok(/🔒/.test(ultimaResposta?.content || ''), 'bloqueado');
+  });
+
+  // ===== !venda remover <id> (remoção direta por ID) =====
+  limpar();
+  const l1 = comprasStore.registrarVendaManual(GUILD, CLIENTE, 25.5, { registradoPor: OPERADOR });
+  comprasStore.registrarVendaManual(GUILD, CLIENTE, 10, { quantidade: 2, registradoPor: OPERADOR });
+  check('remover por ID remove o lançamento certo', () => {
+    const r = comprasStore.removerLancamento(GUILD, l1.id);
+    assert.ok(r && r.id === l1.id, 'removeu o #1');
+    const restante = comprasStore.listarLancamentos(GUILD, CLIENTE);
+    assert.strictEqual(restante.length, 1, 'sobrou o outro lançamento');
+    assert.strictEqual(comprasStore.dadosDoCliente(GUILD, CLIENTE).gasto, 10, 'gasto só do que sobrou');
   });
 
   // ----- limpeza -----

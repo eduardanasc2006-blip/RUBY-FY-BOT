@@ -1,42 +1,51 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { comandoPode } = require('../utils/permissions');
-const { parseValor, parseQuantidade, lancarVenda, resumoCliente, embedLancamento, embedResumoCliente, painelRemoverLancamento } = require('../utils/vendaPanel');
+const {
+  parseValor,
+  parseQuantidade,
+  lancarVenda,
+  resumoCliente,
+  embedLancamento,
+  embedResumoCliente,
+  painelRemoverLancamento,
+} = require('../utils/vendaPanel');
+
+const clienteOpt = (o, obrigatorio = true) =>
+  o.setName('cliente').setDescription('Cliente da venda').setRequired(obrigatorio);
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('venda')
-    .setDescription('Lança ou remove uma venda feita fora do /comprar (credita no gasto do cliente e nas metas)')
-    .addUserOption((o) =>
-      o.setName('cliente').setDescription('Cliente que comprou (obrigatório ao lançar)').setRequired(false)
+    .setDescription('Lançar, consultar ou remover uma venda feita fora do /comprar')
+    // Subcomandos: aparecem como opções claras ao digitar /venda, então "remover"
+    // fica visível de imediato (antes, com tudo em opções opcionais, o remover se
+    // escondia no fim da lista e dava a impressão de não existir).
+    .addSubcommand((s) =>
+      s
+        .setName('lancar')
+        .setDescription('Lança uma venda (credita no gasto do cliente e nas metas)')
+        .addUserOption((o) => clienteOpt(o))
+        .addStringOption((o) =>
+          o.setName('valor').setDescription('Valor em reais (ex: 10,50)').setRequired(true)
+        )
+        .addIntegerOption((o) =>
+          o.setName('quantidade').setDescription('Quantas vendas contar (padrão: 1)').setRequired(false).setMinValue(1)
+        )
+        .addStringOption((o) =>
+          o.setName('descricao').setDescription('Descrição opcional (ex: pix fora do ticket)').setRequired(false).setMaxLength(200)
+        )
     )
-    .addStringOption((o) =>
-      o.setName('valor').setDescription('Valor em reais (ex: 10,50) — obrigatório ao lançar').setRequired(false)
-    )
-    .addIntegerOption((o) =>
-      o
-        .setName('quantidade')
-        .setDescription('Quantas vendas contar (padrão: 1)')
-        .setRequired(false)
-        .setMinValue(1)
-    )
-    .addStringOption((o) =>
-      o
-        .setName('descricao')
-        .setDescription('Descrição opcional (ex: pagou no pix fora do ticket)')
-        .setRequired(false)
-        .setMaxLength(200)
-    )
-    .addUserOption((o) =>
-      o
+    .addSubcommand((s) =>
+      s
         .setName('consultar')
-        .setDescription('Só consulta o gasto deste cliente, sem lançar nada')
-        .setRequired(false)
+        .setDescription('Mostra o gasto acumulado do cliente, sem lançar nada')
+        .addUserOption((o) => clienteOpt(o))
     )
-    .addUserOption((o) =>
-      o
+    .addSubcommand((s) =>
+      s
         .setName('remover')
-        .setDescription('Abre a lista de lançamentos manuais deste cliente para remover um')
-        .setRequired(false)
+        .setDescription('Abre a lista de lançamentos manuais do cliente para remover')
+        .addUserOption((o) => clienteOpt(o))
     ),
 
   async execute(interaction) {
@@ -47,43 +56,30 @@ module.exports = {
       });
     }
 
-    // Modo consulta: mostra o gasto acumulado sem lançar venda.
-    const consulta = interaction.options.getUser('consultar');
-    if (consulta) {
-      const resumo = resumoCliente(interaction.guildId, consulta.id);
+    const sub = interaction.options.getSubcommand();
+
+    if (sub === 'consultar') {
+      const alvo = interaction.options.getUser('cliente');
+      const resumo = resumoCliente(interaction.guildId, alvo.id);
       return interaction.reply({
-        embeds: [embedResumoCliente(consulta.id, resumo)],
+        embeds: [embedResumoCliente(alvo.id, resumo)],
         flags: MessageFlags.Ephemeral,
       });
     }
 
-    // Modo remover: lista os lançamentos manuais do cliente para escolher um.
-    const remover = interaction.options.getUser('remover');
-    if (remover) {
+    if (sub === 'remover') {
+      const alvo = interaction.options.getUser('cliente');
       return interaction.reply({
-        ...painelRemoverLancamento(interaction.guildId, remover.id, 0),
+        ...painelRemoverLancamento(interaction.guildId, alvo.id, 0),
         flags: MessageFlags.Ephemeral,
       });
     }
 
+    // sub === 'lancar'
     const cliente = interaction.options.getUser('cliente');
-    const brutoValor = interaction.options.getString('valor');
-    if (!cliente || !brutoValor) {
-      return interaction.reply({
-        content:
-          '❌ Informe o cliente e o valor para lançar.\n' +
-          'Ex: `/venda cliente:@fulano valor:10,50`\n' +
-          'Para só consultar o gasto: `/venda consultar:@fulano`.',
-        flags: MessageFlags.Ephemeral,
-      });
-    }
-
-    const valor = parseValor(brutoValor);
+    const valor = parseValor(interaction.options.getString('valor'));
     if (valor == null) {
-      return interaction.reply({
-        content: '❌ Valor inválido. Use um número, ex: `10,50`.',
-        flags: MessageFlags.Ephemeral,
-      });
+      return interaction.reply({ content: '❌ Valor inválido. Use um número, ex: `10,50`.', flags: MessageFlags.Ephemeral });
     }
 
     const quantidade = parseQuantidade(interaction.options.getInteger('quantidade'));

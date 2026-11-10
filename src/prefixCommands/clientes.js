@@ -1,16 +1,16 @@
 const { comandoPode } = require('../utils/permissions');
-const { buildClientesPainel } = require('../utils/clientesPanel');
+const { buildListaClientes } = require('../utils/clientesPanel');
 
 module.exports = {
   name: 'clientes',
-  description: 'Lista os clientes que já compraram, com o gasto e o número de vendas (adm)',
+  description: 'Painel de clientes: veja e gerencie quem já comprou (adm)',
   usage: '!clientes',
 
   async execute(message) {
     if (!message.guild || !comandoPode(message.member, message.author.id, 'clientes')) {
-      return message.reply('🔒 Somente administradores ou equipe autorizada podem ver a lista de clientes.');
+      return message.reply('🔒 Somente administradores ou equipe autorizada podem ver o painel de clientes.');
     }
 
-    return message.reply({ ...buildClientesPainel(message.guildId, 0), allowedMentions: { repliedUser: false } });
+    return message.reply({ ...buildListaClientes(message.guild, 0), allowedMentions: { repliedUser: false } });
   },
 };

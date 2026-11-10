@@ -1,11 +1,11 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { comandoPode } = require('../utils/permissions');
-const { buildClientesPainel } = require('../utils/clientesPanel');
+const { buildListaClientes } = require('../utils/clientesPanel');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('clientes')
-    .setDescription('Lista os clientes que já compraram, com o gasto e o número de vendas (adm)'),
+    .setDescription('Painel de clientes: veja e gerencie quem já comprou (adm)'),
 
   async execute(interaction) {
     if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'clientes')) {
@@ -15,6 +15,6 @@ module.exports = {
       });
     }
 
-    return interaction.reply({ ...buildClientesPainel(interaction.guildId, 0), flags: MessageFlags.Ephemeral });
+    return interaction.reply({ ...buildListaClientes(interaction.guild, 0), flags: MessageFlags.Ephemeral });
   },
 };

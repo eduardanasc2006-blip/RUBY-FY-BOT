@@ -3992,13 +3992,14 @@ client.on('interactionCreate', async (interaction) => {
 
 
 // ----- Painel admin de clientes (customId `clientes:`) -----
-const { buildClientesPainel } = require('./utils/clientesPanel');
+// Fluxo em 3 páginas: lista (select) -> perfil do cliente -> gerenciar.
+// Permissao (grupo `vendas`, comando `clientes`) checada a cada clique.
+const { buildListaClientes, buildPerfilCliente, buildGerenciarCliente } = require('./utils/clientesPanel');
 
 client.on('interactionCreate', async (interaction) => {
   try {
     const id = interaction.customId || '';
     if (!id.startsWith('clientes:')) return;
-    if (!interaction.isButton()) return;
 
     if (!interaction.guild || !comandoPode(interaction.member, interaction.user.id, 'clientes')) {
       return interaction.reply({
@@ -4007,8 +4008,28 @@ client.on('interactionCreate', async (interaction) => {
       });
     }
 
-    const pagina = Number((id.split(':')[2] || '0')) || 0;
-    return interaction.update(buildClientesPainel(interaction.guildId, pagina));
+    const partes = id.split(':');
+    const acao = partes[1];
+
+    // Select de cliente na lista -> abre o perfil.
+    if (acao === 'sel' && interaction.isStringSelectMenu()) {
+      return interaction.update(buildPerfilCliente(interaction.guild, interaction.values[0], Number(partes[2]) || 0));
+    }
+
+    // Navegação da lista.
+    if (acao === 'lista' && interaction.isButton()) {
+      return interaction.update(buildListaClientes(interaction.guild, Number(partes[2]) || 0));
+    }
+
+    // Voltar ao perfil do cliente.
+    if (acao === 'perfil' && interaction.isButton()) {
+      return interaction.update(buildPerfilCliente(interaction.guild, partes[2], Number(partes[3]) || 0));
+    }
+
+    // Abrir o gerenciamento do cliente.
+    if (acao === 'gerenciar' && interaction.isButton()) {
+      return interaction.update(buildGerenciarCliente(interaction.guild, partes[2], Number(partes[3]) || 0));
+    }
   } catch (error) {
     console.error('[clientes:interaction]', error);
     try {
